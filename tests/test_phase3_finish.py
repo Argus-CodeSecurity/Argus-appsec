@@ -77,6 +77,7 @@ def test_inventory_exports_architecture(tmp_path: Path) -> None:
 
 def test_cli_infrastructure_commands_registered() -> None:
     import typer
+
     from argus.cli.main import app
 
     names = set(typer.main.get_command(app).commands)

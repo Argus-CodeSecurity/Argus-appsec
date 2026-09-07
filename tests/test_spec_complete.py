@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from pathlib import Path
 
 from argus.analysis.risk_engine import enrich_contextual_risk
@@ -10,9 +11,8 @@ from argus.analysis.verification import assign_verification_state
 from argus.core.models import Finding, Location, ScanResult, Severity
 from argus.exceptions import FindingException, apply_exceptions
 from argus.intel.reevaluation import reevaluate_intel
-from argus.plugins.signing import plugin_allowed, verify_plugin_entry
+from argus.plugins.signing import plugin_allowed
 from argus.profiles import apply_profile
-from datetime import datetime, timezone
 
 
 def _finding(scanner: str = "patterns") -> Finding:

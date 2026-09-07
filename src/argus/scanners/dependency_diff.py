@@ -144,9 +144,7 @@ class DependencyDiffScanner(Scanner):
             return
         timeout = float(opts.get("timeout", 10.0))
         behavior = bool(opts.get("behavior", True))
-        counter = 0
-        for change in diff_packages(Path(ctx.project.root), str(ref)):
-            counter += 1
+        for counter, change in enumerate(diff_packages(Path(ctx.project.root), str(ref)), start=1):
             yield _change_finding(change, counter)
             if behavior:
                 yield from _behavior_findings(change, counter, timeout=timeout)

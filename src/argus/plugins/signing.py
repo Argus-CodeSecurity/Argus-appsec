@@ -13,9 +13,7 @@ def plugin_allowed(name: str) -> bool:
     if allow:
         return name in {x.strip() for x in allow.split(",") if x.strip()}
     block = os.environ.get("ARGUS_PLUGIN_BLOCKLIST", "").strip()
-    if block and name in {x.strip() for x in block.split(",") if x.strip()}:
-        return False
-    return True
+    return not (block and name in {x.strip() for x in block.split(",") if x.strip()})
 
 
 def plugin_fingerprint(name: str, module_path: str) -> str:

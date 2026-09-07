@@ -3,16 +3,15 @@
 from __future__ import annotations
 
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
-from pathlib import Path
-from typing import Callable
 
 from argus.agent.config import AgentConfig, AgentTarget
 from argus.agent.fim import check_integrity
 from argus.agent.host_posture import assess_host
 from argus.core.config import Config
 from argus.core.engine import ScanEngine
-from argus.core.models import ScanResult, Severity
+from argus.core.models import ScanResult
 from argus.targets import resolve
 from argus.upload import PushError, build_ingest_payload, push_result
 from argus.watch.scheduler import run_watch_cycle, state_dir_for

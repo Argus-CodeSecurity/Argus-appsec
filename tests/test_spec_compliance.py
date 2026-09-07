@@ -49,6 +49,7 @@ def test_fim_first_run_no_findings(tmp_path):
 
 def test_baseline_and_server_cli_registered():
     import typer
+
     from argus.cli.main import app
 
     cmds = typer.main.get_command(app).commands

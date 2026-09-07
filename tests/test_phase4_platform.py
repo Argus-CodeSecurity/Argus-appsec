@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 from datetime import datetime, timezone
 
 from argus.analysis.drift import compare_inventories, compare_scans, highest_added_severity
@@ -60,6 +59,7 @@ def test_highest_added_severity():
 
 def test_drift_cli_registered():
     import typer
+
     from argus.cli.main import app
 
     cmds = typer.main.get_command(app).commands
@@ -69,7 +69,9 @@ def test_drift_cli_registered():
 
 def test_enterprise_policy_pack_loads():
     from pathlib import Path
+
     import yaml
+
     from argus.policy.engine import load_policies
 
     path = Path(__file__).resolve().parents[1] / "examples" / "policies" / "enterprise.yml"

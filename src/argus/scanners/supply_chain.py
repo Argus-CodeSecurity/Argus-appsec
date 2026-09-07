@@ -30,15 +30,13 @@ from argus.core.models import (
 )
 from argus.core.plugin import Scanner, ScannerContext, scanner
 from argus.scanners.dependencies import _loads, collect_packages
+from argus.supply_chain.intel import is_malicious, load_malicious_packages
 
 _SUSPICIOUS_SCRIPT = re.compile(
     r"(curl|wget|bash|sh\s|powershell|Invoke-|eval\(|child_process|"
     r"http://|https://|\.exe|chmod\s|/etc/passwd|~/.ssh)",
     re.IGNORECASE,
 )
-
-
-from argus.supply_chain.intel import is_malicious, load_malicious_packages
 
 
 @lru_cache(maxsize=1)

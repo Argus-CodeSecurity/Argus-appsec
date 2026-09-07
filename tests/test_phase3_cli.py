@@ -25,6 +25,7 @@ def test_cicd_cli_helper_finds_workflow_issue(tmp_path: Path) -> None:
 
 def test_cli_registers_infrastructure_commands() -> None:
     import typer
+
     from argus.cli.main import app
 
     click_app = typer.main.get_command(app)

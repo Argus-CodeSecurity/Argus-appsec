@@ -31,7 +31,6 @@ class ContainerImageScanner(Scanner):
     description = "Inspect local OCI/Docker images for root user, privileged mode, and exposed ports."
 
     def applies_to(self, project) -> bool:
-        opts = project.root  # always optional via config
         return True
 
     def scan(self, ctx: ScannerContext) -> Iterable[Finding]:

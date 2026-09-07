@@ -839,8 +839,8 @@ def watch(
 
     from argus.core.engine import ScanEngine
     from argus.targets import resolve
-    from argus.watch import run_watch_loop, state_dir_for
     from argus.upload import PushError, build_ingest_payload, push_result
+    from argus.watch import run_watch_loop, state_dir_for
 
     try:
         resolved = resolve(target)

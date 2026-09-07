@@ -26,6 +26,7 @@ exclude_paths:
   - "src/argus/scanners/llm.py"
   - "src/argus/scanners/patterns.py"
   - "src/argus/scanners/secrets.py"
+  - "src/argus/scanners/authz.py"
   - "src/argus/remediation/rewrites.py"
   # The AST scanners carry deliberately-vulnerable SQL/eval examples in their
   # module docstrings to illustrate what the taint analysis detects.

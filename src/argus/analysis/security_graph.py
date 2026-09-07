@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from argus.core.models import Finding, ScanResult
+from argus.core.models import ScanResult
 
 
 def build_security_graph(result: ScanResult) -> dict:

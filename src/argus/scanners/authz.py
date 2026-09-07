@@ -127,26 +127,25 @@ class AuthzScanner(Scanner):
         self, path: str, line: str, line_no: int, counter: int,
     ) -> Iterable[Finding]:
         lower = line.lower()
-        if "oauth" in lower or "openid" in lower:
-            if re.search(r"callback|redirect", lower) and not re.search(r"state|nonce|pkce", lower):
-                yield Finding(
-                    id=f"authz:oauth-state:{counter + 1}",
-                    rule_id="authz.oauth-missing-state",
-                    scanner="authz",
-                    title="OAuth callback without state/nonce/PKCE hint",
-                    description="OAuth flows should bind callbacks with state, nonce, or PKCE.",
-                    location=Location(path=path, start_line=line_no, snippet=line.strip()[:200]),
-                    severity=Severity.HIGH,
-                    confidence=Confidence.MEDIUM,
-                    likelihood=Likelihood.POSSIBLE,
-                    cwe=["CWE-352"],
-                    owasp=["A07:2021-Identification and Authentication Failures"],
-                    why_vulnerable="Missing CSRF binding enables authorization code interception.",
-                    remediation=Remediation(
-                        summary="Use state parameter and PKCE for OAuth/OIDC callbacks.",
-                    ),
-                    tags=["auth", "oauth"],
-                )
+        if ("oauth" in lower or "openid" in lower) and re.search(r"callback|redirect", lower) and not re.search(r"state|nonce|pkce", lower):
+            yield Finding(
+                id=f"authz:oauth-state:{counter + 1}",
+                rule_id="authz.oauth-missing-state",
+                scanner="authz",
+                title="OAuth callback without state/nonce/PKCE hint",
+                description="OAuth flows should bind callbacks with state, nonce, or PKCE.",
+                location=Location(path=path, start_line=line_no, snippet=line.strip()[:200]),
+                severity=Severity.HIGH,
+                confidence=Confidence.MEDIUM,
+                likelihood=Likelihood.POSSIBLE,
+                cwe=["CWE-352"],
+                owasp=["A07:2021-Identification and Authentication Failures"],
+                why_vulnerable="Missing CSRF binding enables authorization code interception.",
+                remediation=Remediation(
+                    summary="Use state parameter and PKCE for OAuth/OIDC callbacks.",
+                ),
+                tags=["auth", "oauth"],
+            )
         if _OAUTH_TOKEN_IN_URL.search(line):
             yield Finding(
                 id=f"authz:token-url:{counter + 1}",
@@ -219,7 +218,7 @@ class AuthzScanner(Scanner):
             remediation=Remediation(
                 summary="Verify JWT signatures with an explicit allowlist of algorithms.",
                 guidance=(
-                    "Use jwt.decode(..., algorithms=['RS256']); never set verify=False "
+                    "Use jwt.decode(..., algorithms=['RS256']); never disable signature verification "
                     "in production."
                 ),
             ),

@@ -68,6 +68,7 @@ def test_watch_once_exits(tmp_path: Path):
 
 def test_watch_cli_registered():
     import typer
+
     from argus.cli.main import app
 
     assert "watch" in typer.main.get_command(app).commands

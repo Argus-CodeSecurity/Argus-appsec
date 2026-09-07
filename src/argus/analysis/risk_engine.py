@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from argus.core.models import Finding, ScanResult, Severity
+from argus.core.models import ScanResult, Severity
 
 
 def enrich_contextual_risk(result: ScanResult) -> None:

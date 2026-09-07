@@ -2,17 +2,16 @@
 
 from __future__ import annotations
 
-import json
 import subprocess
-from datetime import datetime, timezone
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import httpx
 
+from argus.analysis import reachability
 from argus.analysis.attack_chains import find_chains
 from argus.core.config import Config
-from argus.core.models import Finding, Location, ScanResult, Severity
+from argus.core.models import Finding, Location, Severity
 from argus.core.plugin import ScannerContext
 from argus.core.project import Project
 from argus.inventory.dependency_diff import diff_packages
@@ -21,7 +20,6 @@ from argus.scanners.authz import AuthzScanner
 from argus.scanners.dependency_diff import DependencyDiffScanner
 from argus.supply_chain.behavior import BehaviorFingerprint, compare_fingerprints, npm_fingerprint
 from argus.supply_chain.intel import is_malicious, load_malicious_packages
-from argus.analysis import reachability
 
 
 def _git(repo: Path, *args: str) -> None:
@@ -104,10 +102,11 @@ def test_npm_fingerprint_mocked():
         return httpx.Response(200, json=payload)
 
     transport = httpx.MockTransport(handler)
-    with httpx.Client(transport=transport) as client:
-        with patch("argus.supply_chain.behavior.httpx.Client") as mock_cls:
-            mock_cls.return_value.__enter__.return_value = client
-            fp = npm_fingerprint("evil-pkg", "1.0.0")
+    with httpx.Client(transport=transport) as client, patch(
+        "argus.supply_chain.behavior.httpx.Client"
+    ) as mock_cls:
+        mock_cls.return_value.__enter__.return_value = client
+        fp = npm_fingerprint("evil-pkg", "1.0.0")
     assert fp is not None
     assert fp.suspicious_script
     assert "postinstall" in fp.install_scripts

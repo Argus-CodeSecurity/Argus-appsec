@@ -124,6 +124,7 @@ ignore = ["E501"]
 "src/argus/cli/*" = ["B008"]
 # FastAPI's Depends() in parameter defaults is the framework's idiom, like Typer's.
 "src/argus/dashboard/*" = ["B008"]
+"tests/corpus/*" = ["F821"]
 
 [tool.mypy]
 python_version = "3.10"

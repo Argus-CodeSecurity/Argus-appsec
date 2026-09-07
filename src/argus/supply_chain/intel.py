@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import json
 import logging
 import time
@@ -60,10 +61,8 @@ def _write_cache(packages: set[tuple[str, str]]) -> None:
     payload = {
         "packages": [{"ecosystem": eco, "name": name} for eco, name in sorted(packages)],
     }
-    try:
+    with contextlib.suppress(OSError):
         _cache_path().write_text(json.dumps(payload, indent=2), encoding="utf-8")
-    except OSError:
-        pass
 
 
 def _parse_feed_payload(data: object) -> set[tuple[str, str]]:

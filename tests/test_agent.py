@@ -43,6 +43,7 @@ def test_write_default_agent_config(tmp_path: Path):
 
 def test_agent_cli_registered():
     import typer
+
     from argus.cli.main import app
 
     assert "agent" in typer.main.get_command(app).commands

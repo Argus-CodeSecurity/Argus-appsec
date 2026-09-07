@@ -3,16 +3,17 @@
 from __future__ import annotations
 
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING
 
 from argus.analysis.drift import ScanDriftReport, compare_scans, highest_added_severity
 from argus.core.models import ScanResult, Severity
 
 if TYPE_CHECKING:
-    from argus.core.config import Config
+    pass
 
 
 @dataclass
