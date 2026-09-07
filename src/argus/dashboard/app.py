@@ -148,6 +148,7 @@ async def api_ingest(request: Request, session: Session = Depends(get_session)):
 def serve(host: str = "127.0.0.1", port: int = 8000) -> None:
     """Launch the dashboard with uvicorn (used by ``argus dashboard``)."""
     import logging
+
     import uvicorn
 
     if host in ("0.0.0.0", "::"):

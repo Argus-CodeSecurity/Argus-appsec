@@ -184,7 +184,7 @@ class Finding(BaseModel):
     metadata: dict[str, Any] = Field(default_factory=dict)
     detected_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
-    @computed_field  # serialized into JSON so every finding links to its docs
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def docs_url(self) -> str:
         return docs_url_for(self.scanner)
