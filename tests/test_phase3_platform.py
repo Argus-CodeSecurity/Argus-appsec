@@ -46,6 +46,18 @@ jobs:
     assert "cicd.unpinned-action" in rules
 
 
+def test_cicd_sha_pinned_action_not_flagged(tmp_path: Path) -> None:
+    wf = """
+jobs:
+  x:
+    steps:
+      - uses: docker/setup-buildx-action@f7ce87c1d6bead3e36075b2ce75da1f6cc28aaca # v3.9.0
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+"""
+    rules = {f.rule_id for f in CicdScanner().scan(_ctx(tmp_path, (".github/workflows/ci.yml", wf)))}
+    assert "cicd.unpinned-action" not in rules
+
+
 def test_container_compose_privileged(tmp_path: Path) -> None:
     compose = """
 services:

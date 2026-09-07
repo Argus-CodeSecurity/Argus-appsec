@@ -94,6 +94,9 @@ argus scan ./my-app --ai-provider ollama --ai-model llama3.1
 argus scan ./my-app -f sarif -o results.sarif --fail-on high
 ```
 
+**What does pass/fail mean?** See [Understanding scan results](docs/understanding-results.md)
+— risk scores, severities, exit codes, and how to know you are secure enough.
+
 Explore what is available:
 
 ```bash

@@ -35,6 +35,7 @@ from rich.table import Table
 from argus import __version__
 from argus.core.config import Config
 from argus.core.models import ScanResult, Severity
+from argus.reporting.posture import evaluate_posture
 from argus.core.plugin import registry
 from argus.plugins import register_builtins
 
@@ -300,6 +301,9 @@ def scan(
 
         _emit(result, fmt, output, audience=audience)
 
+        if not quiet and ("table" in fmt or audience):
+            _print_posture(result, cfg.fail_on)
+
         if engine.should_fail(result):
             if cfg.fail_on_error and result.errors:
                 err_console.print(
@@ -311,6 +315,9 @@ def scan(
                     f"[red]Failing:[/red] findings at/above "
                     f"{cfg.fail_on.label if cfg.fail_on else ''}."
                 )
+                if quiet:
+                    s = evaluate_posture(result, cfg.fail_on)
+                    err_console.print(f"[dim]{s.headline}[/dim]")
             raise typer.Exit(1)
     except FileNotFoundError as exc:
         # e.g. an explicit --config path that doesn't exist. Fail loudly with a
@@ -1953,6 +1960,23 @@ def _print_table(result: ScanResult) -> None:
             escape(f.rule_id),
         )
     console.print(table)
+
+
+def _print_posture(result: ScanResult, fail_on: Severity | None) -> None:
+    from argus.reporting.posture import render_posture_panel
+
+    summary = evaluate_posture(result, fail_on)
+    border = {
+        "pass": "green",
+        "clean": "green",
+        "review": "yellow",
+        "fail": "red",
+    }[summary.status.value]
+    console.print(Panel(
+        render_posture_panel(summary),
+        title="Security posture",
+        border_style=border,
+    ))
 
 
 def _print_scan_warnings(result: ScanResult) -> None:

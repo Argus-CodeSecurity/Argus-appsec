@@ -4,6 +4,9 @@ The dashboard is an **optional** local web app for teams who want scan history a
 trends instead of one-off CLI reports. It stores every scan you send it in a small
 SQLite database and shows projects, risk over time, and findings.
 
+For Argus Cloud (hosted) and how users interpret risk scores and drift, see
+[Understanding scan results](understanding-results.md).
+
 It never runs by default and the base `argus` install stays lightweight, the
 dashboard and its dependencies live behind the `dashboard` extra.
 

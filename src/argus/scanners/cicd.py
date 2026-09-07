@@ -39,7 +39,11 @@ _RULES: list[tuple[str, str, re.Pattern[str], Severity, str, str]] = [
     (
         "cicd.unpinned-action",
         "Mutable action reference (@branch instead of SHA)",
-        re.compile(r"uses:\s*[\w./-]+@[a-zA-Z]"),
+        re.compile(
+            r"uses:\s*[\w./-]+@"
+            r"(?![a-f0-9]{40}\b)"  # full commit SHA pins are OK
+            r"(?:v[\w./-]+|[a-zA-Z][\w./-]*)",
+        ),
         Severity.MEDIUM,
         "Floating action tags can change without notice (supply-chain risk).",
         "Pin actions to a full commit SHA.",

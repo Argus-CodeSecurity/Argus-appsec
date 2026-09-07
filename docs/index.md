@@ -76,6 +76,8 @@ argus init         # write a starter .argus.yml
 
 ## Where to next
 
+- [Understanding scan results](understanding-results.md), risk scores, severities,
+  pass/fail gates, dashboard signals, and what “secure” actually means.
 - [Scanners & coverage](scanners.md), exactly what each domain detects and does not.
 - [Triage & baselines](triage.md), keep the tool low-noise on real repos.
 - [CI/CD integration](ci-cd.md), the one-block GitHub Action and diff-aware gating.

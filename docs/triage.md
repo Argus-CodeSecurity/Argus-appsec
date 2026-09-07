@@ -4,6 +4,9 @@ A scanner lives or dies on noise. The first run should show signal, and a team
 should be able to accept known issues and get alerted only on new ones. Argus
 gives you a few honest, working controls for that today.
 
+For how to read risk scores, severities, and pass/fail gates, see
+[Understanding scan results](understanding-results.md).
+
 ## Start with signal, not noise
 
 Show only what matters first, then widen:

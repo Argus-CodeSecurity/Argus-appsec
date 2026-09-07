@@ -58,6 +58,7 @@ markdown_extensions:
 nav:
   - Home: index.md
   - Getting started:
+      - Understanding scan results: understanding-results.md
       - Scanners & coverage: scanners.md
       - Configuration: configuration.md
       - Triage & baselines: triage.md
