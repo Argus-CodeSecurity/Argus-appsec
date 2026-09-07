@@ -15,8 +15,8 @@ from argus.core.models import Finding, Location, Severity
 from argus.core.plugin import ScannerContext
 from argus.core.project import Project
 from argus.inventory.dependency_diff import diff_packages
-from argus.sbom.spdx import build_spdx
 from argus.profiles import apply_profile
+from argus.sbom.spdx import build_spdx
 from argus.scanners.authz import AuthzScanner
 from argus.scanners.dependency_diff import DependencyDiffScanner
 from argus.scanners.malware import MalwareScanner

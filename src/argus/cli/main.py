@@ -331,6 +331,13 @@ def sbom(
         help="Compare SBOM to a git ref (e.g. origin/main...HEAD); emit component diff JSON.",
     ),
     branch: str | None = typer.Option(None, "--branch", "-b", help="Branch for remote targets."),
+    push: bool = typer.Option(False, "--push", help="Upload the SBOM to Argus Cloud."),
+    url: str | None = typer.Option(
+        None, "--url", help="Argus Cloud base URL (or set ARGUS_CLOUD_URL)."
+    ),
+    token: str | None = typer.Option(
+        None, "--token", help="Cloud API token (or set ARGUS_CLOUD_TOKEN)."
+    ),
 ) -> None:
     """Generate an SBOM (CycloneDX or SPDX) or diff components vs a git ref."""
     import json
@@ -376,7 +383,33 @@ def sbom(
         count = len(doc.get("components", doc.get("packages", []))) - (
             1 if fmt_norm == "spdx" else 0
         )
-        if output:
+        if push:
+            import os
+
+            from argus.upload import PushError, push_sbom
+
+            cloud_url = url or os.environ.get("ARGUS_CLOUD_URL")
+            cloud_token = token or os.environ.get("ARGUS_CLOUD_TOKEN")
+            if not cloud_url or not cloud_token:
+                err_console.print(
+                    "[red]Error:[/red] --push requires --url/--token or "
+                    "ARGUS_CLOUD_URL/ARGUS_CLOUD_TOKEN."
+                )
+                raise typer.Exit(2)
+            target_label = str(resolved.project.root)
+            try:
+                resp = push_sbom(
+                    doc,
+                    target=target_label,
+                    fmt=fmt_norm,
+                    url=cloud_url,
+                    token=cloud_token,
+                )
+            except PushError as exc:
+                err_console.print(f"[red]Error:[/red] {exc}")
+                raise typer.Exit(1) from exc
+            console.print(f"[green]SBOM uploaded[/green] ({count} components) → {resp.get('url', 'dashboard')}")
+        elif output:
             output.write_text(text, encoding="utf-8")
             console.print(f"[green]SBOM written:[/green] {output} ({count} components)")
         else:

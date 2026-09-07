@@ -22,6 +22,7 @@ if TYPE_CHECKING:
     import httpx
 
 _INGEST_PATH = "/api/scans"
+_SBOM_PATH = "/api/sbom"
 _COUNT_KEYS = ("critical", "high", "medium", "low")
 
 
@@ -100,6 +101,48 @@ def push_result(
         if resp.status_code >= 300:
             raise PushError(
                 f"cloud rejected the scan (HTTP {resp.status_code}): "
+                f"{resp.text[:300]}"
+            )
+        try:
+            return resp.json()
+        except ValueError:
+            return {}
+    finally:
+        if owns_client:
+            client.close()
+
+
+def push_sbom(
+    payload: dict[str, Any],
+    *,
+    target: str,
+    fmt: str,
+    url: str,
+    token: str,
+    timeout: float = 30.0,
+    client: httpx.Client | None = None,
+) -> dict[str, Any]:
+    """POST a CycloneDX or SPDX document to ``{url}/api/sbom``."""
+    import httpx
+
+    endpoint = url.rstrip("/") + _SBOM_PATH
+    headers = {"Authorization": f"Bearer {token}", "User-Agent": "argus-push"}
+    body = {"target": target, "format": fmt, "payload": payload}
+    owns_client = client is None
+    client = client or httpx.Client(timeout=timeout)
+    try:
+        try:
+            resp = client.post(endpoint, json=body, headers=headers)
+        except httpx.HTTPError as exc:
+            raise PushError(f"could not reach {endpoint}: {exc}") from exc
+        if resp.status_code in (401, 403):
+            raise PushError(
+                "authentication failed; check the cloud API token "
+                "(--token / ARGUS_CLOUD_TOKEN)."
+            )
+        if resp.status_code >= 300:
+            raise PushError(
+                f"cloud rejected the SBOM (HTTP {resp.status_code}): "
                 f"{resp.text[:300]}"
             )
         try:

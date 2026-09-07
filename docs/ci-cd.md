@@ -27,7 +27,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0     # full history enables diff-aware PR scanning
-      - uses: Argus-CodeSecurity/Argus-appsec@v0.8.0
+      - uses: Argus-CodeSecurity/Argus-appsec@v0.8.1
         with:
           fail-on: high      # block merges on newly introduced High+ findings
 ```
