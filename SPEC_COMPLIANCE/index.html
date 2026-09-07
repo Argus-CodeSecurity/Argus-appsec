@@ -1,0 +1,2406 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Argus AppSec, the open-source AI security engineer. Unified, explainable security analysis across code, dependencies, secrets, IaC, and AI, with verified fixes.">
+      
+      
+      
+        <link rel="canonical" href="https://argus-codesecurity.github.io/Argus-appsec/SPEC_COMPLIANCE/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>Argus specification compliance - Argus AppSec</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#argus-specification-compliance" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="Argus AppSec" class="md-header__button md-logo" aria-label="Argus AppSec" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Argus AppSec
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Argus specification compliance
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/Argus-CodeSecurity/Argus-appsec" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    Argus-CodeSecurity/Argus-appsec
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="Argus AppSec" class="md-nav__button md-logo" aria-label="Argus AppSec" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Argus AppSec
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/Argus-CodeSecurity/Argus-appsec" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    Argus-CodeSecurity/Argus-appsec
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../understanding-results/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Understanding scan results
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../scanners/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Scanners & coverage
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../triage/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Triage & baselines
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Using in your pipeline
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Using in your pipeline
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ci-cd/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CI/CD integration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../monitoring/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Continuous monitoring
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../fixing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Fixing & pull requests
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../mcp/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MCP server (AI agents)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../dashboard/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Web dashboard
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Deeper
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Deeper
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../llm-security/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    LLM / AI security
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../attack-simulation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Attack simulation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../plugins/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Writing plugins
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../performance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Performance
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Trust
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Trust
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../benchmarks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Benchmarks & accuracy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../comparison/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How Argus compares
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../security/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Security & threat model
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#12-product-objectives-and-philosophy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1–2 Product objectives and philosophy
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-repository-intelligence" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3 Repository intelligence
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-sast" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4 SAST
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-authentication-authorization" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5 Authentication &amp; authorization
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-business-logic-security" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6 Business logic security
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#78-sca-and-malicious-dependencies" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7–8 SCA and malicious dependencies
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#910-behavioral-analysis-and-version-diff" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9–10 Behavioral analysis and version diff
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#11-sbom" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        11 SBOM
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#1213-vulnerability-intelligence-and-reachability" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        12–13 Vulnerability intelligence and reachability
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#14-vex" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        14 VEX
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#1516-secrets-and-git" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        15–16 Secrets and Git
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#17-baseline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        17 Baseline
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#1820-iac-containers-kubernetes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        18–20 IaC, containers, Kubernetes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2122-api-and-dast" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        21–22 API and DAST
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2325-server-agent-drift-fim" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        23–25 Server agent, drift, FIM
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2627-cloud-and-cicd" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        26–27 Cloud and CI/CD
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2829-artifacts-and-attack-paths" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        28–29 Artifacts and attack paths
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3031-risk-and-verification" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        30–31 Risk and verification
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3234-ai-analyst-fix-engine-policies" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        32–34 AI analyst, fix engine, policies
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#35-ci-integration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        35 CI integration
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3638-monitoring-inventory-dashboard" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        36–38 Monitoring, inventory, dashboard
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#39-alerting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        39 Alerting
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4043-multi-tenancy-cloud-security-agent-security-privacy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        40–43 Multi-tenancy, cloud security, agent security, privacy
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4445-architecture-and-extensibility" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        44–45 Architecture and extensibility
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4648-finding-format-fp-management-performance" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        46–48 Finding format, FP management, performance
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4950-safe-scanning-and-observability" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        49–50 Safe scanning and observability
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5153-testing-and-release-security" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        51–53 Testing and release security
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5458-threat-model-and-continuous-model" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        54–58 Threat model and continuous model
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5961-commercial-model-and-cli" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        59–61 Commercial model and CLI
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6264-data-model-api-documentation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        62–64 Data model, API, documentation
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6570-engineering-rules" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        65–70 Engineering rules
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cli-command-map-60" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CLI command map (§60)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#market-and-industry-alignment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Market and industry alignment
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="argus-specification-compliance">Argus specification compliance<a class="headerlink" href="#argus-specification-compliance" title="Permanent link">&para;</a></h1>
+<p>This document maps the Argus product specification (70 sections) to the current
+implementation. All listed requirements are <strong>implemented</strong> for the current release
+within documented operational limits (authorized targets, read-only cloud/K8s,
+metadata-only SaaS ingest, no full unbounded DAST crawling without explicit URL).</p>
+<p><strong>Central principle (§2):</strong> Argus never claims a scan proves a system is completely
+secure. Every JSON report includes a disclaimer (<code>argus.security.SECURITY_DISCLAIMER</code>).</p>
+<hr />
+<h2 id="12-product-objectives-and-philosophy">1–2 Product objectives and philosophy<a class="headerlink" href="#12-product-objectives-and-philosophy" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Requirement</th>
+<th>Status</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Continuous app + supply chain + infra platform</td>
+<td><strong>Done</strong></td>
+<td>CLI, cloud ingest, <code>watch</code>, <code>agent</code>, asset inventory</td>
+</tr>
+<tr>
+<td>Deterministic facts + AI explanation</td>
+<td><strong>Done</strong></td>
+<td>Scanners + policy engine; AI enrichment optional</td>
+</tr>
+<tr>
+<td>Never claim complete security</td>
+<td><strong>Done</strong></td>
+<td><code>security.py</code>, report disclaimer, README limitations</td>
+</tr>
+<tr>
+<td>Open-source / commercial split</td>
+<td><strong>Done</strong></td>
+<td><code>REPO_LAYOUT.md</code>, plugin hooks, license gating</td>
+</tr>
+</tbody>
+</table>
+<h2 id="3-repository-intelligence">3 Repository intelligence<a class="headerlink" href="#3-repository-intelligence" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Requirement</th>
+<th>Status</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Language/framework detection</td>
+<td><strong>Done</strong></td>
+<td><code>analysis/repository.py</code>, project model</td>
+</tr>
+<tr>
+<td>Architecture map</td>
+<td><strong>Done</strong></td>
+<td><code>analysis/security_graph.py</code>, inventory</td>
+</tr>
+<tr>
+<td>Trust boundaries</td>
+<td><strong>Done</strong></td>
+<td>Security graph nodes/edges, attack chains</td>
+</tr>
+</tbody>
+</table>
+<h2 id="4-sast">4 SAST<a class="headerlink" href="#4-sast" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Requirement</th>
+<th>Status</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Multi-language plugin SAST</td>
+<td><strong>Done</strong></td>
+<td><code>patterns</code>, <code>lang-sast</code>, AST Python/JS/Go</td>
+</tr>
+<tr>
+<td>AST/taint/interprocedural</td>
+<td><strong>Done</strong></td>
+<td><code>ast_python</code>, <code>ast_python_interproc</code>, <code>ast_js</code></td>
+</tr>
+<tr>
+<td>Evidence on findings</td>
+<td><strong>Done</strong></td>
+<td>Snippets, CWE, remediation on <code>Finding</code> model</td>
+</tr>
+</tbody>
+</table>
+<h2 id="5-authentication-authorization">5 Authentication &amp; authorization<a class="headerlink" href="#5-authentication-authorization" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Requirement</th>
+<th>Status</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>AuthZ analyzer</td>
+<td><strong>Done</strong></td>
+<td><code>scanners/authz.py</code>, <code>analysis/auth_map.py</code></td>
+</tr>
+<tr>
+<td>JWT/OAuth/session deep analysis</td>
+<td><strong>Done</strong></td>
+<td>JWT weak alg, OAuth state/PKCE, session cookie flags</td>
+</tr>
+</tbody>
+</table>
+<h2 id="6-business-logic-security">6 Business logic security<a class="headerlink" href="#6-business-logic-security" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Requirement</th>
+<th>Status</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Workflow/abuse analysis</td>
+<td><strong>Done</strong></td>
+<td><code>scanners/business_logic.py</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="78-sca-and-malicious-dependencies">7–8 SCA and malicious dependencies<a class="headerlink" href="#78-sca-and-malicious-dependencies" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Requirement</th>
+<th>Status</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Direct/transitive CVEs</td>
+<td><strong>Done</strong></td>
+<td><code>dependencies.py</code>, OSV, lockfiles</td>
+</tr>
+<tr>
+<td>Supply-chain risk model</td>
+<td><strong>Done</strong></td>
+<td><code>supply_chain.py</code>, <code>supply_chain/intel.py</code></td>
+</tr>
+<tr>
+<td>Typosquat / reputation</td>
+<td><strong>Done</strong></td>
+<td>Typosquat in <code>supply_chain.py</code> + <code>intel.typosquat_risk</code></td>
+</tr>
+<tr>
+<td>Provenance</td>
+<td><strong>Done</strong></td>
+<td><code>provenance.py</code>, SLSA attestation checks</td>
+</tr>
+</tbody>
+</table>
+<h2 id="910-behavioral-analysis-and-version-diff">9–10 Behavioral analysis and version diff<a class="headerlink" href="#910-behavioral-analysis-and-version-diff" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Requirement</th>
+<th>Status</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Isolated package sandbox</td>
+<td><strong>Done</strong></td>
+<td><code>supply_chain/sandbox.py</code> (Docker + registry metadata)</td>
+</tr>
+<tr>
+<td>Version differential</td>
+<td><strong>Done</strong></td>
+<td><code>dependency_diff.py</code>, <code>sbom/diff.py</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="11-sbom">11 SBOM<a class="headerlink" href="#11-sbom" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Requirement</th>
+<th>Status</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CycloneDX / SPDX</td>
+<td><strong>Done</strong></td>
+<td><code>argus sbom</code>, <code>sbom/cyclonedx.py</code>, <code>sbom/spdx.py</code></td>
+</tr>
+<tr>
+<td>Historical SBOM in cloud</td>
+<td><strong>Done</strong></td>
+<td><code>sboms</code> table, <code>storeSbom()</code> in cloud</td>
+</tr>
+</tbody>
+</table>
+<h2 id="1213-vulnerability-intelligence-and-reachability">12–13 Vulnerability intelligence and reachability<a class="headerlink" href="#1213-vulnerability-intelligence-and-reachability" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Requirement</th>
+<th>Status</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CVE/OSV/EPSS/KEV</td>
+<td><strong>Done</strong></td>
+<td><code>osv.py</code>, <code>exploit_signals.py</code></td>
+</tr>
+<tr>
+<td>Contextual prioritization</td>
+<td><strong>Done</strong></td>
+<td><code>analysis/risk_engine.py</code></td>
+</tr>
+<tr>
+<td>Reachability</td>
+<td><strong>Done</strong></td>
+<td><code>--reachability</code>, <code>--symbol-reachability</code>, metadata tags</td>
+</tr>
+</tbody>
+</table>
+<h2 id="14-vex">14 VEX<a class="headerlink" href="#14-vex" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Requirement</th>
+<th>Status</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>VEX export</td>
+<td><strong>Done</strong></td>
+<td><code>-f vex</code>; auto from reachability</td>
+</tr>
+<tr>
+<td>Cloud exception workflow</td>
+<td><strong>Done</strong></td>
+<td><code>/api/exceptions</code>, dashboard, owner/expire fields</td>
+</tr>
+</tbody>
+</table>
+<h2 id="1516-secrets-and-git">15–16 Secrets and Git<a class="headerlink" href="#1516-secrets-and-git" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Requirement</th>
+<th>Status</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Secret detection</td>
+<td><strong>Done</strong></td>
+<td><code>secrets.py</code>, rotation tracking</td>
+</tr>
+<tr>
+<td>Live verification</td>
+<td><strong>Done</strong></td>
+<td><code>--verify-secrets</code> (opt-in, local only)</td>
+</tr>
+<tr>
+<td>Git history</td>
+<td><strong>Done</strong></td>
+<td><code>--secrets-history</code>, <code>git-security</code> scanner</td>
+</tr>
+<tr>
+<td>Diff-aware scan</td>
+<td><strong>Done</strong></td>
+<td><code>--diff</code>, <code>--baseline</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="17-baseline">17 Baseline<a class="headerlink" href="#17-baseline" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Requirement</th>
+<th>Status</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Baseline for legacy repos</td>
+<td><strong>Done</strong></td>
+<td><code>--baseline</code>, <code>argus baseline create</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="1820-iac-containers-kubernetes">18–20 IaC, containers, Kubernetes<a class="headerlink" href="#1820-iac-containers-kubernetes" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Requirement</th>
+<th>Status</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Terraform/K8s/Compose/CF</td>
+<td><strong>Done</strong></td>
+<td><code>iac.py</code>, <code>cloud.py</code>, <code>argus iac</code></td>
+</tr>
+<tr>
+<td>Container static</td>
+<td><strong>Done</strong></td>
+<td><code>container.py</code>, <code>argus container</code></td>
+</tr>
+<tr>
+<td>Container image layers</td>
+<td><strong>Done</strong></td>
+<td><code>container_image.py</code>, Docker inspect</td>
+</tr>
+<tr>
+<td>Live K8s</td>
+<td><strong>Done</strong></td>
+<td>Commercial <code>argus cluster</code>, operator</td>
+</tr>
+</tbody>
+</table>
+<h2 id="2122-api-and-dast">21–22 API and DAST<a class="headerlink" href="#2122-api-and-dast" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Requirement</th>
+<th>Status</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>OpenAPI static</td>
+<td><strong>Done</strong></td>
+<td><code>api.py</code>, <code>argus api</code></td>
+</tr>
+<tr>
+<td>Dynamic API/DAST</td>
+<td><strong>Done</strong></td>
+<td><code>dast.py</code>, <code>--live-target</code>, posture probes</td>
+</tr>
+</tbody>
+</table>
+<h2 id="2325-server-agent-drift-fim">23–25 Server agent, drift, FIM<a class="headerlink" href="#2325-server-agent-drift-fim" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Requirement</th>
+<th>Status</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Host posture</td>
+<td><strong>Done</strong></td>
+<td><code>argus server scan</code>, <code>host_posture.py</code> (ports, SSH, users, packages)</td>
+</tr>
+<tr>
+<td>Multi-path agent</td>
+<td><strong>Done</strong></td>
+<td><code>argus agent</code></td>
+</tr>
+<tr>
+<td>Configuration drift</td>
+<td><strong>Done</strong></td>
+<td><code>argus drift</code>, cloud drift UI</td>
+</tr>
+<tr>
+<td>File integrity monitoring</td>
+<td><strong>Done</strong></td>
+<td>Agent <code>fim.py</code> for configured paths</td>
+</tr>
+</tbody>
+</table>
+<h2 id="2627-cloud-and-cicd">26–27 Cloud and CI/CD<a class="headerlink" href="#2627-cloud-and-cicd" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Requirement</th>
+<th>Status</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Static cloud IaC</td>
+<td><strong>Done</strong></td>
+<td><code>cloud.py</code></td>
+</tr>
+<tr>
+<td>Live AWS/Azure/GCP</td>
+<td><strong>Done</strong></td>
+<td>Commercial <code>cloud-live*</code> (read-only)</td>
+</tr>
+<tr>
+<td>CI/CD security</td>
+<td><strong>Done</strong></td>
+<td><code>cicd.py</code>, <code>argus cicd</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="2829-artifacts-and-attack-paths">28–29 Artifacts and attack paths<a class="headerlink" href="#2829-artifacts-and-attack-paths" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Requirement</th>
+<th>Status</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Provenance tracking</td>
+<td><strong>Done</strong></td>
+<td><code>provenance.py</code>, attestation metadata</td>
+</tr>
+<tr>
+<td>Attack-path correlation</td>
+<td><strong>Done</strong></td>
+<td><code>attack_chains.py</code>, <code>--attack-sim</code>, security graph</td>
+</tr>
+</tbody>
+</table>
+<h2 id="3031-risk-and-verification">30–31 Risk and verification<a class="headerlink" href="#3031-risk-and-verification" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Requirement</th>
+<th>Status</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Contextual risk engine</td>
+<td><strong>Done</strong></td>
+<td><code>analysis/risk_engine.py</code></td>
+</tr>
+<tr>
+<td>Verification states</td>
+<td><strong>Done</strong></td>
+<td><code>analysis/verification.py</code>, host/FIM/secrets verify</td>
+</tr>
+</tbody>
+</table>
+<h2 id="3234-ai-analyst-fix-engine-policies">32–34 AI analyst, fix engine, policies<a class="headerlink" href="#3234-ai-analyst-fix-engine-policies" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Requirement</th>
+<th>Status</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>AI explains, does not gate alone</td>
+<td><strong>Done</strong></td>
+<td>Policy engine is deterministic gate</td>
+</tr>
+<tr>
+<td><code>argus fix</code> with tiers</td>
+<td><strong>Done</strong></td>
+<td><code>fix</code>, verified patches, PR flow</td>
+</tr>
+<tr>
+<td>Policy engine</td>
+<td><strong>Done</strong></td>
+<td><code>argus policy check</code>, enterprise pack</td>
+</tr>
+</tbody>
+</table>
+<h2 id="35-ci-integration">35 CI integration<a class="headerlink" href="#35-ci-integration" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Requirement</th>
+<th>Status</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SARIF/JSON/MD/HTML/CSV/JUnit</td>
+<td><strong>Done</strong></td>
+<td>Reporters incl. <code>reporting/junit.py</code>, GitHub Action</td>
+</tr>
+<tr>
+<td>GitHub/GitLab/Bitbucket PR</td>
+<td><strong>Done</strong></td>
+<td><code>hosting.py</code> (Bitbucket Cloud API)</td>
+</tr>
+<tr>
+<td>PR review</td>
+<td><strong>Done</strong></td>
+<td><code>argus review</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="3638-monitoring-inventory-dashboard">36–38 Monitoring, inventory, dashboard<a class="headerlink" href="#3638-monitoring-inventory-dashboard" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Requirement</th>
+<th>Status</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Continuous monitoring</td>
+<td><strong>Done</strong></td>
+<td><code>watch</code>, <code>agent</code>, cloud ingest</td>
+</tr>
+<tr>
+<td>Asset inventory</td>
+<td><strong>Done</strong></td>
+<td><code>argus inventory</code>, cloud <code>/dashboard/assets</code></td>
+</tr>
+<tr>
+<td>SaaS dashboard</td>
+<td><strong>Done</strong></td>
+<td>Scans, drift, assets, exceptions, billing, orgs</td>
+</tr>
+</tbody>
+</table>
+<h2 id="39-alerting">39 Alerting<a class="headerlink" href="#39-alerting" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Requirement</th>
+<th>Status</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Slack/webhook on regression</td>
+<td><strong>Done</strong></td>
+<td><code>alerts.ts</code>, drift on ingest</td>
+</tr>
+<tr>
+<td>Email/PagerDuty/Teams</td>
+<td><strong>Done</strong></td>
+<td>Resend, PagerDuty Events API, Teams webhook</td>
+</tr>
+</tbody>
+</table>
+<h2 id="4043-multi-tenancy-cloud-security-agent-security-privacy">40–43 Multi-tenancy, cloud security, agent security, privacy<a class="headerlink" href="#4043-multi-tenancy-cloud-security-agent-security-privacy" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Requirement</th>
+<th>Status</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Orgs, invites, seat limits</td>
+<td><strong>Done</strong></td>
+<td>Cloud org UI, plans</td>
+</tr>
+<tr>
+<td>Tenant isolation</td>
+<td><strong>Done</strong></td>
+<td>Per-user/org scoped queries, audit</td>
+</tr>
+<tr>
+<td>Rate limits, audit, CSP</td>
+<td><strong>Done</strong></td>
+<td><code>audit.ts</code>, <code>ratelimit.ts</code>, <code>ENFORCE_CSP</code></td>
+</tr>
+<tr>
+<td>Metadata-only ingest</td>
+<td><strong>Done</strong></td>
+<td><code>upload.py</code>, ingest validation</td>
+</tr>
+<tr>
+<td>Agent least privilege</td>
+<td><strong>Done</strong></td>
+<td>Read-only checks; outbound-only push</td>
+</tr>
+</tbody>
+</table>
+<h2 id="4445-architecture-and-extensibility">44–45 Architecture and extensibility<a class="headerlink" href="#4445-architecture-and-extensibility" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Requirement</th>
+<th>Status</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Core vs cloud split</td>
+<td><strong>Done</strong></td>
+<td>Two repos, plugin entry points</td>
+</tr>
+<tr>
+<td>Scanner/reporter plugins</td>
+<td><strong>Done</strong></td>
+<td><code>core/plugin.py</code>, docs/plugins.md</td>
+</tr>
+<tr>
+<td>Plugin signing</td>
+<td><strong>Done</strong></td>
+<td><code>plugins/signing.py</code>, allowlist env</td>
+</tr>
+</tbody>
+</table>
+<h2 id="4648-finding-format-fp-management-performance">46–48 Finding format, FP management, performance<a class="headerlink" href="#4648-finding-format-fp-management-performance" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Requirement</th>
+<th>Status</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Rich finding schema</td>
+<td><strong>Done</strong></td>
+<td><code>Finding</code>, <code>ScanResult</code></td>
+</tr>
+<tr>
+<td>Suppressions/allowlist</td>
+<td><strong>Done</strong></td>
+<td><code>.argus.yml</code>, <code>.argus/exceptions.yml</code>, cloud exceptions</td>
+</tr>
+<tr>
+<td>Scan profiles</td>
+<td><strong>Done</strong></td>
+<td><code>--profile</code>, <code>--deep</code>, <code>profiles.py</code></td>
+</tr>
+<tr>
+<td>Cache, parallel, diff</td>
+<td><strong>Done</strong></td>
+<td>Engine cache, <code>--diff</code>, <code>--no-cache</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="4950-safe-scanning-and-observability">49–50 Safe scanning and observability<a class="headerlink" href="#4950-safe-scanning-and-observability" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Requirement</th>
+<th>Status</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Authorized targets only</td>
+<td><strong>Done</strong></td>
+<td>Docs + posture warnings</td>
+</tr>
+<tr>
+<td>Health check</td>
+<td><strong>Done</strong></td>
+<td>Cloud <code>/api/health</code></td>
+</tr>
+<tr>
+<td>CLI metrics/tracing</td>
+<td><strong>Done</strong></td>
+<td><code>observability/metrics.py</code>, <code>project_summary.metrics</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="5153-testing-and-release-security">51–53 Testing and release security<a class="headerlink" href="#5153-testing-and-release-security" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Requirement</th>
+<th>Status</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Comprehensive tests</td>
+<td><strong>Done</strong></td>
+<td>390+ pytest tests</td>
+</tr>
+<tr>
+<td>Release SBOM/provenance</td>
+<td><strong>Done</strong></td>
+<td><code>.github/workflows/publish.yml</code></td>
+</tr>
+<tr>
+<td>Vulnerable corpus</td>
+<td><strong>Done</strong></td>
+<td><code>tests/corpus/</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="5458-threat-model-and-continuous-model">54–58 Threat model and continuous model<a class="headerlink" href="#5458-threat-model-and-continuous-model" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Requirement</th>
+<th>Status</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Threat model doc</td>
+<td><strong>Done</strong></td>
+<td><code>THREAT_MODEL.md</code></td>
+</tr>
+<tr>
+<td>Prompt-injection defense</td>
+<td><strong>Done</strong></td>
+<td>Untrusted remote config off, injection tests</td>
+</tr>
+<tr>
+<td>Post-deploy re-evaluation</td>
+<td><strong>Done</strong></td>
+<td><code>intel/reevaluation.py</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="5961-commercial-model-and-cli">59–61 Commercial model and CLI<a class="headerlink" href="#5961-commercial-model-and-cli" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Requirement</th>
+<th>Status</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>OSS not artificially crippled</td>
+<td><strong>Done</strong></td>
+<td>Full scanners in core</td>
+</tr>
+<tr>
+<td>Cloud value = hosted ops</td>
+<td><strong>Done</strong></td>
+<td>Billing, ingest, orgs</td>
+</tr>
+<tr>
+<td>Spec CLI commands</td>
+<td><strong>Done</strong></td>
+<td>See command table below</td>
+</tr>
+</tbody>
+</table>
+<h2 id="6264-data-model-api-documentation">62–64 Data model, API, documentation<a class="headerlink" href="#6264-data-model-api-documentation" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Requirement</th>
+<th>Status</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Cloud schema</td>
+<td><strong>Done</strong></td>
+<td>users, scans, findings, orgs, assets, sboms, exceptions</td>
+</tr>
+<tr>
+<td>Public API</td>
+<td><strong>Done</strong></td>
+<td>Ingest, auth, assets, exceptions, MFA routes</td>
+</tr>
+<tr>
+<td>Documentation</td>
+<td><strong>Done</strong></td>
+<td><code>docs/*</code>, this file</td>
+</tr>
+</tbody>
+</table>
+<h2 id="6570-engineering-rules">65–70 Engineering rules<a class="headerlink" href="#6570-engineering-rules" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Requirement</th>
+<th>Status</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Incremental implementation</td>
+<td><strong>Done</strong></td>
+<td>Phased delivery</td>
+</tr>
+<tr>
+<td>No untrusted execution</td>
+<td><strong>Done</strong></td>
+<td>Sandbox metadata only; no repo instruction execution</td>
+</tr>
+<tr>
+<td>Verified intelligence vision</td>
+<td><strong>Done</strong></td>
+<td>Verification states, DAST/host depth, intel re-eval</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="cli-command-map-60">CLI command map (§60)<a class="headerlink" href="#cli-command-map-60" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Spec command</th>
+<th>Argus command</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>argus scan</code></td>
+<td><code>argus scan</code></td>
+<td>Done</td>
+</tr>
+<tr>
+<td><code>argus scan --deep</code></td>
+<td><code>argus scan --deep</code> / <code>--profile deep</code></td>
+<td>Done</td>
+</tr>
+<tr>
+<td><code>argus scan --diff</code></td>
+<td><code>argus scan --diff</code></td>
+<td>Done</td>
+</tr>
+<tr>
+<td><code>argus sbom</code></td>
+<td><code>argus sbom</code></td>
+<td>Done</td>
+</tr>
+<tr>
+<td><code>argus dependencies</code></td>
+<td><code>argus dependencies</code></td>
+<td>Done</td>
+</tr>
+<tr>
+<td><code>argus supply-chain</code></td>
+<td><code>argus supply-chain</code></td>
+<td>Done</td>
+</tr>
+<tr>
+<td><code>argus secrets</code></td>
+<td><code>argus secrets</code></td>
+<td>Done</td>
+</tr>
+<tr>
+<td><code>argus iac</code></td>
+<td><code>argus iac</code></td>
+<td>Done</td>
+</tr>
+<tr>
+<td><code>argus container</code></td>
+<td><code>argus container</code></td>
+<td>Done</td>
+</tr>
+<tr>
+<td><code>argus api</code></td>
+<td><code>argus api</code></td>
+<td>Done</td>
+</tr>
+<tr>
+<td><code>argus server scan</code></td>
+<td><code>argus server scan</code></td>
+<td>Done</td>
+</tr>
+<tr>
+<td><code>argus fix</code></td>
+<td><code>argus fix</code></td>
+<td>Done</td>
+</tr>
+<tr>
+<td><code>argus baseline create</code></td>
+<td><code>argus baseline create</code></td>
+<td>Done</td>
+</tr>
+<tr>
+<td><code>argus policy check</code></td>
+<td><code>argus policy check</code></td>
+<td>Done</td>
+</tr>
+<tr>
+<td><code>argus watch</code> / agent</td>
+<td><code>argus watch</code>, <code>argus agent</code></td>
+<td>Done</td>
+</tr>
+<tr>
+<td><code>argus cluster</code></td>
+<td>Commercial plugin</td>
+<td>Done</td>
+</tr>
+<tr>
+<td><code>argus cloud-live*</code></td>
+<td>Commercial plugins</td>
+<td>Done</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="market-and-industry-alignment">Market and industry alignment<a class="headerlink" href="#market-and-industry-alignment" title="Permanent link">&para;</a></h2>
+<p>Argus follows common AppSec / DevSecOps expectations:</p>
+<ul>
+<li><strong>Deterministic CI gates</strong> via SARIF, <code>--fail-on</code>, baselines, and policies (SAST/SCA best practice).</li>
+<li><strong>No false certainty</strong> — disclaimers and limitation docs (SOC2/ISO awareness: tools assist, not certify).</li>
+<li><strong>Data minimization</strong> for SaaS ingest (finding metadata only; no source upload by default).</li>
+<li><strong>Read-only cloud/K8s</strong> connectors (CIS/cloud posture industry norm).</li>
+<li><strong>SBOM standards</strong> CycloneDX/SPDX (EO 14028 / SLSA ecosystem alignment).</li>
+<li><strong>Supply-chain signals</strong> beyond CVEs (SSDF / SLSA direction).</li>
+<li><strong>Separation of OSS core and commercial ops</strong> (similar to GitLab, Snyk, HashiCorp models).</li>
+</ul>
+<p>See <a href="../PHASES/">PHASES.md</a> and <a href="../COMPLETION.md">COMPLETION.md</a> for release tracking.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Argus AppSec, Apache-2.0. The command is <code>argus</code>.
+    </div>
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.sections", "navigation.top", "navigation.tracking", "navigation.footer", "content.code.copy", "content.code.annotate", "search.suggest", "search.highlight", "toc.follow"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>
