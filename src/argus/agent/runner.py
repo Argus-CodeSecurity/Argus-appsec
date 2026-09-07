@@ -24,7 +24,7 @@ class AgentCycleSummary:
     exit_code: int = 0
 
 
-def _scan_target(target: AgentTarget, host_label: str | None) -> tuple[ScanResult, Callable[[], None]]:
+def _scan_target(target: AgentTarget, host_label: str | None) -> tuple[Callable[[], ScanResult], Callable[[], None]]:
     resolved = resolve(target.path)
     if resolved.project is None:
         raise RuntimeError(f"Agent target is not a scannable path or repo: {target.path}")
@@ -46,7 +46,7 @@ def _scan_target(target: AgentTarget, host_label: str | None) -> tuple[ScanResul
             result.target = f"{host_label}:{result.target}"
         return result
 
-    return scan(), resolved.cleanup
+    return scan, resolved.cleanup
 
 
 def run_agent_cycle(

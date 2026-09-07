@@ -34,7 +34,7 @@ def render_lessons(result: ScanResult) -> str:
             out.append(f"  Why it matters: {f.why_vulnerable}")
         if f.attacker_perspective:
             out.append(f"  How it is exploited: {f.attacker_perspective}")
-        if f.exploit and getattr(f.exploit, "exploit_walkthrough", ""):
+        if f.exploit and getattr(f.exploit, "exploit_walkthrough", None):
             out.append(f"  Walkthrough: {f.exploit.exploit_walkthrough}")
         if f.remediation:
             out.append(f"  How to fix it: {f.remediation.guidance or f.remediation.summary}")

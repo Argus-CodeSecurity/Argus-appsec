@@ -82,8 +82,9 @@ def push_result(
     non-2xx response. A caller may pass its own ``client`` (used by tests with a
     mock transport).
     """
-    import httpx
     import time
+
+    import httpx
 
     endpoint = url.rstrip("/") + _INGEST_PATH
     headers = {"Authorization": f"Bearer {token}", "User-Agent": "argus-push"}

@@ -42,7 +42,7 @@ def apply_exceptions(findings: list[Finding], exceptions: list[FindingException]
     if not exceptions:
         return findings, 0
     now = datetime.utcnow().date().isoformat()
-    active = {}
+    active: dict[str, FindingException] = {}
     for ex in exceptions:
         if ex.expires_at and ex.expires_at < now:
             continue
@@ -52,17 +52,17 @@ def apply_exceptions(findings: list[Finding], exceptions: list[FindingException]
     suppressed = 0
     for f in findings:
         fp = f.fingerprint()
-        ex = active.get(fp)
-        if ex:
+        matched = active.get(fp)
+        if matched is not None:
             suppressed += 1
             f.metadata["exception"] = {
-                "status": ex.status,
-                "reason": ex.reason,
-                "owner": ex.owner,
+                "status": matched.status,
+                "reason": matched.reason,
+                "owner": matched.owner,
             }
-            if ex.status == "suppress":
+            if matched.status == "suppress":
                 continue
-            f.metadata["verification"] = "accepted" if ex.status == "accept" else "false_positive"
+            f.metadata["verification"] = "accepted" if matched.status == "accept" else "false_positive"
         kept.append(f)
     return kept, suppressed
 
