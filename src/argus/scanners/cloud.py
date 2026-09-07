@@ -101,9 +101,13 @@ class CloudScanner(Scanner):
             text = f.text()
             for rule_id, title, pattern, severity, why, fix in _RULES:
                 if rule_id == "cloud.iam-wildcard":
-                    if pattern.search(text):
+                    match = pattern.search(text)
+                    if match:
                         counter += 1
-                        yield self._mk(f.rel_path, rule_id, title, severity, why, fix, 1, counter)
+                        snippet = match.group(0).replace("\n", " ").strip()[:200]
+                        yield self._mk(
+                            f.rel_path, rule_id, title, severity, why, fix, 1, snippet, counter,
+                        )
                     continue
                 for lineno, line in enumerate(f.lines(), start=1):
                     if pattern.search(line):

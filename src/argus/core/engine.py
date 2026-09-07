@@ -104,11 +104,16 @@ class ScanEngine:
                 outcomes = list(pool.map(run_one, scanners))
         else:
             outcomes = [run_one(s) for s in scanners]
-        for findings, error in outcomes:
+        failed: list[str] = []
+        for scanner, (findings, error) in zip(scanners, outcomes, strict=True):
             for finding in findings:
                 result.add(finding)
             if error:
                 result.errors.append(error)
+                failed.append(scanner.name)
+        if failed:
+            result.scanners_failed = failed
+            result.scanners_run = [n for n in result.scanners_run if n not in failed]
         if cache is not None:
             cache.save()
 
@@ -454,6 +459,8 @@ class ScanEngine:
 
     # --- CI gating helper ---------------------------------------------------
     def should_fail(self, result: ScanResult) -> bool:
+        if self.config.fail_on_error and result.errors:
+            return True
         if self.config.fail_on is None:
             return False
         return result.highest_severity() >= self.config.fail_on

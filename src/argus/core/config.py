@@ -48,6 +48,8 @@ class Config:
     generate_patches: bool = False
     # Fail the process (non-zero exit) at/above this severity, for CI gating.
     fail_on: Severity | None = None
+    # Fail when any scanner crashes (recommended for ci/production profiles).
+    fail_on_error: bool = False
     # Reuse cached findings for unchanged files (file-local scanners only).
     cache: bool = True
     # Run scanners concurrently. Output stays deterministic either way.
@@ -120,6 +122,8 @@ class Config:
             cfg.min_severity = Severity.parse(data["min_severity"])
         if data.get("fail_on"):
             cfg.fail_on = Severity.parse(data["fail_on"])
+        if "fail_on_error" in data:
+            cfg.fail_on_error = bool(data["fail_on_error"])
         ai = data.get("ai", {})
         if ai:
             cfg.ai = AIConfig(

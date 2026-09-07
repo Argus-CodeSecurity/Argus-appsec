@@ -63,6 +63,25 @@ Resources:
     assert "cloud.open-security-group" in rules
 
 
+def test_cloud_iam_wildcard_policy(tmp_path: Path) -> None:
+    """Regression for C-01: wildcard IAM policies must not crash the scanner."""
+    tf = """
+resource "aws_iam_policy" "admin" {
+  policy = jsonencode({
+    Statement = [{
+      Effect   = "Allow"
+      Action   = "*"
+      Resource = "*"
+    }]
+  })
+}
+"""
+    findings = list(CloudScanner().scan(_ctx(tmp_path, ("iam.tf", tf))))
+    rules = {f.rule_id for f in findings}
+    assert "cloud.iam-wildcard" in rules
+    assert len(findings) >= 1
+
+
 def test_inventory_exports_architecture(tmp_path: Path) -> None:
     (tmp_path / "requirements.txt").write_text("django==4.2\n", encoding="utf-8")
     (tmp_path / "Dockerfile").write_text("FROM python:3.12\n", encoding="utf-8")

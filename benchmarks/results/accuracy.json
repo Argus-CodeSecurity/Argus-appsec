@@ -1,4 +1,6 @@
 {
+  "scope": "labeled_corpus_v1",
+  "disclaimer": "Scores reflect a small in-repo labeled corpus used for regression detection only. They are not a claim of real-world accuracy on arbitrary production codebases.",
   "domains": {
     "iac": {
       "recall": 1.0,

@@ -109,6 +109,21 @@ def _is_safe_clone_url(url: str) -> bool:
     return bool(_SAFE_URL.match(url) or _SCP_LIKE.match(url))
 
 
+# Maximum cloned repository size (bytes) before the scan is aborted.
+_MAX_CLONE_BYTES = 500 * 1024 * 1024  # 500 MiB
+
+
+def _clone_dir_size(path: Path) -> int:
+    total = 0
+    for root, _dirs, files in os.walk(path):
+        for name in files:
+            try:
+                total += (Path(root) / name).stat().st_size
+            except OSError:
+                continue
+    return total
+
+
 def _clone(url: str, *, branch: str | None) -> ResolvedTarget:
     if shutil.which("git") is None:
         raise RuntimeError(
@@ -138,6 +153,14 @@ def _clone(url: str, *, branch: str | None) -> ResolvedTarget:
     except subprocess.CalledProcessError as exc:
         shutil.rmtree(tmp, ignore_errors=True)
         raise RuntimeError(f"git clone failed: {exc.stderr.strip()}") from exc
+
+    clone_bytes = _clone_dir_size(Path(tmp))
+    if clone_bytes > _MAX_CLONE_BYTES:
+        shutil.rmtree(tmp, ignore_errors=True)
+        raise RuntimeError(
+            f"cloned repository exceeds size limit ({clone_bytes} bytes > "
+            f"{_MAX_CLONE_BYTES} bytes)"
+        )
 
     origin = _origin_for(url)
     project = Project.from_path(tmp, origin=origin, origin_url=url,

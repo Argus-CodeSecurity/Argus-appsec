@@ -147,6 +147,13 @@ async def api_ingest(request: Request, session: Session = Depends(get_session)):
 
 def serve(host: str = "127.0.0.1", port: int = 8000) -> None:
     """Launch the dashboard with uvicorn (used by ``argus dashboard``)."""
+    import logging
     import uvicorn
 
+    if host in ("0.0.0.0", "::"):
+        logging.getLogger("argus.dashboard").warning(
+            "Binding the dashboard to %s exposes scan history to the local network. "
+            "Prefer 127.0.0.1 unless you intend to share it.",
+            host,
+        )
     uvicorn.run(app, host=host, port=port)

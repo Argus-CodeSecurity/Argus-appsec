@@ -152,6 +152,10 @@ def scan(
     fail_on: str | None = typer.Option(
         None, "--fail-on", help="Exit non-zero if any finding is at/above this severity."
     ),
+    fail_on_error: bool | None = typer.Option(
+        None, "--fail-on-error/--no-fail-on-error",
+        help="Exit non-zero if any scanner crashes (default: off; on for ci/production profiles).",
+    ),
     baseline: Path | None = typer.Option(
         None, "--baseline",
         help="Path to a previous Argus JSON report; report only findings not in it.",
@@ -254,7 +258,8 @@ def scan(
             profile=profile_name,
             exclude=exclude, ai_provider=ai_provider, ai_model=ai_model, no_ai=no_ai,
             attack_sim=attack_sim, patches=patches, min_severity=min_severity,
-            fail_on=fail_on, reachability=reachability, symbol_reachability=symbol_reachability,
+            fail_on=fail_on, fail_on_error=fail_on_error,
+            reachability=reachability, symbol_reachability=symbol_reachability,
             no_cache=no_cache,
             verify_secrets=verify_secrets, secrets_history=secrets_history,
             diff_ref=diff_ref,
@@ -296,10 +301,16 @@ def scan(
         _emit(result, fmt, output, audience=audience)
 
         if engine.should_fail(result):
-            err_console.print(
-                f"[red]Failing:[/red] findings at/above "
-                f"{cfg.fail_on.label if cfg.fail_on else ''}."
-            )
+            if cfg.fail_on_error and result.errors:
+                err_console.print(
+                    "[red]Failing:[/red] one or more scanners failed "
+                    f"({', '.join(result.scanners_failed or ['unknown'])})."
+                )
+            else:
+                err_console.print(
+                    f"[red]Failing:[/red] findings at/above "
+                    f"{cfg.fail_on.label if cfg.fail_on else ''}."
+                )
             raise typer.Exit(1)
     except FileNotFoundError as exc:
         # e.g. an explicit --config path that doesn't exist. Fail loudly with a
@@ -900,7 +911,9 @@ def watch(
         raise typer.Exit(2)
 
     def scan_once() -> ScanResult:
-        return ScanEngine(cfg).scan(resolved.project)
+        proj = resolved.project
+        assert proj is not None
+        return ScanEngine(cfg).scan(proj)
 
     def maybe_push(result: ScanResult) -> None:
         if not push:
@@ -1757,14 +1770,19 @@ def _focused_scan(
 
 def _build_config(*, config, project_root, scanners, profile=None, exclude, ai_provider, ai_model,
                   no_ai, attack_sim, patches, min_severity, fail_on,
+                  fail_on_error: bool | None = None,
                   reachability=False, symbol_reachability=False, no_cache=False,
                   verify_secrets=False, secrets_history=False, diff_ref: str | None = None) -> Config:
     cfg = Config.load(path=config, project_root=project_root)
     if profile:
-        from argus.profiles import apply_profile
+        from argus.profiles import PROFILES, apply_profile
+        key = profile.strip().lower()
         selected = apply_profile(profile)
         if selected:
             cfg.scanners = selected
+        prof = PROFILES.get(key)
+        if prof and prof.fail_on_error:
+            cfg.fail_on_error = True
     if reachability or symbol_reachability:
         dep = cfg.scanner_options.setdefault("dependencies", {})
         dep["reachability"] = True
@@ -1798,6 +1816,8 @@ def _build_config(*, config, project_root, scanners, profile=None, exclude, ai_p
         cfg.min_severity = Severity.parse(min_severity)
     if fail_on:
         cfg.fail_on = Severity.parse(fail_on)
+    if fail_on_error is not None:
+        cfg.fail_on_error = fail_on_error
     return cfg
 
 
@@ -1890,6 +1910,10 @@ def _emit(result: ScanResult, formats: list[str], output: Path | None,
 
 
 def _print_table(result: ScanResult) -> None:
+    if result.errors:
+        for err in result.errors:
+            err_console.print(f"[yellow]Scanner failed:[/yellow] {escape(err)}")
+
     findings = result.sorted_findings()
     counts = result.counts_by_severity()
 
@@ -1902,7 +1926,10 @@ def _print_table(result: ScanResult) -> None:
     ))
 
     if not findings:
-        console.print("[green]No findings at or above the configured severity.[/green]")
+        if result.errors:
+            console.print("[yellow]No findings, but one or more scanners failed.[/yellow]")
+        else:
+            console.print("[green]No findings at or above the configured severity.[/green]")
         return
 
     table = Table(show_lines=False)
@@ -1927,8 +1954,11 @@ def _print_table(result: ScanResult) -> None:
         )
     console.print(table)
 
-    if result.errors:
-        err_console.print(f"[yellow]{len(result.errors)} scan warning(s).[/yellow]")
+
+def _print_scan_warnings(result: ScanResult) -> None:
+    """Print scanner failures (always, including when table output is skipped)."""
+    for err in result.errors:
+        err_console.print(f"[yellow]Scanner failed:[/yellow] {escape(err)}")
 
 
 _STARTER_CONFIG = """\

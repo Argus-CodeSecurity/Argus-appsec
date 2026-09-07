@@ -77,10 +77,13 @@ def push_result(
     """POST an ingest payload to ``{url}/api/scans`` with a bearer token.
 
     Returns the decoded JSON response (e.g. ``{"scanId": ..., "url": ...}``).
-    Raises :class:`PushError` on a network problem or a non-2xx response. A
-    caller may pass its own ``client`` (used by tests with a mock transport).
+    Handles async ``202 Accepted`` by polling ``/api/ingest/jobs/{jobId}`` until
+    the scan is ready. Raises :class:`PushError` on a network problem or a
+    non-2xx response. A caller may pass its own ``client`` (used by tests with a
+    mock transport).
     """
     import httpx
+    import time
 
     endpoint = url.rstrip("/") + _INGEST_PATH
     headers = {"Authorization": f"Bearer {token}", "User-Agent": "argus-push"}
@@ -98,6 +101,35 @@ def push_result(
                 "authentication failed; check the cloud API token "
                 "(--token / ARGUS_CLOUD_TOKEN)."
             )
+        if resp.status_code == 202:
+            body = resp.json()
+            job_id = body.get("jobId")
+            if not job_id:
+                raise PushError("cloud accepted async ingest but returned no jobId")
+            poll_url = url.rstrip("/") + f"/api/ingest/jobs/{job_id}"
+            deadline = time.monotonic() + max(timeout, 60.0)
+            while time.monotonic() < deadline:
+                poll = client.get(poll_url, headers=headers)
+                if poll.status_code in (401, 403):
+                    raise PushError("authentication failed while polling ingest job")
+                if poll.status_code >= 300:
+                    raise PushError(
+                        f"cloud ingest poll failed (HTTP {poll.status_code}): "
+                        f"{poll.text[:300]}"
+                    )
+                status_body = poll.json()
+                state = status_body.get("status")
+                if state == "completed" and status_body.get("scanId"):
+                    return {
+                        "scanId": status_body["scanId"],
+                        "url": status_body.get("url"),
+                    }
+                if state == "failed":
+                    raise PushError(
+                        f"cloud ingest failed: {status_body.get('error', 'unknown error')}"
+                    )
+                time.sleep(0.5)
+            raise PushError("timed out waiting for cloud ingest job to complete")
         if resp.status_code >= 300:
             raise PushError(
                 f"cloud rejected the scan (HTTP {resp.status_code}): "

@@ -38,7 +38,10 @@ def _scan_target(target: AgentTarget, host_label: str | None) -> tuple[ScanResul
         cfg.scanners = target.scanners
 
     def scan() -> ScanResult:
-        result = ScanEngine(cfg).scan(resolved.project)
+        proj = resolved.project
+        if proj is None:
+            raise RuntimeError(f"Agent target is not a scannable path or repo: {target.path}")
+        result = ScanEngine(cfg).scan(proj)
         if host_label:
             result.target = f"{host_label}:{result.target}"
         return result

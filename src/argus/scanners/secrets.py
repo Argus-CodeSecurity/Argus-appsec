@@ -98,6 +98,14 @@ class SecretsScanner(Scanner):
         entropy_enabled = bool(opts.get("entropy", True))
         verify = bool(opts.get("verify", False))
         counter = 0
+        if verify:
+            import warnings
+
+            warnings.warn(
+                "Live secret verification makes outbound network requests that include "
+                "detected credential material. Use only on local targets you own.",
+                stacklevel=2,
+            )
 
         for f in ctx.project.files():
             if f.suffix in self._SKIP_SUFFIXES or f.is_probably_binary():

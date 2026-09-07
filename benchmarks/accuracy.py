@@ -218,10 +218,23 @@ def main(write_json: bool = False) -> int:
 
     print("Argus AppSec, labeled-corpus accuracy")
     print("=" * 52)
+    print(
+        "NOTE: This is a small in-repo labeled corpus for regression detection only.\n"
+        "      It is NOT a claim of real-world 100% accuracy on production codebases."
+    )
     print(f"{'domain':<10} {'recall':>8} {'precision':>11} {'vuln':>6} {'safe-FP':>9}")
     print("-" * 52)
     tot = {"tp": 0, "fn": 0, "fp": 0}
-    report: dict[str, object] = {"domains": {}, "min_severity": MIN_SEVERITY.label}
+    report: dict[str, object] = {
+        "domains": {},
+        "min_severity": MIN_SEVERITY.label,
+        "scope": "labeled_corpus_v1",
+        "disclaimer": (
+            "Scores reflect a small in-repo labeled corpus used for regression "
+            "detection only. They are not a claim of real-world accuracy on "
+            "arbitrary production codebases."
+        ),
+    }
     for name in sorted(domains):
         d = domains[name]
         recall = _rate(d["tp"], d["tp"] + d["fn"])

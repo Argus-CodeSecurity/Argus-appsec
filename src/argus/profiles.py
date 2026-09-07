@@ -10,6 +10,7 @@ class ScanProfile:
     name: str
     scanners: list[str]
     description: str
+    fail_on_error: bool = False
 
 
 # Empty scanners list means "all applicable" in ScanEngine.
@@ -43,11 +44,13 @@ PROFILES: dict[str, ScanProfile] = {
         "ci",
         ["secrets", "patterns", "dependencies", "cicd", "iac"],
         "Pull-request gate: new risk in code, deps, and pipeline config.",
+        fail_on_error=True,
     ),
     "production": ScanProfile(
         "production",
         ["secrets", "dependencies", "supply-chain", "iac", "container", "cloud", "cicd"],
         "Deployment posture: no secrets, safe deps, infra and container config.",
+        fail_on_error=True,
     ),
 }
 

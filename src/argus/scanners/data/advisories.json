@@ -1,8 +1,8 @@
 {
-  "_comment": "Minimal offline advisory dataset for the dependency scanner. Real deployments sync this from OSV/GitHub Advisory data via a plugin; this seed set makes the scanner useful out of the box and gives tests deterministic input. Version ranges use simple comparison semantics handled by the scanner.",
+  "_comment": "Minimal offline advisory seed for air-gapped runs. IDs use real CVE identifiers only — never synthetic GHSA ids. For production air-gap, mirror OSV and replace this file.",
   "advisories": [
     {
-      "id": "GHSA-argus-0001",
+      "id": "CVE-2023-30861",
       "ecosystem": "PyPI",
       "package": "flask",
       "vulnerable": "<2.2.5",
@@ -14,7 +14,7 @@
       "cwe": ["CWE-539"]
     },
     {
-      "id": "GHSA-argus-0002",
+      "id": "CVE-2023-32681",
       "ecosystem": "PyPI",
       "package": "requests",
       "vulnerable": "<2.31.0",
@@ -26,7 +26,7 @@
       "cwe": ["CWE-200"]
     },
     {
-      "id": "GHSA-argus-0003",
+      "id": "CVE-2020-14343",
       "ecosystem": "PyPI",
       "package": "pyyaml",
       "vulnerable": "<5.4",
@@ -38,7 +38,7 @@
       "cwe": ["CWE-502"]
     },
     {
-      "id": "GHSA-argus-0004",
+      "id": "CVE-2021-23337",
       "ecosystem": "npm",
       "package": "lodash",
       "vulnerable": "<4.17.21",
@@ -50,7 +50,7 @@
       "cwe": ["CWE-77"]
     },
     {
-      "id": "GHSA-argus-0005",
+      "id": "CVE-2023-45857",
       "ecosystem": "npm",
       "package": "axios",
       "vulnerable": "<1.6.0",
@@ -62,7 +62,7 @@
       "cwe": ["CWE-918"]
     },
     {
-      "id": "GHSA-argus-0006",
+      "id": "CVE-2021-44906",
       "ecosystem": "npm",
       "package": "minimist",
       "vulnerable": "<1.2.6",

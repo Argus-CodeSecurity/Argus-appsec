@@ -226,6 +226,7 @@ class ScanResult(BaseModel):
     finished_at: datetime | None = None
     argus_version: str = ""
     scanners_run: list[str] = Field(default_factory=list)
+    scanners_failed: list[str] = Field(default_factory=list)
     findings: list[Finding] = Field(default_factory=list)
     # Snapshot of the project model (languages, frameworks, etc.) for the report.
     project_summary: dict[str, Any] = Field(default_factory=dict)

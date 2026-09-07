@@ -133,7 +133,7 @@ CALL_SINKS: list[Sink] = [
     ),
     Sink(
         id="ast-command-injection",
-        fn=re.compile(r"(^|\.)(exec|execSync|spawnSync)$"),
+        fn=re.compile(r"(^|\.)(execSync|spawnSync)$"),
         cwe=["CWE-78"], owasp=["A03:2021-Injection"], severity=Severity.HIGH,
         title="OS command injection (tainted value reaches a shell command)",
         why="Untrusted input reaches child_process exec, which runs it via the shell.",
@@ -315,7 +315,17 @@ class _JsAnalyzer:
         fn_text = self._text(fn)
         sink = next((s for s in CALL_SINKS if s.fn.search(fn_text)), None)
         if sink is None:
-            return None
+            # child_process.exec — not RegExp.prototype.exec
+            if fn.type == "member_expression" and self._text(fn).endswith(".exec"):
+                obj = fn.child_by_field_name("object")
+                obj_text = self._text(obj) if obj else ""
+                if obj is not None and obj.type == "regex":
+                    return None
+                if "child_process" not in obj_text and obj_text not in ("cp", "childProcess"):
+                    return None
+                sink = next(s for s in CALL_SINKS if s.id == "ast-command-injection")
+            else:
+                return None
         args = call.child_by_field_name("arguments")
         if args is None:
             return None
