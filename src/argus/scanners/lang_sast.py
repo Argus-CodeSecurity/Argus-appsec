@@ -45,6 +45,38 @@ _RULES: dict[str, list[tuple[str, re.Pattern, str, Severity, str]]] = {
         ("lang.c.sprintf", re.compile(r"\bsprintf\s*\("),
          "Unbounded sprintf", Severity.HIGH, "CWE-120"),
     ],
+    ".go": [
+        ("lang.go.sql-sprintf", re.compile(r"(?i)\.(Query|Exec)\w*\(\s*fmt\.Sprintf\("),
+         "SQL via fmt.Sprintf", Severity.HIGH, "CWE-89"),
+        ("lang.go.unsafe", re.compile(r"\bunsafe\.Pointer\b"),
+         "Go unsafe pointer", Severity.MEDIUM, "CWE-119"),
+    ],
+    ".cs": [
+        ("lang.csharp.sql-concat", re.compile(r"(?i)SqlCommand\s*\([^)]*\+"),
+         "SQL command built with concatenation", Severity.HIGH, "CWE-89"),
+        ("lang.csharp.deser", re.compile(r"BinaryFormatter\s*\("),
+         "BinaryFormatter deserialization", Severity.HIGH, "CWE-502"),
+    ],
+    ".kt": [
+        ("lang.kotlin.runtime-exec", re.compile(r"Runtime\.getRuntime\(\)\.exec\s*\("),
+         "Kotlin/Java runtime exec", Severity.HIGH, "CWE-78"),
+    ],
+    ".swift": [
+        ("lang.swift.shell", re.compile(r"Process\s*\(\)\.launch"),
+         "Swift Process launch", Severity.MEDIUM, "CWE-78"),
+    ],
+    ".sh": [
+        ("lang.shell.curl-pipe", re.compile(r"(?:curl|wget)\s+[^\n|]+\|\s*(?:ba)?sh\b"),
+         "Remote script piped to shell", Severity.HIGH, "CWE-494"),
+        ("lang.shell.eval-var", re.compile(r"\beval\s+[\"']?\$"),
+         "Shell eval on variable", Severity.HIGH, "CWE-94"),
+    ],
+    ".ps1": [
+        ("lang.ps1.iex", re.compile(r"\bIEX\s*\("),
+         "PowerShell Invoke-Expression", Severity.HIGH, "CWE-94"),
+        ("lang.ps1.download", re.compile(r"DownloadString\s*\("),
+         "PowerShell remote download", Severity.MEDIUM, "CWE-494"),
+    ],
 }
 
 
@@ -52,7 +84,7 @@ _RULES: dict[str, list[tuple[str, re.Pattern, str, Severity, str]]] = {
 class LangSastScanner(Scanner):
     name = "lang-sast"
     category = "sast"
-    description = "Pattern SAST for Java, PHP, Ruby, Rust, and C/C++."
+    description = "Pattern SAST for Java, PHP, Ruby, Rust, C/C++, Go, C#, Kotlin, Swift, and shell scripts."
     file_local = True
 
     def applies_to(self, project) -> bool:

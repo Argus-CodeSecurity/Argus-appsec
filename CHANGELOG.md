@@ -7,6 +7,18 @@ include breaking changes, noted explicitly).
 
 ## [Unreleased]
 
+## [0.8.1], 2026-09-07
+
+### Added
+- **`malware` scanner**: backdoors, webshells, obfuscated exec, reverse shells,
+  cryptominers, credential exfiltration, suspicious npm install scripts.
+- **`lang-sast`**: Go, C#, Kotlin, Swift, shell, and PowerShell rules.
+
+### Fixed
+- **Deep profile**: `ast-python-interproc` renamed to `ast-python-xfile` (cross-file taint).
+- **Authz precision**: skip test files and public auth routes; detect router-level
+  `Depends()`; reduce false positives on token-in-URL heuristics.
+
 ## [0.8.0], 2026-09-07
 
 Platform expansion: supply chain, policy engine, SBOM, infrastructure scanning,

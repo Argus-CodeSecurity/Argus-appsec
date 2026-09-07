@@ -16,7 +16,7 @@ class ScanProfile:
 PROFILES: dict[str, ScanProfile] = {
     "fast": ScanProfile(
         "fast",
-        ["secrets", "patterns", "dependencies"],
+        ["secrets", "patterns", "malware", "dependencies"],
         "Quick CI gate: secrets, pattern SAST, direct dependency CVEs.",
     ),
     "standard": ScanProfile(
@@ -27,7 +27,7 @@ PROFILES: dict[str, ScanProfile] = {
     "deep": ScanProfile(
         "deep",
         [
-            "secrets", "patterns", "ast-python", "ast-python-interproc",
+            "secrets", "patterns", "malware", "ast-python", "ast-python-xfile",
             "ast-js", "lang-sast", "dependencies", "dependency-diff", "supply-chain",
             "provenance", "authz", "api", "business-logic", "git-security",
             "iac", "cicd", "container", "container-image", "cloud", "llm", "dast",

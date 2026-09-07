@@ -16,8 +16,10 @@ from argus.core.plugin import ScannerContext
 from argus.core.project import Project
 from argus.inventory.dependency_diff import diff_packages
 from argus.sbom.spdx import build_spdx
+from argus.profiles import apply_profile
 from argus.scanners.authz import AuthzScanner
 from argus.scanners.dependency_diff import DependencyDiffScanner
+from argus.scanners.malware import MalwareScanner
 from argus.supply_chain.behavior import BehaviorFingerprint, compare_fingerprints, npm_fingerprint
 from argus.supply_chain.intel import is_malicious, load_malicious_packages
 
@@ -167,3 +169,44 @@ def test_cross_file_ssrf_cloud_secret_chain():
     )
     chains = find_chains([ssrf, secret])
     assert any(c.id == "ssrf-to-cloud-credentials" for c in chains)
+
+
+def test_deep_profile_uses_ast_python_xfile():
+    scanners = apply_profile("deep")
+    assert "ast-python-xfile" in scanners
+    assert "ast-python-interproc" not in scanners
+    assert "malware" in scanners
+
+
+def test_malware_flags_obfuscated_python(tmp_path: Path):
+    (tmp_path / "evil.py").write_text(
+        "import base64\nexec(base64.decode('ZWNobyBoYWNr'))\n",
+        encoding="utf-8",
+    )
+    ctx = ScannerContext(project=Project.from_path(tmp_path), config=Config())
+    rules = {f.rule_id for f in MalwareScanner().scan(ctx)}
+    assert "malware.obfuscated-exec" in rules
+
+
+def test_authz_skips_public_login_route(tmp_path: Path):
+    (tmp_path / "app.py").write_text(
+        'from fastapi import FastAPI\napp = FastAPI()\n\n'
+        '@app.post("/user/login")\nasync def login():\n    return {}\n',
+        encoding="utf-8",
+    )
+    ctx = ScannerContext(project=Project.from_path(tmp_path), config=Config())
+    rules = {f.rule_id for f in AuthzScanner().scan(ctx)}
+    assert "authz.missing-authentication" not in rules
+
+
+def test_authz_router_level_depends(tmp_path: Path):
+    (tmp_path / "routes.py").write_text(
+        "from fastapi import APIRouter, Depends\n"
+        "router = APIRouter(dependencies=[Depends(get_current_user)])\n\n"
+        '@router.delete("/companies/delete")\n'
+        "async def delete_company():\n    return {}\n",
+        encoding="utf-8",
+    )
+    ctx = ScannerContext(project=Project.from_path(tmp_path), config=Config())
+    rules = {f.rule_id for f in AuthzScanner().scan(ctx)}
+    assert "authz.missing-authentication" not in rules

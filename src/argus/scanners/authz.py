@@ -19,6 +19,7 @@ from argus.core.models import (
     Severity,
 )
 from argus.core.plugin import Scanner, ScannerContext, scanner
+from argus.scanners.patterns import _is_test_file
 
 _FASTAPI_ROUTE = re.compile(
     r"""@(?:app|router)\.(get|post|put|patch|delete)\(\s*['"]([^'"]+)['"]""",
@@ -60,8 +61,24 @@ _SESSION_INSECURE = re.compile(
     re.IGNORECASE,
 )
 _OAUTH_TOKEN_IN_URL = re.compile(
-    r"(?:access_token|id_token|code)=['\"]?[^&\s'\"]+",
+    r"https?://[^\s'\"]+(?:\?|&)(?:access_token|id_token|code)=[^&\s'\"]+"
+    r"|(?:\?|&)(?:access_token|id_token|code)=[A-Za-z0-9._\-]{8,}",
     re.IGNORECASE,
+)
+_TOKEN_URL_SUPPRESS = re.compile(
+    r"(?i)(?:detail\s*=|message\s*=|description\s*=|Field\(|example|"
+    r"HTTPException|raise\s+\w|#|//|invalid|missing|required|error|"
+    r"schema|openapi|swagger|\"access_token\"\s*:|'access_token'\s*:)",
+)
+_PUBLIC_ROUTE = re.compile(
+    r"/(?:login|signin|signout|logout|signup|register|forgot|reset|password|"
+    r"verification|verify|callback|oauth|refresh|health|docs|openapi|swagger|"
+    r"redoc|static|assets|favicon|metrics|probe)(?:/|$)",
+    re.IGNORECASE,
+)
+_ROUTER_DEPS = re.compile(
+    r"APIRouter\s*\([^)]*dependencies\s*=\s*\[[^\]]*Depends",
+    re.IGNORECASE | re.DOTALL,
 )
 _OWNERSHIP_HINT = re.compile(
     r"(owner|tenant|user_id|account_id|current_user|request\.user|"
@@ -110,8 +127,11 @@ class AuthzScanner(Scanner):
         for f in ctx.project.files():
             if f.suffix not in (".py", ".js", ".jsx", ".ts", ".tsx", ".mjs"):
                 continue
+            if _is_test_file(f.rel_path):
+                continue
             text = f.text()
             lines = _lines(text)
+            file_has_router_auth = bool(_ROUTER_DEPS.search(text))
             for i, line in enumerate(lines):
                 for finding in self._check_jwt(f.rel_path, line, i + 1, counter):
                     counter += 1
@@ -119,7 +139,9 @@ class AuthzScanner(Scanner):
                 for finding in self._check_oauth_session(f.rel_path, line, i + 1, counter):
                     counter += 1
                     yield finding
-                for finding in self._check_routes(f.rel_path, lines, i, counter):
+                for finding in self._check_routes(
+                    f.rel_path, lines, i, counter, file_has_router_auth,
+                ):
                     counter += 1
                     yield finding
 
@@ -146,7 +168,7 @@ class AuthzScanner(Scanner):
                 ),
                 tags=["auth", "oauth"],
             )
-        if _OAUTH_TOKEN_IN_URL.search(line):
+        if _OAUTH_TOKEN_IN_URL.search(line) and not _TOKEN_URL_SUPPRESS.search(line):
             yield Finding(
                 id=f"authz:token-url:{counter + 1}",
                 rule_id="authz.token-in-url",
@@ -227,13 +249,19 @@ class AuthzScanner(Scanner):
 
     def _check_routes(
         self, path: str, lines: list[str], idx: int, counter: int,
+        file_has_router_auth: bool = False,
     ) -> Iterable[Finding]:
         route_path = _route_path(lines[idx])
         if not route_path or not _SENSITIVE_PATH.search(route_path):
             return
+        if _PUBLIC_ROUTE.search(route_path):
+            return
 
         window = _window(lines, idx)
-        if not _AUTH_DECORATORS.search(window):
+        if file_has_router_auth or _AUTH_DECORATORS.search(window):
+            # Still check IDOR hints below when auth is present.
+            pass
+        else:
             yield Finding(
                 id=f"authz:missing-auth:{counter + 1}",
                 rule_id="authz.missing-authentication",
@@ -266,6 +294,7 @@ class AuthzScanner(Scanner):
                 metadata={"route": route_path},
             )
 
+        window = _window(lines, idx)
         if _ID_PARAM.search(route_path) and not _OWNERSHIP_HINT.search(window):
             yield Finding(
                 id=f"authz:idor-hint:{counter + 2}",
