@@ -66,6 +66,7 @@ def evaluate_posture(
 
     gate_failed = fail_on is not None and result.highest_severity() >= fail_on
 
+    bullets: tuple[str, ...]
     if gate_failed:
         status = PostureStatus.FAIL
         headline = f"Does not meet your {gate} gate — fix before merge or deploy."

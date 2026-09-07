@@ -35,9 +35,9 @@ from rich.table import Table
 from argus import __version__
 from argus.core.config import Config
 from argus.core.models import ScanResult, Severity
-from argus.reporting.posture import evaluate_posture
 from argus.core.plugin import registry
 from argus.plugins import register_builtins
+from argus.reporting.posture import evaluate_posture
 
 # On Windows the legacy console defaults to a codepage that can't encode the
 # Unicode Argus uses in reports/tables. Force UTF-8 on the streams when possible.
