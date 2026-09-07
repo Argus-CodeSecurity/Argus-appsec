@@ -68,6 +68,9 @@ class Config:
     # {rule?, path?, reason (required), until? (YYYY-MM-DD)}; see docs/triage.md.
     allow: list[dict[str, Any]] = field(default_factory=list)
 
+    # Security policies evaluated by ``argus policy check``.
+    policies: list[dict[str, Any]] = field(default_factory=list)
+
     # Autonomy ladder (Rung 3): which deterministic fix rules may be applied
     # automatically by `argus fix --auto`. Fixes still land on a branch/PR (never
     # a direct push), so they stay trivially revertible. `graduate`/`demote` are
@@ -109,6 +112,7 @@ class Config:
         cfg.generate_patches = bool(data.get("generate_patches", cfg.generate_patches))
         cfg.scanner_options = dict(data.get("scanner_options", {}))
         cfg.allow = [e for e in data.get("allow", []) if isinstance(e, dict)]
+        cfg.policies = [p for p in data.get("policies", []) if isinstance(p, dict)]
         cfg.autofix = data["autofix"] if isinstance(data.get("autofix"), dict) else {}
         cfg.cache = bool(data.get("cache", cfg.cache))
         cfg.parallel = bool(data.get("parallel", cfg.parallel))

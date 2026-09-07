@@ -44,7 +44,7 @@
         {% if latest %}
         <span class="risk risk-{{ risk_band(latest.risk_score)|lower }}">
           {{ latest.risk_score }}</span>
-        {% else %}<span class="muted">—</span>{% endif %}
+        {% else %}<span class="muted">n/a</span>{% endif %}
       </td>
       <td class="col-bar">
         {% if latest %}
@@ -59,7 +59,7 @@
       </td>
       <td class="num">{{ latest.total_findings if latest else 0 }}</td>
       <td class="num">{{ row.scan_count }}</td>
-      <td class="muted">{{ latest.created_at.strftime('%Y-%m-%d %H:%M') if latest else '—' }}</td>
+      <td class="muted">{{ latest.created_at.strftime('%Y-%m-%d %H:%M') if latest else 'n/a' }}</td>
     </tr>
     {% endfor %}
   </tbody>

@@ -1,0 +1,27 @@
+{
+  "packages": [
+    {"ecosystem": "npm", "name": "flatmap-stream"},
+    {"ecosystem": "npm", "name": "event-stream"},
+    {"ecosystem": "npm", "name": "ua-parser-js"},
+    {"ecosystem": "npm", "name": "coa"},
+    {"ecosystem": "npm", "name": "rc"},
+    {"ecosystem": "PyPI", "name": "pytagora"},
+    {"ecosystem": "PyPI", "name": "libpeshka"},
+    {"ecosystem": "PyPI", "name": "libpeshnx"},
+    {"ecosystem": "PyPI", "name": "importantpackage"},
+    {"ecosystem": "PyPI", "name": "10Cent10"},
+    {"ecosystem": "PyPI", "name": "10Cent11"}
+  ],
+  "popular": {
+    "npm": [
+      "lodash", "express", "react", "axios", "webpack", "typescript", "request",
+      "moment", "chalk", "commander", "debug", "uuid", "semver", "dotenv",
+      "eslint", "prettier", "vite", "next", "vue", "angular"
+    ],
+    "PyPI": [
+      "requests", "urllib3", "pip", "setuptools", "wheel", "numpy", "pandas",
+      "django", "flask", "boto3", "cryptography", "pyyaml", "pytest", "click",
+      "jinja2", "pillow", "sqlalchemy", "fastapi", "httpx", "pydantic"
+    ]
+  }
+}

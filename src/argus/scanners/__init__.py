@@ -6,15 +6,32 @@ that the plugin guide points contributors at.
 """
 
 from argus.scanners import (  # noqa: F401
+    api,
     ast_js,
     ast_python,
     ast_python_interproc,
+    authz,
+    business_logic,
+    cicd,
+    cloud,
+    container,
+    container_image,
+    dast,
     dependencies,
+    dependency_diff,
+    git_security,
     iac,
+    lang_sast,
     llm,
     patterns,
+    provenance,
     secrets,
+    supply_chain,
 )
 
-__all__ = ["ast_js", "ast_python", "ast_python_interproc", "dependencies", "iac",
-           "llm", "patterns", "secrets"]
+__all__ = [
+    "api", "ast_js", "ast_python", "ast_python_interproc", "authz", "business_logic",
+    "cicd", "cloud", "container", "container_image", "dast", "dependencies",
+    "dependency_diff", "git_security", "iac", "lang_sast", "llm", "patterns",
+    "provenance", "secrets", "supply_chain",
+]

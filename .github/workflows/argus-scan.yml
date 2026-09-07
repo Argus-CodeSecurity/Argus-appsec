@@ -47,7 +47,13 @@ jobs:
 
       - name: Run Argus (diff-aware on PRs)
         run: |
-          if [ -f /tmp/baseline.json ]; then
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            argus scan . --diff "origin/${{ github.base_ref }}...HEAD" \
+              -f sarif -o argus.sarif --quiet
+            argus supply-chain . --diff "origin/${{ github.base_ref }}...HEAD" \
+              -o supply-chain.json --quiet || true
+            argus infrastructure . --fail-on high --quiet || true
+          elif [ -f /tmp/baseline.json ]; then
             argus scan . -f sarif -o argus.sarif --baseline /tmp/baseline.json --quiet
           else
             argus scan . -f sarif -o argus.sarif --quiet
@@ -80,4 +86,10 @@ jobs:
           git worktree add /tmp/base "origin/${{ github.base_ref }}"
           argus scan /tmp/base -f json -o /tmp/baseline.json --quiet || true
       - name: Fail on newly introduced High+ findings
-        run: argus scan . --baseline /tmp/baseline.json --fail-on high --quiet
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            argus scan . --diff "origin/${{ github.base_ref }}...HEAD" --fail-on high --quiet
+            argus policy check .
+          else
+            argus scan . --baseline /tmp/baseline.json --fail-on high --quiet
+          fi

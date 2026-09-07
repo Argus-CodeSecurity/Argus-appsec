@@ -53,6 +53,7 @@ def build_ingest_payload(
                 "title": f.title,
                 "location": f.location.as_ref(),
                 "cwe": ";".join(f.cwe) or None,
+                "fingerprint": f.fingerprint(),
             }
         )
     return {

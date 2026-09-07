@@ -1,6 +1,6 @@
 """Git hosting clients: open a pull/merge request via a provider's API.
 
-Supports GitHub and GitLab today (Bitbucket is stubbed with a clear error). The
+Supports GitHub, GitLab, and Bitbucket Cloud today. The remote-URL parsing and
 remote-URL parsing and request-payload construction are separated from the
 network call so they can be unit-tested without credentials or connectivity.
 
@@ -88,7 +88,7 @@ def open_pull_request(
     """Open a PR/MR on the appropriate host. Raises HostingError on failure."""
     token = token or token_for(ref.host)
     if not token:
-        env = {"github": "GITHUB_TOKEN", "gitlab": "GITLAB_TOKEN"}.get(ref.host, "TOKEN")
+        env = {"github": "GITHUB_TOKEN", "gitlab": "GITLAB_TOKEN", "bitbucket": "BITBUCKET_TOKEN"}.get(ref.host, "TOKEN")
         raise HostingError(
             f"No API token found for {ref.host}. Set {env} to open a pull request."
         )
@@ -97,6 +97,8 @@ def open_pull_request(
         return _github_pr(ref, head, base, title, body, token, timeout)
     if ref.host == "gitlab":
         return _gitlab_mr(ref, head, base, title, body, token, timeout)
+    if ref.host == "bitbucket":
+        return _bitbucket_pr(ref, head, base, title, body, token, timeout)
     raise HostingError(f"Opening pull requests on {ref.host} is not yet supported.")
 
 
@@ -199,3 +201,24 @@ def _gitlab_mr(ref: RepoRef, head: str, base: str, title: str, body: str,
         raise HostingError(f"GitLab API error {resp.status_code}: {resp.text[:300]}")
     data = resp.json()
     return PullRequest(url=data.get("web_url", ""), number=data.get("iid"))
+
+
+def _bitbucket_pr(ref: RepoRef, head: str, base: str, title: str, body: str,
+                  token: str, timeout: float) -> PullRequest:
+    url = f"https://api.bitbucket.org/2.0/repositories/{ref.slug}/pullrequests"
+    resp = httpx.post(
+        url,
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "title": title,
+            "description": body,
+            "source": {"branch": {"name": head}},
+            "destination": {"branch": {"name": base}},
+        },
+        timeout=timeout,
+    )
+    if resp.status_code >= 300:
+        raise HostingError(f"Bitbucket API error {resp.status_code}: {resp.text[:300]}")
+    data = resp.json()
+    links = data.get("links", {}).get("html", {})
+    return PullRequest(url=links.get("href", ""), number=data.get("id"))

@@ -77,6 +77,7 @@ class OSVAdvisory:
     fixed: str | None = None
     cwe: list[str] = field(default_factory=list)
     references: list[str] = field(default_factory=list)
+    affected_symbols: list[str] = field(default_factory=list)
 
 
 class OSVError(RuntimeError):
@@ -242,7 +243,7 @@ def query(ecosystem: str,
     return out
 
 
-def _parse_vuln(vuln: dict) -> OSVAdvisory:
+def _parse_vuln(vuln: dict, *, package: str = "") -> OSVAdvisory:
     vid = vuln.get("id", "")
     aliases = vuln.get("aliases", []) or []
     cve = next((a for a in aliases if a.startswith("CVE-")), "")
@@ -255,6 +256,10 @@ def _parse_vuln(vuln: dict) -> OSVAdvisory:
     cwe = [c for c in (vuln.get("database_specific", {}).get("cwe_ids") or [])
            if isinstance(c, str)]
 
+    symbols: list[str] = []
+    from argus.analysis.symbol_reachability import extract_osv_symbols
+    symbols = extract_osv_symbols(vuln, package)
+
     return OSVAdvisory(
         id=vid,
         summary=summary,
@@ -263,6 +268,7 @@ def _parse_vuln(vuln: dict) -> OSVAdvisory:
         fixed=_fixed_version(vuln),
         cwe=cwe or ["CWE-1104"],
         references=refs[:5],
+        affected_symbols=symbols,
     )
 
 

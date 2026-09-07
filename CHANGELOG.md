@@ -7,10 +7,25 @@ include breaking changes, noted explicitly).
 
 ## [Unreleased]
 
+## [0.8.0], 2026-09-07
+
+Platform expansion: supply chain, policy engine, SBOM, infrastructure scanning,
+and plugin CLI commands for commercial add-ons.
+
 ### Added
-- **Plugin commands**: add-on packages can now contribute CLI subcommands via
-  the `argus.commands` entry-point group, so optional and commercial extensions
-  extend the CLI without the core depending on their code.
+- **Supply chain**: malicious package intel, typosquat detection, npm behavior
+  metadata, `argus supply-chain` command.
+- **SBOM**: CycloneDX and SPDX output, SBOM diff via `argus sbom --diff`.
+- **Policy engine**: `argus policy check` with YAML policies.
+- **Dependency diff**: `argus dependencies --diff` for pull-request review.
+- **Infrastructure scanning**: `cicd`, `container`, and `cloud` scanners;
+  focused CLI commands `argus cicd`, `argus container`, `argus cloud`.
+- **Additional scanners**: authz, API security (OpenAPI), provenance, dependency-diff.
+- **Reachability**: npm import reachability and Python symbol-level tier.
+- **Docs**: repository split, project layout, infrastructure scanning, publishing checklist.
+
+### Changed
+- Version **0.8.0** is the minimum core release for `argus-k8s` plugin commands.
 
 ## [0.7.0], 2026-07-14
 

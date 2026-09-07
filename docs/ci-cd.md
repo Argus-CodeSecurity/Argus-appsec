@@ -27,7 +27,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0     # full history enables diff-aware PR scanning
-      - uses: Argus-CodeSecurity/Argus-appsec@v0.7.0
+      - uses: Argus-CodeSecurity/Argus-appsec@v0.8.0
         with:
           fail-on: high      # block merges on newly introduced High+ findings
 ```
@@ -71,8 +71,24 @@ present.
 ## Diff-aware scanning with a baseline
 
 Adopting a scanner on an existing codebase usually means drowning in pre-existing
-findings. Use a **baseline** so a pull request is judged only on the findings it
-*introduces*:
+findings. Argus supports **two** diff-aware modes:
+
+### Git-native diff (`--diff`)
+
+Report only findings on lines/files changed in a git range, plus dependency
+findings on changed lockfiles:
+
+```bash
+argus scan . --diff origin/main...HEAD --fail-on high
+argus dependencies . --diff origin/main...HEAD
+argus sbom . --diff origin/main...HEAD -o sbom-diff.json
+argus supply-chain . --diff origin/main...HEAD --fail-on high
+```
+
+This also enables the `dependency-diff` scanner (version changes + npm behavior
+anomalies) automatically.
+
+### Baseline fingerprint diff (`--baseline`)
 
 ```bash
 # 1. Scan the base branch and save the report as a baseline (outside the tree).
@@ -174,3 +190,18 @@ to `stages: [pre-push]` or CI.
 - Disable AI enrichment for speed with `--no-ai` (findings still carry their
   built-in reasoning and taxonomy).
 - Use `exclude_paths` in `.argus.yml` to skip vendored or generated code.
+
+## Scan your own CI/CD pipelines
+
+Use the focused command to gate risky workflow changes without a full scan:
+
+```yaml
+- name: CI/CD security
+  run: argus cicd . --fail-on high --quiet
+```
+
+For Docker, Compose, and Kubernetes manifests: `argus container . --fail-on high`.
+
+For Terraform and CloudFormation: `argus cloud . --fail-on high`.
+
+Details: [infrastructure-scanning.md](infrastructure-scanning.md).

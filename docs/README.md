@@ -1,5 +1,11 @@
 # Argus documentation
 
+- [Specification compliance](SPEC_COMPLIANCE.md), mapping the full product spec to implementation.
+- [Publishing](PUBLISHING.md), checklist before pushing to GitHub and PyPI.
+- [Repository split](repository-split.md), what belongs in the public repo vs commercial add-ons.
+- [Project layout](project-layout.md), workspace folder structure.
+- [Configuration drift](drift.md), compare scans and inventories over time.
+- [Server agent](agent.md), multi-path host monitoring with `argus agent`.
 - [Architecture](architecture.md), the core, the scan pipeline, and the plugin seams.
 - [Configuration](configuration.md), `.argus.yml`, flags, and environment variables.
 - [Fixing & pull requests](fixing.md), `argus fix`: apply verified fixes and open PRs.

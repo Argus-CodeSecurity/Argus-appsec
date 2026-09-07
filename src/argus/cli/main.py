@@ -4,6 +4,15 @@ Commands:
 
 * ``argus scan TARGET``: run a full scan and write reports.
 * ``argus fix TARGET``: apply verified fixes on a branch and open a pull request.
+* ``argus sbom TARGET``: generate a CycloneDX or SPDX SBOM from dependency manifests.
+* ``argus supply-chain TARGET``: malicious deps, dependency diffs, provenance.
+* ``argus cicd TARGET``: CI/CD pipeline security (GitHub Actions, GitLab CI).
+* ``argus container TARGET``: Docker, Compose, and container runtime checks.
+* ``argus cloud TARGET``: cloud IaC patterns (AWS, Azure, GCP).
+* ``argus infrastructure TARGET``: all infrastructure scanners in one pass.
+* ``argus inventory TARGET``: export static asset inventory (Phase 4 foundation).
+* ``argus drift BEFORE AFTER``: configuration drift between two reports.
+* ``argus policy check TARGET``: evaluate security policies against scan findings.
 * ``argus scanners``: list available scanners.
 * ``argus reporters``: list available report formats.
 * ``argus providers``: list AI providers and their availability.
@@ -106,10 +115,14 @@ def scan(
     ),
     reachability: bool = typer.Option(
         False, "--reachability",
-        help="Experimental: annotate dependency findings with an import-level "
-             "reachability verdict (Python only for now). Findings for packages "
-             "never imported by first-party code are marked and deprioritized, "
-             "not suppressed.",
+        help="Experimental: annotate dependency findings with import-level "
+             "reachability (Python + npm). Findings for packages never imported "
+             "are deprioritized, not suppressed.",
+    ),
+    symbol_reachability: bool = typer.Option(
+        False, "--symbol-reachability",
+        help="Experimental tier-2: Python symbol-level reachability when OSV "
+             "provides affected symbol hints (implies --reachability).",
     ),
     no_cache: bool = typer.Option(
         False, "--no-cache",
@@ -143,6 +156,11 @@ def scan(
         None, "--baseline",
         help="Path to a previous Argus JSON report; report only findings not in it.",
     ),
+    diff_ref: str | None = typer.Option(
+        None, "--diff",
+        help="Git ref range (e.g. origin/main...HEAD); report only findings on "
+             "changed lines or dependency manifests. Local git repo required.",
+    ),
     branch: str | None = typer.Option(
         None, "--branch", "-b", help="Branch to clone for remote targets."
     ),
@@ -161,6 +179,14 @@ def scan(
         None, "--audience",
         help="Re-render the console output for a reader: dev, exec, or auditor "
              "(only affects the default table output, not -f formats).",
+    ),
+    profile: str | None = typer.Option(
+        None, "--profile",
+        help="Scan profile: fast, standard, deep, supply-chain, ci, production.",
+    ),
+    deep: bool = typer.Option(
+        False, "--deep",
+        help="Shorthand for --profile deep (maximum scanner depth).",
     ),
     quiet: bool = typer.Option(False, "--quiet", "-q", help="Suppress progress output."),
 ) -> None:
@@ -217,18 +243,28 @@ def scan(
         )
 
     try:
+        profile_name = "deep" if deep else profile
+        if profile_name and scanners:
+            err_console.print("[red]Error:[/red] use either --profile/--deep or --scanners, not both.")
+            raise typer.Exit(2)
         cfg = _build_config(
             config=config,
             project_root=project.root if trust_project_config else None,
             scanners=scanners,
+            profile=profile_name,
             exclude=exclude, ai_provider=ai_provider, ai_model=ai_model, no_ai=no_ai,
             attack_sim=attack_sim, patches=patches, min_severity=min_severity,
-            fail_on=fail_on, reachability=reachability, no_cache=no_cache,
+            fail_on=fail_on, reachability=reachability, symbol_reachability=symbol_reachability,
+            no_cache=no_cache,
             verify_secrets=verify_secrets, secrets_history=secrets_history,
+            diff_ref=diff_ref,
         )
         # A cloned, untrusted repo must not inject scanner rules via its own
         # in-repo .argus/rules directory; gate it on the same trust decision.
         cfg.trust_project_config = trust_project_config
+
+        if live_target:
+            cfg.scanner_options.setdefault("dast", {})["url"] = live_target
 
         progress = None if quiet else (lambda msg: err_console.print(f"[dim]· {escape(msg)}[/dim]"))
         engine = ScanEngine(cfg, progress=progress)
@@ -241,6 +277,7 @@ def scan(
                     f"[dim]· Posture checks against {escape(live_target)} "
                     "(read-only; authorized use only)[/dim]"
                 )
+            result.project_summary["live_target"] = live_target
             from argus.dynamic import probe
             for finding in probe(live_target):
                 result.add(finding)
@@ -248,6 +285,9 @@ def scan(
 
         if baseline is not None:
             _apply_baseline(result, baseline, quiet=quiet)
+
+        if diff_ref is not None:
+            _apply_diff(result, project.root, diff_ref, quiet=quiet)
 
         if track_secrets is not None:
             from argus.scanners.secret_rotation import track_rotations
@@ -268,6 +308,807 @@ def scan(
         raise typer.Exit(2) from exc
     finally:
         resolved.cleanup()
+
+
+@app.command()
+def sbom(
+    target: str = typer.Argument(
+        ".", help="Local path or git URL to generate an SBOM for."
+    ),
+    output: Path | None = typer.Option(
+        None, "--output", "-o", help="Write SBOM JSON here (stdout if omitted)."
+    ),
+    fmt: str = typer.Option(
+        "cyclonedx", "--format", "-f",
+        help="SBOM format: cyclonedx or spdx.",
+    ),
+    name: str | None = typer.Option(
+        None, "--name", help="Application name in the SBOM metadata."
+    ),
+    version: str = typer.Option("0.0.0", "--version", help="Application version."),
+    diff_ref: str | None = typer.Option(
+        None, "--diff",
+        help="Compare SBOM to a git ref (e.g. origin/main...HEAD); emit component diff JSON.",
+    ),
+    branch: str | None = typer.Option(None, "--branch", "-b", help="Branch for remote targets."),
+) -> None:
+    """Generate an SBOM (CycloneDX or SPDX) or diff components vs a git ref."""
+    import json
+
+    from argus.remediation import git_ops
+    from argus.sbom import build_cyclonedx, build_spdx, diff_components, diff_to_dict
+    from argus.targets import resolve
+
+    fmt_norm = fmt.strip().lower()
+    if fmt_norm not in ("cyclonedx", "spdx"):
+        err_console.print(f"[red]Error:[/red] unknown SBOM format {fmt!r} (use cyclonedx or spdx).")
+        raise typer.Exit(2)
+
+    try:
+        resolved = resolve(target, branch=branch)
+    except Exception as exc:
+        err_console.print(f"[red]Error:[/red] {exc}")
+        raise typer.Exit(2) from exc
+    if resolved.project is None:
+        err_console.print("[red]Error:[/red] SBOM generation requires a source repository.")
+        raise typer.Exit(2)
+    try:
+        if diff_ref:
+            if not git_ops.is_git_repo(resolved.project.root):
+                err_console.print("[red]Error:[/red] --diff requires a local git repository.")
+                raise typer.Exit(2)
+            changes = diff_components(resolved.project.root, diff_ref)
+            doc = diff_to_dict(changes, ref_spec=diff_ref)
+            text = json.dumps(doc, indent=2, sort_keys=True) + "\n"
+            if output:
+                output.write_text(text, encoding="utf-8")
+            else:
+                console.print(text, end="")
+            s = doc["summary"]
+            console.print(
+                f"[green]SBOM diff:[/green] +{s['added']} ~{s['changed']} -{s['removed']}"
+            )
+            return
+
+        builder = build_cyclonedx if fmt_norm == "cyclonedx" else build_spdx
+        doc = builder(resolved.project, name=name, version=version)
+        text = json.dumps(doc, indent=2, sort_keys=True) + "\n"
+        count = len(doc.get("components", doc.get("packages", []))) - (
+            1 if fmt_norm == "spdx" else 0
+        )
+        if output:
+            output.write_text(text, encoding="utf-8")
+            console.print(f"[green]SBOM written:[/green] {output} ({count} components)")
+        else:
+            console.print(text, end="")
+    finally:
+        resolved.cleanup()
+
+
+@app.command()
+def dependencies(
+    target: str = typer.Argument(".", help="Local git repository path."),
+    diff_ref: str | None = typer.Option(
+        None, "--diff",
+        help="Git ref range (e.g. origin/main...HEAD) to compare dependency changes.",
+    ),
+    output: Path | None = typer.Option(
+        None, "--output", "-o", help="Write JSON report here (table to stdout if omitted).",
+    ),
+    behavior: bool = typer.Option(
+        True, "--behavior/--no-behavior",
+        help="Fetch npm registry metadata for version-change anomalies (network).",
+    ),
+) -> None:
+    """List dependency changes between git refs (for pull-request review)."""
+    import json
+
+    from argus.core.config import Config
+    from argus.core.engine import ScanEngine
+    from argus.inventory.dependency_diff import diff_packages
+    from argus.remediation import git_ops
+    from argus.targets import resolve
+
+    if not diff_ref:
+        err_console.print("[red]Error:[/red] --diff is required (e.g. origin/main...HEAD).")
+        raise typer.Exit(2)
+
+    try:
+        resolved = resolve(target)
+    except Exception as exc:
+        err_console.print(f"[red]Error:[/red] {exc}")
+        raise typer.Exit(2) from exc
+    if resolved.project is None or not git_ops.is_git_repo(resolved.project.root):
+        err_console.print("[red]Error:[/red] requires a local git repository.")
+        raise typer.Exit(2)
+
+    try:
+        changes = diff_packages(resolved.project.root, diff_ref)
+        payload = {
+            "diff": diff_ref,
+            "changes": [
+                {
+                    "ecosystem": c.ecosystem,
+                    "package": c.package,
+                    "manifest": c.manifest,
+                    "change": c.change,
+                    "old_version": c.old_version,
+                    "new_version": c.new_version,
+                }
+                for c in changes
+            ],
+        }
+
+        behavior_findings = []
+        if behavior and changes:
+            cfg = Config()
+            cfg.scanners = ["dependency-diff"]
+            cfg.scanner_options["dependency-diff"] = {
+                "ref": diff_ref,
+                "behavior": True,
+            }
+            cfg.ai.enabled = False
+            result = ScanEngine(cfg).scan(resolved.project)
+            behavior_findings = [
+                {
+                    "title": f.title,
+                    "rule": f.rule_id,
+                    "severity": f.severity.label,
+                    "location": f.location.as_ref(),
+                }
+                for f in result.findings
+                if f.rule_id == "dependency-diff.behavior-anomaly"
+            ]
+            payload["behavior_anomalies"] = behavior_findings
+
+        if output:
+            output.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+            console.print(f"[green]Wrote[/green] {len(changes)} change(s) to {output}")
+        else:
+            table = Table(title=f"Dependency changes ({diff_ref})")
+            table.add_column("Change")
+            table.add_column("Package")
+            table.add_column("Versions")
+            table.add_column("Manifest")
+            for c in changes:
+                vers = f"{c.old_version or 'n/a'} -> {c.new_version or 'n/a'}"
+                table.add_row(c.change, c.package, vers, c.manifest)
+            console.print(table)
+            if behavior_findings:
+                err_console.print(
+                    f"[yellow]{len(behavior_findings)} behavioral anomal(y/ies) detected.[/yellow]"
+                )
+    finally:
+        resolved.cleanup()
+
+
+@app.command(name="supply-chain")
+def supply_chain_cmd(
+    target: str = typer.Argument(".", help="Local git repository path."),
+    diff_ref: str | None = typer.Option(
+        None, "--diff",
+        help="Git ref range for dependency/version analysis (e.g. origin/main...HEAD).",
+    ),
+    output: Path | None = typer.Option(None, "--output", "-o", help="Write JSON report."),
+    behavior: bool = typer.Option(True, "--behavior/--no-behavior", help="npm metadata anomaly checks."),
+    sandbox: str = typer.Option(
+        "auto", "--sandbox",
+        help="Behavioral fetch isolation: auto | host | docker (never installs packages).",
+    ),
+    auth_map: bool = typer.Option(False, "--auth-map", help="Include endpoint authorization map."),
+    fail_on: str | None = typer.Option(None, "--fail-on", help="Exit non-zero on findings at/above severity."),
+    quiet: bool = typer.Option(False, "--quiet", "-q"),
+) -> None:
+    """Run supply-chain scanners: malicious packages, typosquats, dependency diffs, provenance."""
+    import json
+
+    from argus.analysis.auth_map import build_auth_map
+    from argus.core.config import Config
+    from argus.core.engine import ScanEngine
+    from argus.inventory.dependency_diff import diff_packages
+    from argus.remediation import git_ops
+    from argus.targets import resolve
+
+    try:
+        resolved = resolve(target)
+    except Exception as exc:
+        err_console.print(f"[red]Error:[/red] {exc}")
+        raise typer.Exit(2) from exc
+    if resolved.project is None:
+        err_console.print("[red]Error:[/red] supply-chain requires a source repository.")
+        raise typer.Exit(2)
+
+    try:
+        cfg = Config()
+        cfg.ai.enabled = False
+        cfg.scanners = [
+            "supply-chain", "dependency-diff", "dependencies", "provenance",
+        ]
+        cfg.scanner_options["supply-chain"] = {
+            "online_intel": True,
+        }
+        if diff_ref:
+            cfg.scanner_options["dependency-diff"] = {
+                "ref": diff_ref,
+                "behavior": behavior,
+                "sandbox": sandbox,
+            }
+        elif git_ops.is_git_repo(resolved.project.root):
+            base = git_ops.default_branch(resolved.project.root)
+            cfg.scanner_options["dependency-diff"] = {
+                "ref": f"{base}...HEAD",
+                "behavior": behavior,
+                "sandbox": sandbox,
+            }
+
+        progress = None if quiet else (lambda m: err_console.print(f"[dim]· {escape(m)}[/dim]"))
+        result = ScanEngine(cfg, progress=progress).scan(resolved.project)
+
+        payload: dict = {
+            "findings": len(result.findings),
+            "highest_severity": result.highest_severity().label,
+            "dependency_changes": [],
+            "items": [
+                {
+                    "rule": f.rule_id,
+                    "severity": f.severity.label,
+                    "title": f.title,
+                    "location": f.location.as_ref(),
+                }
+                for f in result.findings
+            ],
+        }
+        if git_ops.is_git_repo(resolved.project.root):
+            ref = diff_ref or f"{git_ops.default_branch(resolved.project.root)}...HEAD"
+            payload["dependency_changes"] = [
+                {
+                    "ecosystem": c.ecosystem,
+                    "package": c.package,
+                    "change": c.change,
+                    "old_version": c.old_version,
+                    "new_version": c.new_version,
+                }
+                for c in diff_packages(resolved.project.root, ref)
+            ]
+        if auth_map:
+            payload["auth_map"] = [e.to_dict() for e in build_auth_map(resolved.project)]
+
+        if output:
+            output.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+            console.print(f"[green]Supply-chain report:[/green] {output}")
+        elif not quiet:
+            table = Table(title="Supply-chain findings")
+            table.add_column("Severity")
+            table.add_column("Rule")
+            table.add_column("Title")
+            for f in result.sorted_findings()[:50]:
+                table.add_row(f.severity.label, f.rule_id, f.title[:60])
+            console.print(table)
+            if len(result.findings) > 50:
+                err_console.print(f"[dim]… and {len(result.findings) - 50} more[/dim]")
+
+        if fail_on and result.highest_severity() >= Severity.parse(fail_on):
+            raise typer.Exit(1)
+    finally:
+        resolved.cleanup()
+
+
+@app.command()
+def secrets(
+    target: str = typer.Argument(".", help="Local path or git URL."),
+    output: Path | None = typer.Option(None, "--output", "-o"),
+    fail_on: str | None = typer.Option(None, "--fail-on"),
+    quiet: bool = typer.Option(False, "--quiet", "-q"),
+    config: Path | None = typer.Option(None, "--config", "-c"),
+) -> None:
+    """Run secret detection only (source, config, and optional git history via scan flags)."""
+    _focused_scan(
+        target, ["secrets"], output=output, fail_on=fail_on, quiet=quiet,
+        title="Secret findings", config=config,
+    )
+
+
+@app.command()
+def iac(
+    target: str = typer.Argument(".", help="Local path or git URL."),
+    output: Path | None = typer.Option(None, "--output", "-o"),
+    fail_on: str | None = typer.Option(None, "--fail-on"),
+    quiet: bool = typer.Option(False, "--quiet", "-q"),
+    config: Path | None = typer.Option(None, "--config", "-c"),
+) -> None:
+    """Run infrastructure-as-code security checks (Terraform, K8s, CloudFormation)."""
+    _focused_scan(
+        target, ["iac", "cloud"], output=output, fail_on=fail_on, quiet=quiet,
+        title="IaC findings", config=config,
+    )
+
+
+@app.command(name="api")
+def api_scan(
+    target: str = typer.Argument(".", help="Local path or git URL with OpenAPI specs."),
+    output: Path | None = typer.Option(None, "--output", "-o"),
+    fail_on: str | None = typer.Option(None, "--fail-on"),
+    quiet: bool = typer.Option(False, "--quiet", "-q"),
+    config: Path | None = typer.Option(None, "--config", "-c"),
+) -> None:
+    """Analyze OpenAPI/REST API definitions for auth and exposure issues."""
+    _focused_scan(
+        target, ["api", "authz"], output=output, fail_on=fail_on, quiet=quiet,
+        title="API security findings", config=config,
+    )
+
+
+@app.command()
+def cicd(
+    target: str = typer.Argument(".", help="Local path or git URL to scan."),
+    output: Path | None = typer.Option(None, "--output", "-o", help="Write JSON report."),
+    fail_on: str | None = typer.Option(None, "--fail-on", help="Exit non-zero on findings at/above severity."),
+    quiet: bool = typer.Option(False, "--quiet", "-q"),
+    config: Path | None = typer.Option(None, "--config", "-c", help="Optional .argus.yml path."),
+) -> None:
+    """Scan CI/CD workflows for risky patterns (GitHub Actions, GitLab CI, Jenkinsfile)."""
+    _focused_scan(
+        target, ["cicd"], output=output, fail_on=fail_on, quiet=quiet,
+        title="CI/CD findings", config=config,
+    )
+
+
+@app.command()
+def container(
+    target: str = typer.Argument(".", help="Local path or git URL to scan."),
+    output: Path | None = typer.Option(None, "--output", "-o", help="Write JSON report."),
+    fail_on: str | None = typer.Option(None, "--fail-on", help="Exit non-zero on findings at/above severity."),
+    quiet: bool = typer.Option(False, "--quiet", "-q"),
+    config: Path | None = typer.Option(None, "--config", "-c", help="Optional .argus.yml path."),
+) -> None:
+    """Scan Dockerfiles, Compose files, and container runtime settings."""
+    _focused_scan(
+        target, ["container", "iac"], output=output, fail_on=fail_on, quiet=quiet,
+        title="Container findings", config=config,
+    )
+
+
+@app.command()
+def cloud(
+    target: str = typer.Argument(".", help="Local path or git URL to scan."),
+    output: Path | None = typer.Option(None, "--output", "-o", help="Write JSON report."),
+    fail_on: str | None = typer.Option(None, "--fail-on", help="Exit non-zero on findings at/above severity."),
+    quiet: bool = typer.Option(False, "--quiet", "-q"),
+    config: Path | None = typer.Option(None, "--config", "-c", help="Optional .argus.yml path."),
+) -> None:
+    """Scan Terraform and CloudFormation for risky AWS, Azure, and GCP patterns."""
+    _focused_scan(
+        target, ["cloud", "iac"], output=output, fail_on=fail_on, quiet=quiet,
+        title="Cloud configuration findings", config=config,
+    )
+
+
+@app.command()
+def infrastructure(
+    target: str = typer.Argument(".", help="Local path or git URL to scan."),
+    output: Path | None = typer.Option(None, "--output", "-o", help="Write JSON report."),
+    fail_on: str | None = typer.Option(None, "--fail-on", help="Exit non-zero on findings at/above severity."),
+    quiet: bool = typer.Option(False, "--quiet", "-q"),
+    config: Path | None = typer.Option(None, "--config", "-c", help="Optional .argus.yml path."),
+) -> None:
+    """Run all infrastructure scanners: CI/CD, containers, cloud, and IaC."""
+    _focused_scan(
+        target, ["cicd", "container", "cloud", "iac"], output=output, fail_on=fail_on,
+        quiet=quiet, title="Infrastructure findings", config=config,
+    )
+
+
+@app.command()
+def inventory(
+    target: str = typer.Argument(".", help="Local path or git URL to analyze."),
+    output: Path | None = typer.Option(None, "--output", "-o", help="Write JSON inventory here."),
+    quiet: bool = typer.Option(False, "--quiet", "-q"),
+) -> None:
+    """Export static asset inventory: languages, architecture, dependencies, infra files."""
+    import json
+
+    from argus.inventory.asset_map import build_inventory
+    from argus.targets import resolve
+
+    try:
+        resolved = resolve(target)
+    except Exception as exc:
+        err_console.print(f"[red]Error:[/red] {exc}")
+        raise typer.Exit(2) from exc
+    if resolved.project is None:
+        err_console.print("[red]Error:[/red] inventory requires a source repository or local path.")
+        raise typer.Exit(2)
+    try:
+        payload = build_inventory(resolved.project)
+        if output:
+            output.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+            console.print(f"[green]Inventory:[/green] {output}")
+        else:
+            console.print(json.dumps(payload, indent=2))
+        if not quiet:
+            c = payload["counts"]
+            err_console.print(
+                f"[dim]· {c['files']} files, {c['dependencies']} dependencies, "
+                f"{c['ci_cd_files']} CI/CD, {c['container_files']} container, "
+                f"{c['iac_files']} IaC[/dim]"
+            )
+    finally:
+        resolved.cleanup()
+
+
+@app.command()
+def drift(
+    before: Path = typer.Argument(..., help="Earlier Argus JSON report or inventory."),
+    after: Path = typer.Argument(..., help="Later Argus JSON report or inventory."),
+    inventory: bool = typer.Option(
+        False, "--inventory",
+        help="Compare inventory JSON files (from `argus inventory -o`).",
+    ),
+    output: Path | None = typer.Option(None, "--output", "-o", help="Write drift JSON here."),
+    fail_on: str | None = typer.Option(
+        None, "--fail-on",
+        help="Exit non-zero if added/changed findings meet this severity (scan mode).",
+    ),
+    quiet: bool = typer.Option(False, "--quiet", "-q"),
+) -> None:
+    """Detect configuration drift between two scan or inventory snapshots."""
+    import json
+
+    from argus.analysis.drift import (
+        compare_inventories,
+        compare_scans,
+        highest_added_severity,
+    )
+
+    try:
+        before_data = json.loads(before.read_text(encoding="utf-8"))
+        after_data = json.loads(after.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        err_console.print(f"[red]Error:[/red] invalid JSON input: {exc}")
+        raise typer.Exit(2) from exc
+
+    if inventory or before_data.get("dependencies") is not None and "findings" not in before_data:
+        payload = compare_inventories(before_data, after_data)
+        if output:
+            output.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+        if not quiet:
+            s = payload["summary"]
+            table = Table(title="Inventory drift")
+            table.add_column("Change")
+            table.add_column("Count")
+            table.add_row("Dependencies added", str(s["deps_added"]))
+            table.add_row("Dependencies removed", str(s["deps_removed"]))
+            table.add_row("Dependencies changed", str(s["deps_changed"]))
+            table.add_row("Architecture areas changed", str(s["arch_areas_changed"]))
+            console.print(table)
+        raise typer.Exit(0)
+
+    try:
+        before_scan = ScanResult.model_validate(before_data)
+        after_scan = ScanResult.model_validate(after_data)
+    except Exception as exc:
+        err_console.print(f"[red]Error:[/red] expected Argus scan JSON: {exc}")
+        raise typer.Exit(2) from exc
+
+    report = compare_scans(before_scan, after_scan)
+    payload = report.to_dict()
+    if output:
+        output.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+    if not quiet:
+        s = report.summary()
+        table = Table(title="Scan drift (configuration / posture change)")
+        table.add_column("Change")
+        table.add_column("Count")
+        table.add_row("Findings added", str(s["added"]))
+        table.add_row("Findings removed", str(s["removed"]))
+        table.add_row("Severity escalations", str(s["severity_changed"]))
+        console.print(table)
+        for item in report.added[:15]:
+            err_console.print(
+                f"  [red]+[/red] {item.severity} {item.rule_id} {item.title} ({item.location})"
+            )
+        if len(report.added) > 15:
+            err_console.print(f"  [dim]… and {len(report.added) - 15} more added[/dim]")
+
+    if fail_on and highest_added_severity(report) >= Severity.parse(fail_on):
+        raise typer.Exit(1)
+
+
+@app.command()
+def watch(
+    target: str = typer.Argument(".", help="Local path or git URL to monitor."),
+    interval: int = typer.Option(300, "--interval", "-i", help="Seconds between scans."),
+    state_dir: Path = typer.Option(
+        Path(".argus/watch"), "--state-dir",
+        help="Directory for scan snapshots and drift history.",
+    ),
+    once: bool = typer.Option(False, "--once", help="Run a single cycle and exit."),
+    push: bool = typer.Option(False, "--push", help="Upload each scan to Argus Cloud."),
+    url: str | None = typer.Option(None, "--url", help="Cloud base URL (or ARGUS_CLOUD_URL)."),
+    token: str | None = typer.Option(None, "--token", help="Cloud API token (or ARGUS_CLOUD_TOKEN)."),
+    scanners_opt: str | None = typer.Option(None, "--scanners", "-s", help="Comma-separated scanners."),
+    config: Path | None = typer.Option(None, "--config", "-c", help="Optional .argus.yml path."),
+    fail_on_drift: str | None = typer.Option(
+        None, "--fail-on-drift",
+        help="Exit non-zero when new/changed findings meet this severity.",
+    ),
+    quiet: bool = typer.Option(False, "--quiet", "-q"),
+) -> None:
+    """Run periodic scans, track drift locally, and optionally push to Argus Cloud."""
+    import os
+
+    from argus.core.engine import ScanEngine
+    from argus.targets import resolve
+    from argus.watch import run_watch_loop, state_dir_for
+    from argus.upload import PushError, build_ingest_payload, push_result
+
+    try:
+        resolved = resolve(target)
+    except Exception as exc:
+        err_console.print(f"[red]Error:[/red] {exc}")
+        raise typer.Exit(2) from exc
+    if resolved.project is None:
+        err_console.print("[red]Error:[/red] watch requires a source repository or local path.")
+        raise typer.Exit(2)
+
+    cfg = Config.load(path=config, project_root=resolved.project.root if resolved.project.origin == "local" else None)
+    cfg.trust_project_config = resolved.project.origin == "local"
+    if scanners_opt:
+        cfg.scanners = [s.strip() for s in scanners_opt.split(",") if s.strip()]
+
+    drift_floor = Severity.parse(fail_on_drift) if fail_on_drift else None
+    store = state_dir_for(target, state_dir)
+    cloud_url = url or os.environ.get("ARGUS_CLOUD_URL")
+    cloud_token = token or os.environ.get("ARGUS_CLOUD_TOKEN")
+    if push and (not cloud_url or not cloud_token):
+        err_console.print(
+            "[red]Error:[/red] --push requires --url/--token or ARGUS_CLOUD_URL/ARGUS_CLOUD_TOKEN."
+        )
+        raise typer.Exit(2)
+
+    def scan_once() -> ScanResult:
+        return ScanEngine(cfg).scan(resolved.project)
+
+    def maybe_push(result: ScanResult) -> None:
+        if not push:
+            return
+        payload = build_ingest_payload(result)
+        push_result(payload, url=cloud_url, token=cloud_token)  # type: ignore[arg-type]
+
+    def on_cycle(outcome) -> None:
+        if quiet:
+            return
+        counts = outcome.scan.counts_by_severity()
+        err_console.print(
+            f"[dim]· watch {outcome.snapshot_path.name}: "
+            f"{len(outcome.scan.findings)} findings "
+            f"({counts.get('critical', 0)} critical)[/dim]"
+        )
+        if outcome.drift:
+            ds = outcome.drift.summary()
+            if ds["added"] or ds["severity_changed"]:
+                err_console.print(
+                    f"[yellow]drift[/yellow] +{ds['added']} added, "
+                    f"{ds['severity_changed']} severity changes"
+                )
+
+    try:
+        code = run_watch_loop(
+            scan_fn=scan_once,
+            state_dir=store,
+            interval_seconds=interval,
+            once=once,
+            fail_on_drift=drift_floor,
+            push_fn=maybe_push if push else None,
+            on_cycle=on_cycle,
+        )
+    except PushError as exc:
+        err_console.print(f"[red]Push failed:[/red] {exc}")
+        raise typer.Exit(2) from exc
+    finally:
+        resolved.cleanup()
+
+    if code:
+        raise typer.Exit(code)
+
+
+@app.command()
+def agent(
+    config: Path = typer.Option(
+        Path(".argus/agent.yml"), "--config", "-c",
+        help="Agent config file (see examples/agent.yml).",
+    ),
+    init: bool = typer.Option(False, "--init", help="Write a starter agent config and exit."),
+    once: bool = typer.Option(False, "--once", help="Run one cycle across all targets and exit."),
+    quiet: bool = typer.Option(False, "--quiet", "-q"),
+) -> None:
+    """Run the server agent: monitor multiple paths on this host on a schedule.
+
+    Designed for cron, systemd, or long-running deployment. Each target is scanned,
+    drift is tracked locally, and results can be pushed to Argus Cloud.
+    """
+    from argus.agent import load_agent_config, run_agent_loop, write_default_agent_config
+    from argus.upload import PushError
+
+    if init:
+        path = write_default_agent_config(config)
+        console.print(f"[green]Agent config:[/green] {path}")
+        raise typer.Exit(0)
+
+    try:
+        cfg = load_agent_config(config)
+    except (OSError, ValueError, FileNotFoundError) as exc:
+        err_console.print(f"[red]Error:[/red] {exc}")
+        err_console.print("[dim]Run `argus agent --init` to create a starter config.[/dim]")
+        raise typer.Exit(2) from exc
+
+    if not quiet:
+        err_console.print(
+            f"[dim]· agent monitoring {len(cfg.targets)} target(s) "
+            f"every {cfg.interval}s (host: {cfg.host_label})[/dim]"
+        )
+
+    def on_cycle(summary) -> None:
+        if quiet:
+            return
+        err_console.print(
+            f"[dim]· agent cycle: {summary.targets_scanned} targets, "
+            f"{summary.total_findings} findings[/dim]"
+        )
+
+    try:
+        code = run_agent_loop(cfg, once=once, on_cycle=on_cycle)
+    except PushError as exc:
+        err_console.print(f"[red]Push failed:[/red] {exc}")
+        raise typer.Exit(2) from exc
+
+    if code:
+        raise typer.Exit(code)
+
+
+baseline_app = typer.Typer(help="Security baseline: gate on new findings only.")
+app.add_typer(baseline_app, name="baseline")
+
+
+@baseline_app.command("create")
+def baseline_create(
+    target: str = typer.Argument(".", help="Local path or git URL to scan."),
+    output: Path = typer.Option(..., "--output", "-o", help="Write baseline JSON here."),
+    config: Path | None = typer.Option(None, "--config", "-c"),
+    quiet: bool = typer.Option(False, "--quiet", "-q"),
+) -> None:
+    """Scan a target and save the result as a baseline for diff-aware CI gating."""
+    from argus.core.engine import ScanEngine
+    from argus.targets import resolve
+
+    try:
+        resolved = resolve(target)
+    except Exception as exc:
+        err_console.print(f"[red]Error:[/red] {exc}")
+        raise typer.Exit(2) from exc
+    if resolved.project is None:
+        err_console.print("[red]Error:[/red] baseline create requires a source path or repo.")
+        raise typer.Exit(2)
+    try:
+        cfg = Config.load(path=config, project_root=resolved.project.root)
+        cfg.trust_project_config = resolved.project.origin == "local"
+        progress = None if quiet else (lambda m: err_console.print(f"[dim]· {escape(m)}[/dim]"))
+        result = ScanEngine(cfg, progress=progress).scan(resolved.project)
+        output.write_text(result.model_dump_json(indent=2) + "\n", encoding="utf-8")
+        console.print(f"[green]Baseline:[/green] {output} ({len(result.findings)} findings recorded)")
+    finally:
+        resolved.cleanup()
+
+
+server_app = typer.Typer(help="Authorized host/server posture (read-only).")
+app.add_typer(server_app, name="server")
+
+
+@server_app.command("scan")
+def server_scan(
+    label: str | None = typer.Option(None, "--label", help="Host label in reports."),
+    fmt: list[str] = typer.Option(["table"], "--format", "-f"),
+    output: Path | None = typer.Option(None, "--output", "-o"),
+    fail_on: str | None = typer.Option(None, "--fail-on"),
+    quiet: bool = typer.Option(False, "--quiet", "-q"),
+) -> None:
+    """Read-only host posture: listeners, SSH config, and exposure signals."""
+    from argus.agent.host_posture import assess_host
+
+    if not quiet:
+        err_console.print(
+            "[dim]· Read-only host checks on this machine. "
+            "Only run on systems you are authorized to assess.[/dim]"
+        )
+    result = assess_host(label=label)
+    _emit(result, fmt, output)
+    if fail_on and result.highest_severity() >= Severity.parse(fail_on):
+        raise typer.Exit(1)
+
+
+policy_app = typer.Typer(help="Evaluate security policies against scan findings.")
+app.add_typer(policy_app, name="policy")
+
+
+@policy_app.command("check")
+def policy_check(
+    target: str = typer.Argument(".", help="Local path or git URL to scan."),
+    config: Path | None = typer.Option(
+        None, "--config", "-c", help="Path to an .argus.yml with policies:."
+    ),
+    report: Path | None = typer.Option(
+        None, "--report", "-r",
+        help="Evaluate policies against an existing Argus JSON report instead of scanning.",
+    ),
+    scanners_opt: str | None = typer.Option(
+        None, "--scanners", "-s", help="Comma-separated scanners (when scanning)."
+    ),
+    quiet: bool = typer.Option(False, "--quiet", "-q", help="Suppress progress output."),
+) -> None:
+    """Run (or load) a scan and evaluate ``policies:`` from config."""
+    from argus.core.engine import ScanEngine
+    from argus.policy import evaluate
+    from argus.targets import resolve
+
+    if report is not None:
+        try:
+            result = ScanResult.model_validate_json(report.read_text(encoding="utf-8"))
+        except (OSError, ValueError) as exc:
+            err_console.print(f"[red]Error:[/red] invalid report: {exc}")
+            raise typer.Exit(2) from exc
+        cfg = Config.load(path=config)
+    else:
+        try:
+            resolved = resolve(target)
+        except Exception as exc:
+            err_console.print(f"[red]Error:[/red] {exc}")
+            raise typer.Exit(2) from exc
+        if resolved.project is None:
+            err_console.print("[red]Error:[/red] policy check requires a source repository.")
+            raise typer.Exit(2)
+        try:
+            cfg = Config.load(path=config, project_root=resolved.project.root)
+            cfg.ai.enabled = False
+            if scanners_opt:
+                cfg.scanners = [s.strip() for s in scanners_opt.split(",") if s.strip()]
+            progress = None if quiet else (
+                lambda m: err_console.print(f"[dim]· {escape(m)}[/dim]")
+            )
+            result = ScanEngine(cfg, progress=progress).scan(resolved.project)
+        finally:
+            resolved.cleanup()
+
+    if not cfg.policies:
+        err_console.print(
+            "[yellow]No policies configured.[/yellow] Add a ``policies:`` section "
+            "to .argus.yml (see docs/configuration.md)."
+        )
+        raise typer.Exit(0)
+
+    outcome = evaluate(result, cfg.policies)
+    if outcome.blocked:
+        table = Table(title="Policy violations (BLOCK)")
+        table.add_column("Policy", style="bold")
+        table.add_column("Finding")
+        table.add_column("Location")
+        for v in outcome.blocked:
+            table.add_row(v.policy_id, v.finding.title, v.finding.location.as_ref())
+        console.print(table)
+    if outcome.warned and not quiet:
+        for v in outcome.warned:
+            err_console.print(
+                f"[yellow]WARN[/yellow] {v.policy_id}: {v.finding.title} "
+                f"({v.finding.location.as_ref()})"
+            )
+
+    if outcome.passed:
+        console.print("[green]Policy check passed[/green] "
+                      f"({len(outcome.violations)} warning(s)).")
+        raise typer.Exit(0)
+    err_console.print(
+        f"[red]Policy check failed:[/red] {len(outcome.blocked)} blocking violation(s)."
+    )
+    raise typer.Exit(1)
 
 
 @app.command()
@@ -778,13 +1619,128 @@ def _apply_baseline(result: ScanResult, baseline: Path, *, quiet: bool) -> None:
         )
 
 
-def _build_config(*, config, project_root, scanners, exclude, ai_provider, ai_model,
+def _apply_diff(result: ScanResult, root: Path, ref_spec: str, *, quiet: bool) -> None:
+    """Keep only findings that touch the git diff described by ``ref_spec``."""
+    from argus.analysis.diff_scan import filter_findings, resolve_diff
+    from argus.remediation import git_ops
+
+    if not git_ops.is_git_repo(root):
+        err_console.print(
+            "[yellow]Diff ignored:[/yellow] not a git repository "
+            f"({root})."
+        )
+        return
+    try:
+        scope = resolve_diff(root, ref_spec)
+    except Exception as exc:
+        err_console.print(f"[yellow]Diff ignored:[/yellow] {exc}")
+        return
+    if scope.empty:
+        if not quiet:
+            err_console.print("[dim]· Diff: no changed files in range.[/dim]")
+        result.findings = []
+        return
+    result.findings, suppressed = filter_findings(result.findings, scope)
+    if not quiet:
+        err_console.print(
+            f"[dim]· Diff ({ref_spec}): {suppressed} finding(s) outside changed "
+            f"lines/files suppressed, {len(result.findings)} in scope.[/dim]"
+        )
+
+
+def _focused_scan(
+    target: str,
+    scanners: list[str],
+    *,
+    output: Path | None = None,
+    fail_on: str | None = None,
+    quiet: bool = False,
+    title: str = "Findings",
+    config: Path | None = None,
+) -> None:
+    """Run a subset of scanners and print or write a JSON summary."""
+    import json
+
+    from argus.core.engine import ScanEngine
+    from argus.targets import resolve
+
+    try:
+        resolved = resolve(target)
+    except Exception as exc:
+        err_console.print(f"[red]Error:[/red] {exc}")
+        raise typer.Exit(2) from exc
+    if resolved.project is None:
+        err_console.print("[red]Error:[/red] requires a source repository or local path.")
+        raise typer.Exit(2)
+
+    try:
+        cfg = Config.load(path=config, project_root=resolved.project.root)
+        cfg.ai.enabled = False
+        cfg.scanners = scanners
+        progress = None if quiet else (
+            lambda m: err_console.print(f"[dim]· {escape(m)}[/dim]")
+        )
+        result = ScanEngine(cfg, progress=progress).scan(resolved.project)
+
+        payload = {
+            "scanners": scanners,
+            "findings": len(result.findings),
+            "highest_severity": result.highest_severity().label,
+            "items": [
+                {
+                    "rule": f.rule_id,
+                    "severity": f.severity.label,
+                    "title": f.title,
+                    "location": f.location.as_ref(),
+                }
+                for f in result.sorted_findings()
+            ],
+        }
+
+        if output:
+            output.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+            console.print(f"[green]Report:[/green] {output} ({len(result.findings)} finding(s))")
+        elif not quiet:
+            table = Table(title=title)
+            table.add_column("Severity")
+            table.add_column("Rule")
+            table.add_column("Title")
+            table.add_column("Location")
+            for f in result.sorted_findings()[:50]:
+                table.add_row(
+                    f.severity.label, f.rule_id, f.title[:50], f.location.as_ref(),
+                )
+            console.print(table)
+            if len(result.findings) > 50:
+                err_console.print(f"[dim]… and {len(result.findings) - 50} more[/dim]")
+            elif not result.findings:
+                console.print("[green]No findings.[/green]")
+
+        if fail_on and result.highest_severity() >= Severity.parse(fail_on):
+            raise typer.Exit(1)
+    finally:
+        resolved.cleanup()
+
+
+def _build_config(*, config, project_root, scanners, profile=None, exclude, ai_provider, ai_model,
                   no_ai, attack_sim, patches, min_severity, fail_on,
-                  reachability=False, no_cache=False, verify_secrets=False,
-                  secrets_history=False) -> Config:
+                  reachability=False, symbol_reachability=False, no_cache=False,
+                  verify_secrets=False, secrets_history=False, diff_ref: str | None = None) -> Config:
     cfg = Config.load(path=config, project_root=project_root)
-    if reachability:
-        cfg.scanner_options.setdefault("dependencies", {})["reachability"] = True
+    if profile:
+        from argus.profiles import apply_profile
+        selected = apply_profile(profile)
+        if selected:
+            cfg.scanners = selected
+    if reachability or symbol_reachability:
+        dep = cfg.scanner_options.setdefault("dependencies", {})
+        dep["reachability"] = True
+        if symbol_reachability:
+            dep["symbol_reachability"] = True
+    if diff_ref:
+        cfg.scanner_options.setdefault("dependency-diff", {})["ref"] = diff_ref
+        if cfg.scanners and "dependency-diff" not in cfg.scanners:
+            cfg.scanners = [*cfg.scanners, "dependency-diff"]
     if no_cache:
         cfg.cache = False
     if verify_secrets:
@@ -844,6 +1800,8 @@ def _print_fix_outcome(outcome, *, open_pr: bool, dry_run: bool) -> None:
 
 def _emit(result: ScanResult, formats: list[str], output: Path | None,
           audience: str | None = None) -> None:
+    from argus.security import SECURITY_DISCLAIMER
+    result.project_summary.setdefault("disclaimer", SECURITY_DISCLAIMER)
     # Count file-bound formats (everything except the console table) so we know
     # whether a single -o file path is enough or we must disambiguate by extension.
     file_formats = [f for f in formats if f != "table"]
@@ -956,6 +1914,17 @@ min_severity: info
 # Fail the process (non-zero exit) if any finding is at/above this severity.
 # Useful in CI. Leave empty to never fail on findings.
 fail_on: ""
+
+# Security policies (evaluated by ``argus policy check``).
+policies:
+  - id: block-critical
+    when:
+      severity: critical
+    action: block
+  - id: block-secrets
+    when:
+      scanner: secrets
+    action: block
 
 # Flagship educational feature: safe, sandboxed attack demonstrations.
 attack_simulation: false

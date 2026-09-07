@@ -22,7 +22,7 @@
     <polyline class="line" points="{{ trend.polyline }}"></polyline>
     {% for d in trend.dots %}
     <circle class="dot" cx="{{ d.x }}" cy="{{ d.y }}" r="3.5">
-      <title>{{ d.when }} — risk {{ d.risk }}, {{ d.findings }} findings</title>
+      <title>{{ d.when }} - risk {{ d.risk }}, {{ d.findings }} findings</title>
     </circle>
     {% endfor %}
   </svg>

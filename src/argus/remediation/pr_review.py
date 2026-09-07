@@ -68,7 +68,7 @@ def changed_lines(root: str | Path, base: str, head: str = "HEAD") -> dict[str, 
 
 def finding_comment(f: Finding) -> dict:
     """Build one inline GitHub review-comment payload for a finding."""
-    parts = [f"**Argus — {f.severity.label} · {f.title}**", f"`{f.rule_id}`"]
+    parts = [f"**Argus | {f.severity.label} · {f.title}**", f"`{f.rule_id}`"]
     if f.why_vulnerable:
         parts.append(f"\n{f.why_vulnerable}")
     if f.remediation and f.remediation.summary:
@@ -107,9 +107,9 @@ def split_comments(
 def review_summary(total: int, inline_count: int, leftover: list[Finding]) -> str:
     """Markdown body for the review / PR comment."""
     if total == 0:
-        return "### :white_check_mark: Argus: no new findings in this pull request."
+        return "### Argus: no new findings in this pull request."
     header = (
-        f"### :mag: Argus found {total} new finding"
+        f"### Argus found {total} new finding"
         f"{'s' if total != 1 else ''} in this pull request"
     )
     lines = [header, ""]
@@ -120,7 +120,7 @@ def review_summary(total: int, inline_count: int, leftover: list[Finding]) -> st
         )
     for f in leftover:
         lines.append(f"- **{f.severity.label}** `{f.rule_id}` "
-                     f"— {f.title} ({f.location.as_ref()})")
+                     f"- {f.title} ({f.location.as_ref()})")
     lines += ["", "_Only findings introduced by this PR are shown "
               "(diff-aware). Nothing was modified._"]
     return "\n".join(lines)

@@ -4,11 +4,16 @@ Thanks for considering a contribution. Argus is designed so that most
 additions, new scanners, languages, compliance rules, report formats, land as
 plugins and never touch the core. That keeps the barrier low and the core stable.
 
+This public repository is **Apache-2.0 only**. Commercial packages (`argus-k8s`,
+`argus-cloud`) live in a separate private repo. See
+[docs/repository-split.md](docs/repository-split.md) for what belongs here vs
+what must never be committed to this tree.
+
 ## Getting set up
 
 ```bash
 git clone https://github.com/Argus-CodeSecurity/Argus-appsec
-cd Argus
+cd argus-appsec
 python -m venv .venv && . .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -e ".[dev]"
 ```

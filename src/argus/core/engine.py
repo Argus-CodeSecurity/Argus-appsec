@@ -127,6 +127,27 @@ class ScanEngine:
         if self.config.ai.enabled:
             self._run_agents(result, project, ai)
 
+        from argus.analysis.risk_engine import enrich_contextual_risk
+        from argus.analysis.security_graph import build_security_graph
+        from argus.analysis.verification import apply_verification_states
+        from argus.exceptions import apply_exceptions, default_exceptions_path, load_exceptions
+        from argus.observability.metrics import MetricsTimer, ScanMetrics
+
+        timer = MetricsTimer()
+        apply_verification_states(result.findings)
+        enrich_contextual_risk(result)
+        result.project_summary["security_graph"] = build_security_graph(result)
+        exc_path = default_exceptions_path(project.root)
+        excs = load_exceptions(exc_path)
+        result.findings, suppressed = apply_exceptions(result.findings, excs)
+        if suppressed:
+            result.project_summary["exceptions_applied"] = suppressed
+        result.project_summary["metrics"] = ScanMetrics(
+            scanners_run=result.scanners_run,
+            findings_total=len(result.findings),
+            duration_ms=timer.elapsed_ms(),
+        ).to_dict()
+
         # 4. Assemble
         result.findings = result.sorted_findings()
         result.finished_at = datetime.now(timezone.utc)

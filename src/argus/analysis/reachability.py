@@ -31,6 +31,10 @@ from argus.core.project import Project
 IMPORTED = "imported"
 NOT_IMPORTED = "not_imported"
 UNKNOWN = "unknown"
+POTENTIALLY_AFFECTED = "POTENTIALLY_AFFECTED"
+LIKELY_AFFECTED = "LIKELY_AFFECTED"
+REACHABLE = "REACHABLE"
+VERIFIED = "VERIFIED"
 
 # Distribution name -> import name(s), for the common cases where they differ.
 # Only mismatches belong here; identical/normalized names are handled below.
@@ -134,3 +138,38 @@ def describe(verdict: str) -> str:
             "finding is kept, deprioritized rather than suppressed."
         )
     return "Reachability: could not be determined for this package."
+
+
+# --- npm / JavaScript require/import reachability (experimental) ------------
+
+_REQUIRE_RE = re.compile(
+    r"""(?:require\s*\(\s*['"]([^'"]+)['"]|from\s+['"]([^'"]+)['"])""",
+)
+
+
+def collect_npm_imports(project: Project) -> set[str]:
+    """Package names required/imported in first-party JS/TS source."""
+    imports: set[str] = set()
+    for f in project.files():
+        if f.suffix not in (".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs"):
+            continue
+        for m in _REQUIRE_RE.finditer(f.text()):
+            mod = m.group(1) or m.group(2) or ""
+            if mod.startswith("."):
+                continue
+            if mod.startswith("@"):
+                parts = mod.split("/")
+                base = "/".join(parts[:2]) if len(parts) >= 2 else mod
+            else:
+                base = mod.split("/")[0]
+            imports.add(base.lower())
+    return imports
+
+
+def npm_import_verdict(package: str, imports: set[str]) -> str:
+    if not imports:
+        return UNKNOWN
+    pkg = package.strip().lower()
+    if pkg in imports:
+        return IMPORTED
+    return NOT_IMPORTED

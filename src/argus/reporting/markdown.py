@@ -10,12 +10,12 @@ from __future__ import annotations
 from argus.core.models import ScanResult, Severity
 from argus.core.plugin import Reporter, reporter
 
-_SEV_EMOJI = {
-    Severity.CRITICAL: "🔴",
-    Severity.HIGH: "🟠",
-    Severity.MEDIUM: "🟡",
-    Severity.LOW: "🔵",
-    Severity.INFO: "⚪",
+_SEV_LABEL = {
+    Severity.CRITICAL: "CRITICAL",
+    Severity.HIGH: "HIGH",
+    Severity.MEDIUM: "MEDIUM",
+    Severity.LOW: "LOW",
+    Severity.INFO: "INFO",
 }
 
 
@@ -64,7 +64,7 @@ class MarkdownReporter(Reporter):
 
         findings = result.sorted_findings()
         if not findings:
-            out.append("No findings at or above the configured severity threshold. ✅")
+            out.append("No findings at or above the configured severity threshold.")
             return "\n".join(out)
 
         out.append("## Findings")
@@ -105,9 +105,9 @@ class MarkdownReporter(Reporter):
         return "\n".join(["## Summary", "", header, divider, row])
 
     def _finding(self, index: int, f) -> str:
-        emoji = _SEV_EMOJI.get(f.severity, "")
+        label = _SEV_LABEL.get(f.severity, f.severity.label)
         lines = [
-            f"### {index}. {emoji} {_inline(f.title)}",
+            f"### {index}. [{label}] {_inline(f.title)}",
             "",
             f"- **Severity:** {f.severity.label} "
             f"(risk {f.risk_score()}/100) · **Confidence:** {f.confidence.label} · "
@@ -140,7 +140,7 @@ class MarkdownReporter(Reporter):
                 lines.append("")
                 lines.append(f.remediation.guidance)
             if f.remediation.patch:
-                status = "✅ verified" if f.remediation.verified else "proposed"
+                status = "verified" if f.remediation.verified else "proposed"
                 lines.append("")
                 lines.append(f"**Suggested patch ({status}):**")
                 lines.extend(_fence(f.remediation.patch.rstrip(), "diff"))
@@ -149,7 +149,7 @@ class MarkdownReporter(Reporter):
 
     @staticmethod
     def _exploit(ex) -> str:
-        lines = ["<details><summary>🎯 Attack simulation</summary>", ""]
+        lines = ["<details><summary>Attack simulation</summary>", ""]
         rows = [
             ("Discovery", ex.discovery),
             ("Walkthrough", ex.exploit_walkthrough),

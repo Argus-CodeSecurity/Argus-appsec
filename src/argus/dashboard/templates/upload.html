@@ -16,7 +16,7 @@
 
 <section class="card narrow">
   <div class="card-head"><h2>Or send it straight from the CLI</h2></div>
-  <p class="muted">Pipe a scan directly into the dashboard — handy for CI:</p>
+  <p class="muted">Pipe a scan directly into the dashboard (handy for CI):</p>
   <pre class="code">argus scan . -f json | curl -s -X POST --data-binary @- \
   http://127.0.0.1:8000/api/scans</pre>
 </section>

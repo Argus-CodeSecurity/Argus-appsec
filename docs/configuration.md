@@ -55,13 +55,24 @@ scanner_options:
   secrets:
     entropy: true             # enable high-entropy string detection
     entropy_threshold: 4.0    # bits; raise to reduce false positives
+    verify: false             # opt-in live check (CLI: --verify-secrets)
   dependencies:
     online: true              # query the OSV database for real, current CVEs
     timeout: 15               # seconds for OSV lookups
     cache: true               # cache OSV records on disk to speed repeat scans
-    reachability: false       # experimental: imported/not-imported verdicts (Python)
-  secrets:
-    verify: false             # opt-in live check of detected secrets (CLI: --verify-secrets)
+    reachability: false       # experimental: imported/not-imported (Python + npm)
+    symbol_reachability: false  # tier-2: Python symbol usage vs OSV hints
+  supply-chain:
+    online_intel: true        # merge bundled + remote malicious-package feeds
+  dependency-diff:
+    ref: ""                   # git ref for PR diff (set by --diff / supply-chain)
+    behavior: true            # npm registry metadata anomaly checks
+    sandbox: auto             # auto | host | docker for metadata fetch
+  provenance:
+    require_for_releases: false
+
+# Security policies - see docs/policy.md
+policies: []
 ```
 
 ## Secret verification (opt-in)
@@ -110,8 +121,10 @@ annotates each PyPI dependency finding with an **import-level verdict**:
 *not imported* (no import found, deprioritized to an unlikely likelihood, but
 **never suppressed**, since dynamic imports and framework hooks are not traced).
 The verdict appears in the finding description and as `reachability` in finding
-metadata in JSON/SARIF reports. Python only for now; symbol-level and
-call-graph tiers are on the roadmap.
+metadata in JSON/SARIF reports. Supported for **Python and npm** at import level;
+add `--symbol-reachability` for Python symbol-level hints when OSV provides them.
+
+See also [policy.md](policy.md) for the policy engine.
 
 ## Code scanning: two tiers
 

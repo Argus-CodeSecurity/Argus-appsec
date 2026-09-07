@@ -28,22 +28,23 @@ impact*, the likelihood and severity, the CWE and OWASP mapping, and concrete
 remediation. Then it can generate a patch and confirm the patch closes the issue.
 
 > **Status: early alpha.** The architecture and full pipeline are in place: a working
-> CLI, eight built-in scanners (including a first-class LLM/agent scanner), a
-> multi-provider AI layer, cross-file taint analysis, and six report formats. See the
-> [roadmap](#roadmap).
+> CLI, built-in scanners (secrets, dependencies, SAST, IaC, CI/CD, containers, cloud,
+> supply chain, LLM/agent), a multi-provider AI layer, cross-file taint analysis, and
+> six report formats. See the [roadmap](#roadmap).
 
 ## Why Argus
 
-| | What you get |
-|---|---|
-| :mag: **It understands the project first** | Detects languages and frameworks and builds an architecture map (APIs, auth flows, datastores, third-party services, cloud, containers, CI/CD, dependency manifests) before it scans a single line. |
-| :onion: **Layered analysis** | Secrets, dependency CVEs (live [OSV](https://osv.dev) data, transitive packages from lockfiles across PyPI, npm, Go, Rust, Ruby, PHP), SAST, tree-sitter taint analysis, and infrastructure-as-code checks, all in one pass. |
-| :robot: **Built for AI-era codebases** | A first-class LLM and agent security scanner mapped to the [OWASP Top 10 for LLM Apps](https://genai.owasp.org/llm-top-10/): insecure model-output handling, prompt injection, secrets in prompts, over-privileged agent tools, and unsafe model loading. |
-| :mute: **Low noise on purpose** | Reachability analysis marks a CVE in a package your code never imports as lower priority. Cross-file taint follows untrusted input across function and file boundaries so real bugs surface and false alarms stay quiet. |
-| :lock: **Your code stays yours** | Offline heuristic provider by default (no key, no network). Ollama runs models fully locally. Anthropic and OpenAI are opt-in for teams that want cloud models. |
-| :hammer_and_wrench: **It fixes, not just finds** | Deterministic, self-verified fixes go to a fresh branch and open a pull request. An AI-proposed tier drafts riskier fixes, verifies them, and labels them for human review. Nothing risky is ever auto-applied. |
-| :vertical_traffic_light: **CI-native** | Deterministic output, SARIF and GitLab reports, and diff-aware scanning so pull requests are gated only on findings they introduce. One-block GitHub Action, pre-commit hooks, and a Docker image. |
-| :jigsaw: **Plugin-based throughout** | Scanners, reporters, and AI providers are plugins. Add a language, a report format, or even a rule in plain YAML without touching the core. |
+- **Project-aware scanning** - Detects languages and frameworks and builds an architecture map (APIs, auth flows, datastores, third-party services, cloud, containers, CI/CD, dependency manifests) before it scans a single line.
+- **Layered analysis** - Secrets, dependency CVEs (live [OSV](https://osv.dev) data, transitive packages from lockfiles across PyPI, npm, Go, Rust, Ruby, PHP), SAST, tree-sitter taint analysis, infrastructure-as-code, CI/CD pipeline, container, and cloud configuration checks, all in one pass.
+- **Built for AI-era codebases** - A first-class LLM and agent security scanner mapped to the [OWASP Top 10 for LLM Apps](https://genai.owasp.org/llm-top-10/): insecure model-output handling, prompt injection, secrets in prompts, over-privileged agent tools, and unsafe model loading.
+- **Low noise on purpose** - Reachability analysis marks a CVE in a package your code never imports as lower priority. Cross-file taint follows untrusted input across function and file boundaries so real bugs surface and false alarms stay quiet.
+- **Your code stays yours** - Offline heuristic provider by default (no key, no network). Ollama runs models fully locally. Anthropic and OpenAI are opt-in for teams that want cloud models.
+- **It fixes, not just finds** - Deterministic, self-verified fixes go to a fresh branch and open a pull request. An AI-proposed tier drafts riskier fixes, verifies them, and labels them for human review. Nothing risky is ever auto-applied.
+- **CI-native** - Deterministic output, SARIF and GitLab reports, and diff-aware scanning so pull requests are gated only on findings they introduce. One-block GitHub Action, pre-commit hooks, and a Docker image.
+- **Plugin-based throughout** - Scanners, reporters, and AI providers are plugins. Add a language, a report format, or even a rule in plain YAML without touching the core.
+
+For local folder naming before you push, see [docs/project-layout.md](docs/project-layout.md).
+For what belongs in the public repo vs commercial add-ons, see [docs/repository-split.md](docs/repository-split.md).
 
 ## Install
 
@@ -65,7 +66,7 @@ From source, for development:
 
 ```bash
 git clone https://github.com/Argus-CodeSecurity/Argus-appsec
-cd Argus
+cd Argus-appsec
 pip install -e ".[dev]"
 ```
 
@@ -100,6 +101,14 @@ argus scanners     # list scanners
 argus reporters    # list report formats
 argus providers    # list AI providers and whether each is usable right now
 argus init         # write a starter .argus.yml
+argus cicd .       # CI/CD pipeline checks only
+argus container .  # Docker / Compose / K8s manifests
+argus cloud .      # Terraform / CloudFormation
+argus infrastructure .  # all infra scanners
+argus inventory . -o inventory.json  # static asset map
+argus drift before.json after.json   # posture drift
+argus watch . --once                 # continuous local monitoring
+argus agent --init                   # server agent config
 ```
 
 ## CI in one block
@@ -115,7 +124,7 @@ permissions:
 steps:
   - uses: actions/checkout@v4
     with: { fetch-depth: 0 }
-  - uses: Argus-CodeSecurity/Argus-appsec@v0.7.0
+  - uses: Argus-CodeSecurity/Argus-appsec@v0.8.0
     with:
       fail-on: high
 ```
@@ -252,9 +261,17 @@ plugs an `argus cluster` command into the CLI when licensed.
 **Distribution.** An official GitHub Action, pre-commit hooks, and a published Docker
 image. See [docs/ci-cd.md](docs/ci-cd.md).
 
+**Implemented (Phase 4).** Configuration drift via `argus drift`, static asset inventory via `argus inventory`, local continuous monitoring via `argus watch`, and multi-path server agent via `argus agent`.
+
+**Implemented (Phase 3).** CI/CD pipeline scanner (GitHub Actions, GitLab CI,
+Jenkinsfile), container/compose checks, and cloud configuration patterns for
+AWS/Azure/GCP in Terraform and CloudFormation. Live cloud posture (AWS/Azure/GCP)
+is available via commercial add-ons.
+
+**Implemented (Phase 5).** Argus Cloud SaaS: billing, licensing, scan ingest, org invites, and drift in the dashboard.
+
 **Planned.** Full dynamic analysis (DAST) building on the posture layer, deeper taint
-depth (multi-hop cross-file), more deep-analysis languages, team collaboration on the
-dashboard, and richer compliance rule packs.
+depth (multi-hop cross-file), more deep-analysis languages, and richer compliance rule packs.
 
 ## Known limitations
 

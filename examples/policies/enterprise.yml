@@ -1,0 +1,59 @@
+# Enterprise policy pack for Argus
+#
+# Copy into your repo as `.argus.yml` or merge the `policies:` block into an
+# existing config. Run with:
+#   argus policy check . --config examples/policies/enterprise.yml
+#
+# Policies are deterministic: they match finding attributes only, never LLM output.
+
+min_severity: low
+fail_on: high
+
+policies:
+  - id: block-critical
+    when:
+      severity: critical
+    action: block
+
+  - id: block-secrets
+    when:
+      scanner: secrets
+    action: block
+
+  - id: block-live-secrets
+    when:
+      tag: live-secret
+    action: block
+
+  - id: block-supply-chain-critical
+    when:
+      scanner: sca
+      severity: critical
+    action: block
+
+  - id: warn-container-root
+    when:
+      rule: iac.docker-user-root
+    action: warn
+
+  - id: warn-public-cloud
+    when:
+      tag: public-exposure
+    action: warn
+
+  - id: warn-authz-bypass
+    when:
+      scanner: authz
+    action: warn
+
+  - id: block-reachable-critical-cve
+    when:
+      scanner: sca
+      severity: high
+      tag: reachable
+    action: block
+
+scanner_options:
+  secrets:
+    entropy: true
+    entropy_threshold: 4.0

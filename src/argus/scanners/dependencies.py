@@ -304,6 +304,26 @@ _PARSERS = {
 }
 
 
+def collect_packages(project) -> list[tuple[str, str, str, str]]:
+    """Return ``(ecosystem, manifest_path, package, version)`` for every dependency.
+
+    Shared by the dependency scanner, SBOM generator, and supply-chain scanner.
+    Lock files are processed first so pinned transitive versions win.
+    """
+    per_eco: dict[str, dict[tuple[str, str], tuple[str, str, str]]] = {}
+    for manifest_name, (ecosystem, parser) in _PARSERS.items():
+        for f in project.files_matching(manifest_name):
+            for pkg, version in parser(f.text()):
+                bucket = per_eco.setdefault(ecosystem, {})
+                bucket.setdefault((pkg, version), (f.rel_path, pkg, version))
+    out: list[tuple[str, str, str, str]] = []
+    for ecosystem, bucket in per_eco.items():
+        for path, pkg, version in bucket.values():
+            out.append((ecosystem, path, pkg, version))
+    out.sort(key=lambda t: (t[0], t[2], t[3], t[1]))
+    return out
+
+
 def _dedupe_by_cve(advisories: list[dict]) -> list[dict]:
     """Collapse advisories that describe the same CVE, keeping the most severe.
 
@@ -337,23 +357,47 @@ def _osv_to_dict(adv, ecosystem: str) -> dict:
         "cwe": adv.cwe,
         "ecosystem": ecosystem,
         "references": adv.references,
+        "affected_symbols": list(getattr(adv, "affected_symbols", []) or []),
     }
 
 
-def _annotate_reachability(finding: Finding, pkg: str, py_imports: set[str]) -> None:
-    """Attach an import-level reachability verdict to a PyPI dependency finding.
-
-    Annotates only, findings are never suppressed by reachability. A package
-    that is never imported keeps its severity but drops to an unlikely
-    likelihood, so triage naturally sorts confirmed-imported advisories first.
-    """
+def _annotate_reachability(
+    finding: Finding, pkg: str, ecosystem: str, py_imports: set[str] | None,
+    npm_imports: set[str] | None, py_symbols: set[str] | None = None,
+    affected_symbols: list[str] | None = None,
+) -> None:
+    """Attach import-level (and optional symbol-level) reachability verdicts."""
     from argus.analysis import reachability
+    from argus.analysis.symbol_reachability import (
+        describe_symbol_verdict,
+        symbol_verdict,
+    )
 
-    verdict = reachability.python_import_verdict(pkg, py_imports)
+    imported = False
+    if ecosystem == "PyPI" and py_imports is not None:
+        verdict = reachability.python_import_verdict(pkg, py_imports)
+        imported = verdict == reachability.IMPORTED
+    elif ecosystem == "npm" and npm_imports is not None:
+        verdict = reachability.npm_import_verdict(pkg, npm_imports)
+        imported = verdict == reachability.IMPORTED
+    else:
+        return
+
     finding.metadata["reachability"] = verdict
     finding.description = f"{finding.description}\n\n{reachability.describe(verdict)}"
     if verdict == reachability.NOT_IMPORTED:
         finding.likelihood = Likelihood.UNLIKELY
+
+    if py_symbols is not None and affected_symbols is not None and ecosystem == "PyPI":
+        sym = symbol_verdict(
+            pkg, py_symbols, affected_symbols, imported=imported,
+        )
+        finding.metadata["symbol_reachability"] = sym
+        extra = describe_symbol_verdict(sym)
+        if extra:
+            finding.description = f"{finding.description}\n\n{extra}"
+        if sym == "symbol_reachable":
+            finding.likelihood = max(finding.likelihood, Likelihood.LIKELY)
 
 
 def _annotate_exploit_signals(finding: Finding, signal) -> None:
@@ -399,27 +443,27 @@ class DependencyScanner(Scanner):
         timeout = float(opts.get("timeout", 15.0))
         use_cache = bool(opts.get("cache", True))
         use_reachability = bool(opts.get("reachability", False))
-        # EPSS + CISA KEV enrichment: on by default when online, best-effort.
+        symbol_reachability = bool(opts.get("symbol_reachability", False))
         use_exploit = online and bool(opts.get("exploit_signals", True))
         counter = 0
 
-        # Experimental import-level reachability (Python only for now): computed
-        # once per scan, used to annotate PyPI findings as imported/not-imported.
+        # Experimental import-level reachability: Python and npm for now.
         py_imports: set[str] | None = None
-        if use_reachability:
+        npm_imports: set[str] | None = None
+        py_symbols: set[str] | None = None
+        if use_reachability or symbol_reachability:
             from argus.analysis import reachability
             py_imports = reachability.collect_python_imports(ctx.project)
+            npm_imports = reachability.collect_npm_imports(ctx.project)
+            if symbol_reachability:
+                from argus.analysis.symbol_reachability import collect_python_symbols
+                py_symbols = collect_python_symbols(ctx.project)
 
-        # Collect declared dependencies per ecosystem, de-duplicating by
-        # (package, version) so a dependency listed in both a manifest and a lock
-        # file is scanned and reported once. Lock files are processed first (see
-        # _PARSERS ordering), so the reported location prefers the lock file.
+        # Collect declared dependencies per ecosystem via the shared inventory helper.
         per_eco: dict[str, dict[tuple[str, str], tuple[str, str, str]]] = {}
-        for manifest_name, (ecosystem, parser) in _PARSERS.items():
-            for f in ctx.project.files_matching(manifest_name):
-                for pkg, version in parser(f.text()):
-                    bucket = per_eco.setdefault(ecosystem, {})
-                    bucket.setdefault((pkg, version), (f.rel_path, pkg, version))
+        for ecosystem, path, pkg, version in collect_packages(ctx.project):
+            bucket = per_eco.setdefault(ecosystem, {})
+            bucket.setdefault((pkg, version), (path, pkg, version))
 
         findings: list[Finding] = []
         for ecosystem, bucket in per_eco.items():
@@ -435,8 +479,12 @@ class DependencyScanner(Scanner):
                 for adv in _dedupe_by_cve(advisories):
                     counter += 1
                     finding = self._finding(adv, counter, path, pkg, version)
-                    if py_imports is not None and ecosystem == "PyPI":
-                        _annotate_reachability(finding, pkg, py_imports)
+                    if use_reachability or symbol_reachability:
+                        _annotate_reachability(
+                            finding, pkg, ecosystem, py_imports, npm_imports,
+                            py_symbols=py_symbols,
+                            affected_symbols=adv.get("affected_symbols"),
+                        )
                     findings.append(finding)
 
         # Enrich CVE findings with exploit signals in one batched pass, so the

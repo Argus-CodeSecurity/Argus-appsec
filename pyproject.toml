@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "argus-appsec"
-version = "0.7.0"
+version = "0.8.0"
 description = "An open-source AI Security Engineer: maps your application, finds vulnerabilities, explains them, and proposes verified fixes."
 readme = "README.md"
 requires-python = ">=3.10"

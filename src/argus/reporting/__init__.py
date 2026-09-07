@@ -10,9 +10,10 @@ from argus.reporting import (  # noqa: F401
     gitlab,
     html,
     json_reporter,
+    junit,
     markdown,
     sarif,
     vex,
 )
 
-__all__ = ["badge", "gitlab", "html", "json_reporter", "markdown", "sarif", "vex"]
+__all__ = ["badge", "gitlab", "html", "json_reporter", "junit", "markdown", "sarif", "vex"]

@@ -54,6 +54,22 @@ def diff(root: Path, *args: str) -> str:
     return _run(root, "diff", *args, check=False).stdout
 
 
+def show_file(root: Path, ref: str, rel_path: str) -> str | None:
+    """Return file contents at ``ref:rel_path``, or None if unavailable."""
+    proc = _run(root, "show", f"{ref}:{rel_path}", check=False)
+    if proc.returncode != 0:
+        return None
+    return proc.stdout
+
+
+def rev_parse(root: Path, ref: str) -> str | None:
+    """Resolve a ref to a commit sha, or None."""
+    proc = _run(root, "rev-parse", ref, check=False)
+    if proc.returncode != 0:
+        return None
+    return proc.stdout.strip() or None
+
+
 def has_uncommitted_changes(root: Path) -> bool:
     return bool(_run(root, "status", "--porcelain").stdout.strip())
 

@@ -195,6 +195,11 @@ class Registry:
             return
         for ep in eps:
             try:
+                from argus.plugins.signing import verify_plugin_entry
+                if not verify_plugin_entry(ep):
+                    import warnings
+                    warnings.warn(f"Blocked untrusted Argus plugin {ep.name!r}", stacklevel=2)
+                    continue
                 register = ep.load()
                 register()
             except Exception as exc:  # pragma: no cover - defensive

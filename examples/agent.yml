@@ -1,0 +1,16 @@
+# Argus server agent example
+# Copy to .argus/agent.yml and customize paths for your host.
+
+interval: 600
+state_dir: .argus/agent
+push: false
+# cloud_url: ${ARGUS_CLOUD_URL}
+# cloud_token: ${ARGUS_CLOUD_TOKEN}
+fail_on_drift: high
+host_label: my-server
+
+targets:
+  - path: .
+    scanners: secrets, patterns, sca, iac, cicd, container, cloud
+  - path: /etc
+    scanners: patterns
