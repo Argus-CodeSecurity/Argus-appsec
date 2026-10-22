@@ -7,6 +7,68 @@ include breaking changes, noted explicitly).
 
 ## [Unreleased]
 
+### Added
+- **SARIF import.** `argus import <file.sarif>` and `argus scan --import-sarif`
+  read SARIF 2.1.0 from other scanners (CodeQL, Semgrep, Bandit and others),
+  map their results onto Argus findings, and run them through the same
+  baseline, suppression, policy and reporting steps as native findings. The
+  input is treated as untrusted: file size, nesting and result count are
+  capped, locations outside the project root are dropped, and snippets are
+  redacted before anything is stored.
+- **Project context file.** `.argus/context.yml` declares the project's own
+  sanitizers and trusted sources (used by the taint engines), internal-only
+  paths, exposure levels and data classification, so findings are ranked
+  against how the code is really deployed. Validation is strict, and like the
+  rest of repository config it is read only from trusted projects.
+- **Audit log.** `.argus/audit.log` is an append-only, hash-chained record of
+  scans, suppressions (including findings hidden by `--baseline`) and fixes.
+  Set `audit_log: false` to turn it off.
+- **LLM and agent data flow.** The LLM scanner parses Python with tree-sitter
+  to trace model output into dangerous sinks (LLM05), flag agents given
+  excessive tools (LLM06) and review system-prompt construction. Findings cite
+  OWASP Top 10 for LLM Applications 2025 ids.
+- **Agent configuration scanner** (`agent-config`). Reviews MCP server
+  definitions and coding-agent settings for hardcoded credentials, servers
+  launched from unpinned packages, remote servers over plain HTTP, filesystem
+  access to `/` or a home directory, and settings that run tools without
+  confirmation. It runs in the `deep` profile.
+- **`argus check`.** A fast, file-level check for editors and AI assistant
+  hooks, with `--hook` output for Claude Code and Cursor and
+  `--no-inline-ignores` for strict mode.
+- **MCP tools.** The MCP server adds `argus_check_files`, `argus_check_snippet`,
+  `argus_check_package` and `argus_fix` next to `argus_scan`.
+- **`argus init --editor claude|cursor|vscode`** writes that editor's MCP and
+  hook configuration into the project.
+- **Public benchmarks.** `benchmarks/public/` runs Argus, Bandit and Semgrep
+  on OWASP BenchmarkPython and SecurityEval and publishes the raw findings and
+  scores; see `docs/benchmarks.md`.
+- **Flow-sensitive Python taint engine.** Branches, loops, `match` and `try`
+  are analysed separately and joined; constant conditions prune dead code;
+  literal containers and simple early-return guards are understood. New
+  CWE-mapped sinks cover XSS, open redirect, XXE, LDAP and XPath injection,
+  trust-boundary violations, weak randomness for tokens, unsafe
+  deserialization and insecure cookies.
+- Findings report start and end columns, and snippets keep their indentation,
+  so editors can highlight the exact match.
+- Logo set and brand assets in `docs/assets/brand/`.
+
+### Changed
+- A scan of a git work tree skips untracked files that git ignores (build
+  output, virtual environments, local `.env` files).
+- Inline `argus-ignore` comments are recognised in `--`, `<!-- -->` and `;`
+  comment styles as well as `#` and `//`.
+- Deterministic fix patches are attached when AI is off.
+- Reporters, model clients and HTTP libraries are imported on first use, so
+  the CLI starts faster.
+- The regex tier asks the taint engine about its payload, so `shell=True`,
+  `os.system` and `pickle.loads` on literal-only data are no longer reported.
+
+### Fixed
+- Imported SARIF findings keep the tool's own fingerprints, so baselines stay
+  stable across runs.
+- `argus mcp --help` lists every MCP tool.
+- A fresh `import argus.inventory` no longer fails on a circular import.
+
 ## [0.9.2] - 2026-10-22
 
 0.9.2 is the first PyPI release with the 0.9.0 security hardening. The 0.9.0
