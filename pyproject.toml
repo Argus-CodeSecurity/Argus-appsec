@@ -118,8 +118,13 @@ path = "src/argus/__init__.py"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/argus"]
+# Core metadata 2.4 is the version PEP 639 licence fields need and that
+# PyPI, pip and private package mirrors all read. Newer hatchling defaults
+# to 2.5, which older upload tooling rejects.
+core-metadata-version = "2.4"
 
 [tool.hatch.build.targets.sdist]
+core-metadata-version = "2.4"
 include = [
   "src/argus",
   "tests",
