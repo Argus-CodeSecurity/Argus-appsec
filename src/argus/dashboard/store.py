@@ -40,6 +40,19 @@ def _get_or_create_project(session: Session, name: str) -> tuple[Project, int]:
     return project, project.id
 
 
+def _scan_time(result: ScanResult, now: datetime) -> datetime:
+    """When the scan ran, per the report, but never later than ``now``.
+
+    The timestamp comes from the uploaded report. Unclamped, a report dated in
+    the far future would stay the project's "latest" scan forever and hide
+    every real scan sent after it.
+    """
+    when = result.finished_at or result.started_at or now
+    if when.tzinfo is None:
+        when = when.replace(tzinfo=timezone.utc)
+    return min(when, now)
+
+
 def ingest_report(session: Session, raw_json: str) -> Scan:
     """Parse an Argus JSON report and store it as a scan with its findings.
 
@@ -61,7 +74,7 @@ def _store_result(session: Session, result: ScanResult, summary: dict, name: str
 
     scan = Scan(
         project_id=project_id,
-        created_at=result.finished_at or result.started_at or datetime.now(timezone.utc),
+        created_at=_scan_time(result, datetime.now(timezone.utc)),
         argus_version=result.argus_version,
         target=result.target,
         risk_score=result.aggregate_risk(),
@@ -95,6 +108,35 @@ def _store_result(session: Session, result: ScanResult, summary: dict, name: str
     return scan
 
 
+def enforce_retention(session: Session, max_scans: int) -> int:
+    """Keep only the newest ``max_scans`` scans; returns how many were deleted.
+
+    Findings of deleted scans go with them, and projects left without scans
+    are removed, so the database cannot grow without bound.
+    """
+    total = len(session.exec(select(Scan.id)).all())
+    excess = total - max(1, max_scans)
+    if excess <= 0:
+        return 0
+    stale = session.exec(
+        select(Scan).order_by(col(Scan.created_at).asc(), col(Scan.id).asc()).limit(excess)
+    ).all()
+    stale_ids = [s.id for s in stale]
+    project_ids = {s.project_id for s in stale}
+    for finding in session.exec(select(Finding).where(col(Finding.scan_id).in_(stale_ids))):
+        session.delete(finding)
+    for scan in stale:
+        session.delete(scan)
+    session.commit()
+    for pid in project_ids:
+        if session.exec(select(Scan.id).where(Scan.project_id == pid)).first() is None:
+            project = session.get(Project, pid)
+            if project is not None:
+                session.delete(project)
+    session.commit()
+    return len(stale)
+
+
 # --- queries ---------------------------------------------------------------
 def list_projects(session: Session) -> list[dict]:
     """Projects with their latest scan's headline numbers, worst risk first."""
@@ -108,7 +150,7 @@ def list_projects(session: Session) -> list[dict]:
     for project in session.exec(select(Project)).all():
         latest = session.exec(
             select(Scan).where(Scan.project_id == project.id)
-            .order_by(col(Scan.created_at).desc())
+            .order_by(col(Scan.created_at).desc(), col(Scan.id).desc())
         ).first()
         out.append({
             "project": project,
@@ -130,7 +172,7 @@ def get_project_by_id(session: Session, project_id: int) -> Project | None:
 def list_scans(session: Session, project_id: int) -> list[Scan]:
     return list(session.exec(
         select(Scan).where(Scan.project_id == project_id)
-        .order_by(col(Scan.created_at).desc())
+        .order_by(col(Scan.created_at).desc(), col(Scan.id).desc())
     ).all())
 
 
@@ -149,7 +191,7 @@ def trend(session: Session, project_id: int) -> list[Scan]:
     """Scans oldest-first, for time-series charts."""
     return list(session.exec(
         select(Scan).where(Scan.project_id == project_id)
-        .order_by(col(Scan.created_at).asc())
+        .order_by(col(Scan.created_at).asc(), col(Scan.id).asc())
     ).all())
 
 
@@ -160,7 +202,7 @@ def overall_stats(session: Session) -> dict:
     latest_by_project: dict[int, Scan] = {}
     for s in scans:
         cur = latest_by_project.get(s.project_id)
-        if cur is None or s.created_at > cur.created_at:
+        if cur is None or (s.created_at, s.id or 0) > (cur.created_at, cur.id or 0):
             latest_by_project[s.project_id] = s
     for s in latest_by_project.values():
         open_critical += s.severity_counts.get("Critical", 0)
