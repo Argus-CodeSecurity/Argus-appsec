@@ -244,6 +244,15 @@ def test_inventory_reads_at_ref_without_executing_repo_config(tmp_path):
     assert not marker.exists(), marker.read_text()
 
 
+def test_config_from_ref_does_not_execute_repo_config(tmp_path):
+    from argus.core.config import load_config_from_ref
+
+    repo, marker = _hostile_repo(tmp_path)
+    cfg = load_config_from_ref(repo, "HEAD")
+    assert cfg.trust_project_config is False
+    assert not marker.exists(), marker.read_text()
+
+
 def test_worktree_output_is_capped(tmp_path):
     from argus.core import gitexec
 

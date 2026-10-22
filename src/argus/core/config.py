@@ -15,15 +15,13 @@ Kept deliberately small, every field maps to something a user actually tunes.
 
 from __future__ import annotations
 
-import os
-import shutil
-import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import yaml
 
+from argus.core import gitexec
 from argus.core.models import Severity
 
 if TYPE_CHECKING:
@@ -321,20 +319,26 @@ def load_project_config(
 
 
 _GIT_TIMEOUT = 30
+# A config file is small; anything larger than this is not read.
+_MAX_CONFIG_BYTES = 1_000_000
 
 
-def _git(root: Path, *args: str) -> subprocess.CompletedProcess[str]:
-    if shutil.which("git") is None:
-        raise ConfigError("--config-from-ref needs git, which was not found on PATH")
-    env = {**os.environ, "GIT_TERMINAL_PROMPT": "0"}
+def _git(root: Path, *args: str) -> gitexec.GitResult:
+    """Run git for --config-from-ref through the hardened runner.
+
+    The checked-out tree is treated as untrusted here, so the untrusted
+    profile is used: the repository's config cannot launch programs.
+    """
     try:
-        return subprocess.run(
-            ["git", "-C", str(root), *args],
-            capture_output=True, text=True, timeout=_GIT_TIMEOUT, env=env,
-            encoding="utf-8", errors="replace", check=False,
-        )
-    except (OSError, subprocess.TimeoutExpired) as exc:
+        res = gitexec.run(root, *args, profile=gitexec.UNTRUSTED, timeout=_GIT_TIMEOUT,
+                          max_output=_MAX_CONFIG_BYTES, capture_stderr=True)
+    except gitexec.GitNotFoundError as exc:
+        raise ConfigError("--config-from-ref needs git, which was not found on PATH") from exc
+    except gitexec.GitExecError as exc:
         raise ConfigError(f"git {args[0]} failed: {exc}") from exc
+    if res.truncated:
+        raise ConfigError(f"git {args[0]} output exceeded {_MAX_CONFIG_BYTES} bytes")
+    return res
 
 
 def _validate_ref(ref: str) -> str:
@@ -370,7 +374,8 @@ def load_config_from_ref(
     """
     root = Path(project_root)
     ref = _validate_ref(ref)
-    proc = _git(root, "rev-parse", "--verify", "--quiet", f"{ref}^{{commit}}")
+    proc = _git(root, "rev-parse", "--verify", "--quiet", "--end-of-options",
+                f"{ref}^{{commit}}")
     commit = proc.stdout.strip()
     if proc.returncode != 0 or not commit:
         raise ConfigError(
