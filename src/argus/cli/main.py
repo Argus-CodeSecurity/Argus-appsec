@@ -199,6 +199,11 @@ def scan(
     from argus.core.engine import ScanEngine
     from argus.targets import resolve
 
+    # Reject a misspelled threshold before doing any work (e.g. cloning).
+    for value, flag in ((min_severity, "--min-severity"), (fail_on, "--fail-on")):
+        if value:
+            _cli_severity(value, flag)
+
     # Resolve the target first so config discovery can use the project root.
     try:
         resolved = resolve(target, branch=branch)
@@ -215,11 +220,11 @@ def scan(
             )
         result = _posture_result(resolved.web.url, quiet=quiet)
         if min_severity:
-            floor = Severity.parse(min_severity)
+            floor = _cli_severity(min_severity, "--min-severity")
             result.findings = [f for f in result.findings if f.severity >= floor]
         _emit(result, fmt, output)
         gated = fail_on is not None and result.highest_severity() >= \
-            Severity.parse(fail_on)
+            _cli_severity(fail_on, "--fail-on")
         raise typer.Exit(1 if gated else 0)
 
     project = resolved.project
@@ -638,7 +643,7 @@ def supply_chain_cmd(
             if len(result.findings) > 50:
                 err_console.print(f"[dim]… and {len(result.findings) - 50} more[/dim]")
 
-        if fail_on and result.highest_severity() >= Severity.parse(fail_on):
+        if fail_on and result.highest_severity() >= _cli_severity(fail_on, "--fail-on"):
             raise typer.Exit(1)
     finally:
         resolved.cleanup()
@@ -861,7 +866,7 @@ def drift(
         if len(report.added) > 15:
             err_console.print(f"  [dim]… and {len(report.added) - 15} more added[/dim]")
 
-    if fail_on and highest_added_severity(report) >= Severity.parse(fail_on):
+    if fail_on and highest_added_severity(report) >= _cli_severity(fail_on, "--fail-on"):
         raise typer.Exit(1)
 
 
@@ -907,7 +912,7 @@ def watch(
     if scanners_opt:
         cfg.scanners = [s.strip() for s in scanners_opt.split(",") if s.strip()]
 
-    drift_floor = Severity.parse(fail_on_drift) if fail_on_drift else None
+    drift_floor = _cli_severity(fail_on_drift, "--fail-on-drift") if fail_on_drift else None
     store = state_dir_for(target, state_dir)
     cloud_url = url or os.environ.get("ARGUS_CLOUD_URL")
     cloud_token = token or os.environ.get("ARGUS_CLOUD_TOKEN")
@@ -1075,7 +1080,7 @@ def server_scan(
         )
     result = assess_host(label=label)
     _emit(result, fmt, output)
-    if fail_on and result.highest_severity() >= Severity.parse(fail_on):
+    if fail_on and result.highest_severity() >= _cli_severity(fail_on, "--fail-on"):
         raise typer.Exit(1)
 
 
@@ -1237,7 +1242,7 @@ def fix(
         if scanners_opt:
             cfg.scanners = [s.strip() for s in scanners_opt.split(",") if s.strip()]
         if min_severity:
-            cfg.min_severity = Severity.parse(min_severity)
+            cfg.min_severity = _cli_severity(min_severity, "--min-severity")
 
         progress = None if quiet else (lambda msg: err_console.print(f"[dim]· {escape(msg)}[/dim]"))
         result = ScanEngine(cfg, progress=progress).scan(project)
@@ -1346,7 +1351,7 @@ def push(
         )
         raise typer.Exit(2)
 
-    floor = Severity.parse(min_severity) if min_severity else Severity.LOW
+    floor = _cli_severity(min_severity, "--min-severity") if min_severity else Severity.LOW
 
     if report is not None:
         raw = sys.stdin.read() if str(report) == "-" else report.read_text(encoding="utf-8")
@@ -1506,7 +1511,7 @@ def review(
         if exclude:
             cfg.exclude_scanners = [s.strip() for s in exclude.split(",") if s.strip()]
         if min_severity:
-            cfg.min_severity = Severity.parse(min_severity)
+            cfg.min_severity = _cli_severity(min_severity, "--min-severity")
 
         progress = None if quiet else (lambda m: err_console.print(f"[dim]· {escape(m)}[/dim]"))
         result = ScanEngine(cfg, progress=progress).scan(project)
@@ -1530,7 +1535,7 @@ def review(
         )
 
         if fail_on and result.findings:
-            floor = Severity.parse(fail_on)
+            floor = _cli_severity(fail_on, "--fail-on")
             if max(f.severity for f in result.findings) >= floor:
                 err_console.print(f"[red]Failing:[/red] findings at/above {floor.label}.")
                 raise typer.Exit(1)
@@ -1573,7 +1578,7 @@ def learn(
         if scanners_opt:
             cfg.scanners = [s.strip() for s in scanners_opt.split(",") if s.strip()]
         if min_severity:
-            cfg.min_severity = Severity.parse(min_severity)
+            cfg.min_severity = _cli_severity(min_severity, "--min-severity")
         progress = None if quiet else (lambda m: err_console.print(f"[dim]· {escape(m)}[/dim]"))
         result = ScanEngine(cfg, progress=progress).scan(project)
         console.print(render_lessons(result))
@@ -1638,6 +1643,18 @@ def version() -> None:
 
 
 # --- helpers ---------------------------------------------------------------
+def _cli_severity(value: str, option: str) -> Severity:
+    """Parse a severity flag, turning a typo into a usage error (exit 2).
+
+    Exit 1 means "the gate found something"; a misspelled ``--fail-on`` must
+    not be confused with that, nor crash with a traceback.
+    """
+    try:
+        return Severity.parse(value)
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc), param_hint=option) from exc
+
+
 def _posture_result(url: str, *, quiet: bool) -> ScanResult:
     """Build a ScanResult from live posture checks against a URL."""
     from datetime import datetime, timezone
@@ -1769,7 +1786,7 @@ def _focused_scan(
             elif not result.findings:
                 console.print("[green]No findings.[/green]")
 
-        if fail_on and result.highest_severity() >= Severity.parse(fail_on):
+        if fail_on and result.highest_severity() >= _cli_severity(fail_on, "--fail-on"):
             raise typer.Exit(1)
     finally:
         resolved.cleanup()
@@ -1820,9 +1837,9 @@ def _build_config(*, config, project_root, scanners, profile=None, exclude, ai_p
     if patches:
         cfg.generate_patches = True
     if min_severity:
-        cfg.min_severity = Severity.parse(min_severity)
+        cfg.min_severity = _cli_severity(min_severity, "--min-severity")
     if fail_on:
-        cfg.fail_on = Severity.parse(fail_on)
+        cfg.fail_on = _cli_severity(fail_on, "--fail-on")
     if fail_on_error is not None:
         cfg.fail_on_error = fail_on_error
     return cfg

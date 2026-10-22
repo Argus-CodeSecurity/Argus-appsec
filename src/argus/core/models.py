@@ -48,11 +48,26 @@ class _LabeledIntEnum(IntEnum):
 
     @classmethod
     def parse(cls: type[_E], value: str | int | _E) -> _E:
+        """Parse a name (case-insensitive) or integer value.
+
+        Raises ``ValueError`` (never ``KeyError``) on unknown input so callers
+        can report a bad setting as a usage error instead of a crash.
+        """
         if isinstance(value, cls):
             return value
-        if isinstance(value, int):
-            return cls(value)
-        return cls[str(value).strip().upper().replace(" ", "_")]
+        if isinstance(value, int) and not isinstance(value, bool):
+            try:
+                return cls(value)
+            except ValueError:
+                pass
+        else:
+            key = str(value).strip().upper().replace(" ", "_")
+            if key in cls.__members__:
+                return cls.__members__[key]
+        choices = ", ".join(m.name.lower() for m in cls)
+        raise ValueError(
+            f"invalid {cls.__name__.lower()} {value!r} (choose from: {choices})"
+        )
 
     @property
     def label(self) -> str:
