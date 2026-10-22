@@ -87,6 +87,9 @@ jobs:
         with:
           python-version: "3.12"
       - name: Build sdist and wheel
+        # Keep twine in step with the version bundled in the pinned
+        # pypa/gh-action-pypi-publish (publish.yml), so this check fails
+        # wherever the real upload would.
         run: |
           python -m pip install "build==1.6.1" "twine==7.0.0"
           python -m build
