@@ -113,8 +113,20 @@ def posture_result(url: str, *, quiet: bool) -> ScanResult:
     return result
 
 
-def apply_baseline(result: ScanResult, baseline: Path, *, quiet: bool) -> None:
-    """Drop findings already present in a baseline report (diff-aware scanning)."""
+def apply_baseline(
+    result: ScanResult,
+    baseline: Path,
+    *,
+    quiet: bool,
+    project: Project | None = None,
+    cfg: Config | None = None,
+) -> None:
+    """Drop findings already present in a baseline report (diff-aware scanning).
+
+    With ``project`` and ``cfg``, the findings the baseline hid are recorded
+    in ``.argus/audit.log`` (kind ``baseline``) under the same rule as every
+    other suppression: a trusted, local project with the audit log on.
+    """
     from argus.baseline import BaselineError, filter_new, load_fingerprints
 
     try:
@@ -122,12 +134,24 @@ def apply_baseline(result: ScanResult, baseline: Path, *, quiet: bool) -> None:
     except BaselineError as exc:
         err_console.print(f"[yellow]Baseline ignored:[/yellow] {exc}")
         return
+    before = result.findings
     result.findings, suppressed = filter_new(result.findings, known)
     if not quiet:
         err_console.print(
             f"[dim]- Baseline: {suppressed} known finding(s) suppressed, "
             f"{len(result.findings)} new.[/dim]"
         )
+    if project is None or cfg is None or not suppressed:
+        return
+    if not cfg.trust_project_config or project.origin != "local":
+        return
+    from argus.audit import record_baseline
+
+    kept = {id(f) for f in result.findings}
+    hidden = [f for f in before if id(f) not in kept]
+    outcome = record_baseline(project.root, baseline, hidden, config=cfg)
+    if outcome.warning:
+        err_console.print(f"[yellow]Audit log:[/yellow] {escape(outcome.warning)}")
 
 
 def apply_diff(result: ScanResult, root: Path, ref_spec: str, *, quiet: bool) -> None:

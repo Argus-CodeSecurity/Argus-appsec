@@ -299,7 +299,7 @@ def scan(
             result.findings = result.sorted_findings()
 
         if baseline is not None:
-            apply_baseline(result, baseline, quiet=quiet)
+            apply_baseline(result, baseline, quiet=quiet, project=project, cfg=cfg)
 
         if diff_ref is not None:
             apply_diff(result, project.root, diff_ref, quiet=quiet)

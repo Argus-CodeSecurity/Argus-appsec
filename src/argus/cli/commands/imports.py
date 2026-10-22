@@ -145,7 +145,7 @@ def import_cmd(
             "and were merged.[/dim]"
         )
     if baseline is not None:
-        apply_baseline(result, baseline, quiet=quiet)
+        apply_baseline(result, baseline, quiet=quiet, project=proj, cfg=cfg)
     if diff_ref is not None:
         apply_diff(result, proj.root, diff_ref, quiet=quiet)
 

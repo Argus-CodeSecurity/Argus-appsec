@@ -238,7 +238,7 @@ def review(
         result = ScanEngine(cfg, progress=progress_printer(quiet)).scan(project)
 
         if baseline is not None:
-            apply_baseline(result, baseline, quiet=quiet)
+            apply_baseline(result, baseline, quiet=quiet, project=project, cfg=cfg)
 
         changed = pr_review.changed_lines(project.root, base_ref)
         try:

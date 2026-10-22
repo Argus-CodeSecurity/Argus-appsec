@@ -259,7 +259,7 @@ the same order, so every setting below behaves exactly as it does for
   `internal_paths`, raises those under `data_classification` and adjusts
   likelihood by `exposure`, recording each change in `metadata.context`. See
   [Project context](context.md).
-- **Audit log**: an allowlist entry, exception or inline comment
+- **Audit log**: an allowlist entry, exception, inline comment or baseline
   that hides an imported finding is recorded in `.argus/audit.log` on trusted
   local projects. See [Audit log](audit-log.md).
 - **Attack chains** are built from the imported findings as from scanner

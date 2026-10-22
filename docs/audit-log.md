@@ -31,9 +31,11 @@ whether inline comments and exceptions are honoured at all (see
 Scans of cloned remotes, `--config-from-ref` runs, `argus agent` and `argus mcp`
 never write to the scanned tree.
 
-Baseline filtering (`--baseline`) runs in the command after the scan; the
-`argus.audit.record_baseline` helper records it for callers that apply a
-baseline.
+Baseline filtering (`--baseline` on `argus scan`, `argus import` and
+`argus review`) runs in the command after the scan and is recorded under the
+same rule: one `suppression.added` per baseline file content and one
+`suppression.matched` per finding it hid. Other callers can use the
+`argus.audit.record_baseline` helper.
 
 ### Turning it off
 

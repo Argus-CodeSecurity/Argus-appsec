@@ -64,15 +64,22 @@ def suppression_added(
 
 
 def record_baseline(
-    root: str | Path, baseline: str | Path, suppressed: list[Finding]
+    root: str | Path,
+    baseline: str | Path,
+    suppressed: list[Finding],
+    *,
+    config: Any = None,
 ) -> AppendResult:
     """Record a baseline being applied and each finding it hid.
 
     For callers that filter findings through a baseline report (``--baseline``):
     one ``suppression.added`` per distinct baseline file content and one
-    ``suppression.matched`` per hidden finding, both de-duplicated.
+    ``suppression.matched`` per hidden finding, both de-duplicated. With
+    ``config``, its ``audit_log`` setting is honoured as well as the
+    environment switch. Deciding whether the project is trusted is the
+    caller's job.
     """
-    if not audit_enabled():
+    if not audit_enabled(config):
         return AppendResult()
     base = Path(baseline)
     try:
