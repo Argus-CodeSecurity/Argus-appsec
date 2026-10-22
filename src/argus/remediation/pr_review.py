@@ -85,7 +85,8 @@ def parse_changed_lines(diff_text: str) -> dict[str, set[int]]:
         if m and current is not None:
             start = int(m.group(1))
             length = int(m.group(2)) if m.group(2) is not None else 1
-            for n in range(start, start + max(length, 1)):
+            # "+N,0" is a pure deletion: no line exists on the new side.
+            for n in range(start, start + length):
                 current.add(n)
     # Drop files that ended up with no added lines (pure deletions).
     return {p: lines for p, lines in changed.items() if lines}
@@ -151,8 +152,18 @@ def split_comments(
     return inline, leftover
 
 
+# GitHub rejects comment/review bodies over 65,536 characters (HTTP 422).
+MAX_SUMMARY_ENTRIES = 50
+MAX_BODY_CHARS = 60_000
+
+
 def review_summary(total: int, inline_count: int, leftover: list[Finding]) -> str:
-    """Markdown body for the review / PR comment."""
+    """Markdown body for the review / PR comment.
+
+    Lists at most :data:`MAX_SUMMARY_ENTRIES` leftover findings and keeps the
+    body under :data:`MAX_BODY_CHARS`, so a large scan cannot make GitHub
+    reject the whole review.
+    """
     if total == 0:
         return "### Argus: no new findings in this pull request."
     header = (
@@ -165,12 +176,21 @@ def review_summary(total: int, inline_count: int, leftover: list[Finding]) -> st
             f"{inline_count} shown inline on the changed lines below."
             + (" Others are listed here:" if leftover else "")
         )
-    for f in leftover:
-        lines.append(f"- **{f.severity.label}** {md_code(f.rule_id)} "
-                     f"- {md_text(f.title)} ({md_code(f.location.as_ref())})")
-    lines += ["", "_Only findings introduced by this PR are shown "
+    footer = ["", "_Only findings introduced by this PR are shown "
               "(diff-aware). Nothing was modified._"]
-    return "\n".join(lines)
+    budget = MAX_BODY_CHARS - len("\n".join(lines + footer)) - 100
+    shown = 0
+    for f in leftover[:MAX_SUMMARY_ENTRIES]:
+        entry = (f"- **{f.severity.label}** {md_code(f.rule_id)} "
+                 f"- {md_text(f.title)} ({md_code(f.location.as_ref())})")
+        if len(entry) + 1 > budget:
+            break
+        lines.append(entry)
+        budget -= len(entry) + 1
+        shown += 1
+    if shown < len(leftover):
+        lines.append(f"- ...and {len(leftover) - shown} more (see the full report).")
+    return "\n".join(lines + footer)
 
 
 @dataclass
