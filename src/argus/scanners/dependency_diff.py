@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 from pathlib import Path
+from typing import TYPE_CHECKING, Any
 
 from argus.core.models import (
     Confidence,
@@ -14,10 +15,40 @@ from argus.core.models import (
     Severity,
 )
 from argus.core.plugin import Scanner, ScannerContext, scanner
-from argus.inventory.dependency_diff import PackageChange, diff_packages
 from argus.remediation import git_ops
-from argus.supply_chain.behavior import compare_fingerprints
-from argus.supply_chain.sandbox import MODES, fetch_fingerprint
+
+if TYPE_CHECKING:
+    from argus.inventory.dependency_diff import PackageChange
+
+# The inventory and supply-chain helpers are imported when first used, not at
+# module import: ``argus.inventory`` imports ``argus.scanners.dependencies``,
+# which loads this package, so a top-level import here was a circular import,
+# and the supply-chain helpers pull in httpx, which registering the scanner
+# does not need. The thin wrappers keep the names patchable in tests.
+
+
+def diff_packages(root: Path, ref: str) -> list[PackageChange]:
+    from argus.inventory.dependency_diff import diff_packages as impl
+
+    return list(impl(root, ref))
+
+
+def fetch_fingerprint(package: str, version: str, **kwargs: Any) -> Any:
+    from argus.supply_chain.sandbox import fetch_fingerprint as impl
+
+    return impl(package, version, **kwargs)
+
+
+def compare_fingerprints(old: Any, new: Any) -> list[str]:
+    from argus.supply_chain.behavior import compare_fingerprints as impl
+
+    return list(impl(old, new))
+
+
+def _sandbox_modes() -> tuple[str, ...]:
+    from argus.supply_chain.sandbox import MODES
+
+    return tuple(MODES)
 
 
 def _change_finding(change: PackageChange, counter: int) -> Finding:
@@ -147,9 +178,10 @@ class DependencyDiffScanner(Scanner):
         behavior = bool(opts.get("behavior", True))
         # Set by `argus supply-chain --sandbox`; plain scans query from the host.
         sandbox = str(opts.get("sandbox") or "host").lower()
-        if sandbox not in MODES:
+        modes = _sandbox_modes()
+        if sandbox not in modes:
             raise ValueError(
-                f"unknown sandbox mode {sandbox!r} (expected one of {', '.join(MODES)})"
+                f"unknown sandbox mode {sandbox!r} (expected one of {', '.join(modes)})"
             )
         for counter, change in enumerate(diff_packages(Path(ctx.project.root), str(ref)), start=1):
             yield _change_finding(change, counter)

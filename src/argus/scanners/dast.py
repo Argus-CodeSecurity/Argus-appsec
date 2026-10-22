@@ -16,6 +16,7 @@ import os
 import re
 from collections.abc import Iterable
 from pathlib import Path
+from typing import TYPE_CHECKING, Any
 from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
 
 import yaml
@@ -23,9 +24,26 @@ import yaml
 from argus.core.config import CONFIG_FILENAMES
 from argus.core.models import Confidence, Finding, Likelihood, Location, Remediation, Severity
 from argus.core.plugin import Scanner, ScannerContext, scanner
-from argus.dynamic.posture import FetchResult, guarded_get, probe
+
+if TYPE_CHECKING:
+    from argus.dynamic.posture import FetchResult
 
 log = logging.getLogger("argus.scanners.dast")
+
+
+# The HTTP client (argus.dynamic.posture) is only needed when a target is
+# probed, so it is imported on first use instead of when scanners register.
+def guarded_get(url: str, **kwargs: Any) -> FetchResult | None:
+    from argus.dynamic.posture import guarded_get as impl
+
+    return impl(url, **kwargs)
+
+
+def probe(url: str, **kwargs: Any) -> list[Finding]:
+    from argus.dynamic.posture import probe as impl
+
+    return impl(url, **kwargs)
+
 
 _PROBE = "argus-dast-probe-7x3k"
 _REFLECTED = re.compile(re.escape(_PROBE))
