@@ -1,8 +1,8 @@
 # Developer convenience targets. See CONTRIBUTING.md.
-.PHONY: install test lint typecheck fmt scan-example docker clean
+.PHONY: install test lint format-check typecheck accuracy check fmt scan-example docker docs clean
 
 install:
-	pip install -e ".[dev]"
+	pip install -e ".[dev,ast]"
 
 test:
 	pytest -q
@@ -10,10 +10,20 @@ test:
 lint:
 	ruff check .
 
+format-check:
+	ruff format --check .
+
 typecheck:
-	mypy
+	mypy src/argus
+
+accuracy:
+	python benchmarks/accuracy.py
+
+# Everything CI runs on a pull request.
+check: lint format-check typecheck test accuracy
 
 fmt:
+	ruff format .
 	ruff check . --fix
 
 # Run a full scan on the bundled vulnerable example with all features on.
@@ -22,6 +32,9 @@ scan-example:
 
 docker:
 	docker build -t argus:local .
+
+docs:
+	mkdocs serve
 
 clean:
 	rm -rf .pytest_cache .ruff_cache .mypy_cache htmlcov .coverage \

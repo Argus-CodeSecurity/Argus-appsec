@@ -1,27 +1,29 @@
-<!-- Thanks for contributing to Argus! Fill this in so review is quick. -->
+## Summary
 
-## What does this change?
-
-<!-- A short description of the change and why it's needed. Link any related issue. -->
+<!-- What does this change and why? Link the related issue. -->
 
 Closes #
 
 ## Type of change
 
 - [ ] Bug fix
-- [ ] New scanner / rule
+- [ ] New scanner or detection rule
 - [ ] New reporter or AI provider
 - [ ] Documentation
-- [ ] Other (describe below)
+- [ ] CI, build, or release tooling
+- [ ] Breaking change (CLI flags, exit codes, report schema, plugin API, or defaults)
 
 ## Checklist
 
-- [ ] I ran `pytest` and all tests pass
-- [ ] I ran `ruff check .` with no errors
-- [ ] I added or updated tests for my change
-- [ ] I updated docs if behavior or usage changed
-- [ ] New findings (if any) include a CWE/OWASP mapping and remediation
+- [ ] `ruff check .` and `ruff format --check .` pass
+- [ ] `mypy src/argus` passes
+- [ ] `pytest` passes and new behaviour is covered by tests
+- [ ] `python benchmarks/accuracy.py` passes (or the corpus change is explained)
+- [ ] New findings carry a CWE and OWASP mapping and remediation guidance
+- [ ] Docs updated if usage or behaviour changed
+- [ ] `CHANGELOG.md` updated under `[Unreleased]` for user-visible changes
+- [ ] Every commit is signed off (`git commit -s`, see CONTRIBUTING.md)
 
 ## Notes for the reviewer
 
-<!-- Anything that will help review: trade-offs, things you're unsure about, etc. -->
+<!-- Trade-offs, open questions, or anything that will help review. -->
