@@ -31,13 +31,21 @@ well-defined object to the next.
 ```
 
 The engine (`argus.core.engine.ScanEngine`) owns orchestration. It is synchronous
-and free of side effects on the *target*: `scan()` returns a `ScanResult` and
-never modifies scanned source. Its only write is to Argus's own scan-cache
-directory (disable with `--no-cache` / `cache: false`). It also leaves the
-caller's `Project` object alone: config such as `exclude_paths` and the
-analyzer's results are applied to a copy, so one `Project` can be scanned by
-several engines with different configs. Writing reports and creating pull
-requests are separate, explicit actions performed by the CLI or an integration.
+and never modifies scanned source: `scan()` returns a `ScanResult`. It writes
+in two places. The first is Argus's own scan-cache directory (disable with
+`--no-cache` / `cache: false`). The second is the project's
+`.argus/audit.log`: for a trusted local project, each suppression that hid
+or accepted a finding (allowlist entry, exception, inline `argus-ignore`
+comment) is appended once (disable with `audit_log: false` or
+`ARGUS_AUDIT_LOG=off`; see [Audit log](audit-log.md)). Cloned remotes,
+`--config-from-ref` runs, `argus agent` and `argus mcp` never write to the
+scanned tree. The engine also leaves the caller's `Project` object alone:
+config such as `exclude_paths` and the analyzer's results are applied to a
+copy, so one `Project` can be scanned by several engines with different
+configs. `ScanEngine.postprocess()` runs the same post-scan steps on findings
+that came from elsewhere, such as imported SARIF. Writing reports and
+creating pull requests are separate, explicit actions performed by the CLI
+or an integration.
 
 ## Core modules
 
@@ -56,6 +64,9 @@ requests are separate, explicit actions performed by the CLI or an integration.
 | `argus.scanners` | Built-in scanners. |
 | `argus.reporting` | Built-in reporters. |
 | `argus.targets` | Resolves a target string into a `Project` or `WebTarget`. |
+| `argus.context` | Loads and applies `.argus/context.yml` (sanitizers, trusted sources, internal paths, exposure, data classification); see [Project context](context.md). |
+| `argus.audit` | The hash-chained `.argus/audit.log`: event builders, append under a lock, verification and export; see [Audit log](audit-log.md). |
+| `argus.importers` | SARIF 2.1.0 import into ordinary findings, and the merge with Argus's own; see [Importing SARIF](importing.md). |
 | `argus.cli` | The Typer command-line interface; see [The CLI package](#the-cli-package). |
 
 ## The Finding contract
@@ -78,8 +89,8 @@ dominated by the worst finding rather than averaged.
 | Module | Contents |
 |--------|----------|
 | `cli/app.py` | Builds the Typer `app`: root callback and `--version`, the handler that turns any `ConfigError` into exit status 2, built-in plugin registration, then the built-in and third-party commands. |
-| `cli/commands/` | One module per command family: `scan`, `focused` (`secrets`, `iac`, `api`, `cicd`, `container`, `cloud`, `infrastructure`), `supply_chain` (`sbom`, `dependencies`, `supply-chain`), `inventory` (`inventory`, `drift`), `monitor` (`watch`, `agent`, `server`), `baseline`, `policy`, `remediate` (`fix`, `review`, `learn`), `service` (`push`, `dashboard`, `mcp`) and `meta` (`scanners`, `reporters`, `providers`, `version`, `init`). |
-| `cli/commands/__init__.py` | `register_commands(app)`, the single, ordered list of commands. Typer shows commands in `argus --help` in registration order, so new commands are added there. |
+| `cli/commands/` | One module per command family: `scan`, `check` (`check`, the fast file-level check editors and AI hooks run), `imports` (`import`; the module name avoids the Python keyword), `focused` (`secrets`, `iac`, `api`, `cicd`, `container`, `cloud`, `infrastructure`), `supply_chain` (`sbom`, `dependencies`, `supply-chain`), `inventory` (`inventory`, `drift`), `monitor` (`watch`, `agent`, `server`), `baseline`, `policy`, `audit` (`audit verify`, `audit show`, `audit export`), `remediate` (`fix`, `review`, `learn`), `service` (`push`, `dashboard`, `mcp`) and `meta` (`scanners`, `reporters`, `providers`, `version`, `init`). |
+| `cli/commands/__init__.py` | `register_commands(app)`, the ordered list of built-in commands. Typer shows commands in `argus --help` in registration order, so new commands are added there. `cli/app.py` then adds `import` and the `audit` group after it. |
 | `cli/_common.py` | Helpers the commands share: severity and list parsing, target resolution (exit 2 on failure), the progress printer, config assembly from flags, baseline and diff filtering, and the gate that fails a run when scanners crashed. |
 | `cli/output.py` | Report emission through the reporter registry, the console table and posture panel, the fix summary, and verbatim stdout writes for machine-readable output. |
 | `cli/_console.py` | The stdout and stderr Rich consoles, with UTF-8 forced on Windows. |
@@ -140,8 +151,10 @@ It has two profiles:
   every transport (`protocol.allow=never`, no lazy fetch) and the system git
   config, and strips environment variables that could redirect git or inject
   helpers. `argus.scanners._git` (`run_git`, used by the git-security and
-  history scanners), the dependency diff in `argus.inventory` and
-  `--config-from-ref` in `argus.core.config` use it.
+  history scanners), the dependency diff in `argus.inventory`,
+  `--config-from-ref` in `argus.core.config` and the file walk in
+  `argus.core.project` (which asks git for the untracked files it ignores)
+  use it.
 - `WORKTREE` for the operator's own checkout, where `argus fix` and
   `argus review` create branches, commit and push. Hooks, commit signing and
   credentials stay available because those steps need them.
