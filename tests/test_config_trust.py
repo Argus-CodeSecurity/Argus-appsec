@@ -91,3 +91,55 @@ def test_baseline_create_ignores_remote_config(remote_repo: Path, tmp_path: Path
                               "-o", str(out), "--quiet"])
     assert res.exit_code == 0, res.output
     assert '"secrets' in out.read_text(encoding="utf-8")
+
+
+# --- in-tree suppressions (inline comments, .argus/exceptions.yml) ----------
+_SHELL = 'import subprocess\nsubprocess.run("x", shell=True)  # argus-ignore reason="ok"\n'
+
+
+def _suppression_repo(tmp_path: Path) -> Path:
+    from argus.core.models import Finding
+
+    (tmp_path / "app.py").write_text(_SHELL, encoding="utf-8")
+    (tmp_path / "keys.py").write_text(_SECRET, encoding="utf-8")
+    # Suppress every secrets finding by fingerprint via the exceptions file.
+    project = Project.from_path(tmp_path)
+    from argus.core.engine import ScanEngine
+
+    cfg = Config(scanners=["secrets"], cache=False)
+    cfg.ai.enabled = False
+    found: list[Finding] = ScanEngine(cfg).scan(project).findings
+    assert found
+    entries = "".join(
+        f"  - fingerprint: '{f.fingerprint()}'\n    status: suppress\n"
+        f"    reason: accepted\n    owner: me\n" for f in found)
+    (tmp_path / ".argus").mkdir()
+    (tmp_path / ".argus" / "exceptions.yml").write_text(
+        "exceptions:\n" + entries, encoding="utf-8")
+    return tmp_path
+
+
+def _scan(project: Project, *, trusted: bool):
+    from argus.core.engine import ScanEngine
+
+    cfg = Config(scanners=["patterns", "secrets"], cache=False,
+                 trust_project_config=trusted)
+    cfg.ai.enabled = False
+    return ScanEngine(cfg).scan(project)
+
+
+def test_untrusted_target_ignores_in_tree_suppressions(tmp_path: Path) -> None:
+    repo = _suppression_repo(tmp_path)
+    result = _scan(Project.from_path(repo, origin="github"), trusted=False)
+    rules = {f.rule_id for f in result.findings}
+    assert any("shell-true" in r for r in rules)
+    assert any(f.scanner == "secrets" for f in result.findings)
+    assert "exceptions_applied" not in result.project_summary
+
+
+def test_trusted_target_applies_in_tree_suppressions(tmp_path: Path) -> None:
+    repo = _suppression_repo(tmp_path)
+    result = _scan(Project.from_path(repo), trusted=True)
+    assert not any("shell-true" in f.rule_id for f in result.findings)
+    assert not any(f.scanner == "secrets" for f in result.findings)
+    assert result.project_summary.get("exceptions_applied")

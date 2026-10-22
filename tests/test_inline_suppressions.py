@@ -17,7 +17,8 @@ _SHELL = 'import subprocess\nsubprocess.run("x", shell=True)  {comment}\n'
 
 def _scan(tmp_path, comment: str):
     (tmp_path / "app.py").write_text(_SHELL.format(comment=comment), encoding="utf-8")
-    cfg = Config(scanner_options={"dependencies": {"online": False}})
+    cfg = Config(scanner_options={"dependencies": {"online": False}},
+                 trust_project_config=True)
     return ScanEngine(cfg).scan(Project.from_path(tmp_path))
 
 

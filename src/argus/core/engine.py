@@ -120,7 +120,13 @@ class ScanEngine:
         # 3. Prefer AST over regex where the AST tier is authoritative, de-duplicate
         # across scanners, filter, then enrich. Filtering first means agents (and any
         # paid model calls they make) only run on findings we will actually report.
-        result.findings = self._apply_inline_suppressions(result.findings, project)
+        # Inline `argus-ignore` comments and .argus/exceptions.yml live inside the
+        # scanned tree, so for an untrusted target they are written by whoever
+        # controls that tree. Honor them only when the project is trusted;
+        # otherwise a hostile repository could suppress its own findings.
+        trusted = self.config.trust_project_config
+        if trusted:
+            result.findings = self._apply_inline_suppressions(result.findings, project)
         result.findings = self._apply_allowlist(result.findings, self.config)
         result.findings = self._prefer_ast(result.findings, result.scanners_run)
         result.findings = self._dedupe(result.findings)
@@ -142,11 +148,11 @@ class ScanEngine:
         apply_verification_states(result.findings)
         enrich_contextual_risk(result)
         result.project_summary["security_graph"] = build_security_graph(result)
-        exc_path = default_exceptions_path(project.root)
-        excs = load_exceptions(exc_path)
-        result.findings, suppressed = apply_exceptions(result.findings, excs)
-        if suppressed:
-            result.project_summary["exceptions_applied"] = suppressed
+        if trusted:
+            excs = load_exceptions(default_exceptions_path(project.root))
+            result.findings, suppressed = apply_exceptions(result.findings, excs)
+            if suppressed:
+                result.project_summary["exceptions_applied"] = suppressed
         result.project_summary["metrics"] = ScanMetrics(
             scanners_run=result.scanners_run,
             findings_total=len(result.findings),
