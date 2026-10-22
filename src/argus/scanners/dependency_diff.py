@@ -16,7 +16,8 @@ from argus.core.models import (
 from argus.core.plugin import Scanner, ScannerContext, scanner
 from argus.inventory.dependency_diff import PackageChange, diff_packages
 from argus.remediation import git_ops
-from argus.supply_chain.behavior import compare_fingerprints, npm_fingerprint
+from argus.supply_chain.behavior import compare_fingerprints
+from argus.supply_chain.sandbox import MODES, fetch_fingerprint
 
 
 def _change_finding(change: PackageChange, counter: int) -> Finding:
@@ -77,13 +78,16 @@ def _change_finding(change: PackageChange, counter: int) -> Finding:
     )
 
 
-def _behavior_findings(change: PackageChange, counter: int, *, timeout: float) -> Iterable[Finding]:
+def _behavior_findings(change: PackageChange, counter: int, *, timeout: float,
+                       sandbox: str = "host") -> Iterable[Finding]:
     if change.ecosystem != "npm" or change.change != "changed":
         return
     if not change.old_version or not change.new_version:
         return
-    old_fp = npm_fingerprint(change.package, change.old_version, timeout=timeout)
-    new_fp = npm_fingerprint(change.package, change.new_version, timeout=timeout)
+    old_fp = fetch_fingerprint(change.package, change.old_version, mode=sandbox,
+                               timeout=timeout)
+    new_fp = fetch_fingerprint(change.package, change.new_version, mode=sandbox,
+                               timeout=timeout)
     for anomaly in compare_fingerprints(old_fp, new_fp):
         counter += 1
         yield Finding(
@@ -144,7 +148,13 @@ class DependencyDiffScanner(Scanner):
             return
         timeout = float(opts.get("timeout", 10.0))
         behavior = bool(opts.get("behavior", True))
+        # Set by `argus supply-chain --sandbox`; plain scans query from the host.
+        sandbox = str(opts.get("sandbox") or "host").lower()
+        if sandbox not in MODES:
+            raise ValueError(f"unknown sandbox mode {sandbox!r} "
+                             f"(expected one of {', '.join(MODES)})")
         for counter, change in enumerate(diff_packages(Path(ctx.project.root), str(ref)), start=1):
             yield _change_finding(change, counter)
             if behavior:
-                yield from _behavior_findings(change, counter, timeout=timeout)
+                yield from _behavior_findings(change, counter, timeout=timeout,
+                                              sandbox=sandbox)

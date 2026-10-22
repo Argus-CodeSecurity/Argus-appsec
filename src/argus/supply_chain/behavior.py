@@ -56,7 +56,16 @@ def npm_fingerprint(name: str, version: str, *, timeout: float = 10.0) -> Behavi
     except Exception as exc:
         log.debug("npm fingerprint failed for %s@%s: %s", name, version, exc)
         return None
+    return fingerprint_from_manifest(name, version, data)
 
+
+def fingerprint_from_manifest(name: str, version: str,
+                              data: object) -> BehaviorFingerprint | None:
+    """Build a fingerprint from one version's registry manifest (any source).
+
+    Shared by the host registry fetch and the sandboxed ``npm view``; the data is
+    untrusted, so every field is type-checked.
+    """
     if not isinstance(data, dict):
         return None
     scripts = data.get("scripts")
