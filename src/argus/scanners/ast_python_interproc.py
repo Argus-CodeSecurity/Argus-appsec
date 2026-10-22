@@ -32,6 +32,7 @@ depends on another file, this scanner is **not** file-cacheable.
 
 from __future__ import annotations
 
+import re
 from collections.abc import Iterable
 from dataclasses import dataclass
 
@@ -39,11 +40,11 @@ from argus.core.models import (
     Confidence,
     Finding,
     Likelihood,
-    Location,
     Remediation,
     Severity,
 )
 from argus.core.plugin import Scanner, ScannerContext, scanner
+from argus.scanners._pyflow import source_callables
 from argus.scanners.ast_python import (
     _SOURCE_RE,
     SINKS,
@@ -51,6 +52,7 @@ from argus.scanners.ast_python import (
     analysis_skipped_finding,
     is_available,
     new_parser,
+    node_location,
 )
 from argus.scanners.patterns import _is_test_file
 
@@ -65,6 +67,50 @@ class _DangerousParam:
     sink_id: str
     sink_line: int
     def_path: str
+
+
+class _SourceIndex:
+    """Project-wide methods/functions that return request data, by name.
+
+    A method only acts as a source when it is called on an object built from
+    the request (``w = Wrapper(request); w.get_param()``), so a same-named
+    method elsewhere does not. A plain function name must be defined exactly
+    once in the project to be trusted as a source.
+    """
+
+    def __init__(self) -> None:
+        self.methods: dict[str, set[str]] = {}
+        self.functions: dict[str, set[str]] = {}
+
+    def add(self, fp: _FileParse, methods: dict, functions: dict) -> None:
+        for name, node in methods.items():
+            self.methods.setdefault(name, set()).add(f"{fp.path}:{node.start_point[0] + 1}")
+        for name, node in functions.items():
+            self.functions.setdefault(name, set()).add(f"{fp.path}:{node.start_point[0] + 1}")
+
+    @staticmethod
+    def _foreign(where: set[str], path: str) -> str | None:
+        """A definition site outside ``path`` (same-file ones ast-python handles)."""
+        others = sorted(w for w in where if w.rsplit(":", 1)[0] != path)
+        return others[0] if others and len(others) == len(where) else None
+
+    def methods_used_in(self, path: str, text: str) -> dict[str, str]:
+        out: dict[str, str] = {}
+        for name, where in self.methods.items():
+            site = self._foreign(where, path)
+            if site is not None and re.search(rf"\.{re.escape(name)}\s*\(", text):
+                out[name] = site
+        return out
+
+    def functions_used_in(self, path: str, text: str) -> dict[str, str]:
+        out: dict[str, str] = {}
+        for name, where in self.functions.items():
+            if len(where) != 1:
+                continue
+            site = self._foreign(where, path)
+            if site is not None and re.search(rf"(?<![\w.]){re.escape(name)}\s*\(", text):
+                out[name] = site
+        return out
 
 
 class _FileParse:
@@ -118,31 +164,100 @@ class ASTPythonInterprocScanner(Scanner):
                 continue
             parses.append(_FileParse(f.rel_path, src, tree.root_node))
 
-        # Pass 1: summarize dangerous parameters across every function.
+        # Pass 1: summarize dangerous parameters across every function, and
+        # collect the methods/functions that return request data.
         dangerous: dict[str, list[_DangerousParam]] = {}
+        sources = _SourceIndex()
         usable: list[_FileParse] = []
         for fp in parses:
             try:
                 summaries = list(self._summarize_file(fp))
+                methods, functions = source_callables(fp.src, fp.root)
             except Exception as exc:
                 skipped.append(analysis_skipped_finding(self.name, fp.path, exc))
                 continue
             usable.append(fp)
             for summary in summaries:
                 dangerous.setdefault(summary.func_name, []).append(summary)
+            sources.add(fp, methods, functions)
         yield from skipped
-        if not dangerous:
-            return
 
         # Pass 2: find call sites that pass a direct source into a dangerous param.
         seen: set[tuple[str, int, str]] = set()
+        if dangerous:
+            for fp in usable:
+                try:
+                    found = list(self._scan_calls(fp, dangerous, seen))
+                except Exception as exc:
+                    yield analysis_skipped_finding(self.name, fp.path, exc)
+                    continue
+                yield from found
+
+        # Pass 3: request wrappers and helpers defined in another file.
+        yield from self._wrapped_sources(usable, sources)
+
+    # --- pass 3 -------------------------------------------------------------
+    def _wrapped_sources(
+        self, usable: list[_FileParse], sources: _SourceIndex
+    ) -> Iterable[Finding]:
+        """Flows whose source is a request wrapper or helper from another file.
+
+        ``wrapped = request_wrapper(request); x = wrapped.get_form_parameter("q")``
+        is a source when ``get_form_parameter`` (defined elsewhere in the project)
+        returns request data. Each file that calls such a method or function is
+        analyzed with and without that knowledge, and only the flows the extra
+        sources add are reported here; the rest belong to ``ast-python``.
+        """
+        if not sources.methods and not sources.functions:
+            return
         for fp in usable:
+            text = fp.src.decode("utf-8", "ignore")
+            methods = sources.methods_used_in(fp.path, text)
+            functions = sources.functions_used_in(fp.path, text)
+            if not methods and not functions:
+                continue
+            in_test = _is_test_file(fp.path)
             try:
-                found = list(self._scan_calls(fp, dangerous, seen))
+                plain = _Analyzer(fp.src, fp.path, in_test).run(fp.root)
+                extended = _Analyzer(
+                    fp.src,
+                    fp.path,
+                    in_test,
+                    source_methods=frozenset(methods),
+                    source_functions=frozenset(functions),
+                ).run(fp.root)
             except Exception as exc:
                 yield analysis_skipped_finding(self.name, fp.path, exc)
                 continue
-            yield from found
+            known = {(f.rule_id, f.location.start_line) for f in plain}
+            origins = sorted({*methods.values(), *functions.values()})
+            for f in extended:
+                if (f.rule_id, f.location.start_line) in known:
+                    continue
+                yield self._wrapped_finding(f, origins)
+
+    def _wrapped_finding(self, f: Finding, origins: list[str]) -> Finding:
+        sink_id = f.rule_id.split(".", 1)[-1]
+        where = ", ".join(origins[:3])
+        return f.model_copy(
+            update={
+                "id": f"{self.name}:{sink_id}:{f.location.path}:{f.location.start_line}",
+                "rule_id": f"{self.name}.{sink_id}",
+                "scanner": self.name,
+                "title": f"Cross-file {f.title}",
+                "description": (
+                    f"{f.description} The untrusted value comes from a request wrapper "
+                    f"or helper defined in another file ({where})."
+                ),
+                "confidence": min(f.confidence, Confidence.MEDIUM),
+                "tags": [*f.tags, "cross-file"],
+                "metadata": {
+                    **f.metadata,
+                    "analysis": "taint-dataflow-interprocedural",
+                    "source_defined_at": origins[:3],
+                },
+            }
+        )
 
     # --- pass 1 -------------------------------------------------------------
     def _summarize_file(self, fp: _FileParse) -> Iterable[_DangerousParam]:
@@ -260,7 +375,6 @@ class ASTPythonInterprocScanner(Scanner):
             severity = Severity(max(Severity.INFO, severity - 1))
             confidence = Confidence.LOW
             tags.append("test-context")
-        snippet = fp.text(call).replace("\n", " ")[:240]
         where = (
             f"{summary.def_path}:{summary.sink_line}"
             if summary.def_path != fp.path
@@ -275,7 +389,7 @@ class ASTPythonInterprocScanner(Scanner):
                 f"Untrusted input is passed as `{summary.name}` to "
                 f"`{summary.func_name}()`, whose body reaches a sink at {where}."
             ),
-            location=Location(path=fp.path, start_line=line, snippet=snippet),
+            location=node_location(fp.path, fp.src, call),
             severity=severity,
             confidence=confidence,
             likelihood=Likelihood.LIKELY,

@@ -117,7 +117,7 @@ def test_baseline_create_ignores_remote_config(remote_repo: Path, tmp_path: Path
 
 
 # --- in-tree suppressions (inline comments, .argus/exceptions.yml) ----------
-_SHELL = 'import subprocess\nsubprocess.run("x", shell=True)  # argus-ignore reason="ok"\n'
+_SHELL = 'import subprocess\nsubprocess.run(cmd, shell=True)  # argus-ignore reason="ok"\n'
 
 
 def _suppression_repo(tmp_path: Path) -> Path:

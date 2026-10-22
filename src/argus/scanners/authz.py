@@ -20,7 +20,7 @@ from argus.core.models import (
     Severity,
 )
 from argus.core.plugin import Scanner, ScannerContext, scanner
-from argus.scanners._text import MAX_SCAN_LINE
+from argus.scanners._text import MAX_SCAN_LINE, snippet_line
 from argus.scanners.patterns import _is_test_file
 
 _FASTAPI_ROUTE = re.compile(
@@ -62,6 +62,16 @@ _SESSION_INSECURE = re.compile(
     r"(?:session|cookie)\.(?:set|cookie)\([^)]*(?:secure\s*=\s*False|httponly\s*=\s*False)",
     re.IGNORECASE,
 )
+# Flask/Werkzeug, Django, Starlette and aiohttp all spell it
+# ``response.set_cookie(key, value, ..., secure=..., httponly=...)``.
+_SET_COOKIE = re.compile(r"\.set_cookie\s*\(")
+_DEF_SET_COOKIE = re.compile(r"\bdef\s+set_cookie\b")
+_FLAG_KW = {
+    "secure": re.compile(r"(?i)(?<![\w])secure\s*=\s*([\w.]+)"),
+    "httponly": re.compile(r"(?i)(?<![\w])httponly\s*=\s*([\w.]+)"),
+}
+#: Longest call text gathered for one set_cookie(...) across lines.
+_MAX_CALL_TEXT = 4000
 _OAUTH_TOKEN_IN_URL = re.compile(
     r"https?://[^\s'\"]+(?:\?|&)(?:access_token|id_token|code)=[^&\s'\"]+"
     r"|(?:\?|&)(?:access_token|id_token|code)=[A-Za-z0-9._\-]{8,}",
@@ -119,6 +129,56 @@ def _has_router_auth(text: str) -> bool:
     return False
 
 
+def _call_text(lines: list[str], idx: int, start: int) -> str:
+    """Text of the call starting at ``lines[idx][start:]`` up to its closing ``)``.
+
+    Bounded by :data:`_MAX_CALL_TEXT` characters and 40 lines; parentheses inside
+    single-line string literals are ignored. Linear in the text it reads.
+    """
+    out: list[str] = []
+    depth = 0
+    seen = 0
+    for li in range(idx, min(len(lines), idx + 40)):
+        segment = lines[li][start:] if li == idx else lines[li]
+        quote = ""
+        for ch in segment:
+            seen += 1
+            if seen > _MAX_CALL_TEXT:
+                return "".join(out)
+            out.append(ch)
+            if quote:
+                if ch == quote:
+                    quote = ""
+            elif ch in "'\"":
+                quote = ch
+            elif ch == "(":
+                depth += 1
+            elif ch == ")":
+                depth -= 1
+                if depth <= 0:
+                    return "".join(out)
+        out.append("\n")
+    return "".join(out)
+
+
+def _receiver_start(line: str, pos: int) -> int:
+    """Start of the dotted receiver ending at ``pos`` (``resp`` in ``resp.set_cookie``)."""
+    while pos > 0 and (line[pos - 1].isalnum() or line[pos - 1] in "_."):
+        pos -= 1
+    return pos
+
+
+def _flag_state(value: str | None) -> str:
+    """``missing``, ``on``, ``off`` or ``unknown`` for a keyword's source text."""
+    if value is None:
+        return "missing"
+    if value in ("True", "1"):
+        return "on"
+    if value in ("False", "0", "None"):
+        return "off"
+    return "unknown"
+
+
 def _lines(text: str) -> list[str]:
     # Lines are cut to the shared scan limit: the route and JWT checks below
     # run on them and on windows of them, and none needs more than that.
@@ -168,6 +228,10 @@ class AuthzScanner(Scanner):
                 for finding in self._check_jwt(f.rel_path, line, i + 1, counter):
                     counter += 1
                     yield finding
+                if f.suffix == ".py" and "set_cookie" in line:
+                    for finding in self._check_set_cookie(f.rel_path, lines, i, counter):
+                        counter += 1
+                        yield finding
                 for finding in self._check_oauth_session(f.rel_path, line, i + 1, counter):
                     counter += 1
                     yield finding
@@ -200,7 +264,7 @@ class AuthzScanner(Scanner):
                 scanner="authz",
                 title="OAuth callback without state/nonce/PKCE hint",
                 description="OAuth flows should bind callbacks with state, nonce, or PKCE.",
-                location=Location(path=path, start_line=line_no, snippet=line.strip()[:200]),
+                location=Location(path=path, start_line=line_no, snippet=snippet_line(line, 200)),
                 severity=Severity.HIGH,
                 confidence=Confidence.MEDIUM,
                 likelihood=Likelihood.POSSIBLE,
@@ -219,7 +283,7 @@ class AuthzScanner(Scanner):
                 scanner="authz",
                 title="Token or authorization code in URL",
                 description="Tokens in URLs leak via logs, Referer headers, and browser history.",
-                location=Location(path=path, start_line=line_no, snippet=line.strip()[:200]),
+                location=Location(path=path, start_line=line_no, snippet=snippet_line(line, 200)),
                 severity=Severity.MEDIUM,
                 confidence=Confidence.MEDIUM,
                 likelihood=Likelihood.POSSIBLE,
@@ -238,7 +302,7 @@ class AuthzScanner(Scanner):
                 scanner="authz",
                 title="Session cookie missing Secure or HttpOnly",
                 description="Session cookies should set Secure and HttpOnly flags.",
-                location=Location(path=path, start_line=line_no, snippet=line.strip()[:200]),
+                location=Location(path=path, start_line=line_no, snippet=snippet_line(line, 200)),
                 severity=Severity.MEDIUM,
                 confidence=Confidence.HIGH,
                 likelihood=Likelihood.LIKELY,
@@ -249,6 +313,94 @@ class AuthzScanner(Scanner):
                     summary="Set Secure=True and HttpOnly=True on session cookies.",
                 ),
                 tags=["auth", "session"],
+            )
+
+    def _check_set_cookie(
+        self, path: str, lines: list[str], idx: int, counter: int
+    ) -> Iterable[Finding]:
+        """``set_cookie(...)`` without ``secure=True`` / ``httponly=True``.
+
+        The call usually spans several lines, so its text is gathered up to the
+        closing parenthesis first. A flag set to anything other than a literal
+        (``secure=app.config["SECURE"]``) is not judged.
+        """
+        line = lines[idx]
+        m = _SET_COOKIE.search(line)
+        if m is None or _DEF_SET_COOKIE.search(line):
+            return
+        before = line[: m.start()]
+        if "#" in before or (before.count('"') + before.count("'")) % 2:
+            return  # mentioned in a comment or a string, not called
+        call = _call_text(lines, idx, m.start())
+        flags = {}
+        for name, rx in _FLAG_KW.items():
+            fm = rx.search(call)
+            flags[name] = fm.group(1) if fm else None
+        location = Location(
+            path=path,
+            start_line=idx + 1,
+            end_line=idx + 1,
+            start_column=_receiver_start(line, m.start()) + 1,
+            end_column=m.end() + 1,
+            snippet=snippet_line(line),
+        )
+        secure = _flag_state(flags["secure"])
+        if secure in ("off", "missing"):
+            explicit = secure == "off"
+            yield Finding(
+                id=f"authz:session-cookie:{counter + 1}",
+                rule_id="authz.insecure-session-cookie",
+                scanner="authz",
+                title="Cookie set without the Secure flag",
+                description=(
+                    "set_cookie() is called with secure=False."
+                    if explicit
+                    else "set_cookie() is called without secure=True (the default is False)."
+                ),
+                location=location,
+                severity=Severity.MEDIUM if explicit else Severity.LOW,
+                confidence=Confidence.HIGH if explicit else Confidence.MEDIUM,
+                likelihood=Likelihood.LIKELY if explicit else Likelihood.POSSIBLE,
+                cwe=["CWE-614"],
+                owasp=["A05:2021-Security Misconfiguration"],
+                why_vulnerable=(
+                    "Without the Secure attribute the browser also sends the cookie over "
+                    "plain HTTP, where anyone on the network path can read it."
+                ),
+                attacker_perspective="Sniff or downgrade one HTTP request to capture the cookie.",
+                business_impact="Session hijacking or disclosure of the cookie's value.",
+                remediation=Remediation(
+                    summary="Pass secure=True (and httponly=True, samesite='Lax') to set_cookie().",
+                ),
+                tags=["auth", "session", "cookie"],
+            )
+        httponly = _flag_state(flags["httponly"])
+        if httponly in ("off", "missing"):
+            explicit = httponly == "off"
+            yield Finding(
+                id=f"authz:cookie-httponly:{counter + 2}",
+                rule_id="authz.cookie-missing-httponly",
+                scanner="authz",
+                title="Cookie set without the HttpOnly flag",
+                description=(
+                    "set_cookie() is called with httponly=False."
+                    if explicit
+                    else "set_cookie() is called without httponly=True (the default is False)."
+                ),
+                location=location,
+                severity=Severity.LOW,
+                confidence=Confidence.HIGH if explicit else Confidence.MEDIUM,
+                likelihood=Likelihood.POSSIBLE,
+                cwe=["CWE-1004"],
+                owasp=["A05:2021-Security Misconfiguration"],
+                why_vulnerable=(
+                    "Without HttpOnly, script running in the page (for example through "
+                    "an XSS bug) can read the cookie."
+                ),
+                attacker_perspective="Use any script injection to read document.cookie.",
+                business_impact="Session theft when combined with cross-site scripting.",
+                remediation=Remediation(summary="Pass httponly=True to set_cookie()."),
+                tags=["auth", "session", "cookie"],
             )
 
     def _check_jwt(self, path: str, line: str, line_no: int, counter: int) -> Iterable[Finding]:
@@ -267,7 +419,7 @@ class AuthzScanner(Scanner):
                 "JWT verification is disabled or allows the 'none' algorithm, "
                 "enabling token forgery."
             ),
-            location=Location(path=path, start_line=line_no, snippet=line.strip()[:200]),
+            location=Location(path=path, start_line=line_no, snippet=snippet_line(line, 200)),
             severity=Severity.CRITICAL,
             confidence=Confidence.HIGH,
             likelihood=Likelihood.LIKELY,
@@ -319,7 +471,9 @@ class AuthzScanner(Scanner):
                     f"Route `{route_path}` matches sensitive path patterns and has no "
                     f"obvious auth decorator or Depends() in the surrounding code."
                 ),
-                location=Location(path=path, start_line=idx + 1, snippet=lines[idx].strip()[:200]),
+                location=Location(
+                    path=path, start_line=idx + 1, snippet=snippet_line(lines[idx], 200)
+                ),
                 severity=Severity.HIGH,
                 confidence=Confidence.MEDIUM,
                 likelihood=Likelihood.POSSIBLE,
@@ -353,7 +507,9 @@ class AuthzScanner(Scanner):
                     f"Route `{route_path}` includes an object identifier parameter "
                     f"but no ownership/tenant check is visible nearby (IDOR/BOLA risk)."
                 ),
-                location=Location(path=path, start_line=idx + 1, snippet=lines[idx].strip()[:200]),
+                location=Location(
+                    path=path, start_line=idx + 1, snippet=snippet_line(lines[idx], 200)
+                ),
                 severity=Severity.MEDIUM,
                 confidence=Confidence.LOW,
                 likelihood=Likelihood.POSSIBLE,

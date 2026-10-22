@@ -26,7 +26,7 @@ from argus.core.models import (
     Severity,
 )
 from argus.core.plugin import Scanner, ScannerContext, scanner
-from argus.scanners._text import MAX_SCAN_LINE, iter_scan_lines
+from argus.scanners._text import MAX_SCAN_LINE, iter_scan_windows, match_columns, snippet_line
 
 
 @dataclass
@@ -49,6 +49,14 @@ class Rule:
     # encode safe idioms that would otherwise be false positives (e.g. a hash
     # marked usedforsecurity=False, or a pickle round-trip of the app's own data).
     suppress: re.Pattern[str] | None = None
+    # Python rules whose verdict the AST tier can refine with data flow. "shell"
+    # and "deser" drop the finding when the payload is built only from literals;
+    # "yaml" keeps it (an unsafe loader is still wrong) but grades severity and
+    # confidence by whether the input is tainted. See _grade().
+    grade: str | None = None
+    # A regex fallback for a class the AST tier reports with data flow. Skipped
+    # on Python files when that tier is active, so it cannot add noise there.
+    ast_owned: bool = False
 
 
 def _rx(pattern: str) -> re.Pattern[str]:
@@ -144,6 +152,7 @@ RULES: list[Rule] = [
         owasp=["A03:2021-Injection"],
         languages={"Python"},
         confidence=Confidence.MEDIUM,
+        grade="shell",
         why="Running a subprocess through the shell lets shell metacharacters in any "
         "interpolated input execute additional commands.",
         attack="Provide input containing `; rm -rf /` or `$(...)` to run arbitrary "
@@ -165,6 +174,7 @@ RULES: list[Rule] = [
         owasp=["A03:2021-Injection"],
         languages={"Python"},
         confidence=Confidence.MEDIUM,
+        grade="shell",
         why="os.system runs its argument through the shell; building it from "
         "variables enables command injection.",
         attack="Inject shell metacharacters via the concatenated value.",
@@ -293,6 +303,7 @@ RULES: list[Rule] = [
         owasp=["A08:2021-Software and Data Integrity Failures"],
         languages={"Python"},
         confidence=Confidence.MEDIUM,
+        grade="yaml",
         why="yaml.load with the default loader can construct arbitrary Python objects "
         "from the document.",
         attack="Feed a YAML payload using `!!python/object/apply` tags to execute code.",
@@ -308,6 +319,7 @@ RULES: list[Rule] = [
         owasp=["A08:2021-Software and Data Integrity Failures"],
         languages={"Python"},
         confidence=Confidence.LOW,
+        grade="deser",
         # A round-trip of the app's own freshly-pickled data is not untrusted input.
         suppress=_rx(r"pickle\.loads\(\s*pickle\.dumps"),
         why="pickle executes code during deserialization; loading untrusted bytes is unsafe.",
@@ -332,12 +344,105 @@ RULES: list[Rule] = [
         fix="Use textContent, framework-escaped bindings, or sanitize with a vetted "
         "library (e.g. DOMPurify) before inserting HTML.",
     ),
+    Rule(
+        id="python-markup-dynamic",
+        title="Markup()/mark_safe() on a dynamically built string",
+        # Marking a formatted string as safe HTML disables autoescaping for
+        # whatever was interpolated. The AST tier reports the tainted case.
+        pattern=_rx(
+            r"(?<![\w.])(?:Markup|mark_safe)\(\s*"
+            r"(?:[fF]['\"]|(['\"])[^'\"\n]*\1\s*(?:%|\+|\.format\())"
+        ),
+        severity=Severity.MEDIUM,
+        cwe=["CWE-79"],
+        owasp=["A03:2021-Injection"],
+        languages={"Python"},
+        confidence=Confidence.LOW,
+        why="Markup()/mark_safe() tell the template engine a string is already safe "
+        "HTML, so anything interpolated into it is rendered without escaping.",
+        attack="Get user input into the interpolated value to inject script into the page.",
+        impact="Cross-site scripting.",
+        fix="Escape each interpolated value (markupsafe.escape) or use "
+        "Markup('...{}').format(value), which escapes its arguments.",
+    ),
+    Rule(
+        id="template-unescaped-output",
+        title="Template output with autoescaping turned off",
+        # Jinja/Django `{{ x|safe }}` and `{% autoescape false %}` blocks.
+        pattern=_rx(r"\{\{[^}\n]*\|\s*safe\s*\}\}|\{%-?\s*autoescape\s+(?:false|off)\s*-?%\}"),
+        severity=Severity.LOW,
+        cwe=["CWE-79"],
+        owasp=["A03:2021-Injection"],
+        languages={"HTML"},
+        confidence=Confidence.LOW,
+        why="The |safe filter and autoescape-off blocks render a value as raw HTML. "
+        "If the value can contain user input, that is cross-site scripting.",
+        attack="Store or reflect markup with a script payload in the rendered value.",
+        impact="Cross-site scripting.",
+        fix="Drop |safe and let the engine escape, or sanitize the HTML with a vetted "
+        "library before marking it safe.",
+    ),
+    Rule(
+        id="python-xml-resolve-entities",
+        title="lxml parser with external entity resolution turned on",
+        pattern=_rx(r"XMLParser\([^)\n]*resolve_entities\s*=\s*True"),
+        severity=Severity.MEDIUM,
+        cwe=["CWE-611"],
+        owasp=["A05:2021-Security Misconfiguration"],
+        languages={"Python"},
+        confidence=Confidence.MEDIUM,
+        why="resolve_entities=True makes lxml expand external entities, so any XML "
+        "this parser reads can pull in local files or remote URLs.",
+        attack='Get a document with `<!ENTITY x SYSTEM "file:///etc/passwd">` parsed.',
+        impact="Local file disclosure or SSRF through XML parsing.",
+        fix="Drop resolve_entities=True (lxml 5 defaults to internal entities only) "
+        "or parse untrusted XML with defusedxml.",
+    ),
+    Rule(
+        id="python-open-redirect",
+        title="Redirect to a URL taken from the request",
+        pattern=_rx(
+            r"(?<![\w.])(?:redirect|HttpResponseRedirect)\(\s*request\.(?:args|form|values|GET|POST)\b"
+        ),
+        severity=Severity.MEDIUM,
+        cwe=["CWE-601"],
+        owasp=["A01:2021-Broken Access Control"],
+        languages={"Python"},
+        confidence=Confidence.MEDIUM,
+        ast_owned=True,
+        why="The redirect target comes straight from request data, so the app can be "
+        "made to send users to any external site.",
+        attack="Send a victim a link to this app that bounces to a phishing page.",
+        impact="Credible phishing through the trusted domain.",
+        fix="Redirect only to relative paths or allowlisted hosts, or use url_for().",
+    ),
+    Rule(
+        id="python-weak-random-token",
+        title="random module used for a security token",
+        pattern=_rx(
+            r"(?i)(?:token|secret|passw|nonce|otp|salt|session|csrf|api_?key)\w*\s*=[^=\n#][^\n#]*"
+            r"(?<![\w.])random\.(?:random|randint|randrange|choice|choices|getrandbits|randbytes|sample)\("
+        ),
+        severity=Severity.MEDIUM,
+        cwe=["CWE-330", "CWE-338"],
+        owasp=["A02:2021-Cryptographic Failures"],
+        languages={"Python"},
+        confidence=Confidence.MEDIUM,
+        ast_owned=True,
+        why="The random module is a predictable PRNG; values from it must not be used "
+        "as tokens, passwords, salts or session identifiers.",
+        attack="Recover the generator state from observed outputs and predict tokens.",
+        impact="Token, session or password-reset forgery.",
+        fix="Use secrets.token_urlsafe()/secrets.token_hex() or random.SystemRandom().",
+    ),
     # --- Weak crypto ---
     Rule(
         id="weak-hash-md5-sha1",
         title="Weak hash algorithm (MD5/SHA1)",
+        # hashlib.new("md5") is the same algorithm chosen by name, so it counts too.
         pattern=_rx(
-            r"(?i)(hashlib\.(md5|sha1)\(|MessageDigest\.getInstance\(\s*['\"](MD5|SHA-?1)|createHash\(\s*['\"](md5|sha1))"
+            r"(?i)(hashlib\.(md5|sha1)\(|MessageDigest\.getInstance\(\s*['\"](MD5|SHA-?1)|createHash\(\s*['\"](md5|sha1)"
+            r"|hashlib\.new\(\s*(?:name\s*=\s*)?['\"](?:md4|md5|sha1|md5-sha1)['\"])"
         ),
         severity=Severity.MEDIUM,
         cwe=["CWE-327"],
@@ -422,6 +527,59 @@ def _is_test_file(path: str) -> bool:
     return bool(_TEST_PATH.search(path))
 
 
+@dataclass(frozen=True)
+class _Grade:
+    """How the AST data-flow verdict changes a graded regex finding."""
+
+    verdict: str  # "tainted" | "literal" | "unknown"
+    drop: bool = False
+    severity: Severity | None = None
+    confidence: Confidence | None = None
+
+
+def _grade(rule: Rule, verdicts: dict[tuple[str, int], str], lineno: int) -> _Grade | None:
+    kind = "shell" if rule.grade == "shell" else "deser"
+    verdict = verdicts.get((kind, lineno))
+    if verdict is None:
+        return None  # no call the AST tier understood on this line: keep as is
+    if rule.grade == "yaml":
+        # An unsafe loader is always reported, graded by what it loads: request
+        # data raises confidence, a document built from literals lowers both
+        # severity and confidence, an unknown origin keeps the rule's defaults.
+        if verdict == "tainted":
+            return _Grade(verdict, confidence=Confidence.HIGH)
+        if verdict == "literal":
+            return _Grade(verdict, severity=Severity.LOW, confidence=Confidence.LOW)
+        return _Grade(verdict)
+    # shell=True / os.system / pickle: a payload built only from literals
+    # cannot carry attacker input, so there is nothing to report.
+    return _Grade(verdict, drop=verdict == "literal")
+
+
+def _ast_parser():
+    """A private tree-sitter parser for grading, or None without the [ast] extra."""
+    from argus.scanners.ast_python import new_parser
+
+    return new_parser()
+
+
+def _ast_scanner_selected(ctx: ScannerContext) -> bool:
+    """Whether the ``ast-python`` tier runs in this scan (it owns some classes)."""
+    cfg = ctx.config
+    chosen = list(getattr(cfg, "scanners", None) or [])
+    excluded = set(getattr(cfg, "exclude_scanners", None) or [])
+    return ("ast-python" in chosen if chosen else True) and "ast-python" not in excluded
+
+
+def _line_verdicts(text: str, parser) -> dict[tuple[str, int], str]:
+    from argus.scanners.ast_python import line_verdicts
+
+    try:
+        return line_verdicts(text.encode("utf-8", "replace"), parser)
+    except Exception:  # an unparseable or hostile file: grade nothing
+        return {}
+
+
 # --- lightweight taint tracking (path traversal) ---------------------------
 # Full data-flow analysis needs an AST (a planned milestone). This deliberately
 # narrow heuristic catches the common, high-value case the line-anchored rules
@@ -450,6 +608,8 @@ class PatternScanner(Scanner):
 
     # Only source-y files; skip data/asset languages entirely.
     _SKIP_LANGS = {"JSON", "CSS", "HTML", "YAML", None}
+    # Markup that only the rules naming it (template autoescape checks) see.
+    _MARKUP_LANGS = {"HTML"}
 
     def applies_to(self, project) -> bool:
         # Nothing to do on a project with no scannable source (e.g. pure IaC/docs).
@@ -476,23 +636,52 @@ class PatternScanner(Scanner):
     def scan(self, ctx: ScannerContext) -> Iterable[Finding]:
         counter = 0
         rules = self._effective_rules(ctx)
+        parser = _ast_parser()
+        ast_running = parser is not None and _ast_scanner_selected(ctx)
         for f in ctx.project.files():
-            if f.language in self._SKIP_LANGS or f.is_probably_binary():
+            if f.is_probably_binary():
+                continue
+            markup = f.language in self._MARKUP_LANGS
+            if f.language in self._SKIP_LANGS and not markup:
                 continue
             in_test = _is_test_file(f.rel_path)
             lines = f.lines()
+            verdicts: dict[tuple[str, int], str] | None = None
             for rule in rules:
                 if rule.languages and f.language not in rule.languages:
                     continue
+                if markup and not rule.languages:
+                    continue  # templates only get the rules written for them
+                if rule.ast_owned and ast_running and f.language == "Python":
+                    continue
                 reported: set[int] = set()
-                for lineno, line in iter_scan_lines(lines):
-                    if lineno in reported or not rule.pattern.search(line):
+                for lineno, offset, segment in iter_scan_windows(lines):
+                    if lineno in reported:
                         continue
-                    if rule.suppress and rule.suppress.search(line):
+                    m = rule.pattern.search(segment)
+                    if m is None:
+                        continue
+                    if rule.suppress and rule.suppress.search(segment):
                         continue  # a known-safe idiom on this line
+                    grade: _Grade | None = None
+                    if rule.grade and parser is not None and f.language == "Python":
+                        if verdicts is None:
+                            verdicts = _line_verdicts(f.text(), parser)
+                        grade = _grade(rule, verdicts, lineno)
+                        if grade is not None and grade.drop:
+                            continue  # data flow proves the payload is a constant
                     reported.add(lineno)
                     counter += 1
-                    yield self._finding(rule, counter, f.rel_path, lineno, line, in_test=in_test)
+                    yield self._finding(
+                        rule,
+                        counter,
+                        f.rel_path,
+                        lineno,
+                        lines[lineno - 1],
+                        in_test=in_test,
+                        columns=match_columns(m, offset),
+                        grade=grade,
+                    )
             # Cross-line path-traversal heuristic (Python only).
             if f.language == "Python":
                 yield from self._scan_path_traversal(f, in_test)
@@ -523,9 +712,11 @@ class PatternScanner(Scanner):
             rest = line[sink.start() :]
             used = next((v for v in tainted if re.search(rf"\b{re.escape(v)}\b", rest)), None)
             if used:
-                yield self._path_traversal_finding(f.rel_path, lineno, line, in_test)
+                yield self._path_traversal_finding(f.rel_path, lineno, line, in_test, sink)
 
-    def _path_traversal_finding(self, path: str, lineno: int, line: str, in_test: bool) -> Finding:
+    def _path_traversal_finding(
+        self, path: str, lineno: int, line: str, in_test: bool, sink: re.Match[str]
+    ) -> Finding:
         severity = Severity.LOW if in_test else Severity.MEDIUM
         confidence = Confidence.LOW if in_test else Confidence.MEDIUM
         tags = ["sast", "taint"] + (["test-context"] if in_test else [])
@@ -536,7 +727,7 @@ class PatternScanner(Scanner):
             title="Possible path traversal from untrusted input",
             description="A filesystem path derived from user input reaches a file "
             "operation without normalization.",
-            location=Location(path=path, start_line=lineno, snippet=line.strip()[:240]),
+            location=_location(path, lineno, line, match_columns(sink)),
             severity=severity,
             confidence=confidence,
             likelihood=Likelihood.POSSIBLE,
@@ -560,15 +751,29 @@ class PatternScanner(Scanner):
         )
 
     def _finding(
-        self, rule: Rule, index: int, path: str, lineno: int, line: str, *, in_test: bool = False
+        self,
+        rule: Rule,
+        index: int,
+        path: str,
+        lineno: int,
+        line: str,
+        *,
+        in_test: bool = False,
+        columns: tuple[int, int] | None = None,
+        grade: _Grade | None = None,
     ) -> Finding:
         severity = rule.severity
         confidence = rule.confidence
         tags = ["sast"]
+        metadata: dict[str, str] = {}
+        if grade is not None:
+            severity = grade.severity if grade.severity is not None else severity
+            confidence = grade.confidence if grade.confidence is not None else confidence
+            metadata["dataflow"] = grade.verdict
         # Test/fixture code is lower risk: downgrade a level and mark it, rather
         # than hiding it. Keeps the signal without drowning real production issues.
         if in_test:
-            severity = Severity(max(Severity.INFO, rule.severity - 1))
+            severity = Severity(max(Severity.INFO, severity - 1))
             confidence = Confidence.LOW
             tags.append("test-context")
         return Finding(
@@ -577,7 +782,7 @@ class PatternScanner(Scanner):
             scanner=self.name,
             title=rule.title,
             description=rule.why,
-            location=Location(path=path, start_line=lineno, snippet=line.strip()[:240]),
+            location=_location(path, lineno, line, columns),
             severity=severity,
             confidence=confidence,
             likelihood=Likelihood.POSSIBLE,
@@ -597,4 +802,17 @@ class PatternScanner(Scanner):
                 ],
             ),
             tags=tags,
+            metadata=metadata,
         )
+
+
+def _location(path: str, lineno: int, line: str, columns: tuple[int, int] | None) -> Location:
+    start, end = columns if columns is not None else (None, None)
+    return Location(
+        path=path,
+        start_line=lineno,
+        end_line=lineno,
+        start_column=start,
+        end_column=end,
+        snippet=snippet_line(line),
+    )

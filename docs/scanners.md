@@ -60,14 +60,32 @@ Only package names, versions, and CVE ids ever leave your machine.
 ## SAST (pattern rules)
 
 **Detects.** Dangerous code patterns across many languages: `shell=True`,
-`os.system` on dynamic input, unsafe `yaml.load`, weak hashing, insecure
-deserialization, and more, each with a CWE mapping and a concrete fix.
+`os.system` on dynamic input, unsafe `yaml.load`, weak hashing (including
+`hashlib.new("md5")`), insecure deserialization, `Markup()`/`mark_safe()` on a
+formatted string, `|safe` and `{% autoescape false %}` in templates, lxml
+`resolve_entities=True`, and more, each with a CWE mapping and a concrete fix.
+
+**Graded by data flow (Python).** When the `ast` extra is installed, a few rules
+ask the data-flow engine what the payload is before reporting:
+
+| Rule | Payload built only from literals | Unknown origin | Request data |
+| --- | --- | --- | --- |
+| `python-shell-true`, `python-os-system` | not reported | reported (medium confidence) | reported; the taint tier adds a high-confidence finding |
+| `python-pickle-loads` | not reported | reported (low confidence) | reported; the taint tier adds a high-confidence finding |
+| `python-yaml-load` (unsafe loader) | reported, low severity and confidence | reported as before | reported, high confidence |
+
+"Built only from literals" includes values that passed a numeric conversion
+(`int()`), an allowlist check, or a module-level constant bound once. The
+finding's `metadata.dataflow` records the verdict. An unsafe YAML loader is
+always reported because it is wrong even when today's input is constant.
 
 **Does not.** Follow data across functions and files on its own (that is the
 taint tier below). Flag every dynamic call, on purpose, to stay low-noise.
 
-**Limits.** Pattern rules are precise but shallow. Lines above a length cap
-(2000 chars) are skipped to avoid pathological-regex hangs on minified files.
+**Limits.** Pattern rules are precise but shallow. Long lines are scanned in
+bounded, overlapping windows so a regex never sees more than 2000 characters at
+once. Findings carry 1-based `start_column`/`end_column` (end exclusive, SARIF
+style) and the source line with its indentation as the snippet.
 
 ## Taint / data-flow (AST)
 
@@ -79,8 +97,55 @@ tree-sitter for Python and JavaScript/TypeScript.
 (`pip install "argus-appsec[ast]"`); without it, Argus falls back to the
 lightweight-taint code scanner and says so.
 
-**Limits.** Strongest for Python and JS/TS. Interprocedural analysis is bounded;
-extremely dynamic code can defeat static tracing.
+**Python sinks and rule ids** (`ast-python.*`, and `ast-python-xfile.*` when the
+source or the sink is in another file):
+
+| Rule | CWE | Sink |
+| --- | --- | --- |
+| `ast-sql-injection` | 89 | `execute()`/`executemany()` query argument |
+| `ast-sql-string-building` | 89 | query built with `%`, `+`, `.format()` or an f-string from a function parameter (low confidence, no traced source) |
+| `ast-command-injection` | 78 | `os.system`, `os.popen`, `subprocess.*`, `os.exec*`/`os.spawn*` |
+| `ast-path-traversal` | 22 | `open`, `codecs.open`, `os.path.exists` and other `os`/`shutil` file calls, `send_file`, and file methods on a `pathlib.Path` built from the value (`Path(x)`, `base / x`) |
+| `ast-code-injection` | 95 | `eval`, `exec`, `compile` |
+| `ast-eval-of-parameter` | 95 | `eval`/`exec` of a function parameter (low confidence, no traced source) |
+| `ast-unsafe-deserialization` | 502 | `pickle`/`dill`/`marshal` loads, `yaml.load` without a safe loader, `yaml.unsafe_load` |
+| `ast-xss` | 79 | value returned from a Flask/Bottle view (`@app.route`, or `@app.get` in a Flask file), `Markup()`, `mark_safe()`, Django `HttpResponse` |
+| `ast-open-redirect` | 601 | `redirect()`, `HttpResponseRedirect`, `RedirectResponse`, `headers["Location"] = ...` |
+| `ast-xxe` | 611 | XML parse of the value with a parser that has external entities enabled (`setFeature(feature_external_ges, True)`, lxml `resolve_entities=True`) |
+| `ast-ldap-injection` | 90 | ldap3 `search()` base/filter, python-ldap `search_s()` (only in files importing ldap/ldap3) |
+| `ast-xpath-injection` | 643 | lxml `xpath()`/`XPath()`, `elementpath.select()`, ElementTree `find*()` in XML files |
+| `ast-trust-boundary` | 501 | request data written into `session[...]` (key or value) |
+| `ast-weak-random` | 330, 338 | a `random` module value (not `SystemRandom`) stored as a token, password, salt, nonce, session or cookie value, or returned from a function named like one |
+
+**How values are tracked.** The engine is flow-sensitive within a function:
+`if`/`elif`/`else`, `match`, loops and `try` are analyzed per branch and joined,
+so `if not p: p = ""` keeps the taint of the other branch. Conditions that fold
+to a constant (`if 7 * 18 + num > 200`, a `match` on a constant) prune the dead
+branch. Literal dicts, lists (`append`, `pop`, indexing) and `configparser`
+objects are tracked per key, so storing request data under one key does not
+taint a read of another. A method returns request data when it reads the
+request (`return self.request.form.get(name)`); calling it on an object built
+from the request (`Wrapper(request).get_form_parameter("q")`) is a source, in
+the same file (`ast-python`) or across files (`ast-python-xfile`).
+
+**Guards and sanitizers.** CWE-specific sanitizers clear a value only for their
+class: HTML escaping (`html.escape`, `markupsafe.escape`, any `*escape*`) for
+XSS, `escape_filter_chars` for LDAP, quote removal for XPath. Numeric
+conversion, `secure_filename`, `basename`, `shlex.quote` and `url_for` clear
+every class. A block that returns or raises when a check fails refines the
+value after it: `'../' in p` clears path traversal, a quote check clears XPath,
+an allowlist membership test (`x not in (...)`) or `x.isdigit()` clears
+everything, `urlparse(u).netloc` against an allowlist clears open redirect, a
+resolved path checked with `startswith`/`is_relative_to` clears path
+traversal, and the "quoted literal only" check before `eval` clears code
+injection. `request.path` is not a source inside a view whose routes have no
+`<converters>`, because routing already fixed it.
+
+**Limits.** Strongest for Python and JS/TS. Interprocedural analysis is bounded
+(one call hop, plus request wrappers); extremely dynamic code can defeat static
+tracing. Guards are recognized only in the simple forms above. A file that needs
+more than a fixed amount of analysis work, or nests statements deeper than 60
+levels, falls back to a conservative flat scan or is reported as skipped.
 
 ## Infrastructure as Code
 
@@ -103,6 +168,47 @@ model loading. See [LLM / AI security](llm-security.md).
 
 **Limits.** A newer domain; rules are evolving. This is the area under the most
 active development.
+
+## Authentication and session (authz)
+
+**Detects.** Sensitive routes without an auth decorator, object-id routes with
+no visible ownership check, weak JWT validation, OAuth callbacks without
+state/PKCE, tokens in URLs, and cookies set without security flags:
+`set_cookie(...)` with `secure=False` or without `secure=True` is
+`authz.insecure-session-cookie` (CWE-614), and without `httponly=True` is
+`authz.cookie-missing-httponly` (CWE-1004). The call is read across lines; an
+explicit `False` is high confidence, a missing flag medium.
+
+**Does not.** Judge a flag set from configuration (`secure=app.config[...]`), or
+know whether a cookie is a session cookie.
+
+## Agent config
+
+**Detects.** Risky settings in MCP server and coding-agent configuration files
+that a teammate or CI agent runs simply by opening the project (`.mcp.json`,
+`.claude/settings.json`, `.cursor/mcp.json`, `.vscode/mcp.json`,
+`claude_desktop_config.json`, Windsurf `mcp_config.json`, Cline, Roo Code and
+Gemini CLI settings):
+
+- `mcp-hardcoded-secret` (OWASP LLM02): a literal credential in a server's
+  `env`, `headers` or `args` instead of a variable reference. Uses the secrets
+  scanner's signatures; the value is redacted.
+- `mcp-unpinned-package` (LLM03): a server started with `npx`, `bunx`,
+  `pnpm dlx`, `uvx`, `pipx run` or `docker run` on a package or image without a
+  pinned version.
+- `mcp-plaintext-http` (LLM03): a remote server reached over plain `http://`
+  (loopback excepted).
+- `mcp-broad-filesystem-root` (LLM06): a filesystem server or
+  `additionalDirectories` entry granted `/`, a drive root or a home directory.
+- `agent-auto-approve` (LLM06): tools that run without confirmation (Cline
+  `autoApprove`, Roo Code `alwaysAllow`, Gemini CLI `trust: true`, Claude Code
+  `enableAllProjectMcpServers`, a bare `Bash` allow rule, `bypassPermissions`).
+
+**Does not.** Start or contact the configured servers, or judge what a pinned
+package actually does.
+
+**Limits.** Only the documented file names and keys are read; a client with a
+different layout is not covered until it is added.
 
 ## Custom rules
 

@@ -12,7 +12,9 @@ from argus.core.config import Config
 from argus.core.engine import ScanEngine
 from argus.core.project import Project
 
-_SHELL = 'import subprocess\nsubprocess.run("x", shell=True)  {comment}\n'
+# The command is not a constant: with a literal one the data-flow tier proves
+# shell=True harmless and the rule (correctly) stays silent.
+_SHELL = "import subprocess\nsubprocess.run(cmd, shell=True)  {comment}\n"
 
 
 def _scan(tmp_path, comment: str):

@@ -36,6 +36,19 @@ from argus.core.models import (
     Severity,
 )
 from argus.core.plugin import Scanner, ScannerContext, scanner
+from argus.scanners._pyflow import (
+    CMD_FN,
+    CODE_FN,
+    DESER_FN,
+    NON_TAINT_SINKS,
+    PATH_FN,
+    SINK_CWES,
+    SOURCE_RE,
+    SQL_FN,
+    UNIVERSAL_SANITIZERS,
+    Flow,
+    source_callables,
+)
 
 if TYPE_CHECKING:
     from argus.context import LanguageContext
@@ -190,28 +203,10 @@ def run_with_context(
     return with_ctx
 
 
-# Untrusted-input sources: an expression mentioning one of these is tainted.
-_SOURCE_RE = re.compile(
-    r"\brequest\.(args|form|values|json|data|files|cookies|headers|query_params|GET|POST)\b"
-    r"|\binput\s*\("
-    r"|\bsys\.argv\b"
-    r"|\bflask\.request\b"
-    r"|\bos\.environ\b"
-)
-# Function-name last components that neutralize taint (numeric coercion, quoting,
-# path basename, HTML escaping). Keyed on the final identifier of the call target.
-_SANITIZERS = {
-    "int",
-    "float",
-    "bool",
-    "secure_filename",
-    "basename",
-    "quote",
-    "escape",
-    "safe_join",
-    "quote_plus",
-    "shlex",
-}
+# Untrusted-input sources, shared with the cross-file tier (see _pyflow).
+_SOURCE_RE = SOURCE_RE
+#: Kept for callers that used the old name; the flow engine owns the list now.
+_SANITIZERS = set(UNIVERSAL_SANITIZERS)
 
 
 @dataclass
@@ -227,14 +222,17 @@ class Sink:
     impact: str
     fix: str
     references: list[str] = field(default_factory=list)
+    confidence: Confidence = Confidence.HIGH
 
+
+_INJECTION = ["A03:2021-Injection"]
 
 SINKS: list[Sink] = [
     Sink(
         id="ast-sql-injection",
-        fn=re.compile(r"(^|\.)(execute|executemany|executescript)$"),
+        fn=SQL_FN,
         cwe=["CWE-89"],
-        owasp=["A03:2021-Injection"],
+        owasp=_INJECTION,
         severity=Severity.HIGH,
         title="SQL injection (tainted value reaches a database query)",
         why="A value derived from untrusted input flows into a database query "
@@ -246,10 +244,27 @@ SINKS: list[Sink] = [
         "input, even across intermediate variables.",
     ),
     Sink(
+        id="ast-sql-string-building",
+        fn=SQL_FN,
+        cwe=["CWE-89"],
+        owasp=_INJECTION,
+        severity=Severity.MEDIUM,
+        confidence=Confidence.LOW,
+        title="SQL query built by string formatting from a non-constant value",
+        why="The query passed to execute() is assembled with %, + , .format() or an "
+        "f-string from a value that is not a constant. No untrusted source was traced "
+        "to it in this file, but if the value can be influenced by a caller (a "
+        "function parameter, a request elsewhere), the query structure can change.",
+        attack="If any caller passes attacker-controlled text, inject SQL through it.",
+        impact="Unauthorized data access or modification if the value is attacker-controlled.",
+        fix="Pass values as bound parameters (execute(sql, params)) instead of "
+        "formatting them into the SQL text.",
+    ),
+    Sink(
         id="ast-command-injection",
-        fn=re.compile(r"(^|\.)system$|(^|\.)popen$|^subprocess\.\w+$"),
+        fn=CMD_FN,
         cwe=["CWE-78"],
-        owasp=["A03:2021-Injection"],
+        owasp=_INJECTION,
         severity=Severity.HIGH,
         title="OS command injection (tainted value reaches a shell command)",
         why="A value derived from untrusted input flows into a command executed by "
@@ -261,7 +276,7 @@ SINKS: list[Sink] = [
     ),
     Sink(
         id="ast-path-traversal",
-        fn=re.compile(r"(^|\.)open$|send_file$|send_from_directory$"),
+        fn=PATH_FN,
         cwe=["CWE-22"],
         owasp=["A01:2021-Broken Access Control"],
         severity=Severity.MEDIUM,
@@ -276,9 +291,9 @@ SINKS: list[Sink] = [
     ),
     Sink(
         id="ast-code-injection",
-        fn=re.compile(r"^(eval|exec)$"),
+        fn=CODE_FN,
         cwe=["CWE-95"],
-        owasp=["A03:2021-Injection"],
+        owasp=_INJECTION,
         severity=Severity.HIGH,
         title="Code injection (tainted value reaches eval/exec)",
         why="Untrusted input flows into eval/exec, which executes it as code.",
@@ -286,7 +301,143 @@ SINKS: list[Sink] = [
         impact="Remote code execution within the interpreter.",
         fix="Never eval/exec untrusted input; use a safe parser or explicit dispatch.",
     ),
+    Sink(
+        id="ast-eval-of-parameter",
+        fn=CODE_FN,
+        cwe=["CWE-95"],
+        owasp=_INJECTION,
+        severity=Severity.MEDIUM,
+        confidence=Confidence.LOW,
+        title="eval/exec of a function parameter",
+        why="A function evaluates one of its parameters as code. No untrusted source "
+        "was traced to it in this file, but any caller that passes user-influenced text "
+        "turns this into code execution.",
+        attack="Find a caller that forwards request data and pass a Python expression.",
+        impact="Remote code execution if any caller passes attacker-controlled text.",
+        fix="Parse data with ast.literal_eval or json, or dispatch on an allowlist "
+        "instead of evaluating text.",
+    ),
+    Sink(
+        id="ast-unsafe-deserialization",
+        fn=DESER_FN,
+        cwe=["CWE-502"],
+        owasp=["A08:2021-Software and Data Integrity Failures"],
+        severity=Severity.HIGH,
+        title="Unsafe deserialization of untrusted data",
+        why="Untrusted input reaches pickle/marshal or yaml.load with an unsafe "
+        "loader, which can construct arbitrary objects and run code while loading.",
+        attack="Send a crafted pickle stream (a __reduce__ payload) or a YAML document "
+        "with `!!python/object/apply` tags.",
+        impact="Remote code execution.",
+        fix="Never unpickle untrusted bytes; use JSON or yaml.safe_load with a schema.",
+    ),
+    Sink(
+        id="ast-xss",
+        fn=re.compile(r"(?:^|\.)(?:Markup|mark_safe|SafeString|SafeText|HttpResponse)$"),
+        cwe=["CWE-79"],
+        owasp=_INJECTION,
+        severity=Severity.MEDIUM,
+        confidence=Confidence.MEDIUM,
+        title="Cross-site scripting (tainted value returned as HTML)",
+        why="A value derived from untrusted input is returned from a web view (or "
+        "wrapped in Markup/mark_safe) without HTML escaping, so markup in the input "
+        "is rendered by the browser.",
+        attack="Send `<script>...</script>` (or an event-handler attribute) in the "
+        "parameter and get a victim to open the link.",
+        impact="Script execution in the victim's session: account takeover, data theft.",
+        fix="Escape output (markupsafe.escape / html.escape), render through an "
+        "autoescaping template, or return JSON.",
+    ),
+    Sink(
+        id="ast-open-redirect",
+        fn=re.compile(r"(?:^|\.)(?:redirect|HttpResponseRedirect|RedirectResponse)$"),
+        cwe=["CWE-601"],
+        owasp=["A01:2021-Broken Access Control"],
+        severity=Severity.MEDIUM,
+        title="Open redirect (tainted value used as a redirect target)",
+        why="The redirect target comes from untrusted input without an allowlist "
+        "check of the host, so the app can send users to any site.",
+        attack="Craft a link to this app that redirects to a phishing page.",
+        impact="Credible phishing and token leakage through the trusted domain.",
+        fix="Redirect only to relative paths or to hosts on an allowlist "
+        "(urlparse(target).netloc in ALLOWED), or use url_for().",
+    ),
+    Sink(
+        id="ast-xxe",
+        fn=re.compile(r"(?:^|\.)(?:parseString|parse|fromstring|XML|iterparse)$"),
+        cwe=["CWE-611"],
+        owasp=["A05:2021-Security Misconfiguration"],
+        severity=Severity.HIGH,
+        title="XML external entity injection (untrusted XML, entities enabled)",
+        why="Untrusted XML is parsed by a parser that has external entity resolution "
+        "turned on (feature_external_ges or resolve_entities=True).",
+        attack='Submit a document with `<!ENTITY x SYSTEM "file:///etc/passwd">`.',
+        impact="Local file disclosure, SSRF, or denial of service.",
+        fix="Leave external entities disabled (the Python default) or parse with defusedxml.",
+    ),
+    Sink(
+        id="ast-ldap-injection",
+        fn=re.compile(r"(?:^|\.)search(?:_s|_st|_ext|_ext_s)?$"),
+        cwe=["CWE-90"],
+        owasp=_INJECTION,
+        severity=Severity.HIGH,
+        title="LDAP injection (tainted value in an LDAP search filter or base)",
+        why="Untrusted input is placed into an LDAP filter or DN without escaping, so "
+        "filter metacharacters can change the query.",
+        attack="Send `*)(uid=*))(|(uid=*` to widen the filter and enumerate entries.",
+        impact="Authentication bypass or disclosure of directory data.",
+        fix="Escape values with ldap3.utils.conv.escape_filter_chars (or "
+        "ldap.filter.escape_filter_chars) before building the filter.",
+    ),
+    Sink(
+        id="ast-xpath-injection",
+        fn=re.compile(r"(?:^|\.)(?:xpath|XPath|select|find|findall|iterfind|findtext)$"),
+        cwe=["CWE-643"],
+        owasp=_INJECTION,
+        severity=Severity.HIGH,
+        title="XPath injection (tainted value in an XPath expression)",
+        why="Untrusted input is concatenated into an XPath expression, so quotes and "
+        "operators in it can change what the query selects.",
+        attack="Send `' or '1'='1` to select every node.",
+        impact="Disclosure of XML data or authentication bypass.",
+        fix="Use XPath variables (root.xpath(query, name=value)) instead of "
+        "formatting values into the expression.",
+    ),
+    Sink(
+        id="ast-trust-boundary",
+        fn=re.compile(r"(?:^|\.)session$"),
+        cwe=["CWE-501"],
+        owasp=["A04:2021-Insecure Design"],
+        severity=Severity.LOW,
+        confidence=Confidence.MEDIUM,
+        title="Trust boundary violation (untrusted value stored in the session)",
+        why="Request data is written into the server-side session, where later code "
+        "is likely to treat it as trusted, validated state.",
+        attack="Plant a crafted value in the session through this request and have a "
+        "later request act on it.",
+        impact="Authorization or logic flaws in code that trusts session contents.",
+        fix="Validate the value before storing it, and keep untrusted input apart "
+        "from trusted session state.",
+    ),
+    Sink(
+        id="ast-weak-random",
+        fn=re.compile(r"^random\.\w+$"),
+        cwe=["CWE-330", "CWE-338"],
+        owasp=["A02:2021-Cryptographic Failures"],
+        severity=Severity.MEDIUM,
+        confidence=Confidence.MEDIUM,
+        title="Weak random number generator used for a security value",
+        why="A value from the `random` module (a predictable Mersenne Twister) is "
+        "used as a token, password, session or cookie value.",
+        attack="Observe a few outputs, recover the generator state and predict the next tokens.",
+        impact="Session hijacking, password-reset or token forgery.",
+        fix="Use the secrets module (secrets.token_urlsafe, secrets.token_hex) or "
+        "random.SystemRandom.",
+    ),
 ]
+_SINK_BY_ID = {s.id: s for s in SINKS}
+if set(_SINK_BY_ID) != set(SINK_CWES):  # pragma: no cover - a coding error
+    raise RuntimeError("every flow sink needs a catalog entry")
 
 # Test/fixture paths, findings there are downgraded, matching the regex scanner.
 from argus.scanners.patterns import _is_test_file  # noqa: E402  (shared helper)
@@ -338,8 +489,35 @@ class ASTPythonScanner(Scanner):
             yield from findings
 
 
+def node_location(path: str, src: bytes, node, lines: list[bytes] | None = None) -> Location:
+    """A Location for a tree-sitter node: 1-based lines, 1-based columns.
+
+    Columns follow the SARIF convention (``end_column`` is the column just past
+    the last character) and count characters, not bytes. The snippet is the
+    node's first source line with its indentation kept and only the line ending
+    removed.
+    """
+    if lines is None:
+        lines = src.splitlines()
+    srow, scol = node.start_point
+    erow, ecol = node.end_point
+    first = lines[srow] if srow < len(lines) else b""
+    last = lines[erow] if erow < len(lines) else b""
+    start_col = len(first[:scol].decode("utf-8", "ignore")) + 1
+    end_col = len(last[:ecol].decode("utf-8", "ignore")) + 1
+    snippet = first.decode("utf-8", "ignore").rstrip("\r\n")[:240]
+    return Location(
+        path=path,
+        start_line=srow + 1,
+        end_line=erow + 1,
+        start_column=start_col,
+        end_column=end_col,
+        snippet=snippet,
+    )
+
+
 class _Analyzer:
-    """Intra-file, per-function-scope taint walk over a Python AST."""
+    """Runs the flow engine over one file and turns its reports into findings."""
 
     def __init__(
         self,
@@ -348,201 +526,79 @@ class _Analyzer:
         in_test: bool,
         *,
         context: LanguageContext | None = None,
+        source_methods: frozenset[str] = frozenset(),
+        source_functions: frozenset[str] = frozenset(),
     ) -> None:
         self._src = src
         self._path = path
         self._in_test = in_test
         self._seen: set[tuple[str, int]] = set()  # (sink_id, line) de-dup within file
-        self._lines: list[str] | None = None
+        self._lines: list[bytes] | None = None
         # Project context (trusted config only): extra sanitizers, some valid
         # only for particular CWEs, and sources that are not attacker-controlled.
         self._ctx = context
-        self._ctx_cwes: tuple[str, ...] = tuple(sorted(context.cwes)) if context else ()
+        self._extra_methods = source_methods
+        self._extra_functions = source_functions
+        self._findings: list[Finding] = []
 
-    def run(self, root) -> Iterable[Finding]:
-        yield from self._walk(root, set())
+    def run(self, root) -> list[Finding]:
+        methods, functions = source_callables(self._src, root, self._ctx)
+        flow = Flow(
+            self._src,
+            self._emit,
+            context=self._ctx,
+            source_methods=self._extra_methods | frozenset(methods),
+            source_functions=self._extra_functions | frozenset(functions),
+        )
+        self._findings = []
+        flow.run(root)
+        return list(self._findings)
 
     def seeded_sinks(self, body, seed_names: set[str]) -> list[tuple[str, int]]:
-        """Sinks reachable in ``body`` when ``seed_names`` start tainted.
+        """Taint sinks reachable in ``body`` when ``seed_names`` start tainted.
 
         Used by the inter-procedural pass to decide which *parameters* of a
         function flow into a sink (seed each parameter, see what fires). Returns
-        (sink_id, line) pairs. Does not mutate this analyzer's dedup state.
+        (sink_id, line) pairs. Does not touch this analyzer's findings.
         """
-        saved = self._seen
-        self._seen = set()
-        try:
-            found = [
-                (f.rule_id.split(".", 1)[-1], f.location.start_line or 0)
-                for f in self._walk(body, set(seed_names))
-            ]
-        finally:
-            self._seen = saved
+        found: list[tuple[str, int]] = []
+        seen: set[tuple[str, int]] = set()
+
+        def collect(sink_id: str, node) -> None:
+            key = (sink_id, node.start_point[0] + 1)
+            if sink_id not in NON_TAINT_SINKS and key not in seen:
+                seen.add(key)
+                found.append(key)
+
+        Flow(self._src, collect, context=self._ctx).run_body(body, seed_names)
         return found
 
-    # --- traversal ----------------------------------------------------------
-    # All walks use an explicit stack, not recursion: a file with a few thousand
-    # levels of nesting would otherwise raise RecursionError. Children are pushed
-    # in reverse so nodes are visited in the same pre-order as a recursive walk,
-    # which matters because assignments update the shared taint set as they go.
-    def _walk(self, root, tainted: set[str]) -> Iterable[Finding]:
-        stack: list[tuple[Any, set[str]]] = [(root, tainted)]
-        while stack:
-            node, scope = stack.pop()
-            t = node.type
-            if t == "function_definition":
-                body = node.child_by_field_name("body")
-                if body is not None:
-                    stack.append((body, set()))  # fresh scope per function
-                continue
-            if t in ("assignment", "augmented_assignment"):
-                self._apply_assignment(node, scope, augmented=(t == "augmented_assignment"))
-                right = node.child_by_field_name("right")
-                if right is not None:
-                    stack.append((right, scope))  # catch sinks on the RHS too
-                continue
-            if t == "call":
-                finding = self._check_sink(node, scope)
-                if finding is not None:
-                    yield finding
-            stack.extend((child, scope) for child in reversed(node.children))
-
-    # --- taint rules --------------------------------------------------------
-    def _apply_assignment(self, node, tainted: set[str], *, augmented: bool) -> None:
-        left = node.child_by_field_name("left")
-        right = node.child_by_field_name("right")
-        if left is None or right is None:
-            return
-        names = self._target_names(left)
-        if self._tainted(right, tainted):
-            # CWEs for which the new value is clean (a CWE-specific sanitizer
-            # from the project context), computed before the scope changes.
-            clean_for = {
-                c for c in self._ctx_cwes if not self._tainted(right, tainted, frozenset((c,)))
-            }
-            for name in names:
-                keep = clean_for
-                if augmented and name in tainted:
-                    # x += y: x stays partially sanitized only where both were.
-                    keep = {c for c in clean_for if marker(name, c) in tainted}
-                tainted.difference_update(marker(name, c) for c in self._ctx_cwes)
-                tainted.add(name)
-                tainted.update(marker(name, c) for c in keep)
-        elif not augmented:
-            tainted.difference_update(names)  # reassigned to a clean value
-            for name in names:
-                tainted.difference_update(marker(name, c) for c in self._ctx_cwes)
-
-    def _ident_tainted(self, name: str, tainted: set[str], cwes: frozenset[str] | None) -> bool:
-        if name not in tainted:
-            return False
-        return not (cwes and any(marker(name, c) in tainted for c in cwes))
-
-    def _source(self, text: str) -> bool:
-        if self._ctx is not None:
-            text = self._ctx.mask_trusted(text)
-        return bool(_SOURCE_RE.search(text))
-
-    def _tainted(self, node, tainted: set[str], cwes: frozenset[str] | None = None) -> bool:
-        """Whether ``node`` carries taint into a sink of ``cwes`` (None: any sink)."""
-        if node.type == "call" and self._is_sanitizer(node, cwes):
-            return False
-        text = self._text(node)
-        if self._source(text):
-            return True
-        if node.type == "identifier":
-            return self._ident_tainted(text, tainted, cwes)
-        # The source pattern was just checked against the whole subtree's text,
-        # and a descendant's text is a token-aligned slice of it, so below this
-        # point only tainted identifiers can still match. Checking just those
-        # keeps this linear in the subtree; re-running the regex on every
-        # descendant was quadratic in the nesting depth.
-        stack = list(node.children)
-        while stack:
-            child = stack.pop()
-            if child.type == "call" and self._is_sanitizer(child, cwes):
-                continue
-            if child.type == "identifier" and self._ident_tainted(self._text(child), tainted, cwes):
-                return True
-            stack.extend(child.children)
-        return False
-
-    def _check_sink(self, call, tainted: set[str]) -> Finding | None:
-        fn_node = call.child_by_field_name("function")
-        if fn_node is None:
-            return None
-        fn_text = self._text(fn_node)
-        sink = next((s for s in SINKS if s.fn.search(fn_text)), None)
-        if sink is None:
-            return None
-        args = call.child_by_field_name("arguments")
-        if args is None:
-            return None
-        named = args.named_children
-        # For SQL sinks, only the first argument (the query string) is dangerous.
-        # A tainted value in a later argument is a bound parameter, i.e. the safe,
-        # parameterized form `execute("... %s", (uid,))`, and must NOT be flagged.
-        to_check = named[:1] if sink.id == "ast-sql-injection" else named
-        cwes = frozenset(sink.cwe)
-        if not any(self._tainted(a, tainted, cwes) for a in to_check):
-            return None
-        line = call.start_point[0] + 1
-        key = (sink.id, line)
+    def _emit(self, sink_id: str, node) -> None:
+        line = node.start_point[0] + 1
+        key = (sink_id, line)
         if key in self._seen:
-            return None
+            return
         self._seen.add(key)
-        return self._finding(sink, line, call)
+        sink = _SINK_BY_ID[sink_id]
+        self._findings.append(self._finding(sink, line, node))
 
-    # --- helpers ------------------------------------------------------------
-    def _is_sanitizer(self, call, cwes: frozenset[str] | None = None) -> bool:
-        fn = call.child_by_field_name("function")
-        if fn is None:
-            return False
-        fn_text = self._text(fn)
-        if fn_text.rsplit(".", 1)[-1] in _SANITIZERS:
-            return True
-        return self._ctx is not None and self._ctx.clears(fn_text, cwes)
-
-    def _target_names(self, left) -> set[str]:
-        """Identifier names assigned by an LHS (handles simple and tuple targets)."""
-        names: set[str] = set()
-        stack = [left]
-        while stack:
-            node = stack.pop()
-            if node.type == "identifier":
-                names.add(self._text(node))
-            else:
-                stack.extend(node.children)
-        return names
-
-    def _text(self, node) -> str:
-        return self._src[node.start_byte : node.end_byte].decode("utf-8", "ignore")
-
-    def _line_text(self, line: int) -> str:
-        if self._lines is None:  # split once per file, not once per finding
-            self._lines = self._src.decode("utf-8", "ignore").splitlines()
-        try:
-            return self._lines[line - 1].strip()
-        except IndexError:  # pragma: no cover
-            return ""
-
-    def _finding(self, sink: Sink, line: int, call) -> Finding:
+    def _finding(self, sink: Sink, line: int, node) -> Finding:
         severity = sink.severity
-        confidence = Confidence.HIGH  # backed by real data flow, not a pattern
+        confidence = sink.confidence  # backed by real data flow, not a pattern
         tags = ["sast", "ast", "taint"]
         if self._in_test:
             severity = Severity(max(Severity.INFO, sink.severity - 1))
             confidence = Confidence.LOW
             tags.append("test-context")
+        if self._lines is None:  # split once per file, not once per finding
+            self._lines = self._src.splitlines()
         return Finding(
             id=f"{ASTPythonScanner.name}:{sink.id}:{self._path}:{line}",
             rule_id=f"{ASTPythonScanner.name}.{sink.id}",
             scanner=ASTPythonScanner.name,
             title=sink.title,
             description=sink.why,
-            location=Location(
-                path=self._path, start_line=line, snippet=self._line_text(line)[:240]
-            ),
+            location=node_location(self._path, self._src, node, self._lines),
             severity=severity,
             confidence=confidence,
             likelihood=Likelihood.LIKELY,
@@ -560,3 +616,18 @@ class _Analyzer:
             tags=tags,
             metadata={"analysis": "taint-dataflow"},
         )
+
+
+def line_verdicts(src: bytes, parser) -> dict[tuple[str, int], str]:
+    """Per-line data-flow verdicts the regex tier uses to grade its findings.
+
+    Keys are ``("deser", line)`` for pickle/marshal/unsafe yaml.load calls and
+    ``("shell", line)`` for shell=True subprocess calls and os.system/os.popen;
+    values say whether the payload argument is ``"tainted"``, built only from
+    ``"literal"`` values, or of ``"unknown"`` origin.
+    """
+    root = parser.parse(src).root_node
+    methods, functions = source_callables(src, root)
+    flow = Flow(src, None, source_methods=frozenset(methods), source_functions=frozenset(functions))
+    flow.run(root)
+    return flow.verdicts

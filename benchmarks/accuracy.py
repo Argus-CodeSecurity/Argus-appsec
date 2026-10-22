@@ -45,6 +45,13 @@ RESULTS_DIR = HERE / "results"
 MIN_SEVERITY = Severity.LOW
 
 
+#: Prelude for the small Flask views in the flow-sensitive taint cases.
+_FLASK = (
+    "import os\nimport subprocess\n"
+    "from flask import Flask, redirect, request, session\napp = Flask(__name__)\n"
+)
+
+
 @dataclass
 class Case:
     name: str
@@ -640,6 +647,245 @@ CASES: list[Case] = [
         False,
         '{"permissions": {"allow": ["Bash(npm run test *)", "Bash(git diff *)"],'
         ' "deny": ["Read(./.env)"]}}\n',
+    ),
+    # --- flow-sensitive taint (added with the public-benchmark fixes) --------
+    # An empty-default guard must not erase the taint of the other branch.
+    Case(
+        "taint-empty-default-guard",
+        "taint",
+        "view.py",
+        True,
+        _FLASK + "@app.route('/ping', methods=['POST'])\ndef ping():\n"
+        "    host = request.form.get('host')\n    if not host:\n        host = ''\n"
+        "    return str(os.system('ping -c 1 ' + host))\n",
+    ),
+    Case(
+        "taint-allowlist-guard-safe",
+        "taint",
+        "view.py",
+        False,
+        _FLASK + "@app.route('/run', methods=['POST'])\ndef run():\n"
+        "    cmd = request.form.get('cmd')\n    if cmd not in ('uptime', 'date'):\n"
+        "        return 'no'\n    return str(subprocess.run([cmd]).returncode)\n",
+    ),
+    Case(
+        "taint-constant-branch-safe",
+        "taint",
+        "view.py",
+        False,
+        _FLASK + "@app.route('/calc', methods=['POST'])\ndef calc():\n"
+        "    expr = request.form.get('e')\n    limit = 86\n"
+        "    if 7 * 42 - limit > 200:\n        expr = '1 + 1'\n    return str(eval(expr))\n",
+    ),
+    Case(
+        "taint-configparser-key",
+        "taint",
+        "view.py",
+        True,
+        _FLASK + "import configparser\n@app.route('/cfg', methods=['POST'])\ndef cfg():\n"
+        "    conf = configparser.ConfigParser()\n    conf.add_section('s')\n"
+        "    conf.set('s', 'user', request.form.get('v'))\n    conf.set('s', 'fixed', 'x')\n"
+        "    return str(eval(conf.get('s', 'user')))\n",
+    ),
+    Case(
+        "taint-configparser-other-key-safe",
+        "taint",
+        "view.py",
+        False,
+        _FLASK + "import configparser\n@app.route('/cfg', methods=['POST'])\ndef cfg():\n"
+        "    conf = configparser.ConfigParser()\n    conf.add_section('s')\n"
+        "    conf.set('s', 'user', request.form.get('v'))\n    conf.set('s', 'fixed', '1 + 1')\n"
+        "    return str(eval(conf.get('s', 'fixed')))\n",
+    ),
+    Case(
+        "taint-pathlib-join",
+        "taint",
+        "view.py",
+        True,
+        _FLASK + "import pathlib\n@app.route('/file')\ndef read_file():\n"
+        "    p = pathlib.Path('/srv/files') / request.args.get('name')\n"
+        "    return p.read_text()\n",
+    ),
+    Case(
+        "taint-pathlib-resolved-safe",
+        "taint",
+        "view.py",
+        False,
+        _FLASK + "import pathlib\n@app.route('/file')\ndef read_file():\n"
+        "    base = pathlib.Path('/srv/files')\n"
+        "    p = (base / request.args.get('name')).resolve()\n"
+        "    if not str(p).startswith(str(base)):\n        return 'no'\n"
+        "    return p.read_text()\n",
+    ),
+    Case(
+        "taint-request-wrapper",
+        "taint",
+        "view.py",
+        True,
+        _FLASK
+        + "class Wrapped:\n    def __init__(self, request):\n        self.request = request\n"
+        "    def param(self, name):\n        return self.request.args.get(name)\n"
+        "@app.route('/w')\ndef w():\n    return str(eval(Wrapped(request).param('q')))\n",
+    ),
+    Case(
+        "taint-reflected-xss",
+        "taint",
+        "view.py",
+        True,
+        _FLASK + "@app.route('/hello')\ndef hello():\n"
+        "    return f\"<h1>Hello {request.args.get('name')}</h1>\"\n",
+    ),
+    Case(
+        "taint-reflected-xss-escaped-safe",
+        "taint",
+        "view.py",
+        False,
+        _FLASK + "from markupsafe import escape\n@app.route('/hello')\ndef hello():\n"
+        "    return f\"<h1>Hello {escape(request.args.get('name'))}</h1>\"\n",
+    ),
+    Case(
+        "taint-open-redirect",
+        "taint",
+        "view.py",
+        True,
+        _FLASK + "@app.route('/go')\ndef go():\n    return redirect(request.args.get('next'))\n",
+    ),
+    Case(
+        "taint-open-redirect-allowlist-safe",
+        "taint",
+        "view.py",
+        False,
+        _FLASK + "from urllib.parse import urlparse\n@app.route('/go')\ndef go():\n"
+        "    target = request.args.get('next')\n"
+        "    if urlparse(target).netloc not in ('example.com',):\n        return 'no'\n"
+        "    return redirect(target)\n",
+    ),
+    Case(
+        "taint-xxe-external-entities",
+        "taint",
+        "view.py",
+        True,
+        _FLASK + "import xml.sax\nimport xml.dom.minidom\n@app.route('/xml', methods=['POST'])\n"
+        "def parse():\n    parser = xml.sax.make_parser()\n"
+        "    parser.setFeature(xml.sax.handler.feature_external_ges, True)\n"
+        "    return xml.dom.minidom.parseString(request.data, parser).toxml()\n",
+    ),
+    Case(
+        "taint-xml-default-parser-safe",
+        "taint",
+        "view.py",
+        False,
+        _FLASK + "import xml.dom.minidom\n@app.route('/xml', methods=['POST'])\n"
+        "def parse():\n    doc = xml.dom.minidom.parseString(request.data)\n"
+        "    return str(len(doc.childNodes))\n",
+    ),
+    Case(
+        "taint-ldap-filter",
+        "taint",
+        "view.py",
+        True,
+        _FLASK + "import ldap3\n@app.route('/who')\ndef who(conn):\n"
+        "    conn.search('ou=people', f\"(uid={request.args.get('u')})\")\n"
+        "    return str(len(conn.entries))\n",
+    ),
+    Case(
+        "taint-ldap-escaped-safe",
+        "taint",
+        "view.py",
+        False,
+        _FLASK + "import ldap3\nfrom ldap3.utils.conv import escape_filter_chars\n"
+        "@app.route('/who')\ndef who(conn):\n"
+        "    user = escape_filter_chars(request.args.get('u'))\n"
+        "    conn.search('ou=people', f'(uid={user})')\n    return str(len(conn.entries))\n",
+    ),
+    Case(
+        "taint-xpath-expression",
+        "taint",
+        "view.py",
+        True,
+        _FLASK + "import lxml.etree\n@app.route('/emp')\ndef emp():\n"
+        "    root = lxml.etree.parse('employees.xml')\n"
+        "    return str(len(root.xpath(f\"//e[@id='{request.args.get('id')}']\")))\n",
+    ),
+    Case(
+        "taint-xpath-variables-safe",
+        "taint",
+        "view.py",
+        False,
+        _FLASK + "import lxml.etree\n@app.route('/emp')\ndef emp():\n"
+        "    root = lxml.etree.parse('employees.xml')\n"
+        "    return str(len(root.xpath('//e[@id=$v]', v=request.args.get('id'))))\n",
+    ),
+    Case(
+        "taint-trust-boundary",
+        "taint",
+        "view.py",
+        True,
+        _FLASK + "@app.route('/pref', methods=['POST'])\ndef pref():\n"
+        "    session['theme'] = request.form.get('theme')\n    return 'ok'\n",
+    ),
+    Case(
+        "taint-trust-boundary-constant-safe",
+        "taint",
+        "view.py",
+        False,
+        _FLASK + "@app.route('/pref', methods=['POST'])\ndef pref():\n"
+        "    session['theme'] = 'dark' if request.form.get('dark') else 'light'\n    return 'ok'\n",
+    ),
+    # --- regex tier with data-flow grading and new checks -------------------
+    Case(
+        "sast-weak-random-token",
+        "sast",
+        "tokens.py",
+        True,
+        "import random\nimport string\ndef new_reset_token():\n"
+        "    return ''.join(random.choice(string.ascii_letters) for _ in range(32))\n",
+    ),
+    Case(
+        "sast-secrets-token-safe",
+        "sast",
+        "tokens.py",
+        False,
+        "import secrets\ndef new_reset_token():\n    return secrets.token_urlsafe(32)\n",
+    ),
+    Case(
+        "sast-hashlib-new-md5",
+        "sast",
+        "hash.py",
+        True,
+        "import hashlib\ndef digest(pw):\n    h = hashlib.new('md5')\n    h.update(pw)\n"
+        "    return h.hexdigest()\n",
+    ),
+    Case(
+        "sast-shell-constant-safe",
+        "sast",
+        "run.py",
+        False,
+        "import subprocess\ndef disk():\n    return subprocess.run('df -h', shell=True)\n",
+    ),
+    Case(
+        "sast-pickle-literal-safe",
+        "sast",
+        "load.py",
+        False,
+        "import base64\nimport pickle\nBLOB = 'gAN9cQAu'\n"
+        "def defaults():\n    return pickle.loads(base64.b64decode(BLOB))\n",
+    ),
+    Case(
+        "sast-cookie-not-secure",
+        "sast",
+        "view.py",
+        True,
+        "def remember(resp, sid):\n    resp.set_cookie('sid', sid,\n"
+        "        secure=False,\n        httponly=True)\n    return resp\n",
+    ),
+    Case(
+        "sast-cookie-flags-safe",
+        "sast",
+        "view.py",
+        False,
+        "def remember(resp, sid):\n    resp.set_cookie('sid', sid,\n"
+        "        secure=True,\n        httponly=True,\n        samesite='Lax')\n    return resp\n",
     ),
 ]
 

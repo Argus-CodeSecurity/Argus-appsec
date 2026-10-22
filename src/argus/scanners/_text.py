@@ -64,6 +64,34 @@ def search_line(
     return None
 
 
+def iter_scan_windows(
+    text: str | Sequence[str], max_len: int = MAX_SCAN_LINE
+) -> Iterator[tuple[int, int, str]]:
+    """Like :func:`iter_scan_lines`, plus each segment's offset in its line.
+
+    ``(lineno, offset, segment)``: a match at ``m.start()`` in ``segment`` sits
+    at column ``offset + m.start() + 1`` (1-based) of line ``lineno``.
+    """
+    lines = text.splitlines() if isinstance(text, str) else text
+    step = max(1, max_len - WINDOW_OVERLAP)
+    for lineno, line in enumerate(lines, start=1):
+        if len(line) <= max_len:
+            yield lineno, 0, line
+        else:
+            for i, window in enumerate(line_windows(line, max_len)):
+                yield lineno, i * step, window
+
+
+def match_columns(m: re.Match[str], offset: int = 0) -> tuple[int, int]:
+    """1-based ``(start_column, end_column)`` of a match, end exclusive (SARIF)."""
+    return offset + m.start() + 1, offset + max(m.end(), m.start() + 1) + 1
+
+
+def snippet_line(line: str, limit: int = 240) -> str:
+    """A source line for ``Location.snippet``: indentation kept, line ending dropped."""
+    return line.rstrip("\r\n")[:limit]
+
+
 def iter_scan_lines(
     text: str | Sequence[str], max_len: int = MAX_SCAN_LINE
 ) -> Iterator[tuple[int, str]]:

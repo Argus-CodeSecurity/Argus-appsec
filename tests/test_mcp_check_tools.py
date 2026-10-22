@@ -98,7 +98,8 @@ def test_check_files_returns_structured_findings(root: Path) -> None:
     assert yaml_finding["line"] == 5
     assert yaml_finding["severity"] == "high"
     assert yaml_finding["fix_available"] is True
-    assert yaml_finding["hook"].startswith("app.py:5:1: error high patterns.python-yaml-load:")
+    # Column 12 is where `yaml.load(` starts on `    return yaml.load(raw)`.
+    assert yaml_finding["hook"].startswith("app.py:5:12: error high patterns.python-yaml-load:")
     assert data["summary"]["by_severity"]["critical"] >= 1
     assert data["summary"]["highest"] == "critical"
 
