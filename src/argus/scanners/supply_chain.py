@@ -8,7 +8,7 @@ Checks:
 
 * **Known malicious packages** - bundled seed list (OSV/GitHub advisory sourced).
 * **Typosquatting** - edit distance <= 1 from a popular package in the same ecosystem.
-* **Suspicious npm lifecycle scripts** — ``preinstall`` / ``postinstall`` with shell
+* **Suspicious npm lifecycle scripts**: ``preinstall`` / ``postinstall`` with shell
   or network patterns in ``package.json``.
 """
 
@@ -29,14 +29,10 @@ from argus.core.models import (
     Severity,
 )
 from argus.core.plugin import Scanner, ScannerContext, scanner
+from argus.scanners._text import MAX_SCAN_LINE
 from argus.scanners.dependencies import _PARSERS, _loads, collect_packages
 from argus.supply_chain.intel import is_malicious, load_malicious_packages
-
-_SUSPICIOUS_SCRIPT = re.compile(
-    r"(curl|wget|bash|sh\s|powershell|Invoke-|eval\(|child_process|"
-    r"http://|https://|\.exe|chmod\s|/etc/passwd|~/.ssh)",
-    re.IGNORECASE,
-)
+from argus.supply_chain.scripts import LIFECYCLE_HOOKS, SUSPICIOUS_INSTALL_SCRIPT
 
 
 @lru_cache(maxsize=1)
@@ -80,6 +76,15 @@ def _known_malicious(ecosystem: str, name: str, *, online: bool = True) -> bool:
     return is_malicious(ecosystem, name, online=online)
 
 
+def _hook_line(f, hook: str) -> int | None:
+    """Line of the ``"hook":`` key in a package.json, if it can be found."""
+    key = re.compile(rf'"{re.escape(hook)}"\s*:')
+    for lineno, line in enumerate(f.lines(), start=1):
+        if len(line) <= MAX_SCAN_LINE and key.search(line):
+            return lineno
+    return None
+
+
 def _scan_npm_scripts(project, counter: int) -> Iterable[Finding]:
     for f in project.files_matching("package.json"):
         data = _loads(f.text())
@@ -88,9 +93,9 @@ def _scan_npm_scripts(project, counter: int) -> Iterable[Finding]:
         scripts = data.get("scripts") or {}
         if not isinstance(scripts, dict):
             continue
-        for hook in ("preinstall", "postinstall", "prepare"):
+        for hook in LIFECYCLE_HOOKS:
             body = scripts.get(hook)
-            if not isinstance(body, str) or not _SUSPICIOUS_SCRIPT.search(body):
+            if not isinstance(body, str) or not SUSPICIOUS_INSTALL_SCRIPT.search(body):
                 continue
             counter += 1
             yield Finding(
@@ -102,7 +107,10 @@ def _scan_npm_scripts(project, counter: int) -> Iterable[Finding]:
                     f"The `{hook}` script in package.json contains patterns associated "
                     f"with shell execution, downloads, or credential access."
                 ),
-                location=Location(path=f.rel_path, snippet=body[:200]),
+                # The line number lets the engine merge this with the malware
+                # scanner's finding for the same script (same file, line, CWE).
+                location=Location(path=f.rel_path, start_line=_hook_line(f, hook),
+                                  snippet=body[:200]),
                 severity=Severity.HIGH,
                 confidence=Confidence.MEDIUM,
                 likelihood=Likelihood.POSSIBLE,

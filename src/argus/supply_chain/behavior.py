@@ -8,19 +8,16 @@ changes between dependency versions in a PR diff.
 from __future__ import annotations
 
 import logging
-import re
 from dataclasses import dataclass, field
 
 import httpx
 
+from argus.supply_chain.scripts import LIFECYCLE_HOOKS, SUSPICIOUS_INSTALL_SCRIPT
+
 log = logging.getLogger("argus.supply_chain.behavior")
 
 _REGISTRY = "https://registry.npmjs.org"
-_SUSPICIOUS = re.compile(
-    r"(curl|wget|bash|powershell|eval\(|child_process|http://|https://|"
-    r"chmod\s|/etc/passwd|~/.ssh|process\.env)",
-    re.IGNORECASE,
-)
+_SUSPICIOUS = SUSPICIOUS_INSTALL_SCRIPT
 
 
 @dataclass
@@ -60,9 +57,13 @@ def npm_fingerprint(name: str, version: str, *, timeout: float = 10.0) -> Behavi
         log.debug("npm fingerprint failed for %s@%s: %s", name, version, exc)
         return None
 
-    scripts = data.get("scripts") or {}
+    if not isinstance(data, dict):
+        return None
+    scripts = data.get("scripts")
+    if not isinstance(scripts, dict):
+        scripts = {}
     install_hooks = [
-        h for h in ("preinstall", "install", "postinstall", "prepare")
+        h for h in LIFECYCLE_HOOKS
         if isinstance(scripts.get(h), str)
     ]
     script_bodies = " ".join(str(scripts.get(h, "")) for h in install_hooks)
