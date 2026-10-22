@@ -6,6 +6,7 @@ that the plugin guide points contributors at.
 """
 
 from argus.scanners import (  # noqa: F401
+    agent_config,
     api,
     ast_js,
     ast_python,
@@ -31,6 +32,7 @@ from argus.scanners import (  # noqa: F401
 )
 
 __all__ = [
+    "agent_config",
     "api",
     "ast_js",
     "ast_python",
