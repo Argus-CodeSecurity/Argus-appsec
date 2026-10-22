@@ -88,25 +88,23 @@ def test_constant_ternary_and_match_are_pruned(tmp_path):
     assert "ast-code-injection" in _rules(tmp_path, match.replace("'ABC'[1]", "'ABC'[0]"))
 
 
-def test_traversal_containment_guard_clears_path_only(tmp_path):
-    code = _view(
-        "bar = request.args.get('f')\nif '../' in bar:\n    return 'no'\n"
-        "open('/data/' + bar)\nos.system('cat ' + bar)"
+def test_blocklist_guards_are_not_trusted(tmp_path):
+    """``'../' in p`` and "no quote inside" checks are incomplete mitigations.
+
+    An absolute path or a backslash form slips past a ``'../'`` check, and a
+    quote check says nothing about the quoting the sink uses, so neither clears
+    the value: only allowlists, numeric checks and resolved-path containment do.
+    """
+    traversal = _view(
+        "bar = request.args.get('f')\nif '../' in bar:\n    return 'no'\nopen('/data/' + bar)"
     )
-    rules = _rules(tmp_path, "import os\n" + code)
-    assert "ast-path-traversal" not in rules
-    assert "ast-command-injection" in rules  # the guard says nothing about shells
-
-
-def test_literal_check_before_eval(tmp_path):
-    guard = (
+    assert "ast-path-traversal" in _rules(tmp_path, traversal)
+    quoted = (
         "bar = request.args.get('e')\n"
         'if not bar.startswith("\'") or not bar.endswith("\'") or "\'" in bar[1:-1]:\n'
         "    return 'bad'\neval(bar)"
     )
-    assert "ast-code-injection" not in _rules(tmp_path, _view(guard))
-    weaker = guard.replace(' or "\'" in bar[1:-1]', "")
-    assert "ast-code-injection" in _rules(tmp_path, _view(weaker))
+    assert "ast-code-injection" in _rules(tmp_path, _view(quoted))
 
 
 def test_allowlist_membership_clears(tmp_path):
@@ -293,7 +291,7 @@ def test_xpath_injection_and_variables(tmp_path):
     variables = vuln.replace("root.xpath(f\"/E[@id='{emp}']\")", "root.xpath('/E[@id=$v]', v=emp)")
     assert "ast-xpath-injection" not in _rules(tmp_path, variables)
     quote_guard = vuln.replace("root = ", "if \"'\" in emp:\n        return 'no'\n    root = ")
-    assert "ast-xpath-injection" not in _rules(tmp_path, quote_guard)
+    assert "ast-xpath-injection" in _rules(tmp_path, quote_guard)  # a blocklist, not trusted
 
 
 def test_trust_boundary_session_store(tmp_path):
@@ -393,6 +391,22 @@ def test_set_cookie_in_comments_and_strings_is_ignored(tmp_path):
     assert not _scan(tmp_path, {"app.py": code}, "authz")
 
 
+def test_cookiejar_set_cookie_is_not_a_response_cookie(tmp_path):
+    code = "def add(jar, cookie):\n    jar.set_cookie(cookie)\n"
+    assert not _scan(tmp_path, {"app.py": code}, "authz")
+
+
+def test_path_sinks_use_the_path_argument_only(tmp_path):
+    # send_file's second argument is the WSGI environ, not a path; an
+    # arbitrary object's .open() (a test client) is not a file API.
+    code = _view(
+        "from io import BytesIO\nfrom flask import send_file\n"
+        "send_file(BytesIO(b'x'), request.environ)\nclient.open(request.args.get('u'))"
+    )
+    assert "ast-path-traversal" not in _rules(tmp_path, code)
+    assert "ast-path-traversal" in _rules(tmp_path / "b", _view("send_file(request.args.get('f'))"))
+
+
 def test_any_containment_guard_clears_path(tmp_path):
     code = _view(
         "import pathlib\nroots = [pathlib.Path('/a'), pathlib.Path('/b')]\n"
@@ -460,17 +474,13 @@ def test_hostile_nesting_stays_bounded(tmp_path):
     assert any(f.rule_id.endswith("ast-code-injection") for f in findings)
 
 
-def test_compile_and_eval_of_parameter(tmp_path):
+def test_compile_is_a_code_sink_but_parameters_are_not_sources(tmp_path):
     assert "ast-code-injection" in _rules(
         tmp_path, _view("compile(request.args.get('c'), 'x', 'exec')")
     )
-    hits = [
-        f
-        for f in _scan(tmp_path / "b", {"m.py": "def run(expr):\n    return eval(expr)\n"})
-        if f.rule_id.endswith("ast-eval-of-parameter")
-    ]
-    assert hits and hits[0].confidence == Confidence.LOW
-    assert not _scan(tmp_path / "c", {"m.py": "def run():\n    return eval('1 + 1')\n"})
+    # eval/exec of a plain function parameter is common in template engines and
+    # debuggers; with no traced source it is not reported.
+    assert not _scan(tmp_path / "b", {"m.py": "def run(code, ns):\n    exec(code, ns)\n"})
     assert not _scan(tmp_path / "d", {"m.py": "import re\ndef pat(p):\n    return re.compile(p)\n"})
 
 

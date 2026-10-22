@@ -90,10 +90,9 @@ SINK_CWES: dict[str, frozenset[str]] = {
     "ast-xpath-injection": frozenset({CWE_XPATH}),
     "ast-trust-boundary": frozenset({CWE_TRUST}),
     "ast-weak-random": frozenset({CWE_WEAKRAND}),
-    "ast-eval-of-parameter": frozenset({CWE_CODE}),
 }
 #: Sinks that do not depend on a tainted source (excluded from summaries).
-NON_TAINT_SINKS = frozenset({"ast-sql-string-building", "ast-weak-random", "ast-eval-of-parameter"})
+NON_TAINT_SINKS = frozenset({"ast-sql-string-building", "ast-weak-random"})
 TAINT_CWES: frozenset[str] = frozenset(
     c for sid, cwes in SINK_CWES.items() if sid not in NON_TAINT_SINKS for c in cwes
 ) | frozenset({"CWE-80", "CWE-94"})
@@ -209,7 +208,6 @@ PURE_FUNCTIONS = frozenset(
         "deepcopy",
         "copy",
         "escape",
-        "escape_for_html",
     }
 )
 PURE_METHODS = frozenset(
@@ -303,11 +301,19 @@ CMD_FN = re.compile(
     r"(?:^|\.)system$|(?:^|\.)popen$|^subprocess\.\w+$|^os\.(?:exec\w*|spawn\w*)$"
     r"|^commands\.getoutput$|^pty\.spawn$"
 )
+# File APIs whose path argument is a traversal sink. ``x.open()`` on an
+# arbitrary object is not included (test clients, browsers, archives all have
+# one); pathlib objects are handled through PATH_METHODS.
 PATH_FN = re.compile(
-    r"(?:^|\.)open$|send_file$|^os\.path\.(?:exists|lexists|isfile|isdir|getsize|getmtime)$"
+    r"^(?:open|io\.open|codecs\.open|os\.open|gzip\.open|bz2\.open|lzma\.open|tarfile\.open)$"
+    r"|(?:^|\.)send_file$|(?:^|\.)send_from_directory$"
     r"|^os\.(?:remove|unlink|rmdir|removedirs|mkdir|makedirs|listdir|scandir|stat|lstat|"
     r"chmod|chown|rename|renames|replace|truncate|utime|access)$"
     r"|^shutil\.(?:copy|copy2|copyfile|copytree|move|rmtree)$"
+)
+#: Calls whose first two positional arguments are both paths.
+TWO_PATH_FN = re.compile(
+    r"^os\.(?:rename|renames|replace)$|^shutil\.(?:copy|copy2|copyfile|copytree|move)$"
 )
 CODE_FN = re.compile(r"^(?:eval|exec|compile)$")
 DESER_FN = re.compile(
@@ -401,7 +407,6 @@ _IMPORTS_LDAP = re.compile(rb"(?m)^\s*(?:from|import)\s+ldap3?\b")
 _IMPORTS_XML = re.compile(rb"(?m)^\s*(?:from|import)\s+(?:lxml|xml\.etree|elementpath)\b")
 _FROM_RANDOM = re.compile(rb"(?m)^\s*from\s+random\s+import\s+([^\n#]+)")
 _EXTERNAL_ENTITY_FEATURE = re.compile(r"external[-_](?:ges|pes|general|parameter)")
-_QUOTES = frozenset({"'", '"'})
 
 
 @dataclass(frozen=True)
@@ -1449,22 +1454,21 @@ class Flow:
         out.append((cond, truth))
 
     def _refine(self, cond, st: State, truth: bool) -> None:
+        # Only guards that are standard, complete mitigations refine a value:
+        # allowlists, numeric/identifier checks, host allowlists for redirects
+        # and resolved-path containment. Blocklist checks such as
+        # ``'../' in p`` or "contains no quote" are deliberately not trusted:
+        # they are incomplete in general (absolute paths, other quote styles).
         atoms: list[tuple[Any, bool]] = []
         self._atoms(cond, truth, atoms)
-        starts: set[tuple[str, str]] = set()
-        ends: set[tuple[str, str]] = set()
-        inner: set[tuple[str, str]] = set()
         for node, holds in atoms:
             contained = self._path_contained(node, st, 0) if holds else None
             if contained is not None:
                 self._clean(st, contained, frozenset({CWE_PATH}))
             if node.type == "comparison_operator":
-                self._refine_compare(node, st, holds, inner)
+                self._refine_compare(node, st, holds)
             elif node.type == "call":
-                self._refine_call(node, st, holds, starts, ends)
-        for key in starts & ends & inner:
-            if key[1] in _QUOTES:
-                self._clean(st, key[0], frozenset({CWE_CODE, "CWE-94"}))
+                self._refine_call(node, st, holds)
 
     def _path_contained(self, node, st: State, depth: int) -> str | None:
         """The resolved path variable ``node`` proves to lie inside a base directory.
@@ -1536,7 +1540,7 @@ class Flow:
             break
         return node
 
-    def _refine_compare(self, node, st: State, holds: bool, inner: set[tuple[str, str]]) -> None:
+    def _refine_compare(self, node, st: State, holds: bool) -> None:
         operands = [c for c in node.named_children if c.type != "comment"]
         ops = [
             c.type
@@ -1549,23 +1553,6 @@ class Flow:
         op = ops[0]
         if op in ("in", "not in"):
             member_holds = (op == "in") == holds
-            av = self._ev_quiet(a, st)
-            if not member_holds and isinstance(av.const, str):
-                target = b
-                sliced = False
-                if b.type == "subscript":
-                    sub = b.child_by_field_name("subscript")
-                    if sub is not None and sub.type == "slice" and self._compact(sub) == "1:-1":
-                        target = b.child_by_field_name("value")
-                        sliced = True
-                path = self._path(target) if target is not None else None
-                if path is not None:
-                    if not sliced and ".." in av.const:
-                        self._clean(st, path, frozenset({CWE_PATH}))
-                    if not sliced and av.const in _QUOTES:
-                        self._clean(st, path, frozenset({CWE_XPATH}))
-                    if sliced and av.const in _QUOTES:
-                        inner.add((path, av.const))
             if member_holds:
                 bv = self._ev_quiet(b, st)
                 if bv.lit:
@@ -1617,8 +1604,6 @@ class Flow:
         node,
         st: State,
         holds: bool,
-        starts: set[tuple[str, str]],
-        ends: set[tuple[str, str]],
     ) -> None:
         fn = node.child_by_field_name("function")
         args = node.child_by_field_name("arguments")
@@ -1638,13 +1623,7 @@ class Flow:
             if last in ("isdigit", "isnumeric", "isdecimal", "isalnum", "isalpha", "isidentifier"):
                 v = st.get(rpath)
                 st.vars[rpath] = Val(lit=True, weak=v.weak)
-            elif last in ("startswith", "endswith") and len(arg_nodes) == 1:
-                q = self._ev_quiet(arg_nodes[0], st).const
-                if isinstance(q, str):
-                    (starts if last == "startswith" else ends).add((rpath, q))
-                if last == "startswith" and "normalized" in st.get(rpath).flags:
-                    self._clean(st, rpath, frozenset({CWE_PATH}))
-            elif last == "is_relative_to" and "normalized" in st.get(rpath).flags:
+            elif last in ("startswith", "is_relative_to") and "normalized" in st.get(rpath).flags:
                 self._clean(st, rpath, frozenset({CWE_PATH}))
         safe_url = ("url_has_allowed_host_and_scheme", "is_safe_url", "is_safe_redirect_url")
         if last in safe_url and arg_nodes:
@@ -2008,11 +1987,6 @@ class Flow:
             out.add(CWE_SQL)
         if c.last in _LDAP_ESCAPES:
             out.add(CWE_LDAP)
-        if c.last == "replace" and c.recv is not None and c.pos:
-            old = c.pos[0].const
-            new = c.pos[1].const if len(c.pos) > 1 else ""
-            if isinstance(old, str) and old in _QUOTES and isinstance(new, str) and old not in new:
-                out.add(CWE_XPATH)
         if self._ctx is not None:
             out |= {cwe for cwe in self._cwes if self._ctx.clears(c.fn, frozenset({cwe}))}
         return frozenset(out)
@@ -2287,8 +2261,16 @@ class Flow:
             ):
                 self._verdict("shell", c.node, vals[0] if vals else None)
         if PATH_FN.search(fn):
-            vals = c.pos[:2] + [
-                c.kw[k] for k in ("file", "filename", "path", "name", "src", "dst") if k in c.kw
+            if TWO_PATH_FN.search(fn):
+                vals = c.pos[:2]
+            elif last == "send_from_directory":
+                vals = c.pos[1:2]  # the directory is the app's; the file name is the risk
+            else:
+                vals = c.pos[:1]
+            vals = vals + [
+                c.kw[k]
+                for k in ("file", "filename", "path", "path_or_file", "name", "src", "dst")
+                if k in c.kw
             ]
             if any(v.tainted_for(SINK_CWES["ast-path-traversal"]) for v in vals):
                 self._emit("ast-path-traversal", c.node)
@@ -2303,9 +2285,6 @@ class Flow:
             v = c.arg(0, "source", "object")
             if v is not None and v.tainted_for(SINK_CWES["ast-code-injection"]):
                 self._emit("ast-code-injection", c.node)
-            elif v is not None and v.param and not v.lit and fn != "compile":
-                # compile() alone is often a syntax check; eval/exec run the text.
-                self._emit("ast-eval-of-parameter", c.node)
         if DESER_FN.search(fn) or (YAML_LOAD_FN.search(fn) and self._yaml_unsafe(c)):
             v = c.arg(0, "data", "stream", "file", "s")
             self._verdict("deser", c.node, v)

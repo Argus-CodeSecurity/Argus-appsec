@@ -302,22 +302,6 @@ SINKS: list[Sink] = [
         fix="Never eval/exec untrusted input; use a safe parser or explicit dispatch.",
     ),
     Sink(
-        id="ast-eval-of-parameter",
-        fn=CODE_FN,
-        cwe=["CWE-95"],
-        owasp=_INJECTION,
-        severity=Severity.MEDIUM,
-        confidence=Confidence.LOW,
-        title="eval/exec of a function parameter",
-        why="A function evaluates one of its parameters as code. No untrusted source "
-        "was traced to it in this file, but any caller that passes user-influenced text "
-        "turns this into code execution.",
-        attack="Find a caller that forwards request data and pass a Python expression.",
-        impact="Remote code execution if any caller passes attacker-controlled text.",
-        fix="Parse data with ast.literal_eval or json, or dispatch on an allowlist "
-        "instead of evaluating text.",
-    ),
-    Sink(
         id="ast-unsafe-deserialization",
         fn=DESER_FN,
         cwe=["CWE-502"],

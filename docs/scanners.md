@@ -105,9 +105,8 @@ source or the sink is in another file):
 | `ast-sql-injection` | 89 | `execute()`/`executemany()` query argument |
 | `ast-sql-string-building` | 89 | query built with `%`, `+`, `.format()` or an f-string from a function parameter (low confidence, no traced source) |
 | `ast-command-injection` | 78 | `os.system`, `os.popen`, `subprocess.*`, `os.exec*`/`os.spawn*` |
-| `ast-path-traversal` | 22 | `open`, `codecs.open`, `os.path.exists` and other `os`/`shutil` file calls, `send_file`, and file methods on a `pathlib.Path` built from the value (`Path(x)`, `base / x`) |
+| `ast-path-traversal` | 22 | `open`, `io.open`, `codecs.open`, `os`/`shutil` file operations, `send_file`, the file name of `send_from_directory`, and file methods on a `pathlib.Path` built from the value (`Path(x)`, `base / x`) |
 | `ast-code-injection` | 95 | `eval`, `exec`, `compile` |
-| `ast-eval-of-parameter` | 95 | `eval`/`exec` of a function parameter (low confidence, no traced source) |
 | `ast-unsafe-deserialization` | 502 | `pickle`/`dill`/`marshal` loads, `yaml.load` without a safe loader, `yaml.unsafe_load` |
 | `ast-xss` | 79 | value returned from a Flask/Bottle view (`@app.route`, or `@app.get` in a Flask file), `Markup()`, `mark_safe()`, Django `HttpResponse` |
 | `ast-open-redirect` | 601 | `redirect()`, `HttpResponseRedirect`, `RedirectResponse`, `headers["Location"] = ...` |
@@ -130,16 +129,17 @@ the same file (`ast-python`) or across files (`ast-python-xfile`).
 
 **Guards and sanitizers.** CWE-specific sanitizers clear a value only for their
 class: HTML escaping (`html.escape`, `markupsafe.escape`, any `*escape*`) for
-XSS, `escape_filter_chars` for LDAP, quote removal for XPath. Numeric
-conversion, `secure_filename`, `basename`, `shlex.quote` and `url_for` clear
-every class. A block that returns or raises when a check fails refines the
-value after it: `'../' in p` clears path traversal, a quote check clears XPath,
-an allowlist membership test (`x not in (...)`) or `x.isdigit()` clears
-everything, `urlparse(u).netloc` against an allowlist clears open redirect, a
-resolved path checked with `startswith`/`is_relative_to` clears path
-traversal, and the "quoted literal only" check before `eval` clears code
-injection. `request.path` is not a source inside a view whose routes have no
-`<converters>`, because routing already fixed it.
+XSS, `escape_filter_chars` for LDAP. Numeric conversion, `secure_filename`,
+`basename`, `shlex.quote` and `url_for` clear every class. A block that returns
+or raises when a check fails refines the value after it, for checks that are
+complete mitigations: an allowlist membership test (`x not in (...)`) or
+`x.isdigit()` clears everything, `urlparse(u).netloc` against an allowlist
+clears open redirect, and a resolved path (`resolve()`, `os.path.realpath`)
+checked with `startswith`/`is_relative_to` clears path traversal. Blocklist
+checks (`'../' in p`, "contains no quote") are deliberately not trusted: an
+absolute path or another quoting style gets past them. `request.path` is not a
+source inside a view whose routes have no `<converters>`, because routing
+already fixed it.
 
 **Limits.** Strongest for Python and JS/TS. Interprocedural analysis is bounded
 (one call hop, plus request wrappers); extremely dynamic code can defeat static

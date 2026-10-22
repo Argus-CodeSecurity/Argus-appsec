@@ -202,8 +202,8 @@ class ASTPythonInterprocScanner(Scanner):
     ) -> Iterable[Finding]:
         """Flows whose source is a request wrapper or helper from another file.
 
-        ``wrapped = request_wrapper(request); x = wrapped.get_form_parameter("q")``
-        is a source when ``get_form_parameter`` (defined elsewhere in the project)
+        ``form = FormView(request); x = form.value("q")``
+        is a source when ``FormView.value`` (defined elsewhere in the project)
         returns request data. Each file that calls such a method or function is
         analyzed with and without that knowledge, and only the flows the extra
         sources add are reported here; the rest belong to ``ast-python``.

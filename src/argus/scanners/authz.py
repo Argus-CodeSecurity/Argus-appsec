@@ -161,6 +161,26 @@ def _call_text(lines: list[str], idx: int, start: int) -> str:
     return "".join(out)
 
 
+def _top_level_commas(call: str) -> int:
+    """Commas between the outer parentheses of ``call``, outside nested brackets/strings."""
+    depth = 0
+    quote = ""
+    count = 0
+    for ch in call:
+        if quote:
+            if ch == quote:
+                quote = ""
+        elif ch in "'\"":
+            quote = ch
+        elif ch in "([{":
+            depth += 1
+        elif ch in ")]}":
+            depth -= 1
+        elif ch == "," and depth == 1:
+            count += 1
+    return count
+
+
 def _receiver_start(line: str, pos: int) -> int:
     """Start of the dotted receiver ending at ``pos`` (``resp`` in ``resp.set_cookie``)."""
     while pos > 0 and (line[pos - 1].isalnum() or line[pos - 1] in "_."):
@@ -332,6 +352,11 @@ class AuthzScanner(Scanner):
         if "#" in before or (before.count('"') + before.count("'")) % 2:
             return  # mentioned in a comment or a string, not called
         call = _call_text(lines, idx, m.start())
+        if _top_level_commas(call) == 0 or "**" in call:
+            # ``**kwargs`` may carry the flags, so the call cannot be judged.
+            # ``jar.set_cookie(cookie)`` (http.cookiejar, requests) takes a ready
+            # Cookie object; the web-framework form is set_cookie(key, value, ...).
+            return
         flags = {}
         for name, rx in _FLAG_KW.items():
             fm = rx.search(call)
