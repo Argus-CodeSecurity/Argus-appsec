@@ -25,9 +25,11 @@ def git_available() -> bool:
 def _run(root: Path, *args: str, check: bool = True) -> subprocess.CompletedProcess:
     if not git_available():
         raise GitError("git is not installed or not on PATH.")
+    # Decode as UTF-8 explicitly: git emits UTF-8 paths and content, and the
+    # platform default (e.g. cp1252 on Windows) can mangle or reject them.
     proc = subprocess.run(
         ["git", "-C", str(root), *args],
-        capture_output=True, text=True,
+        capture_output=True, text=True, encoding="utf-8", errors="replace",
     )
     if check and proc.returncode != 0:
         raise GitError(f"git {' '.join(args)} failed: {proc.stderr.strip()}")
@@ -46,12 +48,23 @@ def current_branch(root: Path) -> str:
 
 
 def diff(root: Path, *args: str) -> str:
-    """Return `git diff <args>` stdout (empty string on failure).
+    """Return `git diff <args>` stdout; raise :class:`GitError` if git fails.
 
-    Used by the PR-review flow to discover which lines a pull request changed.
-    Non-fatal: a missing ref just yields an empty diff (a full, non-diff review).
+    An empty string means git ran and found no changes. A failure (unknown ref,
+    shallow clone without a merge base, not a repository) raises instead of
+    looking like an empty diff, so callers cannot mistake "could not compute the
+    diff" for "nothing changed". Paths are printed unquoted (UTF-8) so non-ASCII
+    file names match the scanner's paths.
     """
-    return _run(root, "diff", *args, check=False).stdout
+    return _run(root, "-c", "core.quotePath=false", "diff", *args).stdout
+
+
+def verify_commit(root: Path, ref: str) -> bool:
+    """True if ``ref`` resolves to a commit in this repository."""
+    if not ref or ref.startswith("-"):
+        return False
+    proc = _run(root, "rev-parse", "--verify", "--quiet", f"{ref}^{{commit}}", check=False)
+    return proc.returncode == 0
 
 
 def show_file(root: Path, ref: str, rel_path: str) -> str | None:

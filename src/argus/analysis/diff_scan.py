@@ -38,16 +38,50 @@ class DiffScope:
         return not self.changed_files and not self.changed_lines
 
 
+class DiffError(git_ops.GitError):
+    """The diff scope could not be computed (bad ref, shallow clone, git error).
+
+    Raised instead of returning an empty scope: an empty scope means "nothing
+    changed" and drops every finding, which must never happen just because git
+    could not answer.
+    """
+
+
+def _split_spec(spec: str, head: str) -> tuple[str, str, str]:
+    """Return (base, head, normalized three-dot spec) for a ref spec."""
+    if "..." in spec:
+        base, _, tip = spec.partition("...")
+    else:
+        base, tip = spec, head
+    base, tip = base.strip() or "HEAD", tip.strip() or "HEAD"
+    return base, tip, f"{base}...{tip}"
+
+
 def resolve_diff(root: Path, ref_spec: str, *, head: str = "HEAD") -> DiffScope:
     """Build a :class:`DiffScope` from a git ref spec such as ``origin/main...HEAD``.
 
     Accepts either a full three-dot range (``base...head``) or a base ref alone
     (``origin/main``), in which case ``base...head`` is used.
+
+    Paths are reported relative to ``root`` (``git diff --relative``), matching
+    finding paths even when ``root`` is a subdirectory of the repository.
+
+    Raises :class:`DiffError` when a ref cannot be resolved or git fails, so
+    callers can keep every finding rather than silently reporting none.
     """
-    spec = ref_spec.strip()
-    if "..." not in spec:
-        spec = f"{spec}...{head}"
-    text = git_ops.diff(root, "--unified=0", "--no-color", spec)
+    base, tip, spec = _split_spec(ref_spec.strip(), head)
+    for ref in (base, tip):
+        if not git_ops.verify_commit(root, ref):
+            raise DiffError(
+                f"cannot resolve git ref {ref!r}. In CI, fetch it first "
+                f"(e.g. `git fetch origin {ref}` or checkout with fetch-depth: 0)."
+            )
+    try:
+        text = git_ops.diff(
+            root, "--relative", "--unified=0", "--no-color", "--no-ext-diff", spec,
+        )
+    except git_ops.GitError as exc:
+        raise DiffError(str(exc)) from exc
     changed_lines = parse_changed_lines(text)
     changed_files = frozenset(changed_lines.keys())
     return DiffScope(changed_lines=changed_lines, changed_files=changed_files)

@@ -23,6 +23,38 @@ from argus.remediation.hosting import RepoRef, post_issue_comment, post_pr_revie
 # `@@ -old,+new @@` hunk header; we only need the new-side start and length.
 _HUNK = re.compile(r"^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@")
 
+_C_ESCAPES = {"a": 7, "b": 8, "t": 9, "n": 10, "v": 11, "f": 12, "r": 13,
+              '"': 34, "\\": 92}
+
+
+def _unquote_path(path: str) -> str:
+    r"""Undo git's C-style quoting (``"caf\303\251.py"``) of a diff path.
+
+    ``core.quotePath=false`` keeps non-ASCII names raw, but git still quotes
+    paths containing control characters, quotes or backslashes.
+    """
+    if len(path) < 2 or not (path.startswith('"') and path.endswith('"')):
+        return path
+    body = path[1:-1]
+    out = bytearray()
+    i = 0
+    while i < len(body):
+        ch = body[i]
+        if ch == "\\" and i + 1 < len(body):
+            nxt = body[i + 1]
+            octal = body[i + 1:i + 4]
+            if len(octal) == 3 and all(c in "01234567" for c in octal):
+                out.append(int(octal, 8))
+                i += 4
+                continue
+            if nxt in _C_ESCAPES:
+                out.append(_C_ESCAPES[nxt])
+                i += 2
+                continue
+        out += ch.encode("utf-8")
+        i += 1
+    return out.decode("utf-8", errors="replace")
+
 
 def parse_changed_lines(diff_text: str) -> dict[str, set[int]]:
     """Map each file to the set of line numbers a unified diff *adds*.
@@ -33,9 +65,13 @@ def parse_changed_lines(diff_text: str) -> dict[str, set[int]]:
     """
     changed: dict[str, set[int]] = {}
     current: set[int] | None = None
-    for line in diff_text.splitlines():
+    # Split on "\n" only: str.splitlines() also breaks on \x0c,   and
+    # friends, which would let file content masquerade as hunk headers.
+    for line in diff_text.split("\n"):
+        line = line.rstrip("\r")
         if line.startswith("+++ "):
-            path = line[4:].strip()
+            # git appends a tab after names that contain spaces.
+            path = _unquote_path(line[4:].rstrip("\t"))
             if path == "/dev/null":
                 current = None
                 continue
@@ -60,9 +96,13 @@ def changed_lines(root: str | Path, base: str, head: str = "HEAD") -> dict[str, 
     Uses a three-dot diff (``base...head``) so it matches what the PR shows,
     the changes on the head branch since it diverged from base. Returns an empty
     map if git or the refs are unavailable (caller then falls back to a
-    summary-only review).
+    summary-only review, which still lists every finding).
     """
-    text = git_ops.diff(Path(root), "--unified=0", "--no-color", f"{base}...{head}")
+    try:
+        text = git_ops.diff(Path(root), "--unified=0", "--no-color", "--no-ext-diff",
+                            f"{base}...{head}")
+    except git_ops.GitError:
+        return {}
     return parse_changed_lines(text)
 
 
