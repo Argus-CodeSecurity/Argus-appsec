@@ -391,7 +391,7 @@ class PatternScanner(Scanner):
         # Custom rules can change on disk without any scanned file changing, so a
         # run that loads them opts out of the per-file cache to stay correct.
         rules_opt = ctx.config.options_for(self.name).get("rules")
-        trust = getattr(ctx.config, "trust_project_config", True)
+        trust = getattr(ctx.config, "trust_project_config", False)
         from argus.scanners.custom_rules import config_signature
         return self.file_local and not config_signature(
             ctx.project.root, rules_opt, trust)
@@ -400,7 +400,7 @@ class PatternScanner(Scanner):
         rules_opt = ctx.config.options_for(self.name).get("rules")
         # A cloned, untrusted repo must not be able to inject rules via its own
         # .argus/rules convention directory (rule injection / ReDoS).
-        trust = getattr(ctx.config, "trust_project_config", True)
+        trust = getattr(ctx.config, "trust_project_config", False)
         from argus.scanners.custom_rules import load_custom_rules
         return [*RULES, *load_custom_rules(ctx.project.root, rules_opt, trust)]
 

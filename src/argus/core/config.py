@@ -7,6 +7,9 @@ Config resolution order (later wins):
 3. A file passed explicitly with ``--config``.
 4. CLI flags.
 
+Step 2 only happens for trusted targets; see :func:`load_project_config`,
+which every command uses to make that decision.
+
 Kept deliberately small, every field maps to something a user actually tunes.
 """
 
@@ -14,11 +17,14 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import yaml
 
 from argus.core.models import Severity
+
+if TYPE_CHECKING:
+    from argus.core.project import Project
 
 CONFIG_FILENAMES = (".argus.yml", ".argus.yaml")
 
@@ -112,12 +118,13 @@ class Config:
     cache: bool = True
     # Run scanners concurrently. Output stays deterministic either way.
     parallel: bool = True
-    # Whether the scanned project's own contents are trusted. False for a cloned
-    # remote repo scanned without --trust-remote-config: in that case in-repo
-    # extension points (the .argus/rules convention dir) must NOT be honored,
-    # because a hostile repository could otherwise inject scanner rules. Set by
-    # the CLI from the same trust decision that gates the in-repo .argus.yml.
-    trust_project_config: bool = True
+    # Whether the scanned project's own contents are trusted. When False,
+    # in-repo extension points (the .argus/rules convention dir) are NOT
+    # honored, because a hostile repository could otherwise inject scanner
+    # rules. Untrusted by default: load_project_config() sets it from the same
+    # decision that gates the in-repo .argus.yml (local targets are trusted,
+    # cloned remotes only with --trust-remote-config).
+    trust_project_config: bool = False
 
     ai: AIConfig = field(default_factory=AIConfig)
 
@@ -236,3 +243,30 @@ class Config:
 
     def options_for(self, scanner_name: str) -> dict[str, Any]:
         return self.scanner_options.get(scanner_name, {})
+
+
+def load_project_config(
+    project: Project,
+    explicit_config: str | Path | None = None,
+    *,
+    trust_remote: bool = False,
+) -> Config:
+    """Load the configuration for scanning ``project``, with one trust decision.
+
+    Every command goes through this so the rules are the same everywhere:
+
+    * An explicit ``--config`` file is always honored (the user chose it).
+    * The project's own ``.argus.yml`` and its in-repo extension points
+      (``.argus/rules``, ``.argus/exceptions.yml``, inline ``argus-ignore``
+      comments) are trusted only for local targets, or for a cloned remote
+      when the user passes ``trust_remote`` (``--trust-remote-config``). A
+      cloned repository is attacker-controlled: its config could exclude
+      every path, drop scanners, or allowlist its own findings.
+    """
+    trusted = project.origin == "local" or trust_remote
+    cfg = Config.load(
+        path=explicit_config,
+        project_root=project.root if trusted else None,
+    )
+    cfg.trust_project_config = trusted
+    return cfg

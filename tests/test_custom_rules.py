@@ -42,7 +42,7 @@ def test_custom_rule_produces_finding(tmp_path):
     (rules_dir / "team.yml").write_text(_RULE_YAML, encoding="utf-8")
     (tmp_path / "app.py").write_text("x = 'BANNED_TOKEN'\n", encoding="utf-8")
 
-    findings = _scan(tmp_path, Config())
+    findings = _scan(tmp_path, Config(trust_project_config=True))
     hits = [f for f in findings if f.rule_id == "patterns.no-eval-marker"]
     assert hits
     assert hits[0].severity.label == "High"
@@ -86,6 +86,6 @@ def test_custom_rules_disable_cache(tmp_path):
     (withrules / ".argus" / "rules").mkdir(parents=True)
     (withrules / ".argus" / "rules" / "team.yml").write_text(_RULE_YAML,
                                                              encoding="utf-8")
-    ctx_rules = ScannerContext(project=Project.from_path(withrules), config=Config(),
-                               ai=None)
+    ctx_rules = ScannerContext(project=Project.from_path(withrules),
+                               config=Config(trust_project_config=True), ai=None)
     assert scanner.cacheable(ctx_rules) is False

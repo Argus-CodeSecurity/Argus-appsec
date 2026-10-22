@@ -35,7 +35,7 @@ from rich.table import Table
 from typer.core import TyperGroup
 
 from argus import __version__
-from argus.core.config import Config, ConfigError
+from argus.core.config import Config, ConfigError, load_project_config
 from argus.core.models import ScanResult, Severity
 from argus.core.plugin import registry
 from argus.plugins import register_builtins
@@ -266,7 +266,6 @@ def scan(
     # Security: a cloned remote repository is untrusted. Do not honor a config file
     # discovered inside it (which could disable scanners or hide paths) unless the
     # user explicitly opts in. An explicit --config path is always respected.
-    trust_project_config = project.origin == "local" or trust_remote_config
     if project.origin != "local" and not trust_remote_config and not quiet:
         err_console.print(
             "[dim]· Ignoring any .argus.yml inside the remote repo "
@@ -280,7 +279,8 @@ def scan(
             raise typer.Exit(2)
         cfg = _build_config(
             config=config,
-            project_root=project.root if trust_project_config else None,
+            project=project,
+            trust_remote=trust_remote_config,
             scanners=scanners,
             profile=profile_name,
             exclude=exclude, ai_provider=ai_provider, ai_model=ai_model, no_ai=no_ai,
@@ -291,9 +291,6 @@ def scan(
             verify_secrets=verify_secrets, secrets_history=secrets_history,
             diff_ref=diff_ref,
         )
-        # A cloned, untrusted repo must not inject scanner rules via its own
-        # in-repo .argus/rules directory; gate it on the same trust decision.
-        cfg.trust_project_config = trust_project_config
 
         if live_target:
             cfg.scanner_options.setdefault("dast", {})["url"] = live_target
@@ -597,6 +594,7 @@ def supply_chain_cmd(
 
     try:
         cfg = Config()
+        cfg.trust_project_config = resolved.project.origin == "local"
         cfg.ai.enabled = False
         cfg.scanners = [
             "supply-chain", "dependency-diff", "dependencies", "provenance",
@@ -928,8 +926,7 @@ def watch(
         err_console.print("[red]Error:[/red] watch requires a source repository or local path.")
         raise typer.Exit(2)
 
-    cfg = Config.load(path=config, project_root=resolved.project.root if resolved.project.origin == "local" else None)
-    cfg.trust_project_config = resolved.project.origin == "local"
+    cfg = load_project_config(resolved.project, config)
     if scanners_opt:
         cfg.scanners = [s.strip() for s in scanners_opt.split(",") if s.strip()]
 
@@ -1069,8 +1066,7 @@ def baseline_create(
         err_console.print("[red]Error:[/red] baseline create requires a source path or repo.")
         raise typer.Exit(2)
     try:
-        cfg = Config.load(path=config, project_root=resolved.project.root)
-        cfg.trust_project_config = resolved.project.origin == "local"
+        cfg = load_project_config(resolved.project, config)
         progress = None if quiet else (lambda m: err_console.print(f"[dim]· {escape(m)}[/dim]"))
         result = ScanEngine(cfg, progress=progress).scan(resolved.project)
         output.write_text(result.model_dump_json(indent=2) + "\n", encoding="utf-8")
@@ -1146,7 +1142,7 @@ def policy_check(
             err_console.print("[red]Error:[/red] policy check requires a source repository.")
             raise typer.Exit(2)
         try:
-            cfg = Config.load(path=config, project_root=resolved.project.root)
+            cfg = load_project_config(resolved.project, config)
             cfg.ai.enabled = False
             if scanners_opt:
                 cfg.scanners = [s.strip() for s in scanners_opt.split(",") if s.strip()]
@@ -1254,10 +1250,7 @@ def fix(
     project = resolved.project
     try:
         # Only honor an in-repo config for local targets (a cloned repo is untrusted).
-        cfg = Config.load(
-            project_root=project.root if project.origin == "local" else None
-        )
-        cfg.trust_project_config = project.origin == "local"
+        cfg = load_project_config(project)
         # Fixing is deterministic; AI enrichment is not needed and slows things down.
         cfg.ai.enabled = False
         if scanners_opt:
@@ -1396,10 +1389,7 @@ def push(
             else:
                 project = resolved.project
                 assert project is not None
-                cfg = Config.load(
-                    project_root=project.root if project.origin == "local" else None
-                )
-                cfg.trust_project_config = project.origin == "local"
+                cfg = load_project_config(project)
                 if scanners_opt:
                     cfg.scanners = [s.strip() for s in scanners_opt.split(",") if s.strip()]
                 progress = None if quiet else (
@@ -1521,11 +1511,7 @@ def review(
     )
 
     try:
-        cfg = Config.load(
-            path=config,
-            project_root=project.root if project.origin == "local" else None,
-        )
-        cfg.trust_project_config = project.origin == "local"
+        cfg = load_project_config(project, config)
         cfg.ai.enabled = False  # a PR gate should be fast and deterministic
         if scanners_opt:
             cfg.scanners = [s.strip() for s in scanners_opt.split(",") if s.strip()]
@@ -1591,10 +1577,7 @@ def learn(
 
     project = resolved.project
     try:
-        cfg = Config.load(
-            project_root=project.root if project.origin == "local" else None
-        )
-        cfg.trust_project_config = project.origin == "local"
+        cfg = load_project_config(project)
         cfg.attack_simulation = True  # richer exploit walkthroughs make better lessons
         if scanners_opt:
             cfg.scanners = [s.strip() for s in scanners_opt.split(",") if s.strip()]
@@ -1765,7 +1748,7 @@ def _focused_scan(
         raise typer.Exit(2)
 
     try:
-        cfg = Config.load(path=config, project_root=resolved.project.root)
+        cfg = load_project_config(resolved.project, config)
         cfg.ai.enabled = False
         cfg.scanners = scanners
         progress = None if quiet else (
@@ -1813,12 +1796,12 @@ def _focused_scan(
         resolved.cleanup()
 
 
-def _build_config(*, config, project_root, scanners, profile=None, exclude, ai_provider, ai_model,
-                  no_ai, attack_sim, patches, min_severity, fail_on,
+def _build_config(*, config, project, trust_remote=False, scanners, profile=None, exclude,
+                  ai_provider, ai_model, no_ai, attack_sim, patches, min_severity, fail_on,
                   fail_on_error: bool | None = None,
                   reachability=False, symbol_reachability=False, no_cache=False,
                   verify_secrets=False, secrets_history=False, diff_ref: str | None = None) -> Config:
-    cfg = Config.load(path=config, project_root=project_root)
+    cfg = load_project_config(project, config, trust_remote=trust_remote)
     if profile:
         from argus.profiles import PROFILES, apply_profile
         key = profile.strip().lower()
