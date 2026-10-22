@@ -110,11 +110,13 @@ def changed_lines(root: str | Path, base: str, head: str = "HEAD") -> dict[str, 
     return parse_changed_lines(text)
 
 
-def finding_comment(f: Finding) -> dict:
+def finding_comment(f: Finding, path_prefix: str = "") -> dict:
     """Build one inline GitHub review-comment payload for a finding.
 
     Everything interpolated comes from the scanned (possibly hostile) PR, so it
     is escaped: no links, HTML or @mentions can ride along on the bot's token.
+    ``path_prefix`` turns the scan-relative path into the repository-relative
+    path GitHub expects when a subdirectory was scanned.
     """
     parts = [f"**Argus | {f.severity.label} | {md_text(f.title)}**", md_code(f.rule_id)]
     if f.why_vulnerable:
@@ -125,7 +127,7 @@ def finding_comment(f: Finding) -> dict:
     if mapping:
         parts.append(f"\n_{md_text(mapping)}_")
     return {
-        "path": f.location.path,
+        "path": path_prefix + f.location.path,
         "line": f.location.start_line,
         "side": "RIGHT",
         "body": "  \n".join(parts),
@@ -133,20 +135,21 @@ def finding_comment(f: Finding) -> dict:
 
 
 def split_comments(
-    findings: list[Finding], changed: dict[str, set[int]]
+    findings: list[Finding], changed: dict[str, set[int]], path_prefix: str = ""
 ) -> tuple[list[dict], list[Finding]]:
     """Split findings into (inline comments on changed lines, everything else).
 
     GitHub rejects a whole review if any comment targets a line outside the diff,
     so only findings whose line is in ``changed`` become inline comments; the
-    rest are returned to be summarized in the review body.
+    rest are returned to be summarized in the review body. ``changed`` is keyed
+    by repository-relative path; ``path_prefix`` maps finding paths onto it.
     """
     inline: list[dict] = []
     leftover: list[Finding] = []
     for f in findings:
         line = f.location.start_line
-        if line is not None and line in changed.get(f.location.path, set()):
-            inline.append(finding_comment(f))
+        if line is not None and line in changed.get(path_prefix + f.location.path, set()):
+            inline.append(finding_comment(f, path_prefix))
         else:
             leftover.append(f)
     return inline, leftover
@@ -212,6 +215,7 @@ def post_findings_review(
     token: str | None = None,
     dry_run: bool = False,
     post_clean: bool = False,
+    path_prefix: str = "",
 ) -> ReviewOutcome:
     """Post ``findings`` to PR ``number`` as an inline review plus a summary.
 
@@ -220,7 +224,7 @@ def post_findings_review(
     (then a short "no new findings" comment is left). ``dry_run`` builds the
     outcome without any network call.
     """
-    inline, leftover = split_comments(findings, changed)
+    inline, leftover = split_comments(findings, changed, path_prefix)
     summary = review_summary(len(findings), len(inline), leftover)
     outcome = ReviewOutcome(
         total=len(findings), inline=len(inline), leftover=len(leftover),

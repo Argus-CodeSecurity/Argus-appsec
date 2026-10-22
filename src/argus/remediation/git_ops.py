@@ -77,6 +77,19 @@ def current_branch(root: Path) -> str:
     return _run(root, "rev-parse", "--abbrev-ref", "HEAD").stdout.strip()
 
 
+def path_prefix(root: Path) -> str:
+    """``root``'s location inside its repository, e.g. ``"services/api/"``.
+
+    Empty at the repository root or outside a repository. Finding paths are
+    relative to the scanned directory; adding this prefix gives the
+    repository-relative path that git diffs and hosting APIs use.
+    """
+    proc = _run(root, "rev-parse", "--show-prefix", check=False)
+    if proc.returncode != 0:
+        return ""
+    return proc.stdout.strip()
+
+
 def diff(root: Path, *args: str) -> str:
     """Return `git diff <args>` stdout; raise :class:`GitError` if git fails.
 

@@ -1608,7 +1608,8 @@ def review(
         changed = pr_review.changed_lines(project.root, base_ref)
         try:
             outcome = pr_review.post_findings_review(
-                ref, pr_number, result.findings, changed=changed, dry_run=dry_run
+                ref, pr_number, result.findings, changed=changed, dry_run=dry_run,
+                path_prefix=git_ops.path_prefix(project.root),
             )
         except HostingError as exc:
             err_console.print(f"[red]Could not post review:[/red] {exc}")
