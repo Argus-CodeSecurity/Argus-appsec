@@ -27,6 +27,7 @@ _SCANNER_DOC_ANCHOR = {
     "ast-js": "taint-data-flow-ast",
     "iac": "infrastructure-as-code",
     "llm": "llm-ai-application-security",
+    "agent-config": "agent-config",
     "custom_rules": "custom-rules",
 }
 

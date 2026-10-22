@@ -54,9 +54,10 @@ PROFILES: dict[str, ScanProfile] = {
             "container-image",
             "cloud",
             "llm",
+            "agent-config",
             "dast",
         ],
-        "Maximum depth: AST taint, supply chain, authz, API, infra, LLM.",
+        "Maximum depth: AST taint, supply chain, authz, API, infra, LLM and agent config.",
     ),
     "supply-chain": ScanProfile(
         "supply-chain",

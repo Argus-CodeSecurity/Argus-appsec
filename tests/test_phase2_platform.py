@@ -194,6 +194,14 @@ def test_deep_profile_uses_ast_python_xfile():
     assert "malware" in scanners
 
 
+def test_deep_profile_includes_agent_config_and_only_known_scanners():
+    from argus.core.plugin import registry
+
+    scanners = apply_profile("deep")
+    assert "agent-config" in scanners
+    assert set(scanners) <= set(registry.scanners())
+
+
 def test_malware_flags_obfuscated_python(tmp_path: Path):
     (tmp_path / "evil.py").write_text(
         "import base64\nexec(base64.decode('ZWNobyBoYWNr'))\n",
