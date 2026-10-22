@@ -8,6 +8,8 @@ as a short, hands-on lesson.
 
 from __future__ import annotations
 
+from rich.markup import escape
+
 from argus.core.models import ScanResult, Severity
 
 _SEV_COLOR = {
@@ -25,20 +27,23 @@ def render_lessons(result: ScanResult) -> str:
     out = [f"[bold]Argus learn[/bold]  {len(findings)} lesson(s) from your code", ""]
     for i, f in enumerate(findings, 1):
         color = _SEV_COLOR.get(f.severity, "white")
-        out.append(f"[bold]Lesson {i}: {f.title}[/bold]  "
-                   f"[{color}]{f.severity.label.upper()}[/{color}]")
-        out.append(f"  Where: {f.location.as_ref()}")
+        # Every value comes from scanned code or a model: escape it so text
+        # such as "[/bold]" or "[link=...]" cannot break or restyle the output.
+        out.append(f"[bold]Lesson {i}: {escape(f.title)}[/bold]  "
+                   f"[{color}]{escape(f.severity.label.upper())}[/{color}]")
+        out.append(f"  Where: {escape(f.location.as_ref())}")
         if f.location.snippet:
-            out.append(f"    [dim]{f.location.snippet.strip()[:200]}[/dim]")
+            out.append(f"    [dim]{escape(f.location.snippet.strip()[:200])}[/dim]")
         if f.why_vulnerable:
-            out.append(f"  Why it matters: {f.why_vulnerable}")
+            out.append(f"  Why it matters: {escape(f.why_vulnerable)}")
         if f.attacker_perspective:
-            out.append(f"  How it is exploited: {f.attacker_perspective}")
+            out.append(f"  How it is exploited: {escape(f.attacker_perspective)}")
         if f.exploit and getattr(f.exploit, "exploit_walkthrough", None):
-            out.append(f"  Walkthrough: {f.exploit.exploit_walkthrough}")
+            out.append(f"  Walkthrough: {escape(f.exploit.exploit_walkthrough)}")
         if f.remediation:
-            out.append(f"  How to fix it: {f.remediation.guidance or f.remediation.summary}")
-        out.append(f"  Learn more: {f.docs_url}")
+            fix = f.remediation.guidance or f.remediation.summary
+            out.append(f"  How to fix it: {escape(fix)}")
+        out.append(f"  Learn more: {escape(str(f.docs_url))}")
         out.append("")
     out.append("[dim]Fix these, re-run `argus learn`, and watch the lessons "
                "disappear.[/dim]")
