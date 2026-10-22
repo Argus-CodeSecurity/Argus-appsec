@@ -228,11 +228,16 @@ Each imported finding gets a stable id, `sarif:<tool>:<rule>:<hash>`. The hash
 covers the tool, rule and path, plus the result's `fingerprints` and
 `partialFingerprints` when the tool provides them, else the line and snippet.
 
-Baselines match on the same fingerprint as Argus's own findings: rule id,
-path and the whitespace-normalized snippet. Because Argus reads the snippet
-from the project file, a finding keeps its identity when unrelated edits move
-it, as long as the file is available. Record and compare a baseline the usual
-way:
+Baselines, exceptions and the audit log match on a finding's fingerprint.
+When the tool supplied `fingerprints` or `partialFingerprints` (CodeQL,
+Semgrep and most others do), the fingerprint is rule id, path and the hash
+from the finding's id (`metadata.sarif.fingerprint`), which is computed from
+the tool's fingerprints: the tool designed them to survive edits, and they do
+not depend on the file being readable. Otherwise it is the same as
+for Argus's own findings: rule id, path and the whitespace-normalized
+snippet. Because Argus reads the snippet from the project file, such a
+finding keeps its identity when unrelated edits move it, as long as the file
+is available. Record and compare a baseline the usual way:
 
 ```bash
 argus import semgrep.sarif -f json -o baseline.json
@@ -289,9 +294,9 @@ error.
 - An absolute path outside the project root is dropped, not re-mapped. Use
   relative paths or `originalUriBaseIds` (most tools do by default), or run
   `argus import` from a checkout at the same path the tool used.
-- If the project file is not available and the SARIF has no snippet, the
-  baseline fingerprint falls back to the line number, so such a finding is
-  reported again after it moves.
+- If the tool gives no fingerprints, the project file is not available and
+  the SARIF has no snippet, the baseline fingerprint falls back to the line
+  number, so such a finding is reported again after it moves.
 - `argus-ignore: <rule>` cannot name rule ids that contain `/` (CodeQL);
   use an `allow:` entry or a rule-less `argus-ignore` instead.
 - Markdown in messages is kept as text, not rendered.

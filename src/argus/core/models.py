@@ -32,10 +32,19 @@ _SCANNER_DOC_ANCHOR = {
 
 
 def docs_url_for(scanner: str) -> str:
-    """The docs URL for a scanner's page (used on every finding)."""
+    """The docs URL for a scanner's page (used on every finding).
+
+    Findings imported from another tool's SARIF (scanner ``sarif:<tool>``)
+    link to the import guide, which explains how they were mapped.
+    """
+    if scanner.startswith("sarif:"):
+        return f"{_DOCS_BASE}/importing/"
     anchor = _SCANNER_DOC_ANCHOR.get(scanner)
     return f"{_DOCS_BASE}/scanners/" + (f"#{anchor}" if anchor else "")
 
+
+# The importer's digest of a SARIF result (see argus.importers.sarif).
+_SARIF_DIGEST = re.compile(r"[0-9a-f]{8,64}")
 
 _E = TypeVar("_E", bound="_LabeledIntEnum")
 
@@ -211,7 +220,17 @@ class Finding(BaseModel):
         edits shift it up or down the file. This is what makes baseline/diff-aware
         scanning and cross-commit tracking reliable. Falls back to the line number
         for file-level findings that have no snippet.
+
+        A finding imported from SARIF whose tool supplied its own fingerprints
+        (``fingerprints`` / ``partialFingerprints``) uses the importer's digest
+        of them instead (``metadata["sarif"]["fingerprint"]``): the tool built
+        them to survive edits, and they do not depend on Argus being able to
+        read the file. Without tool fingerprints that digest includes the line
+        number, so the content fingerprint above is the more stable one.
         """
+        imported = self._sarif_fingerprint()
+        if imported:
+            return f"{self.rule_id}|{self.location.path}|{imported}"
         basis = re.sub(r"\s+", "", self.location.snippet or "")
         if basis:
             # Non-security digest: a stable content fingerprint for de-duplication,
@@ -219,6 +238,15 @@ class Finding(BaseModel):
             digest = hashlib.sha1(basis.encode("utf-8"), usedforsecurity=False).hexdigest()[:12]
             return f"{self.rule_id}|{self.location.path}|{digest}"
         return f"{self.rule_id}|{self.location.path}|L{self.location.start_line}"
+
+    def _sarif_fingerprint(self) -> str | None:
+        sarif = self.metadata.get("sarif")
+        if not isinstance(sarif, dict) or not sarif.get("fingerprints"):
+            return None
+        value = sarif.get("fingerprint")
+        if isinstance(value, str) and _SARIF_DIGEST.fullmatch(value):
+            return value
+        return None
 
     def risk_score(self) -> float:
         """A 0 to 100 score combining severity, confidence, and likelihood.
