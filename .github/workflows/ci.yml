@@ -8,7 +8,37 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
+  lint:
+    name: Lint & type check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@0b93645e9fea7318ecaed2b359559ac225c90a2b # v5.3.0
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install
+        run: pip install -e ".[dev,ast]"
+
+      - name: Lint
+        run: ruff check --output-format=github .
+
+      - name: Format
+        run: ruff format --check .
+
+      - name: Type check
+        run: mypy src/argus
+
   test:
     name: Test (${{ matrix.os }} · Python ${{ matrix.python-version }})
     runs-on: ${{ matrix.os }}
@@ -16,15 +46,20 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
-        python-version: ["3.10", "3.11", "3.12"]
-        # A large share of enterprise developers are on Windows; a scanner that
-        # breaks on path separators or symlink handling there is unusable. Cover
-        # it on the current Python without tripling the whole matrix.
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
+        # A large share of enterprise developers are on Windows and macOS; a
+        # scanner that breaks on path separators or symlink handling there is
+        # unusable. Cover both on the current Python without multiplying the
+        # whole matrix.
         include:
           - os: windows-latest
             python-version: "3.12"
+          - os: macos-latest
+            python-version: "3.12"
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
 
       - name: Set up Python
         uses: actions/setup-python@0b93645e9fea7318ecaed2b359559ac225c90a2b # v5.3.0
@@ -35,17 +70,27 @@ jobs:
       - name: Install
         run: pip install -e ".[dev,ast]"
 
-      - name: Lint
-        run: ruff check .
-
-      - name: Type check
-        run: mypy src/argus
-
       - name: Test
         run: pytest -q --cov=argus --cov-report=term-missing
 
       - name: Accuracy benchmark (labeled corpus regression gate)
         run: python benchmarks/accuracy.py
+
+  build:
+    name: Build distributions
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@0b93645e9fea7318ecaed2b359559ac225c90a2b # v5.3.0
+        with:
+          python-version: "3.12"
+      - name: Build sdist and wheel
+        run: |
+          python -m pip install "build==1.6.1" "twine==7.0.0"
+          python -m build
+          python -m twine check --strict dist/*
 
   build-image:
     name: Build Docker image
@@ -53,6 +98,8 @@ jobs:
     needs: test
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
       - name: Build
         run: docker build -t argus:ci .
       - name: Smoke test the image

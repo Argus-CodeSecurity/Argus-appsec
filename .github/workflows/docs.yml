@@ -1,4 +1,6 @@
-# Build and publish the documentation site (MkDocs Material) to GitHub Pages.
+# Build the documentation site (MkDocs Material) on every change, and publish it
+# to GitHub Pages from main. The build runs with --strict so broken links and
+# pages missing from the nav fail the pull request instead of the live site.
 name: Docs
 
 on:
@@ -7,25 +9,55 @@ on:
     paths:
       - "docs/**"
       - "mkdocs.yml"
+      - "README.md"
+      - ".github/workflows/docs.yml"
+  pull_request:
+    paths:
+      - "docs/**"
+      - "mkdocs.yml"
+      - "README.md"
       - ".github/workflows/docs.yml"
   workflow_dispatch:
 
 permissions:
-  contents: write # mkdocs gh-deploy pushes the built site to the gh-pages branch
+  contents: read
+
+concurrency:
+  group: docs-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  deploy:
-    name: Build & deploy
+  build:
+    name: Build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
       - uses: actions/setup-python@0b93645e9fea7318ecaed2b359559ac225c90a2b # v5.3.0
         with:
           python-version: "3.12"
           cache: pip
       - name: Install docs dependencies
         run: pip install ".[docs]"
-      - name: Build and deploy
-        run: |
-          mkdocs build
-          mkdocs gh-deploy --force
+      - name: Build (strict)
+        run: mkdocs build --strict
+
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: build
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # mkdocs gh-deploy pushes the built site to the gh-pages branch
+    steps:
+      # gh-deploy pushes with the checkout's credentials, so they must persist
+      # here. This job only runs on main and uploads no artifacts.
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2 # zizmor: ignore[artipacked]
+      - uses: actions/setup-python@0b93645e9fea7318ecaed2b359559ac225c90a2b # v5.3.0
+        with:
+          python-version: "3.12"
+      - name: Install docs dependencies
+        run: pip install ".[docs]"
+      - name: Deploy
+        run: mkdocs gh-deploy --strict --force

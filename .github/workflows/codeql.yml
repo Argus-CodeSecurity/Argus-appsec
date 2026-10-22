@@ -1,0 +1,52 @@
+# CodeQL static analysis of Argus's own source. A security tool should hold
+# itself to the standard it applies to others.
+name: CodeQL
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "41 3 * * 2" # weekly, Tuesday 03:41 UTC
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  analyze:
+    name: Analyze (${{ matrix.language }})
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write # upload results to Code Scanning
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [python, javascript-typescript, actions]
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@1b549b9259bda1cb5ddde3b41741a82a2d15a841 # v3.28.13
+        with:
+          languages: ${{ matrix.language }}
+          queries: security-extended
+          # The examples, benchmark corpora and test fixtures are deliberately
+          # vulnerable code that exists for Argus to find.
+          config: |
+            paths-ignore:
+              - examples
+              - tests/corpus
+              - tests/fixtures
+              - benchmarks
+
+      - name: Analyze
+        uses: github/codeql-action/analyze@1b549b9259bda1cb5ddde3b41741a82a2d15a841 # v3.28.13
+        with:
+          category: "/language:${{ matrix.language }}"
