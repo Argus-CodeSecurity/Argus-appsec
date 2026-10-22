@@ -76,14 +76,14 @@ def test_subdirectory_paths_are_project_relative(tmp_path):
 
 def test_non_ascii_paths_are_not_quoted(tmp_path):
     root = _repo(tmp_path)
-    _commit(root, {"café.py": "a = 1\n"}, "init")
-    _commit(root, {"café.py": "a = 1\nb = 2\n"}, "change")
+    _commit(root, {"caf\u00e9.py": "a = 1\n"}, "init")
+    _commit(root, {"caf\u00e9.py": "a = 1\nb = 2\n"}, "change")
     scope = resolve_diff(root, "HEAD~1")
-    assert "café.py" in scope.changed_files
+    assert "caf\u00e9.py" in scope.changed_files
 
 
 def test_unquote_git_c_style_path():
-    assert _unquote_path('"b/caf\\303\\251 \\"x\\".py"') == 'b/café "x".py'
+    assert _unquote_path('"b/caf\\303\\251 \\"x\\".py"') == 'b/caf\u00e9 "x".py'
     assert _unquote_path("b/plain.py") == "b/plain.py"
 
 

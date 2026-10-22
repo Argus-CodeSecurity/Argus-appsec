@@ -116,7 +116,7 @@ def finding_comment(f: Finding) -> dict:
     Everything interpolated comes from the scanned (possibly hostile) PR, so it
     is escaped: no links, HTML or @mentions can ride along on the bot's token.
     """
-    parts = [f"**Argus | {f.severity.label} · {md_text(f.title)}**", md_code(f.rule_id)]
+    parts = [f"**Argus | {f.severity.label} | {md_text(f.title)}**", md_code(f.rule_id)]
     if f.why_vulnerable:
         parts.append("\n" + md_text(f.why_vulnerable, multiline=True))
     if f.remediation and f.remediation.summary:

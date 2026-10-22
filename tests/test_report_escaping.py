@@ -41,7 +41,7 @@ def test_md_text_escapes_metacharacters_mentions_and_html():
     assert "\\*\\*b\\*\\*" in out
     assert "\\[l\\]\\(u\\)" in out
     assert "&lt;i>" in out
-    assert "@‍alice" in out
+    assert "@\u200dalice" in out
     assert "\n" not in out
 
 

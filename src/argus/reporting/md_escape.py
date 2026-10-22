@@ -12,7 +12,7 @@ from __future__ import annotations
 import re
 
 # Zero-width joiner: keeps "@user" readable while stopping the mention.
-_ZWJ = "‍"
+_ZWJ = "\u200d"
 
 # ASCII punctuation that carries Markdown/GFM meaning anywhere in a line
 # ("#" included: "#123" autolinks and cross-references issues).
