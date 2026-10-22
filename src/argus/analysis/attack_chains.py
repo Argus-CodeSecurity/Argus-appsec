@@ -116,7 +116,7 @@ def _file_local_chains(findings: list[Finding]) -> list[Chain]:
                     narrative=(
                         "This component both accepts untrusted input into a prompt (LLM01) "
                         "and routes model output into a dangerous sink or an "
-                        "execution-capable tool (LLM02/LLM08). An attacker who controls the "
+                        "execution-capable tool (LLM05/LLM06). An attacker who controls the "
                         "input can steer the model to emit a payload that then executes, "
                         "turning prompt injection into remote code or command execution."
                     ),

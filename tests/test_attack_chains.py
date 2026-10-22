@@ -33,6 +33,21 @@ def test_llm_injection_to_execution_chain():
     assert chains[0].severity == Severity.CRITICAL
 
 
+def test_llm_chain_cites_owasp_llm_2025_ids():
+    import re
+
+    (chain,) = find_chains(
+        [
+            _f("llm.prompt-injection", scanner="llm"),
+            _f("llm.insecure-output-handling", scanner="llm"),
+        ]
+    )
+    # 2025 list: LLM05 Improper Output Handling, LLM06 Excessive Agency. The
+    # 2023 ids (LLM02 output handling, LLM08 agency) must not come back.
+    assert "LLM05" in chain.narrative and "LLM06" in chain.narrative
+    assert not re.search(r"LLM0[28]\b", chain.narrative)
+
+
 def test_secret_plus_injection_chain():
     chains = find_chains(
         [

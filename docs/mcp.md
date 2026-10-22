@@ -80,7 +80,7 @@ clients.
       "title": "Insecure handling of LLM output",
       "location": "agent.py:42",
       "cwe": ["CWE-95"],
-      "owasp": ["LLM02:2025-Insecure Output Handling"],
+      "owasp": ["LLM05:2025-Improper Output Handling"],
       "remediation": "Validate, parse, or escape model output before a sensitive sink."
     }
   ]
