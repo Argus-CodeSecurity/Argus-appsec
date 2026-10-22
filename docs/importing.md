@@ -245,12 +245,25 @@ argus import semgrep.sarif --baseline baseline.json --fail-on high
 
 ## Using the rest of Argus
 
+Imported findings go through the same post-processing as Argus's own, in
+the same order, so every setting below behaves exactly as it does for
+`argus scan`:
+
 - **Allowlist and exceptions**: `allow:` entries in `.argus.yml` and
   `.argus/exceptions.yml` apply to imported findings. Match a rule by its
   original id (`rule: py/sql-injection`) or the prefixed one.
 - **Inline suppressions**: `argus-ignore` comments apply on trusted projects,
   as for a scan.
 - **`exclude_paths`** from config also drops imported findings in those paths.
+- **Project context**: `.argus/context.yml` lowers findings under
+  `internal_paths`, raises those under `data_classification` and adjusts
+  likelihood by `exposure`, recording each change in `metadata.context`. See
+  [Project context](context.md).
+- **Audit log**: an allowlist entry, exception or inline comment
+  that hides an imported finding is recorded in `.argus/audit.log` on trusted
+  local projects. See [Audit log](audit-log.md).
+- **Attack chains** are built from the imported findings as from scanner
+  findings.
 - **Policy**: write a JSON report and check it:
   `argus import *.sarif -f json -o results.json` then
   `argus policy check --report results.json`.

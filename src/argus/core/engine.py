@@ -142,7 +142,12 @@ class ScanEngine:
         return self._finish(result, project, ai, context)
 
     def postprocess(
-        self, result: ScanResult, project: Project, *, ai: AIProvider | None = None
+        self,
+        result: ScanResult,
+        project: Project,
+        *,
+        ai: AIProvider | None = None,
+        dedupe: Callable[[list[Finding]], list[Finding]] | None = None,
     ) -> ScanResult:
         """Run the post-scan pipeline on findings that came from elsewhere.
 
@@ -153,12 +158,24 @@ class ScanEngine:
         de-duplication, project context (``internal_paths``, ``exposure``,
         ``data_classification``), attack chains, the ``min_severity`` filter,
         enrichment, risk scoring, and the audit log's suppression events.
+        Findings under ``exclude_paths`` are dropped first, since a scan never
+        reads those files; placeholder locations such as ``(image)`` are kept.
         ``result.findings`` is replaced and the same ``result`` is returned.
         ``ai`` defaults to the configured provider when enrichment is on.
+
+        ``dedupe``, when given, replaces the engine's cross-scanner
+        de-duplication step; the SARIF importer uses it to fold duplicates
+        into another finding and record who else reported them.
         """
         if ai is None:
             ai = build_provider(self.config.ai)
-        return self._finish(result, project, ai, self._resolve_context(project))
+        project = self._working_copy(project)
+        result.findings = [
+            f
+            for f in result.findings
+            if f.location.path.startswith("(") or not project._excluded(f.location.path)
+        ]
+        return self._finish(result, project, ai, self._resolve_context(project), dedupe=dedupe)
 
     def _finish(
         self,
@@ -166,6 +183,8 @@ class ScanEngine:
         project: Project,
         ai: AIProvider,
         context: ProjectContext | None,
+        *,
+        dedupe: Callable[[list[Finding]], list[Finding]] | None = None,
     ) -> ScanResult:
         """Everything after the scanners ran; shared by scan() and postprocess()."""
         audit_events: list[AuditEvent] = []
@@ -191,7 +210,7 @@ class ScanEngine:
             )
         result.findings = self._apply_allowlist(result.findings, self.config, events=audit_events)
         result.findings = self._prefer_ast(result.findings, result.scanners_run)
-        result.findings = self._dedupe(result.findings)
+        result.findings = (dedupe or self._dedupe)(result.findings)
         # Path-based context (internal paths, exposure, data classification)
         # adjusts severity/likelihood and records why on each finding.
         from argus.context import apply_context
