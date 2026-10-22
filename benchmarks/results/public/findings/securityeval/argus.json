@@ -1,8 +1,8 @@
 {
  "meta": {
   "tool": "argus",
-  "started_at": "2026-10-22T13:09:29+00:00",
-  "raw_sha256": "3c550351f599470b5e77e03ab9dfacb2928e1331f575ed42c26fe6b252490693",
+  "started_at": "2026-10-22T17:40:17+00:00",
+  "raw_sha256": "14b259c6815bc22ccff971484f0de5a2b641b90c63fc18e4e0f31d9c34456424",
   "version": "0.9.2",
   "command": [
    "argus",
@@ -17,7 +17,7 @@
    "<raw_output>"
   ],
   "exit_code": 0,
-  "seconds": 3.9,
+  "seconds": 1.9,
   "scanners_run": [
    "patterns",
    "ast-python",
@@ -51,11 +51,51 @@
    ]
   ],
   [
+   "CWE-020_codeql_1.py",
+   11,
+   "ast-python.ast-xss",
+   [
+    79
+   ]
+  ],
+  [
    "CWE-020_codeql_2.py",
    15,
-   "patterns.python-pickle-loads",
+   "ast-python.ast-unsafe-deserialization",
    [
     502
+   ]
+  ],
+  [
+   "CWE-020_codeql_2.py",
+   16,
+   "ast-python.ast-xss",
+   [
+    79
+   ]
+  ],
+  [
+   "CWE-020_codeql_3.py",
+   17,
+   "ast-python.ast-open-redirect",
+   [
+    601
+   ]
+  ],
+  [
+   "CWE-020_codeql_4.py",
+   13,
+   "ast-python.ast-open-redirect",
+   [
+    601
+   ]
+  ],
+  [
+   "CWE-022_author_1.py",
+   13,
+   "ast-python.ast-path-traversal",
+   [
+    22
    ]
   ],
   [
@@ -80,6 +120,78 @@
    "ast-python.ast-command-injection",
    [
     78
+   ]
+  ],
+  [
+   "CWE-079_codeql_1.py",
+   15,
+   "ast-python.ast-xss",
+   [
+    79
+   ]
+  ],
+  [
+   "CWE-079_codeql_2.py",
+   13,
+   "ast-python.ast-xss",
+   [
+    79
+   ]
+  ],
+  [
+   "CWE-079_sonar_1.py",
+   15,
+   "ast-python.ast-xss",
+   [
+    79
+   ]
+  ],
+  [
+   "CWE-080_author_1.py",
+   13,
+   "ast-python.ast-xss",
+   [
+    79
+   ]
+  ],
+  [
+   "CWE-089_author_1.py",
+   16,
+   "ast-python.ast-sql-string-building",
+   [
+    89
+   ]
+  ],
+  [
+   "CWE-089_codeql_1.py",
+   16,
+   "ast-python.ast-sql-string-building",
+   [
+    89
+   ]
+  ],
+  [
+   "CWE-090_codeql_1.py",
+   21,
+   "ast-python.ast-ldap-injection",
+   [
+    90
+   ]
+  ],
+  [
+   "CWE-090_codeql_2.py",
+   22,
+   "ast-python.ast-ldap-injection",
+   [
+    90
+   ]
+  ],
+  [
+   "CWE-094_author_1.py",
+   11,
+   "ast-python.ast-code-injection",
+   [
+    95
    ]
   ],
   [
@@ -115,6 +227,14 @@
    ]
   ],
   [
+   "CWE-200_author_1.py",
+   15,
+   "ast-python.ast-sql-string-building",
+   [
+    89
+   ]
+  ],
+  [
    "CWE-215_codeql_1.py",
    12,
    "patterns.flask-debug-true",
@@ -131,6 +251,30 @@
    ]
   ],
   [
+   "CWE-306_pearce_1.py",
+   29,
+   "ast-python.ast-trust-boundary",
+   [
+    501
+   ]
+  ],
+  [
+   "CWE-319_author_1.py",
+   29,
+   "authz.cookie-missing-httponly",
+   [
+    1004
+   ]
+  ],
+  [
+   "CWE-319_author_1.py",
+   29,
+   "authz.insecure-session-cookie",
+   [
+    614
+   ]
+  ],
+  [
    "CWE-321_author_2.py",
    10,
    "secrets.high-entropy-string",
@@ -144,6 +288,15 @@
    "patterns.weak-hash-md5-sha1",
    [
     327
+   ]
+  ],
+  [
+   "CWE-330_author_1.py",
+   8,
+   "ast-python.ast-weak-random",
+   [
+    330,
+    338
    ]
   ],
   [
@@ -189,6 +342,14 @@
   [
    "CWE-502_sonar_1.py",
    11,
+   "ast-python.ast-xss",
+   [
+    79
+   ]
+  ],
+  [
+   "CWE-502_sonar_1.py",
+   11,
    "patterns.python-yaml-load",
    [
     502
@@ -203,11 +364,83 @@
    ]
   ],
   [
+   "CWE-601_codeql_1.py",
+   12,
+   "ast-python.ast-open-redirect",
+   [
+    601
+   ]
+  ],
+  [
+   "CWE-601_sonar_1.py",
+   8,
+   "ast-python.ast-open-redirect",
+   [
+    601
+   ]
+  ],
+  [
+   "CWE-601_sonar_2.py",
+   12,
+   "ast-python.ast-open-redirect",
+   [
+    601
+   ]
+  ],
+  [
+   "CWE-601_sonar_3.py",
+   13,
+   "ast-python.ast-open-redirect",
+   [
+    601
+   ]
+  ],
+  [
+   "CWE-611_codeql_1.py",
+   14,
+   "ast-python.ast-xss",
+   [
+    79
+   ]
+  ],
+  [
+   "CWE-611_sonar_1.py",
+   7,
+   "patterns.python-xml-resolve-entities",
+   [
+    611
+   ]
+  ],
+  [
+   "CWE-611_sonar_2.py",
+   8,
+   "patterns.python-xml-resolve-entities",
+   [
+    611
+   ]
+  ],
+  [
+   "CWE-611_sonar_3.py",
+   9,
+   "patterns.python-xml-resolve-entities",
+   [
+    611
+   ]
+  ],
+  [
    "CWE-641_sonar_1.py",
    13,
    "ast-python.ast-path-traversal",
    [
     22
+   ]
+  ],
+  [
+   "CWE-643_codeql_1.py",
+   17,
+   "ast-python.ast-xpath-injection",
+   [
+    643
    ]
   ],
   [
@@ -219,11 +452,59 @@
    ]
   ],
   [
+   "CWE-643_sonar_1.py",
+   17,
+   "ast-python.ast-xpath-injection",
+   [
+    643
+   ]
+  ],
+  [
+   "CWE-643_sonar_1.py",
+   18,
+   "ast-python.ast-xss",
+   [
+    79
+   ]
+  ],
+  [
+   "CWE-759_mitre_1.py",
+   8,
+   "patterns.weak-hash-md5-sha1",
+   [
+    327
+   ]
+  ],
+  [
+   "CWE-776_codeql_1.py",
+   15,
+   "ast-python.ast-xss",
+   [
+    79
+   ]
+  ],
+  [
+   "CWE-918_codeql_1.py",
+   14,
+   "ast-python.ast-xss",
+   [
+    79
+   ]
+  ],
+  [
    "CWE-918_codeql_2.py",
    7,
    "authz.missing-authentication",
    [
     306
+   ]
+  ],
+  [
+   "CWE-918_codeql_2.py",
+   17,
+   "ast-python.ast-xss",
+   [
+    79
    ]
   ]
  ]

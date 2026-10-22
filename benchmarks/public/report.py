@@ -146,6 +146,14 @@ def write_summary(results_dir: Path) -> Path:
         "`mapped` uses the committed CWE equivalence groups in "
         "`benchmarks/public/mapping.py`; `strict` requires the exact labeled CWE.",
         "",
+        "Methodology note: Argus's Python rules were last revised with OWASP "
+        "BenchmarkPython visible (its misses were studied and general rules written "
+        "for them), so that dataset is not an independent test of Argus. No case was "
+        "held out; `docs/benchmarks.md` gives split-half numbers, a SecurityEval "
+        "figure without the rules written after reading its misses, and a "
+        "false-positive check on projects with no known vulnerabilities. Bandit and "
+        "Semgrep were not tuned on either dataset.",
+        "",
     ]
     for path in sorted(results_dir.glob("*.json")):
         doc = json.loads(path.read_text(encoding="utf-8"))

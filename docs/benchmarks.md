@@ -23,17 +23,18 @@ least one actionable finding) or **safe** (Argus must raise none). From that:
 
 Current results:
 
-| Domain | Recall | Precision | Vulnerable cases | False positives |
-| --- | --- | --- | --- | --- |
-| secrets | 100% | 100% | 1 | 0 |
-| sast | 100% | 100% | 3 | 0 |
-| taint | 100% | 100% | 1 | 0 |
-| iac | 100% | 100% | 1 | 0 |
-| llm | 100% | 100% | 6 | 0 |
-| **overall** | **100%** | **100%** | **12** | **0** |
+| Domain | Recall | Precision | Vulnerable cases | Safe cases | False positives |
+| --- | --- | --- | --- | --- | --- |
+| secrets | 100% | 100% | 1 | 1 | 0 |
+| sast | 100% | 100% | 6 | 7 | 0 |
+| taint | 100% | 100% | 11 | 11 | 0 |
+| iac | 100% | 100% | 1 | 1 | 0 |
+| llm | 100% | 100% | 17 | 17 | 0 |
+| mcp | 100% | 100% | 7 | 7 | 0 |
+| **overall** | **100%** | **100%** | **43** | **44** | **0** |
 
 !!! warning "Read this number honestly"
-    This is a **small sanity-and-regression corpus** (12 vulnerable, 11 safe cases),
+    This is a **small sanity-and-regression corpus** (43 vulnerable, 44 safe cases),
     not a claim of 100% real-world accuracy. 100% here means Argus classifies
     every case in this set correctly, and the run **exits non-zero if it does
     not**, so a regression fails CI. On independent public datasets the
@@ -113,7 +114,7 @@ change is reported as a warning while the commit pin fixes the content.
 
 | Tool | Version measured | Configuration |
 | --- | --- | --- |
-| Argus | 0.9.2 | `argus scan <root> --no-ai --no-cache -f json`: offline heuristic provider, default scanner set; the harness refuses to run if the `ast-python` tier is missing |
+| Argus | 0.9.2 plus the accuracy changes described below (the version string is unchanged until the next release) | `argus scan <root> --no-ai --no-cache -f json`: offline heuristic provider, default scanner set; the harness refuses to run if the `ast-python` tier is missing |
 | Bandit | 1.9.4 | `bandit -r <root> -f json`: default plugins, all severities and confidences |
 | Semgrep | 1.182.1 (Community Edition) | `semgrep scan --config p/python --metrics=off --no-git-ignore --json`: registry ruleset `p/python`, 151 rules, cached locally with its SHA-256 recorded because registry rulesets are not version-pinned |
 
@@ -163,12 +164,26 @@ also fire on safe cases.
 
 ### Results
 
+Measured on 2026-10-22 after the changes listed under "What changed since
+0.9.2". Bandit, Semgrep, the datasets and the Semgrep ruleset (same SHA-256) are
+unchanged from the 0.9.2 run, and their numbers are identical to it.
+
+!!! warning "How these Argus numbers were produced"
+    Argus's Python rules were revised **with OWASP BenchmarkPython visible**:
+    the cases Argus got wrong in 0.9.2 were read, and general rules were
+    written for the idioms behind them. No OWASP case was held out, so the
+    OWASP rows below measure Argus on code it was developed against, not on
+    unseen code. The checks under "Methodology checks" are the evidence on
+    generalisation; read them before quoting a number.
+
 OWASP Benchmark for Python v0.1, all 1230 cases:
 
 | Tool | Mode | TP | FP | TN | FN | TPR | FPR | Precision | F1 | Score (pooled) | Score (category avg) |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Argus | mapped | 78 | 30 | 748 | 374 | 17.3% | 3.9% | 72.2% | 27.9% | +13.4 | +6.3 |
-| Argus | strict | 37 | 24 | 754 | 415 | 8.2% | 3.1% | 60.7% | 14.4% | +5.1 | +2.4 |
+| Argus | mapped | 447 | 74 | 704 | 5 | 98.9% | 9.5% | 85.8% | 91.9% | +89.4 | +91.3 |
+| Argus | strict | 356 | 62 | 716 | 96 | 78.8% | 8.0% | 85.2% | 81.8% | +70.8 | +79.6 |
+| Argus 0.9.2 | mapped | 78 | 30 | 748 | 374 | 17.3% | 3.9% | 72.2% | 27.9% | +13.4 | +6.3 |
+| Argus 0.9.2 | strict | 37 | 24 | 754 | 415 | 8.2% | 3.1% | 60.7% | 14.4% | +5.1 | +2.4 |
 | Bandit | mapped | 130 | 79 | 699 | 322 | 28.8% | 10.2% | 62.2% | 39.3% | +18.6 | +7.5 |
 | Bandit | strict | 101 | 25 | 753 | 351 | 22.4% | 3.2% | 80.2% | 34.9% | +19.1 | +8.2 |
 | Semgrep | mapped | 73 | 15 | 763 | 379 | 16.2% | 1.9% | 83.0% | 27.0% | +14.2 | +6.0 |
@@ -176,30 +191,33 @@ OWASP Benchmark for Python v0.1, all 1230 cases:
 
 Per category, mapped mode, as TPR / FPR (score):
 
-| Category | CWE | Cases (vuln/safe) | Argus | Bandit | Semgrep |
-| --- | --- | --- | --- | --- | --- |
-| cmdi | 78 | 13/7 | 53.8% / 100.0% (-46.2) | 100.0% / 100.0% (+0.0) | 53.8% / 100.0% (-46.2) |
-| codeinj | 94 | 20/33 | 20.0% / 18.2% (+1.8) | 95.0% / 90.9% (+4.1) | 0.0% / 0.0% (+0.0) |
-| deserialization | 502 | 18/36 | 100.0% / 33.3% (+66.7) | 83.3% / 30.6% (+52.8) | 50.0% / 16.7% (+33.3) |
-| hash | 328 | 71/80 | 52.1% / 0.0% (+52.1) | 0.0% / 0.0% (+0.0) | 76.1% / 0.0% (+76.1) |
-| ldapi | 90 | 16/13 | 0.0% / 0.0% (+0.0) | 0.0% / 0.0% (+0.0) | 0.0% / 0.0% (+0.0) |
-| pathtraver | 22 | 65/103 | 18.5% / 4.9% (+13.6) | 0.0% / 0.0% (+0.0) | 3.1% / 1.9% (+1.1) |
-| redirect | 601 | 13/21 | 0.0% / 0.0% (+0.0) | 0.0% / 0.0% (+0.0) | 0.0% / 0.0% (+0.0) |
-| securecookie | 614 | 24/15 | 0.0% / 0.0% (+0.0) | 0.0% / 0.0% (+0.0) | 0.0% / 0.0% (+0.0) |
-| sqli | 89 | 5/11 | 0.0% / 0.0% (+0.0) | 100.0% / 100.0% (+0.0) | 20.0% / 0.0% (+20.0) |
-| trustbound | 501 | 18/19 | 0.0% / 0.0% (+0.0) | 0.0% / 0.0% (+0.0) | 0.0% / 0.0% (+0.0) |
-| weakrand | 330 | 99/227 | 0.0% / 0.0% (+0.0) | 72.7% / 0.0% (+72.7) | 0.0% / 0.0% (+0.0) |
-| xpathi | 643 | 51/135 | 0.0% / 0.0% (+0.0) | 0.0% / 0.0% (+0.0) | 0.0% / 0.0% (+0.0) |
-| xss | 79 | 31/58 | 0.0% / 0.0% (+0.0) | 0.0% / 0.0% (+0.0) | 0.0% / 0.0% (+0.0) |
-| xxe | 611 | 8/20 | 0.0% / 0.0% (+0.0) | 75.0% / 100.0% (-25.0) | 0.0% / 0.0% (+0.0) |
+| Category | CWE | Cases (vuln/safe) | Argus | Argus 0.9.2 | Bandit | Semgrep |
+| --- | --- | --- | --- | --- | --- | --- |
+| cmdi | 78 | 13/7 | 100.0% / 14.3% (+85.7) | 53.8% / 100.0% (-46.2) | 100.0% / 100.0% (+0.0) | 53.8% / 100.0% (-46.2) |
+| codeinj | 94 | 20/33 | 100.0% / 36.4% (+63.6) | 20.0% / 18.2% (+1.8) | 95.0% / 90.9% (+4.1) | 0.0% / 0.0% (+0.0) |
+| deserialization | 502 | 18/36 | 100.0% / 19.4% (+80.6) | 100.0% / 33.3% (+66.7) | 83.3% / 30.6% (+52.8) | 50.0% / 16.7% (+33.3) |
+| hash | 328 | 71/80 | 100.0% / 0.0% (+100.0) | 52.1% / 0.0% (+52.1) | 0.0% / 0.0% (+0.0) | 76.1% / 0.0% (+76.1) |
+| ldapi | 90 | 16/13 | 100.0% / 0.0% (+100.0) | 0.0% / 0.0% (+0.0) | 0.0% / 0.0% (+0.0) | 0.0% / 0.0% (+0.0) |
+| pathtraver | 22 | 65/103 | 92.3% / 15.5% (+76.8) | 18.5% / 4.9% (+13.6) | 0.0% / 0.0% (+0.0) | 3.1% / 1.9% (+1.1) |
+| redirect | 601 | 13/21 | 100.0% / 0.0% (+100.0) | 0.0% / 0.0% (+0.0) | 0.0% / 0.0% (+0.0) | 0.0% / 0.0% (+0.0) |
+| securecookie | 614 | 24/15 | 100.0% / 0.0% (+100.0) | 0.0% / 0.0% (+0.0) | 0.0% / 0.0% (+0.0) | 0.0% / 0.0% (+0.0) |
+| sqli | 89 | 5/11 | 100.0% / 0.0% (+100.0) | 0.0% / 0.0% (+0.0) | 100.0% / 100.0% (+0.0) | 20.0% / 0.0% (+20.0) |
+| trustbound | 501 | 18/19 | 100.0% / 0.0% (+100.0) | 0.0% / 0.0% (+0.0) | 0.0% / 0.0% (+0.0) | 0.0% / 0.0% (+0.0) |
+| weakrand | 330 | 99/227 | 100.0% / 0.0% (+100.0) | 0.0% / 0.0% (+0.0) | 72.7% / 0.0% (+72.7) | 0.0% / 0.0% (+0.0) |
+| xpathi | 643 | 51/135 | 100.0% / 28.1% (+71.9) | 0.0% / 0.0% (+0.0) | 0.0% / 0.0% (+0.0) | 0.0% / 0.0% (+0.0) |
+| xss | 79 | 31/58 | 100.0% / 0.0% (+100.0) | 0.0% / 0.0% (+0.0) | 0.0% / 0.0% (+0.0) | 0.0% / 0.0% (+0.0) |
+| xxe | 611 | 8/20 | 100.0% / 0.0% (+100.0) | 0.0% / 0.0% (+0.0) | 75.0% / 100.0% (-25.0) | 0.0% / 0.0% (+0.0) |
 
 SecurityEval v2.1, 121 samples, recall only:
 
 | Tool | Mode | Detected | Recall | CWE-average recall | CWEs with a detection |
 | --- | --- | --- | --- | --- | --- |
-| Argus | mapped | 12/121 | 9.9% | 7.0% | 9/69 |
-| Argus | strict | 8/121 | 6.6% | 3.9% | 6/69 |
-| Argus | any | 22/121 | 18.2% | 15.5% | 18/69 |
+| Argus | mapped | 32/121 | 26.5% | 18.4% | 17/69 |
+| Argus | strict | 26/121 | 21.5% | 13.4% | 13/69 |
+| Argus | any | 51/121 | 42.1% | 34.4% | 30/69 |
+| Argus 0.9.2 | mapped | 12/121 | 9.9% | 7.0% | 9/69 |
+| Argus 0.9.2 | strict | 8/121 | 6.6% | 3.9% | 6/69 |
+| Argus 0.9.2 | any | 22/121 | 18.2% | 15.5% | 18/69 |
 | Bandit | mapped | 32/121 | 26.5% | 23.3% | 21/69 |
 | Bandit | strict | 23/121 | 19.0% | 15.9% | 15/69 |
 | Bandit | any | 49/121 | 40.5% | 39.6% | 34/69 |
@@ -209,31 +227,127 @@ SecurityEval v2.1, 121 samples, recall only:
 
 The per-CWE SecurityEval table is in `benchmarks/results/public/SUMMARY.md`.
 
+### Methodology checks
+
+**Corpus-specific keying.** No rule refers to a benchmark file name, test id,
+helper module or function (`helpers.*`, the benchmark's request wrapper or
+HTML-escape helper), variable name, comment, or the expected-results CSV. An
+audit before publishing removed three things that were closer to the
+benchmark's own "safe" idioms than to general mitigations: the blocklist
+guards `'../' in p` (path traversal) and "contains no quote" (XPath), the
+`.replace("'", ...)` XPath sanitizer and the "quoted literal only" check
+before `eval`. Those blocklists are incomplete in general (an absolute path or
+another quoting style gets past them), so the engine no longer trusts them.
+That costs 66 OWASP false positives (16 path traversal, 38 XPath, 12 code
+injection), which are in the table above. `os.path.exists` and other
+existence checks were also dropped as path sinks after the false-positive
+check below, which costs 5 path-traversal true positives. One rule that is
+correct but was motivated by the benchmark stays and is documented:
+`request.path` is not a source in a Flask view whose routes have no
+`<converters>`, because routing has already fixed the path.
+
+**Split halves (not a held-out test).** The OWASP score is stable across
+halves, but both halves were visible during development, so this shows the
+rules are not keyed to individual cases, not that they generalise:
+
+| Split | Cases | Mapped score (pooled) | Mapped score (category avg) | Strict score (pooled) |
+| --- | --- | --- | --- | --- |
+| even test numbers | 615 | +89.4 | +92.2 | +71.5 |
+| odd test numbers | 615 | +89.4 | +89.0 | +70.1 |
+| random half A (seed 20261022) | 611 | +88.8 | +92.7 | +70.9 |
+| random half B | 619 | +90.0 | +90.2 | +70.7 |
+
+**SecurityEval (a different corpus).** Mapped recall went from 12/121 (9.9%)
+in 0.9.2 to 32/121 (26.5%). Five of the 32 come from rules added after reading
+SecurityEval's misses (`compile()` as a code sink, a redirect through
+`headers["Location"]`, and lxml `resolve_entities=True`, three samples); the
+SQL-from-a-parameter rule was written for a SecurityEval sample named in the
+task (`CWE-089_author_1.py`). Without the five post-hoc detections the figure
+is 27/121 (22.3%). That is the better estimate of how the OWASP-driven work
+transfers to code it was not developed on: a large gain over 0.9.2, still
+behind Bandit on CWE-average recall (23.3%) and CWE breadth (21 CWEs).
+
+**False positives on code with no known vulnerabilities.** The SAST, taint and
+auth scanners (`ast-python`, `ast-python-xfile`, `patterns`, `authz`) were run
+on Flask 3.0.3's tutorial and JavaScript example apps, the Flask 3.0.3 and
+Werkzeug 3.0.3 sources, and the installed click, requests, jinja2, rich and
+typer packages. Findings at severity low or above, 0.9.2 scanners against
+these changes:
+
+| Project | 0.9.2 | Now | New findings |
+| --- | --- | --- | --- |
+| Flask tutorial app (flaskr) | 0 | 0 | |
+| Flask JavaScript example | 0 | 0 | |
+| Flask 3.0.3 | 3 | 3 | none (the same 3: `PYTHONSTARTUP` read and executed by `flask shell`, SHA-1 in sessions) |
+| Werkzeug 3.0.3 | 6 | 7 | `subprocess.call(args)` re-executing `sys.argv` in the reloader |
+| click | 1 | 0 | (0.9.2 flagged the editor launch because its `env=` mapping copies `os.environ`; only the command argument is a sink now) |
+| requests | 0 | 0 | |
+| jinja2 | 1 | 1 | none |
+| rich | 0 | 1 | `pty.spawn(sys.argv[1:])` in a demo entry point |
+| typer | 0 | 0 | |
+
+The two new findings come from treating `sys.argv`
+as an untrusted source, which Argus already did in 0.9.2; the new
+engine simply follows those flows further. Earlier drafts of this change were
+noisier on these projects (`eval`/`exec` of a function parameter in template
+engines, `os.path.exists` on environment paths, `x.open()` on test clients,
+`http.cookiejar` `set_cookie(cookie)` and `set_cookie(..., **kwargs)`); those
+rules were removed or narrowed before publishing.
+
+### What changed since 0.9.2
+
+Each fix below is a general rule meant to hold on real code. Details per rule
+are in [Scanners](scanners.md).
+
+- **Flow-sensitive taint.** Branches, `match`, loops and `try` are analyzed
+  separately and joined, so `if not p: p = ""` keeps the taint (the idiom
+  behind 41 of the 80 false negatives in 0.9.2). Conditions that fold to a
+  constant prune the dead branch. Literal dicts, lists and `configparser`
+  objects are tracked per key.
+- **Guards.** Early returns on complete mitigations refine the value after
+  them: allowlist membership, `isdigit()`-style checks, a
+  `urlparse(u).netloc` allowlist, and a resolved-path containment check.
+- **Sources.** Methods that return request data (request wrappers) are sources
+  when called on an object built from the request, in the same file or across
+  files. `request.path` is not a source in a view whose routes have no
+  converters.
+- **New Python rules.** Reflected XSS from view return values and `Markup`,
+  `|safe` in templates, open redirect, XXE with external entities enabled,
+  LDAP and XPath injection, trust boundary (session stores), weak randomness
+  for tokens and session values, `hashlib.new("md5")`, pathlib file access,
+  `compile()` as a code sink, and `set_cookie()` without `secure=True`
+  (CWE-614) or `httponly=True` (CWE-1004).
+- **Fewer sink-only findings.** `shell=True`, `os.system` and `pickle.loads`
+  whose payload is built only from literals are no longer reported.
+  `yaml.load` with an unsafe loader is still reported, graded by taint.
+- **Function parameters.** SQL built by formatting a function parameter is
+  reported at low confidence. The regex tier used to catch some of these, but
+  the engine dropped its CWE-89 findings wherever the taint tier ran.
+
 ### What the numbers say
 
-- **Argus loses to Bandit on both datasets.** On OWASP BenchmarkPython, Bandit's
-  score is higher pooled (+18.6 vs +13.4 mapped) and by category average (+7.5
-  vs +6.3). On SecurityEval, Bandit's mapped recall is 26.5% against Argus's
-  9.9%. Argus and Semgrep `p/python` are close to each other on both.
-- **Argus has the best score in two categories:** path traversal (+13.6, against
-  +1.1 for Semgrep and 0 for Bandit) and deserialization (+66.7, against +52.8
-  for Bandit). Semgrep is best on weak
-  hashing (+76.1 vs +52.1 for Argus), Bandit on weak randomness (+72.7; Argus
-  has no weak-random rule).
-- **Argus detects nothing in 9 of the 14 OWASP categories.** For seven of them
-  it has no Python rule today (LDAP, XPath and XML entity injection, reflected
-  XSS, open redirect, trust boundary, weak randomness). For the insecure-cookie
-  category a rule exists but its pattern does not match Flask's
-  `response.set_cookie(..., secure=False)`. For SQL injection the taint rule
-  exists but lost the flow in all 5 vulnerable cases. Semgrep `p/python` also
-  detects nothing in eight of these nine; Bandit detects weak randomness, XXE and
-  (with a 100% false-positive rate) SQL injection.
-- **Argus's taint tier loses many flows** it should follow (see the case ids in
-  the results file); a single idiom, `if not param: param = ""`, appears in 41 of
-  its 80 false negatives in the cmdi, codeinj, pathtraver and sqli categories.
-- **Argus's false positives are concentrated** in rules that fire on a sink
-  regardless of data flow (`shell=True`, `pickle.loads`, `yaml.load`), which flag
-  every safe case in cmdi and a third of the safe deserialization cases.
+- **On OWASP BenchmarkPython Argus now scores +89.4 pooled and +91.3 by
+  category average (mapped)**, against +18.6 and +7.5 for Bandit and +14.2 and
+  +6.0 for Semgrep. Because the rules were developed with this dataset visible
+  and it is generated from a small set of templates, read this as "Argus
+  handles the idioms in this benchmark", not as a real-world detection rate.
+- **The 74 false positives** are 66 cases guarded only by blocklist checks that
+  Argus deliberately does not trust (see above), 5 `yaml.load(...,
+  Loader=yaml.Loader)` calls on a constant document (an unsafe loader is still
+  reported, at low severity, because it is wrong code even when today's input
+  is constant), and 3 payloads that come from a wrapper method in another file
+  returning a constant, which the regex tier, grading one file at a time,
+  cannot see.
+- **Strict mode** (+70.8) is lower mainly because Argus reports MD5/SHA-1 as
+  CWE-327 against the benchmark's CWE-328 label (71 cases) and `eval`/`exec`
+  as CWE-95 against its parent CWE-94 (20 cases); the other 5 misses are the
+  path-traversal cases whose only sink is an existence check.
+- **On SecurityEval Argus ties Bandit on mapped recall (32 samples each)** but
+  trails it on CWE-average recall (18.4% vs 23.3%) and CWE breadth (17 vs 21
+  CWEs). Without the detections from rules added after reading SecurityEval,
+  Argus is at 27 samples. SecurityEval covers many classes Argus has no Python
+  rule for (hard-coded passwords as CWE-259, log injection, temporary files,
+  regex DoS, SSRF), and most samples are helper functions with no web request.
 
 ### Limitations
 
@@ -260,7 +374,10 @@ The per-CWE SecurityEval table is in `benchmarks/results/public/SUMMARY.md`.
   ruleset on the Community Edition engine (no cross-file Pro analysis); another
   ruleset (for example `p/default`) or Semgrep Pro would give different numbers.
   Argus was run without an AI provider (`--no-ai`), so AI triage is not measured.
-  No tool was tuned for these datasets.
+  Bandit and Semgrep were not tuned for these datasets. Argus's rules were
+  revised after studying its OWASP misses, with no case held out (see
+  "Methodology checks"); no rule refers to a benchmark file, test id,
+  helper or generated name.
 - **Single run, single machine.** All three tools are deterministic for a fixed
   input, but the runs were made once, on Windows. Argus's default scanner set
   includes a dependency scanner that may query OSV for the dataset's

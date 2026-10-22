@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-10-22T13:10:09+00:00",
+  "generated_at": "2026-10-22T17:40:34+00:00",
   "mode": "live",
   "host": {
     "os": "Windows",
@@ -227,8 +227,8 @@
       "status": "ok",
       "run": {
         "tool": "argus",
-        "started_at": "2026-10-22T13:09:29+00:00",
-        "raw_sha256": "3c550351f599470b5e77e03ab9dfacb2928e1331f575ed42c26fe6b252490693",
+        "started_at": "2026-10-22T17:40:17+00:00",
+        "raw_sha256": "14b259c6815bc22ccff971484f0de5a2b641b90c63fc18e4e0f31d9c34456424",
         "version": "0.9.2",
         "command": [
           "argus",
@@ -243,7 +243,7 @@
           "<raw_output>"
         ],
         "exit_code": 0,
-        "seconds": 3.9,
+        "seconds": 1.9,
         "scanners_run": [
           "patterns",
           "ast-python",
@@ -262,16 +262,37 @@
         "notes": "offline heuristic provider (--no-ai); default scanners incl. the [ast] tier"
       },
       "inventory": {
-        "findings_total": 23,
-        "findings_in_scored_files": 23,
+        "findings_total": 58,
+        "findings_in_scored_files": 58,
         "findings_in_scored_files_without_cwe": 0,
         "rules": [
+          {
+            "rule_id": "ast-python.ast-xss",
+            "cwes": [
+              79
+            ],
+            "count": 12
+          },
+          {
+            "rule_id": "ast-python.ast-open-redirect",
+            "cwes": [
+              601
+            ],
+            "count": 6
+          },
           {
             "rule_id": "ast-python.ast-path-traversal",
             "cwes": [
               22
             ],
-            "count": 5
+            "count": 6
+          },
+          {
+            "rule_id": "ast-python.ast-code-injection",
+            "cwes": [
+              95
+            ],
+            "count": 3
           },
           {
             "rule_id": "ast-python.ast-command-injection",
@@ -281,9 +302,37 @@
             "count": 3
           },
           {
-            "rule_id": "ast-python.ast-code-injection",
+            "rule_id": "ast-python.ast-sql-string-building",
             "cwes": [
-              95
+              89
+            ],
+            "count": 3
+          },
+          {
+            "rule_id": "patterns.python-xml-resolve-entities",
+            "cwes": [
+              611
+            ],
+            "count": 3
+          },
+          {
+            "rule_id": "patterns.weak-hash-md5-sha1",
+            "cwes": [
+              327
+            ],
+            "count": 3
+          },
+          {
+            "rule_id": "ast-python.ast-ldap-injection",
+            "cwes": [
+              90
+            ],
+            "count": 2
+          },
+          {
+            "rule_id": "ast-python.ast-xpath-injection",
+            "cwes": [
+              643
             ],
             "count": 2
           },
@@ -291,13 +340,6 @@
             "rule_id": "authz.missing-authentication",
             "cwes": [
               306
-            ],
-            "count": 2
-          },
-          {
-            "rule_id": "patterns.python-pickle-loads",
-            "cwes": [
-              502
             ],
             "count": 2
           },
@@ -316,11 +358,40 @@
             "count": 2
           },
           {
-            "rule_id": "patterns.weak-hash-md5-sha1",
+            "rule_id": "ast-python.ast-trust-boundary",
             "cwes": [
-              327
+              501
             ],
-            "count": 2
+            "count": 1
+          },
+          {
+            "rule_id": "ast-python.ast-unsafe-deserialization",
+            "cwes": [
+              502
+            ],
+            "count": 1
+          },
+          {
+            "rule_id": "ast-python.ast-weak-random",
+            "cwes": [
+              330,
+              338
+            ],
+            "count": 1
+          },
+          {
+            "rule_id": "authz.cookie-missing-httponly",
+            "cwes": [
+              1004
+            ],
+            "count": 1
+          },
+          {
+            "rule_id": "authz.insecure-session-cookie",
+            "cwes": [
+              614
+            ],
+            "count": 1
           },
           {
             "rule_id": "authz.jwt-weak-validation",
@@ -333,6 +404,13 @@
             "rule_id": "patterns.flask-debug-true",
             "cwes": [
               489
+            ],
+            "count": 1
+          },
+          {
+            "rule_id": "patterns.python-pickle-loads",
+            "cwes": [
+              502
             ],
             "count": 1
           },
@@ -363,10 +441,9 @@
             },
             "CWE-22": {
               "samples": 4,
-              "detected": 1,
-              "recall": 0.25,
+              "detected": 2,
+              "recall": 0.5,
               "missed": [
-                "CWE-022_author_1.py",
                 "CWE-022_author_2.py",
                 "CWE-022_codeql_2.py"
               ]
@@ -379,13 +456,9 @@
             },
             "CWE-79": {
               "samples": 3,
-              "detected": 0,
-              "recall": 0.0,
-              "missed": [
-                "CWE-079_codeql_1.py",
-                "CWE-079_codeql_2.py",
-                "CWE-079_sonar_1.py"
-              ]
+              "detected": 3,
+              "recall": 1.0,
+              "missed": []
             },
             "CWE-80": {
               "samples": 1,
@@ -397,21 +470,15 @@
             },
             "CWE-89": {
               "samples": 2,
-              "detected": 0,
-              "recall": 0.0,
-              "missed": [
-                "CWE-089_author_1.py",
-                "CWE-089_codeql_1.py"
-              ]
+              "detected": 2,
+              "recall": 1.0,
+              "missed": []
             },
             "CWE-90": {
               "samples": 2,
-              "detected": 0,
-              "recall": 0.0,
-              "missed": [
-                "CWE-090_codeql_1.py",
-                "CWE-090_codeql_2.py"
-              ]
+              "detected": 2,
+              "recall": 1.0,
+              "missed": []
             },
             "CWE-94": {
               "samples": 3,
@@ -612,11 +679,9 @@
             },
             "CWE-330": {
               "samples": 1,
-              "detected": 0,
-              "recall": 0.0,
-              "missed": [
-                "CWE-330_author_1.py"
-              ]
+              "detected": 1,
+              "recall": 1.0,
+              "missed": []
             },
             "CWE-331": {
               "samples": 1,
@@ -777,13 +842,9 @@
             },
             "CWE-601": {
               "samples": 5,
-              "detected": 0,
-              "recall": 0.0,
+              "detected": 4,
+              "recall": 0.8,
               "missed": [
-                "CWE-601_codeql_1.py",
-                "CWE-601_sonar_1.py",
-                "CWE-601_sonar_2.py",
-                "CWE-601_sonar_3.py",
                 "CWE-601_sonar_4.py"
               ]
             },
@@ -797,14 +858,11 @@
             },
             "CWE-611": {
               "samples": 6,
-              "detected": 0,
-              "recall": 0.0,
+              "detected": 3,
+              "recall": 0.5,
               "missed": [
                 "CWE-611_author_1.py",
                 "CWE-611_codeql_1.py",
-                "CWE-611_sonar_1.py",
-                "CWE-611_sonar_2.py",
-                "CWE-611_sonar_3.py",
                 "CWE-611_sonar_4.py"
               ]
             },
@@ -818,12 +876,9 @@
             },
             "CWE-643": {
               "samples": 2,
-              "detected": 0,
-              "recall": 0.0,
-              "missed": [
-                "CWE-643_codeql_1.py",
-                "CWE-643_sonar_1.py"
-              ]
+              "detected": 2,
+              "recall": 1.0,
+              "missed": []
             },
             "CWE-703": {
               "samples": 3,
@@ -946,11 +1001,11 @@
           },
           "overall": {
             "samples": 121,
-            "detected": 8,
-            "recall": 0.0661,
-            "cwe_average_recall": 0.0386,
+            "detected": 26,
+            "recall": 0.2149,
+            "cwe_average_recall": 0.1336,
             "cwes": 69,
-            "cwes_with_any_detection": 6
+            "cwes_with_any_detection": 13
           }
         },
         "mapped": {
@@ -970,10 +1025,9 @@
             },
             "CWE-22": {
               "samples": 4,
-              "detected": 1,
-              "recall": 0.25,
+              "detected": 2,
+              "recall": 0.5,
               "missed": [
-                "CWE-022_author_1.py",
                 "CWE-022_author_2.py",
                 "CWE-022_codeql_2.py"
               ]
@@ -986,47 +1040,33 @@
             },
             "CWE-79": {
               "samples": 3,
-              "detected": 0,
-              "recall": 0.0,
-              "missed": [
-                "CWE-079_codeql_1.py",
-                "CWE-079_codeql_2.py",
-                "CWE-079_sonar_1.py"
-              ]
+              "detected": 3,
+              "recall": 1.0,
+              "missed": []
             },
             "CWE-80": {
               "samples": 1,
-              "detected": 0,
-              "recall": 0.0,
-              "missed": [
-                "CWE-080_author_1.py"
-              ]
+              "detected": 1,
+              "recall": 1.0,
+              "missed": []
             },
             "CWE-89": {
               "samples": 2,
-              "detected": 0,
-              "recall": 0.0,
-              "missed": [
-                "CWE-089_author_1.py",
-                "CWE-089_codeql_1.py"
-              ]
+              "detected": 2,
+              "recall": 1.0,
+              "missed": []
             },
             "CWE-90": {
               "samples": 2,
-              "detected": 0,
-              "recall": 0.0,
-              "missed": [
-                "CWE-090_codeql_1.py",
-                "CWE-090_codeql_2.py"
-              ]
+              "detected": 2,
+              "recall": 1.0,
+              "missed": []
             },
             "CWE-94": {
               "samples": 3,
-              "detected": 2,
-              "recall": 0.6667,
-              "missed": [
-                "CWE-094_author_1.py"
-              ]
+              "detected": 3,
+              "recall": 1.0,
+              "missed": []
             },
             "CWE-95": {
               "samples": 1,
@@ -1214,11 +1254,9 @@
             },
             "CWE-330": {
               "samples": 1,
-              "detected": 0,
-              "recall": 0.0,
-              "missed": [
-                "CWE-330_author_1.py"
-              ]
+              "detected": 1,
+              "recall": 1.0,
+              "missed": []
             },
             "CWE-331": {
               "samples": 1,
@@ -1379,13 +1417,9 @@
             },
             "CWE-601": {
               "samples": 5,
-              "detected": 0,
-              "recall": 0.0,
+              "detected": 4,
+              "recall": 0.8,
               "missed": [
-                "CWE-601_codeql_1.py",
-                "CWE-601_sonar_1.py",
-                "CWE-601_sonar_2.py",
-                "CWE-601_sonar_3.py",
                 "CWE-601_sonar_4.py"
               ]
             },
@@ -1399,14 +1433,11 @@
             },
             "CWE-611": {
               "samples": 6,
-              "detected": 0,
-              "recall": 0.0,
+              "detected": 3,
+              "recall": 0.5,
               "missed": [
                 "CWE-611_author_1.py",
                 "CWE-611_codeql_1.py",
-                "CWE-611_sonar_1.py",
-                "CWE-611_sonar_2.py",
-                "CWE-611_sonar_3.py",
                 "CWE-611_sonar_4.py"
               ]
             },
@@ -1420,12 +1451,9 @@
             },
             "CWE-643": {
               "samples": 2,
-              "detected": 0,
-              "recall": 0.0,
-              "missed": [
-                "CWE-643_codeql_1.py",
-                "CWE-643_sonar_1.py"
-              ]
+              "detected": 2,
+              "recall": 1.0,
+              "missed": []
             },
             "CWE-703": {
               "samples": 3,
@@ -1548,32 +1576,28 @@
           },
           "overall": {
             "samples": 121,
-            "detected": 12,
-            "recall": 0.0992,
-            "cwe_average_recall": 0.07,
+            "detected": 32,
+            "recall": 0.2645,
+            "cwe_average_recall": 0.1843,
             "cwes": 69,
-            "cwes_with_any_detection": 9
+            "cwes_with_any_detection": 17
           }
         },
         "any": {
           "per_cwe": {
             "CWE-20": {
               "samples": 6,
-              "detected": 2,
-              "recall": 0.3333,
+              "detected": 5,
+              "recall": 0.8333,
               "missed": [
-                "CWE-020_author_2.py",
-                "CWE-020_codeql_1.py",
-                "CWE-020_codeql_3.py",
-                "CWE-020_codeql_4.py"
+                "CWE-020_author_2.py"
               ]
             },
             "CWE-22": {
               "samples": 4,
-              "detected": 1,
-              "recall": 0.25,
+              "detected": 2,
+              "recall": 0.5,
               "missed": [
-                "CWE-022_author_1.py",
                 "CWE-022_author_2.py",
                 "CWE-022_codeql_2.py"
               ]
@@ -1586,47 +1610,33 @@
             },
             "CWE-79": {
               "samples": 3,
-              "detected": 0,
-              "recall": 0.0,
-              "missed": [
-                "CWE-079_codeql_1.py",
-                "CWE-079_codeql_2.py",
-                "CWE-079_sonar_1.py"
-              ]
+              "detected": 3,
+              "recall": 1.0,
+              "missed": []
             },
             "CWE-80": {
               "samples": 1,
-              "detected": 0,
-              "recall": 0.0,
-              "missed": [
-                "CWE-080_author_1.py"
-              ]
+              "detected": 1,
+              "recall": 1.0,
+              "missed": []
             },
             "CWE-89": {
               "samples": 2,
-              "detected": 0,
-              "recall": 0.0,
-              "missed": [
-                "CWE-089_author_1.py",
-                "CWE-089_codeql_1.py"
-              ]
+              "detected": 2,
+              "recall": 1.0,
+              "missed": []
             },
             "CWE-90": {
               "samples": 2,
-              "detected": 0,
-              "recall": 0.0,
-              "missed": [
-                "CWE-090_codeql_1.py",
-                "CWE-090_codeql_2.py"
-              ]
+              "detected": 2,
+              "recall": 1.0,
+              "missed": []
             },
             "CWE-94": {
               "samples": 3,
-              "detected": 2,
-              "recall": 0.6667,
-              "missed": [
-                "CWE-094_author_1.py"
-              ]
+              "detected": 3,
+              "recall": 1.0,
+              "missed": []
             },
             "CWE-95": {
               "samples": 1,
@@ -1679,11 +1689,9 @@
             },
             "CWE-200": {
               "samples": 1,
-              "detected": 0,
-              "recall": 0.0,
-              "missed": [
-                "CWE-200_author_1.py"
-              ]
+              "detected": 1,
+              "recall": 1.0,
+              "missed": []
             },
             "CWE-209": {
               "samples": 1,
@@ -1759,18 +1767,15 @@
             },
             "CWE-306": {
               "samples": 1,
-              "detected": 0,
-              "recall": 0.0,
-              "missed": [
-                "CWE-306_pearce_1.py"
-              ]
+              "detected": 1,
+              "recall": 1.0,
+              "missed": []
             },
             "CWE-319": {
               "samples": 2,
-              "detected": 0,
-              "recall": 0.0,
+              "detected": 1,
+              "recall": 0.5,
               "missed": [
-                "CWE-319_author_1.py",
                 "CWE-319_author_2.py"
               ]
             },
@@ -1811,11 +1816,9 @@
             },
             "CWE-330": {
               "samples": 1,
-              "detected": 0,
-              "recall": 0.0,
-              "missed": [
-                "CWE-330_author_1.py"
-              ]
+              "detected": 1,
+              "recall": 1.0,
+              "missed": []
             },
             "CWE-331": {
               "samples": 1,
@@ -1972,13 +1975,9 @@
             },
             "CWE-601": {
               "samples": 5,
-              "detected": 0,
-              "recall": 0.0,
+              "detected": 4,
+              "recall": 0.8,
               "missed": [
-                "CWE-601_codeql_1.py",
-                "CWE-601_sonar_1.py",
-                "CWE-601_sonar_2.py",
-                "CWE-601_sonar_3.py",
                 "CWE-601_sonar_4.py"
               ]
             },
@@ -1992,14 +1991,10 @@
             },
             "CWE-611": {
               "samples": 6,
-              "detected": 0,
-              "recall": 0.0,
+              "detected": 4,
+              "recall": 0.6667,
               "missed": [
                 "CWE-611_author_1.py",
-                "CWE-611_codeql_1.py",
-                "CWE-611_sonar_1.py",
-                "CWE-611_sonar_2.py",
-                "CWE-611_sonar_3.py",
                 "CWE-611_sonar_4.py"
               ]
             },
@@ -2011,11 +2006,9 @@
             },
             "CWE-643": {
               "samples": 2,
-              "detected": 1,
-              "recall": 0.5,
-              "missed": [
-                "CWE-643_codeql_1.py"
-              ]
+              "detected": 2,
+              "recall": 1.0,
+              "missed": []
             },
             "CWE-703": {
               "samples": 3,
@@ -2047,11 +2040,9 @@
             },
             "CWE-759": {
               "samples": 1,
-              "detected": 0,
-              "recall": 0.0,
-              "missed": [
-                "CWE-759_mitre_1.py"
-              ]
+              "detected": 1,
+              "recall": 1.0,
+              "missed": []
             },
             "CWE-760": {
               "samples": 1,
@@ -2063,11 +2054,9 @@
             },
             "CWE-776": {
               "samples": 1,
-              "detected": 0,
-              "recall": 0.0,
-              "missed": [
-                "CWE-776_codeql_1.py"
-              ]
+              "detected": 1,
+              "recall": 1.0,
+              "missed": []
             },
             "CWE-798": {
               "samples": 2,
@@ -2104,11 +2093,9 @@
             },
             "CWE-918": {
               "samples": 2,
-              "detected": 1,
-              "recall": 0.5,
-              "missed": [
-                "CWE-918_codeql_1.py"
-              ]
+              "detected": 2,
+              "recall": 1.0,
+              "missed": []
             },
             "CWE-941": {
               "samples": 1,
@@ -2137,11 +2124,11 @@
           },
           "overall": {
             "samples": 121,
-            "detected": 22,
-            "recall": 0.1818,
-            "cwe_average_recall": 0.1546,
+            "detected": 51,
+            "recall": 0.4215,
+            "cwe_average_recall": 0.3437,
             "cwes": 69,
-            "cwes_with_any_detection": 18
+            "cwes_with_any_detection": 30
           }
         }
       }
@@ -2150,8 +2137,8 @@
       "status": "ok",
       "run": {
         "tool": "bandit",
-        "started_at": "2026-10-22T13:09:33+00:00",
-        "raw_sha256": "0118f1cdffb69383f72138a1f481026d0ed8fdabf61cdd93a088b57d0f4f0a8f",
+        "started_at": "2026-10-22T17:40:19+00:00",
+        "raw_sha256": "9c549f9ec316a7d4b5f007c00e10786642e60fd1912df2505fed70212a0c711a",
         "version": "bandit 1.9.4",
         "command": [
           "bandit",
@@ -2164,7 +2151,7 @@
           "-q"
         ],
         "exit_code": 1,
-        "seconds": 1.8,
+        "seconds": 0.9,
         "notes": "default configuration (all plugins, all severities and confidences)"
       },
       "inventory": {
@@ -4115,8 +4102,8 @@
       "status": "ok",
       "run": {
         "tool": "semgrep",
-        "started_at": "2026-10-22T13:09:35+00:00",
-        "raw_sha256": "8e7d8a9ec5b2664be8623f29a10fac1c0b72ae161fc8c42d94460b6af891a08c",
+        "started_at": "2026-10-22T17:40:21+00:00",
+        "raw_sha256": "f988aef8f98f93a00476673626ffd4312a184731e4c9fdb38de30c44f9d5c0eb",
         "version": "1.182.1",
         "command": [
           "semgrep",
@@ -4133,13 +4120,13 @@
           "<dataset_root>"
         ],
         "exit_code": 0,
-        "seconds": 26.8,
+        "seconds": 9.8,
         "semgrep_errors": 0,
         "notes": "registry ruleset cached locally; Semgrep CE engine; default settings",
         "ruleset": "p/python",
         "ruleset_sha256": "de5bc79d074c3b4146338a0bf95830406f169bd91ac590a2f1ef111f162e23f5",
         "ruleset_rules": 151,
-        "ruleset_fetched_at": "2026-10-22T12:44:11+00:00"
+        "ruleset_fetched_at": "2026-10-22T16:58:11+00:00"
       },
       "inventory": {
         "findings_total": 32,

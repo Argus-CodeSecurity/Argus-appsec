@@ -1,8 +1,8 @@
 {
  "meta": {
   "tool": "semgrep",
-  "started_at": "2026-10-22T13:06:21+00:00",
-  "raw_sha256": "4008028a4b4e29624e59a4a1782d456ad1f96f0a605f21bf5dc8c306baf21090",
+  "started_at": "2026-10-22T17:39:28+00:00",
+  "raw_sha256": "98da9cbef129dc578670683de890c2b1519013fbbe93fe71ed858d14081e7515",
   "version": "1.182.1",
   "command": [
    "semgrep",
@@ -19,13 +19,13 @@
    "<dataset_root>"
   ],
   "exit_code": 0,
-  "seconds": 178.3,
+  "seconds": 46.6,
   "semgrep_errors": 0,
   "notes": "registry ruleset cached locally; Semgrep CE engine; default settings",
   "ruleset": "p/python",
   "ruleset_sha256": "de5bc79d074c3b4146338a0bf95830406f169bd91ac590a2f1ef111f162e23f5",
   "ruleset_rules": 151,
-  "ruleset_fetched_at": "2026-10-22T12:44:11+00:00"
+  "ruleset_fetched_at": "2026-10-22T16:58:11+00:00"
  },
  "columns": [
   "file",

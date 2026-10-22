@@ -1,8 +1,8 @@
 {
  "meta": {
   "tool": "bandit",
-  "started_at": "2026-10-22T13:05:48+00:00",
-  "raw_sha256": "4f144ab1c4f73ec933d33c156ebfdb7b16c0126a50bf63dd55294dfecedc4a57",
+  "started_at": "2026-10-22T17:39:21+00:00",
+  "raw_sha256": "803b8342f3a6053d148fa885a1f6f3bb3e813e3f7bbf056928079fb235efc88f",
   "version": "bandit 1.9.4",
   "command": [
    "bandit",
@@ -15,7 +15,7 @@
    "-q"
   ],
   "exit_code": 1,
-  "seconds": 31.3,
+  "seconds": 6.3,
   "notes": "default configuration (all plugins, all severities and confidences)"
  },
  "columns": [
