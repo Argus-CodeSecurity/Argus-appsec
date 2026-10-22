@@ -2,24 +2,21 @@
 
 from __future__ import annotations
 
-import subprocess
 from collections.abc import Iterable
 from pathlib import Path
 
 from argus.core.models import Confidence, Finding, Likelihood, Location, Remediation, Severity
 from argus.core.plugin import Scanner, ScannerContext, scanner
+from argus.scanners._git import run_git
 
 
 def _run_git(root: Path, *args: str) -> str | None:
-    try:
-        return subprocess.check_output(
-            ["git", "-C", str(root), *args],
-            text=True,
-            stderr=subprocess.DEVNULL,
-            timeout=30,
-        )
-    except (subprocess.SubprocessError, FileNotFoundError):
+    # The scanned repo is untrusted: run_git neutralises its .git/config
+    # (fsmonitor, gpg.program, pagers, external diff) before invoking git.
+    res = run_git(root, *args, timeout=30, max_output=5_000_000)
+    if res is None or res.returncode != 0:
         return None
+    return res.stdout
 
 
 @scanner

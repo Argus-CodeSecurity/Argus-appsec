@@ -17,11 +17,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
-from argus.remediation import git_ops
+from argus.scanners import _git
 
 # Bound the diff text we read so an enormous history cannot hang or OOM a scan.
 _MAX_OUTPUT_CHARS = 20_000_000  # ~20 MB of unified diff text
 _MAX_LINE = 1000  # skip minified/huge added lines, matching the working-tree scan
+_TIMEOUT = 300.0  # seconds for the whole history walk
 
 
 @dataclass
@@ -36,19 +37,19 @@ def find_history_secrets(root: Path) -> tuple[list[HistorySecret], bool]:
     """Return (secrets, truncated). Empty list if not a git repo or git absent."""
     from argus.scanners.secrets import _SIGNATURES, SecretsScanner
 
-    if not git_ops.is_git_repo(root):
+    # The repo being scanned is untrusted; the hardened runner stops its
+    # .git/config from launching programs (fsmonitor, gpg, textconv, pager).
+    if not _git.is_git_repo(root):
         return [], False
-    proc = git_ops._run(
-        root, "log", "-p", "-U0", "--all", "--no-color", "--no-textconv",
-        "--no-merges", check=False,
+    proc = _git.run_git(
+        root, "log", "-p", "-U0", "--all", "--no-color", "--no-merges",
+        timeout=_TIMEOUT, max_output=_MAX_OUTPUT_CHARS,
     )
-    if proc.returncode != 0:
+    if proc is None or proc.returncode != 0:
         return [], False
 
     text = proc.stdout
-    truncated = len(text) > _MAX_OUTPUT_CHARS
-    if truncated:
-        text = text[:_MAX_OUTPUT_CHARS]
+    truncated = proc.truncated
 
     seen: set[tuple[str, str]] = set()
     found: list[HistorySecret] = []
