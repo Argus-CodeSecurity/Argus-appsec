@@ -11,7 +11,7 @@ from __future__ import annotations
 import re
 from datetime import datetime, timezone
 
-from sqlmodel import Session, col, select
+from sqlmodel import Session, col, func, select
 
 from argus.core.models import ScanResult, Severity
 from argus.dashboard.db import Finding, Project, Scan
@@ -29,26 +29,38 @@ def severity_label(value: int) -> str:
         return "Info"
 
 
-def _get_or_create_project(session: Session, name: str) -> Project:
+def _get_or_create_project(session: Session, name: str) -> tuple[Project, int]:
     slug = _slugify(name)
     project = session.exec(select(Project).where(Project.slug == slug)).first()
     if project is None:
         project = Project(slug=slug, name=name)
         session.add(project)
-        session.commit()
-        session.refresh(project)
-    return project
+        session.flush()
+    assert project.id is not None  # assigned by the database on flush
+    return project, project.id
 
 
 def ingest_report(session: Session, raw_json: str) -> Scan:
-    """Parse an Argus JSON report and store it as a scan with its findings."""
+    """Parse an Argus JSON report and store it as a scan with its findings.
+
+    The project, scan, and findings are written in one transaction: a report that
+    fails part-way through never leaves a half-ingested scan behind.
+    """
     result = ScanResult.model_validate_json(raw_json)
     summary = result.project_summary or {}
     name = summary.get("name") or (result.target.rsplit("/", 1)[-1]) or result.target
-    project = _get_or_create_project(session, str(name))
+    try:
+        return _store_result(session, result, summary, str(name))
+    except Exception:
+        session.rollback()
+        raise
+
+
+def _store_result(session: Session, result: ScanResult, summary: dict, name: str) -> Scan:
+    _, project_id = _get_or_create_project(session, name)
 
     scan = Scan(
-        project_id=project.id,
+        project_id=project_id,
         created_at=result.finished_at or result.started_at or datetime.now(timezone.utc),
         argus_version=result.argus_version,
         target=result.target,
@@ -59,12 +71,13 @@ def ingest_report(session: Session, raw_json: str) -> Scan:
         project_summary=summary,
     )
     session.add(scan)
-    session.commit()
-    session.refresh(scan)
+    session.flush()
+    assert scan.id is not None  # assigned by the database on flush
+    scan_id = scan.id
 
     for f in result.sorted_findings():
         session.add(Finding(
-            scan_id=scan.id,
+            scan_id=scan_id,
             rule_id=f.rule_id, scanner=f.scanner, title=f.title,
             severity=int(f.severity), confidence=int(f.confidence),
             likelihood=int(f.likelihood), risk_score=f.risk_score(),
@@ -78,23 +91,29 @@ def ingest_report(session: Session, raw_json: str) -> Scan:
             tags=f.tags,
         ))
     session.commit()
+    session.refresh(scan)
     return scan
 
 
 # --- queries ---------------------------------------------------------------
 def list_projects(session: Session) -> list[dict]:
     """Projects with their latest scan's headline numbers, worst risk first."""
+    counts: dict[int, int] = {
+        project_id: count
+        for project_id, count in session.exec(
+            select(Scan.project_id, func.count()).group_by(col(Scan.project_id))
+        ).all()
+    }
     out: list[dict] = []
     for project in session.exec(select(Project)).all():
         latest = session.exec(
             select(Scan).where(Scan.project_id == project.id)
             .order_by(col(Scan.created_at).desc())
         ).first()
-        scans = session.exec(select(Scan).where(Scan.project_id == project.id)).all()
         out.append({
             "project": project,
             "latest": latest,
-            "scan_count": len(scans),
+            "scan_count": counts.get(project.id or -1, 0),
         })
     out.sort(key=lambda r: (r["latest"].risk_score if r["latest"] else -1), reverse=True)
     return out
