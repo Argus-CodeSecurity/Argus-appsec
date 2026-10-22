@@ -55,8 +55,8 @@ their own threat models.
 
 | Threat | Control | Where |
 | --- | --- | --- |
-| A repo's own `.argus.yml` disabling scanners or redirecting the AI provider to an attacker URL | Remote-repo config is ignored by default; loading it is opt-in via `--trust-remote-config` | `cli/main.py`, `core/config.py` |
-| A repo shipping `.argus/rules/*.yml` to inject scanner regexes (rule injection / ReDoS) | The in-repo convention directory is honored only for trusted targets (`config.trust_project_config`), gated by the same decision as `.argus.yml`; custom-rule patterns are also rejected if they contain a nested-quantifier ReDoS shape | `scanners/custom_rules.py`, `scanners/patterns.py`, `cli/main.py` |
+| A repo's own `.argus.yml` disabling scanners or redirecting the AI provider to an attacker URL | Remote-repo config is ignored by default; loading it is opt-in via `--trust-remote-config` | `cli/commands/scan.py`, `core/config.py` |
+| A repo shipping `.argus/rules/*.yml` to inject scanner regexes (rule injection / ReDoS) | The in-repo convention directory is honored only for trusted targets (`config.trust_project_config`), gated by the same decision as `.argus.yml`; custom-rule patterns are also rejected if they contain a nested-quantifier ReDoS shape | `scanners/custom_rules.py`, `scanners/patterns.py`, `cli/commands/scan.py` |
 
 ### 5. Handling discovered secrets
 
