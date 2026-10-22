@@ -1,9 +1,8 @@
 """Thin wrappers over the ``git`` CLI for the fix workflow.
 
-Kept deliberately small and explicit: each function is one git command. All calls
-run with a fixed identity fallback so commits succeed in CI where no global
-git identity is configured, without overwriting a user's real identity when one
-exists.
+Kept deliberately small and explicit: each function is one git command. Commits
+fall back to a fixed identity only when none is configured (so they succeed in
+bare CI containers) and never override a user's real identity.
 """
 
 from __future__ import annotations
@@ -143,15 +142,36 @@ def remote_url(root: Path, remote: str = "origin") -> str | None:
     return proc.stdout.strip() or None
 
 
-def create_branch(root: Path, name: str, *, base: str | None = None) -> None:
-    args = ["checkout", "-b", name]
+def create_branch(root: Path, name: str, *, base: str | None = None,
+                  reset: bool = False) -> None:
+    """Create branch ``name`` at ``base`` and check it out.
+
+    With ``reset`` an existing branch is moved to ``base`` (``checkout -B``)
+    instead of failing, so a stale branch never carries old commits forward.
+    """
+    if not _safe_ref(name) or (base is not None and not _safe_ref(base)):
+        raise GitError(f"refusing unsafe branch/ref name: {name!r} / {base!r}")
+    args = ["checkout", "-B" if reset else "-b", name]
     if base:
         args.append(base)
     _run(root, *args)
 
 
 def checkout(root: Path, name: str) -> None:
+    if not _safe_ref(name):
+        raise GitError(f"refusing unsafe ref name: {name!r}")
     _run(root, "checkout", name)
+
+
+def delete_branch(root: Path, name: str) -> None:
+    if not _safe_ref(name):
+        raise GitError(f"refusing unsafe branch name: {name!r}")
+    _run(root, "branch", "-D", name)
+
+
+def reset_hard(root: Path) -> None:
+    """Discard staged and unstaged changes to tracked files."""
+    _run(root, "reset", "--hard", "-q", "HEAD")
 
 
 def branch_exists(root: Path, name: str) -> bool:
@@ -176,15 +196,31 @@ def stage_paths(root: Path, paths: list[str]) -> None:
     _run(root, "add", "--", *paths)
 
 
+def _config_value(root: Path, key: str) -> str:
+    return _run(root, "config", "--get", key, check=False).stdout.strip()
+
+
 def commit(root: Path, message: str, *, author_name: str = "Argus",
-           author_email: str = "argus@localhost") -> str:
-    """Commit staged changes with a guaranteed identity; return the commit sha."""
-    _run(
-        root,
-        "-c", f"user.name={author_name}",
-        "-c", f"user.email={author_email}",
-        "commit", "-m", message, "--no-verify",
-    )
+           author_email: str = "argus@localhost", no_verify: bool = False) -> str:
+    """Commit staged changes; return the commit sha.
+
+    The user's own identity is used whenever one is configured (git config or
+    the GIT_AUTHOR_*/GIT_COMMITTER_* environment), so DCO/CLA checks and branch
+    protection see the real author. The fallback identity is supplied only for
+    the parts that are missing, e.g. in a bare CI container. Commit hooks run
+    unless ``no_verify`` is explicitly requested.
+    """
+    identity: list[str] = []
+    if not (_config_value(root, "user.name")
+            or (os.environ.get("GIT_AUTHOR_NAME") and os.environ.get("GIT_COMMITTER_NAME"))):
+        identity += ["-c", f"user.name={author_name}"]
+    if not (_config_value(root, "user.email")
+            or (os.environ.get("GIT_AUTHOR_EMAIL") and os.environ.get("GIT_COMMITTER_EMAIL"))):
+        identity += ["-c", f"user.email={author_email}"]
+    args = [*identity, "commit", "-m", message]
+    if no_verify:
+        args.append("--no-verify")
+    _run(root, *args)
     return _run(root, "rev-parse", "HEAD").stdout.strip()
 
 

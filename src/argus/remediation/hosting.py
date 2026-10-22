@@ -40,6 +40,18 @@ _HOSTS = {
 }
 
 
+_URL_USERINFO = re.compile(r"(?i)\b([a-z][a-z0-9+.-]*://)[^/@\s]+@")
+
+
+def redact_credentials(text: str) -> str:
+    """Strip ``user:token@`` from any URL in ``text`` before showing it.
+
+    Remotes often embed a token (``https://x-access-token:ghp_...@github.com``);
+    it must never reach logs or CI output.
+    """
+    return _URL_USERINFO.sub(r"\1", text)
+
+
 def parse_remote(url: str) -> RepoRef | None:
     """Parse a git remote URL (https or ssh) into a RepoRef, or None if unknown."""
     url = url.strip()

@@ -18,12 +18,13 @@ from pathlib import Path
 from argus.core.models import Finding
 from argus.core.project import Project
 from argus.remediation import git_ops
-from argus.remediation.applier import ApplyReport, apply_fixes
+from argus.remediation.applier import APPLIED_KEY, ApplyReport, apply_fixes
 from argus.remediation.hosting import (
     HostingError,
     PullRequest,
     open_pull_request,
     parse_remote,
+    redact_credentials,
 )
 from argus.reporting.md_escape import md_code, md_fence
 
@@ -41,6 +42,9 @@ class FixOptions:
     annotate: bool = False             # post inline review comments on the opened PR
     # Autonomy ladder: when set, apply only these rule ids (auto-tier fixes).
     only_rules: set[str] | None = None
+    # Skip commit hooks (git commit --no-verify). Off by default: hooks such as
+    # DCO sign-off or secret scanning must run unless the user opts out.
+    no_verify: bool = False
 
 
 @dataclass
@@ -97,46 +101,78 @@ def run_fix_workflow(project: Project, findings: list[Finding],
     base = options.base or git_ops.default_branch(root)
     outcome = FixOutcome(applied=ApplyReport(), branch=options.branch)
 
-    # Create (or reset) the working branch from base.
+    # The findings (and their line numbers) come from the checked-out HEAD, but
+    # the fix branch starts at base. If the two differ, fixes would be applied
+    # to different code than was scanned, so refuse rather than guess.
+    head_sha = git_ops.rev_parse(root, "HEAD")
+    base_sha = git_ops.rev_parse(root, base)
+    if base_sha is None:
+        return FixOutcome(applied=ApplyReport(),
+                          error=f"Base '{base}' does not resolve to a commit.")
+    if head_sha != base_sha:
+        current = git_ops.current_branch(root)
+        return FixOutcome(
+            applied=ApplyReport(),
+            error=(f"The scanned checkout ('{current}' at {(head_sha or '?')[:8]}) is "
+                   f"not the base '{base}' ({base_sha[:8]}), so the findings do not "
+                   f"match the code the fix branch would start from. Check out "
+                   f"'{base}' and re-run, or pass --base {current} to target the "
+                   f"current branch."),
+        )
+
+    # Where to return to if anything fails: the branch (or detached commit) the
+    # user was on.
+    original = git_ops.current_branch(root)
+    if original == "HEAD":
+        original = head_sha or base
+    existed = git_ops.branch_exists(root, options.branch)
+
+    # Create (or, with --force-branch, reset) the working branch at base.
     try:
-        if git_ops.branch_exists(root, options.branch):
-            if not options.force_branch:
-                return FixOutcome(
-                    applied=ApplyReport(),
-                    error=(f"Branch '{options.branch}' already exists. Delete it, pick "
-                           f"another with --branch, or pass --force-branch."),
-                )
-            git_ops.checkout(root, options.branch)
-        else:
-            git_ops.create_branch(root, options.branch, base=base)
-        outcome.note(f"Created branch '{options.branch}' from '{base}'.")
+        if existed and not options.force_branch:
+            return FixOutcome(
+                applied=ApplyReport(),
+                error=(f"Branch '{options.branch}' already exists. Delete it, pick "
+                       f"another with --branch, or pass --force-branch."),
+            )
+        git_ops.create_branch(root, options.branch, base=base, reset=existed)
+        verb = "Reset" if existed else "Created"
+        outcome.note(f"{verb} branch '{options.branch}' at '{base}'.")
     except git_ops.GitError as exc:
         return FixOutcome(applied=ApplyReport(), error=str(exc))
 
-    # Apply the fixes on the branch.
-    report = apply_fixes(project, findings,
-                         include_unverified=options.include_unverified,
-                         dry_run=False, only_rules=options.only_rules)
-    outcome.applied = report
-    if options.only_rules is not None:
-        outcome.note(f"Auto-tier: only {len(options.only_rules)} "
-                     "auto-approved rule(s) considered.")
-    if not report.any_changes:
-        outcome.note("No deterministic fixes could be applied; nothing to commit.")
-        # Return to the base branch so we don't leave an empty branch checked out.
-        _safe_checkout(root, base, outcome)
-        return outcome
-
-    # Commit. Stage only the files Argus rewrote, never `git add -A`, so nothing
-    # outside the fix set can be swept into the commit.
     try:
+        # Apply the fixes on the branch.
+        report = apply_fixes(project, findings,
+                             include_unverified=options.include_unverified,
+                             dry_run=False, only_rules=options.only_rules)
+        outcome.applied = report
+        if options.only_rules is not None:
+            outcome.note(f"Auto-tier: only {len(options.only_rules)} "
+                         "auto-approved rule(s) considered.")
+        if not report.any_changes:
+            outcome.note("No deterministic fixes could be applied; nothing to commit.")
+            # Return to where the user was so an empty branch is not left checked out.
+            _rollback(root, original, options.branch, delete=not existed, outcome=outcome)
+            return outcome
+
+        # Commit. Stage only the files Argus rewrote, never `git add -A`, so
+        # nothing outside the fix set can be swept into the commit.
         git_ops.stage_paths(root, report.changed_files)
         message = _commit_message(report)
-        outcome.commit_sha = git_ops.commit(root, message)
+        outcome.commit_sha = git_ops.commit(root, message, no_verify=options.no_verify)
         outcome.committed = True
         outcome.note(f"Committed {len(report.fixes)} fix(es) as {outcome.commit_sha[:8]}.")
-    except git_ops.GitError as exc:
-        outcome.error = f"Commit failed: {exc}"
+    except Exception as exc:
+        # Never leave rewritten files or a half-made branch behind: discard the
+        # changes (the tree was verified clean above) and go back.
+        outcome.error = f"Fix failed: {exc}"
+        for finding in findings:
+            finding.metadata.pop(APPLIED_KEY, None)
+            if finding.metadata.get("verification") == "fixed":
+                finding.metadata.pop("verification")
+        _rollback(root, original, options.branch, delete=not existed, outcome=outcome,
+                  discard=True)
         return outcome
 
     if not options.open_pr:
@@ -158,14 +194,15 @@ def _push_and_open_pr(root: Path, base: str, options: FixOptions,
         return
     ref = parse_remote(remote)
     if ref is None:
-        outcome.error = f"Unsupported or unrecognized git remote: {remote}"
+        outcome.error = ("Unsupported or unrecognized git remote: "
+                         f"{redact_credentials(remote)}")
         return
     try:
         git_ops.push(root, options.branch, set_upstream=True, force=options.force_branch)
         outcome.pushed = True
         outcome.note(f"Pushed '{options.branch}' to {ref.slug}.")
     except git_ops.GitError as exc:
-        outcome.error = f"Push failed: {exc}"
+        outcome.error = f"Push failed: {redact_credentials(str(exc))}"
         return
 
     try:
@@ -192,11 +229,22 @@ def _push_and_open_pr(root: Path, base: str, options: FixOptions,
             outcome.note(f"Could not post inline annotations: {exc}")
 
 
-def _safe_checkout(root: Path, branch: str, outcome: FixOutcome) -> None:
+def _rollback(root: Path, original: str, branch: str, *, delete: bool,
+              outcome: FixOutcome, discard: bool = False) -> None:
+    """Return the repo to ``original``, optionally discarding Argus's edits.
+
+    With ``discard``, uncommitted changes are thrown away; this is only safe
+    because the workflow refuses to start on a dirty tree. ``delete`` removes
+    the fix branch when this run created it.
+    """
     try:
-        git_ops.checkout(root, branch)
-    except git_ops.GitError as exc:  # pragma: no cover - defensive
-        outcome.note(f"Could not switch back to '{branch}': {exc}")
+        if discard:
+            git_ops.reset_hard(root)
+        git_ops.checkout(root, original)
+        if delete:
+            git_ops.delete_branch(root, branch)
+    except git_ops.GitError as exc:
+        outcome.note(f"Could not restore '{original}': {exc}")
 
 
 # --- message/body builders -------------------------------------------------
