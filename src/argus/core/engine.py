@@ -37,7 +37,7 @@ from argus.agents import (
 )
 from argus.ai.factory import build_provider
 from argus.analysis.repository import RepositoryAnalyzer
-from argus.core.config import Config
+from argus.core.config import Config, ConfigError
 from argus.core.models import Finding, ScanResult
 from argus.core.plugin import Scanner, ScannerContext, registry
 from argus.core.project import Project
@@ -78,8 +78,9 @@ class ScanEngine:
         # 2. Scan. Scanners are independent, so they run concurrently; results
         # are merged in selection order to keep output deterministic. File-local
         # scanners consult the per-file cache so unchanged files skip re-analysis.
-        scanners = self._select_scanners(project)
+        scanners, failed, select_errors = self._select_scanners(project)
         result.scanners_run = [s.name for s in scanners]
+        result.errors.extend(select_errors)
         scan_ctx = ScannerContext(project=project, config=self.config, ai=ai)
         cache = self._open_cache(project)
         project.files()  # materialize the file walk once before threads share it
@@ -104,7 +105,6 @@ class ScanEngine:
                 outcomes = list(pool.map(run_one, scanners))
         else:
             outcomes = [run_one(s) for s in scanners]
-        failed: list[str] = []
         for scanner, (findings, error) in zip(scanners, outcomes, strict=True):
             for finding in findings:
                 result.add(finding)
@@ -238,30 +238,49 @@ class ScanEngine:
         return findings
 
     # --- steps --------------------------------------------------------------
-    def _select_scanners(self, project: Project) -> list[Scanner]:
+    def _select_scanners(self, project: Project) -> tuple[list[Scanner], list[str], list[str]]:
+        """Pick the scanners to run.
+
+        Returns ``(selected, failed_names, errors)``. An explicitly requested
+        scanner name that does not exist is a :class:`ConfigError`: silently
+        skipping it (``--scanners secret`` for ``secrets``) used to run nothing
+        and pass the gate. Excluding every requested scanner is an error for
+        the same reason. A scanner whose ``applies_to`` check crashes (for
+        example on a malformed manifest in a hostile repository) is recorded
+        as a failed scanner instead of aborting the whole scan.
+        """
         available = registry.scanners()
-        explicit = bool(self.config.scanners)
-        chosen_names = self.config.scanners or list(available)
+        chosen_names = list(dict.fromkeys(self.config.scanners)) or list(available)
+        unknown = [n for n in chosen_names if n not in available]
+        if unknown:
+            raise ConfigError(
+                f"unknown scanner(s): {', '.join(unknown)} "
+                f"(available: {', '.join(sorted(available))})"
+            )
+        for name in self.config.exclude_scanners:
+            if name not in available:
+                self._progress(f"Ignoring unknown scanner '{name}' in exclusions.")
+        names = [n for n in chosen_names if n not in self.config.exclude_scanners]
+        if not names:
+            raise ConfigError(
+                "no scanners selected: every requested scanner is excluded"
+            )
         selected: list[Scanner] = []
-        for name in chosen_names:
-            if name in self.config.exclude_scanners:
+        failed: list[str] = []
+        errors: list[str] = []
+        for name in names:
+            instance = available[name]()
+            try:
+                applies = instance.applies_to(project)
+            except Exception as exc:  # a broken check must not sink the scan
+                failed.append(name)
+                errors.append(f"scanner '{name}' failed: {exc}")
                 continue
-            cls = available.get(name)
-            if cls is None:
-                # Only warn for names the user asked for explicitly; the "all"
-                # default is derived from the registry and can't contain unknowns.
-                if explicit:
-                    self._progress(
-                        f"Unknown scanner '{name}' (available: "
-                        f"{', '.join(sorted(available))})."
-                    )
-                continue
-            instance = cls()
-            if instance.applies_to(project):
+            if applies:
                 selected.append(instance)
             else:
                 self._progress(f"Skipping scanner '{name}' (not applicable).")
-        return selected
+        return selected, failed, errors
 
     def _run_agents(self, result: ScanResult, project: Project,
                     ai: AIProvider) -> None:
