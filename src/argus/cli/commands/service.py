@@ -23,8 +23,12 @@ from argus.core.models import ScanResult, Severity
 def mcp() -> None:
     """Run Argus as an MCP server (stdio) so AI coding agents can call it.
 
-    Speaks the Model Context Protocol over stdin/stdout and exposes an
-    ``argus_scan`` tool. Point an MCP-capable client at ``argus mcp``.
+    Speaks the Model Context Protocol over stdin/stdout. Tools:
+    argus_scan (scan a directory or file), argus_check_files (fast check of
+    edited files), argus_check_snippet (check code text), argus_check_package
+    (vet a dependency before adding it) and argus_fix (a verified fix as a
+    diff, never applied). Point an MCP-capable client at ``argus mcp``; see
+    docs/mcp.md.
     """
     from argus.mcp.server import run_stdio
 

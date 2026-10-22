@@ -7,6 +7,19 @@ import json
 from argus.mcp.server import handle_request
 
 
+def test_mcp_help_lists_every_tool():
+    from typer.testing import CliRunner
+
+    from argus.cli.main import app
+    from argus.mcp.server import TOOLS
+
+    res = CliRunner().invoke(app, ["mcp", "--help"], terminal_width=200)
+    assert res.exit_code == 0, res.output
+    text = " ".join(res.output.split())
+    for tool in TOOLS:
+        assert tool["name"] in text, tool["name"]
+
+
 def test_initialize_returns_capabilities_and_server_info():
     resp = handle_request(
         {
