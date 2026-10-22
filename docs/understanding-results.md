@@ -158,7 +158,7 @@ argus scan . --audience auditor  # CWE / OWASP taxonomy for evidence
 ### CI/CD (automatic on every PR)
 
 ```yaml
-- uses: Argus-CodeSecurity/Argus-appsec@v0.9.1
+- uses: Argus-CodeSecurity/Argus-appsec@v0.9.2
   with:
     fail-on: high
     profile: ci

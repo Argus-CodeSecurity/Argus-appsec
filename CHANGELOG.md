@@ -7,11 +7,12 @@ include breaking changes, noted explicitly).
 
 ## [Unreleased]
 
-## [0.9.1] - 2026-10-22
+## [0.9.2] - 2026-10-22
 
-0.9.0 was tagged and its container image published, but the PyPI upload was
-rejected (see below), so 0.9.1 is the first PyPI release with the 0.9.0
-security hardening. It contains every 0.9.0 change plus these fixes.
+0.9.2 is the first PyPI release with the 0.9.0 security hardening. The 0.9.0
+upload was rejected by PyPI tooling (see below), and the v0.9.1 tag was
+created on the 0.9.0 commit by mistake. It contains every 0.9.0 change plus
+these fixes.
 
 ### Fixed
 - Packages declare core metadata 2.4 instead of 2.5, and releases upload with
@@ -23,6 +24,14 @@ security hardening. It contains every 0.9.0 change plus these fixes.
   the command and the pipe.
 - The scan cache now includes a fingerprint of the installed Argus code, so
   changing a rule in a source checkout no longer returns stale cached findings.
+- The container release workflow refuses to publish when the release tag does
+  not match the package version, as the PyPI workflow already did.
+
+## [0.9.1] - 2026-10-22
+
+Tagged on the 0.9.0 commit by mistake. The PyPI release check refused to
+publish it, so it is not on PyPI; its container image contains 0.9.0. Use
+0.9.2.
 
 ## [0.9.0] - 2026-10-22
 
@@ -325,7 +334,8 @@ Simulation Mode; deterministic verified auto-fix with branch + pull-request
 creation (`argus fix`); JSON, SARIF, Markdown, HTML, and CSV reporters; plugin
 entry-point system for scanners, reporters, and providers.
 
-[Unreleased]: https://github.com/Argus-CodeSecurity/Argus-appsec/compare/v0.9.1...HEAD
+[Unreleased]: https://github.com/Argus-CodeSecurity/Argus-appsec/compare/v0.9.2...HEAD
+[0.9.2]: https://github.com/Argus-CodeSecurity/Argus-appsec/compare/v0.9.0...v0.9.2
 [0.9.1]: https://github.com/Argus-CodeSecurity/Argus-appsec/compare/v0.9.0...v0.9.1
 [0.9.0]: https://github.com/Argus-CodeSecurity/Argus-appsec/compare/v0.8.1...v0.9.0
 [0.8.1]: https://github.com/Argus-CodeSecurity/Argus-appsec/compare/v0.8.0...v0.8.1
