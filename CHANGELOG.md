@@ -85,8 +85,18 @@ Upgrading is recommended for every user.
   provenance and SBOM attestations for releases and the container image.
 - Governance: `GOVERNANCE.md`, `MAINTAINERS.md`, `SUPPORT.md`, a complete
   security policy, the full Contributor Covenant, and DCO sign-off.
+- **Versioned plugin API**: `argus.plugin_api` is the public import surface for
+  scanners, reporters and AI providers, versioned by `PLUGIN_API_VERSION` (1).
+  Plugin base classes carry `api_version`; a plugin built for a different
+  version is skipped with a logged warning instead of being loaded. See
+  "Stability and versioning" in `docs/plugins.md`.
 
 ### Changed
+- `ScannerContext` is now a dataclass. Construction and attribute access are
+  unchanged.
+- The CLI is split into one module per command group under
+  `argus.cli.commands`; commands, options, help text and exit codes are
+  unchanged. `argus.cli.main:app` remains the entry point.
 - The default Anthropic model is `claude-sonnet-5-5` (override with
   `ARGUS_AI_MODEL`, `ai.model` or `--ai-model`); model calls default to a 60 s
   timeout and 2 retries; the default `max_tokens` is 4096.

@@ -13,6 +13,8 @@ import os
 from dataclasses import dataclass
 from typing import ClassVar
 
+from argus.core.plugin import PLUGIN_API_VERSION
+
 # Network defaults for model calls. SDK defaults (a 10 minute timeout) would let
 # one stalled request hold a CI job for a very long time.
 DEFAULT_TIMEOUT = 60.0
@@ -46,6 +48,8 @@ class ChatMessage:
 class AIProvider(abc.ABC):
     """Base class for all model backends."""
 
+    #: Plugin API version this class was written against (see ``Scanner``).
+    api_version: ClassVar[int] = PLUGIN_API_VERSION
     #: Unique provider id used in config and the `--ai-provider` flag.
     name: ClassVar[str] = ""
     #: Whether this provider sends data off the local machine. Surfaced to users

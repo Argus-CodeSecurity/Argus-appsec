@@ -174,8 +174,7 @@ Full reference: [docs/configuration.md](docs/configuration.md).
 Everything is a plugin. Here is a whole scanner:
 
 ```python
-from argus.core.plugin import Scanner, ScannerContext, scanner
-from argus.core.models import Finding, Location, Severity
+from argus.plugin_api import Finding, Location, Scanner, ScannerContext, Severity, scanner
 
 @scanner
 class HelloScanner(Scanner):
