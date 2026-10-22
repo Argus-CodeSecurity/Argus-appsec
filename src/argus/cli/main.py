@@ -936,22 +936,9 @@ def watch(
     import os
 
     from argus.core.engine import ScanEngine
-    from argus.targets import resolve
+    from argus.targets import ResolvedTarget, resolve
     from argus.upload import PushError, build_ingest_payload, push_result
     from argus.watch import run_watch_loop, state_dir_for
-
-    try:
-        resolved = resolve(target)
-    except Exception as exc:
-        err_console.print(f"[red]Error:[/red] {exc}")
-        raise typer.Exit(2) from exc
-    if resolved.project is None:
-        err_console.print("[red]Error:[/red] watch requires a source repository or local path.")
-        raise typer.Exit(2)
-
-    cfg = load_project_config(resolved.project, config)
-    if scanners_opt:
-        cfg.scanners = [s.strip() for s in scanners_opt.split(",") if s.strip()]
 
     drift_floor = _cli_severity(fail_on_drift, "--fail-on-drift") if fail_on_drift else None
     store = state_dir_for(target, state_dir)
@@ -963,10 +950,43 @@ def watch(
         )
         raise typer.Exit(2)
 
+    def load_cycle() -> tuple[ResolvedTarget, Config]:
+        """Resolve the target and its config afresh.
+
+        A Project caches its file list and file contents, so reusing one across
+        cycles would scan the first cycle's snapshot forever and never see
+        changes. Each cycle therefore re-resolves (re-cloning a remote) and
+        re-reads the config, then cleans up.
+        """
+        resolved = resolve(target)
+        try:
+            if resolved.project is None:
+                raise ValueError("watch requires a source repository or local path.")
+            cfg = load_project_config(resolved.project, config)
+            if scanners_opt:
+                cfg.scanners = [s.strip() for s in scanners_opt.split(",") if s.strip()]
+        except BaseException:
+            resolved.cleanup()
+            raise
+        return resolved, cfg
+
+    # Resolve once up front so a bad target or config exits 2 immediately; the
+    # first cycle then uses this resolution instead of resolving twice.
+    try:
+        pending = [load_cycle()]
+    except ConfigError:
+        raise
+    except Exception as exc:
+        err_console.print(f"[red]Error:[/red] {exc}")
+        raise typer.Exit(2) from exc
+
     def scan_once() -> ScanResult:
-        proj = resolved.project
-        assert proj is not None
-        return ScanEngine(cfg).scan(proj)
+        resolved, cfg = pending.pop() if pending else load_cycle()
+        try:
+            assert resolved.project is not None
+            return ScanEngine(cfg).scan(resolved.project)
+        finally:
+            resolved.cleanup()
 
     def maybe_push(result: ScanResult) -> None:
         if not push:
@@ -1005,7 +1025,8 @@ def watch(
         err_console.print(f"[red]Push failed:[/red] {exc}")
         raise typer.Exit(2) from exc
     finally:
-        resolved.cleanup()
+        for resolved, _cfg in pending:
+            resolved.cleanup()
 
     if code:
         raise typer.Exit(code)
