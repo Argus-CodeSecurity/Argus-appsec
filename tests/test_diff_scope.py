@@ -104,13 +104,13 @@ def test_pr_review_changed_lines_tolerates_bad_ref(tmp_path):
 
 
 def test_cli_keeps_all_findings_when_diff_fails(tmp_path):
-    from argus.cli.main import _apply_diff
+    from argus.cli._common import apply_diff
 
     root = _repo(tmp_path)
     _commit(root, {"app.py": "a = 1\n"}, "init")
     result = ScanResult(target=str(root), started_at=datetime.now(timezone.utc),
                         findings=[_finding("app.py", 1), _finding("lib.py", 3)])
-    _apply_diff(result, root, "origin/missing...HEAD", quiet=True)
+    apply_diff(result, root, "origin/missing...HEAD", quiet=True)
     assert len(result.findings) == 2
 
 

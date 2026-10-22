@@ -22,30 +22,39 @@ Commands:
 
 from __future__ import annotations
 
-import contextlib
 import sys
 from pathlib import Path
 from typing import Any
 
 import typer
-from rich.console import Console
 from rich.markup import escape
-from rich.panel import Panel
 from rich.table import Table
 from typer.core import TyperGroup
 
 from argus import __version__
+from argus.cli._common import (
+    CONFIG_FROM_REF_HELP,
+    apply_baseline,
+    apply_diff,
+    build_config,
+    cli_severity,
+    fail_on_scanner_errors,
+    posture_result,
+)
+from argus.cli._console import console, err_console
+from argus.cli.output import (
+    emit,
+    print_fix_outcome,
+    print_posture,
+    print_scanner_failure,
+    write_stdout,
+)
+from argus.cli.plugins import load_plugin_commands
 from argus.core.config import Config, ConfigError, load_project_config
 from argus.core.models import ScanResult, Severity
 from argus.core.plugin import registry
 from argus.plugins import register_builtins
 from argus.reporting.posture import evaluate_posture
-
-# On Windows the legacy console defaults to a codepage that can't encode the
-# Unicode Argus uses in reports/tables. Force UTF-8 on the streams when possible.
-for _stream in (sys.stdout, sys.stderr):
-    with contextlib.suppress(AttributeError, ValueError):
-        _stream.reconfigure(encoding="utf-8")  # type: ignore[union-attr]
 
 # Register built-in plugins up front so `scanners`/`reporters`/`providers` work
 # even without the entry-point discovery path (e.g. running from source).
@@ -75,17 +84,6 @@ app = typer.Typer(
     add_completion=False,
     no_args_is_help=True,
     cls=_ArgusGroup,
-)
-console = Console()
-err_console = Console(stderr=True)
-
-_CONFIG_FROM_REF_HELP = (
-    "Read .argus.yml (or the --config path, which must be inside the repository) "
-    "from this git ref instead of the working tree, and treat the checked-out "
-    "tree as untrusted: its .argus/rules, .argus/exceptions.yml and inline "
-    "argus-ignore comments are not honored. Use it in CI on pull requests with "
-    "the base branch (e.g. origin/main) so a PR cannot change the settings it is "
-    "checked against. The ref must exist locally; an unknown ref is an error."
 )
 
 
@@ -207,7 +205,7 @@ def scan(
              "repo is untrusted and could suppress its own findings).",
     ),
     config_from_ref: str | None = typer.Option(
-        None, "--config-from-ref", metavar="REF", help=_CONFIG_FROM_REF_HELP,
+        None, "--config-from-ref", metavar="REF", help=CONFIG_FROM_REF_HELP,
     ),
     live_target: str | None = typer.Option(
         None, "--live-target",
@@ -237,7 +235,7 @@ def scan(
     # Reject a misspelled threshold before doing any work (e.g. cloning).
     for value, flag in ((min_severity, "--min-severity"), (fail_on, "--fail-on")):
         if value:
-            _cli_severity(value, flag)
+            cli_severity(value, flag)
 
     # Resolve the target first so config discovery can use the project root.
     try:
@@ -253,13 +251,13 @@ def scan(
                 "[dim]· Running read-only posture checks (not full DAST). "
                 "Only assess systems you are authorized to test.[/dim]"
             )
-        result = _posture_result(resolved.web.url, quiet=quiet)
+        result = posture_result(resolved.web.url, quiet=quiet)
         if min_severity:
-            floor = _cli_severity(min_severity, "--min-severity")
+            floor = cli_severity(min_severity, "--min-severity")
             result.findings = [f for f in result.findings if f.severity >= floor]
-        _emit(result, fmt, output)
+        emit(result, fmt, output)
         gated = fail_on is not None and result.highest_severity() >= \
-            _cli_severity(fail_on, "--fail-on")
+            cli_severity(fail_on, "--fail-on")
         raise typer.Exit(1 if gated else 0)
 
     project = resolved.project
@@ -291,7 +289,7 @@ def scan(
         if profile_name and scanners:
             err_console.print("[red]Error:[/red] use either --profile/--deep or --scanners, not both.")
             raise typer.Exit(2)
-        cfg = _build_config(
+        cfg = build_config(
             config=config,
             project=project,
             trust_remote=trust_remote_config,
@@ -328,24 +326,24 @@ def scan(
             result.findings = result.sorted_findings()
 
         if baseline is not None:
-            _apply_baseline(result, baseline, quiet=quiet)
+            apply_baseline(result, baseline, quiet=quiet)
 
         if diff_ref is not None:
-            _apply_diff(result, project.root, diff_ref, quiet=quiet)
+            apply_diff(result, project.root, diff_ref, quiet=quiet)
 
         if track_secrets is not None:
             from argus.scanners.secret_rotation import track_rotations
             track_rotations(result.findings, track_secrets)
 
-        _emit(result, fmt, output, audience=audience)
+        emit(result, fmt, output, audience=audience)
 
         if not quiet and ("table" in fmt or audience):
-            _print_posture(result, cfg.fail_on)
+            print_posture(result, cfg.fail_on)
 
         if engine.should_fail(result):
             if engine.fails_on_errors(result):
                 # The table output already listed each failure.
-                _print_scanner_failure(result, details="table" not in fmt)
+                print_scanner_failure(result, details="table" not in fmt)
             else:
                 err_console.print(
                     f"[red]Failing:[/red] findings at/above "
@@ -424,7 +422,7 @@ def sbom(
             if output:
                 output.write_text(text, encoding="utf-8")
             else:
-                _write_stdout(text)
+                write_stdout(text)
             s = doc["summary"]
             # The summary goes to stderr when the JSON is on stdout, so the
             # stream stays parseable.
@@ -469,7 +467,7 @@ def sbom(
             output.write_text(text, encoding="utf-8")
             console.print(f"[green]SBOM written:[/green] {output} ({count} components)")
         else:
-            _write_stdout(text)
+            write_stdout(text)
     finally:
         resolved.cleanup()
 
@@ -602,7 +600,7 @@ def supply_chain_cmd(
     from argus.remediation import git_ops
     from argus.targets import resolve
 
-    threshold = _cli_severity(fail_on, "--fail-on") if fail_on else None
+    threshold = cli_severity(fail_on, "--fail-on") if fail_on else None
     try:
         resolved = resolve(target)
     except Exception as exc:
@@ -684,7 +682,7 @@ def supply_chain_cmd(
             if len(result.findings) > 50:
                 err_console.print(f"[dim]… and {len(result.findings) - 50} more[/dim]")
 
-        _fail_on_scanner_errors(result, cfg, gating=threshold is not None)
+        fail_on_scanner_errors(result, cfg, gating=threshold is not None)
         if threshold is not None and result.highest_severity() >= threshold:
             raise typer.Exit(1)
     finally:
@@ -822,7 +820,7 @@ def inventory(
             output.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
             console.print(f"[green]Inventory:[/green] {output}")
         else:
-            _write_stdout(json.dumps(payload, indent=2) + "\n")
+            write_stdout(json.dumps(payload, indent=2) + "\n")
         if not quiet:
             c = payload["counts"]
             err_console.print(
@@ -908,7 +906,7 @@ def drift(
         if len(report.added) > 15:
             err_console.print(f"  [dim]… and {len(report.added) - 15} more added[/dim]")
 
-    if fail_on and highest_added_severity(report) >= _cli_severity(fail_on, "--fail-on"):
+    if fail_on and highest_added_severity(report) >= cli_severity(fail_on, "--fail-on"):
         raise typer.Exit(1)
 
 
@@ -940,7 +938,7 @@ def watch(
     from argus.upload import PushError, build_ingest_payload, push_result
     from argus.watch import run_watch_loop, state_dir_for
 
-    drift_floor = _cli_severity(fail_on_drift, "--fail-on-drift") if fail_on_drift else None
+    drift_floor = cli_severity(fail_on_drift, "--fail-on-drift") if fail_on_drift else None
     store = state_dir_for(target, state_dir)
     cloud_url = url or os.environ.get("ARGUS_CLOUD_URL")
     cloud_token = token or os.environ.get("ARGUS_CLOUD_TOKEN")
@@ -1105,7 +1103,7 @@ def baseline_create(
     output: Path = typer.Option(..., "--output", "-o", help="Write baseline JSON here."),
     config: Path | None = typer.Option(None, "--config", "-c"),
     config_from_ref: str | None = typer.Option(
-        None, "--config-from-ref", metavar="REF", help=_CONFIG_FROM_REF_HELP,
+        None, "--config-from-ref", metavar="REF", help=CONFIG_FROM_REF_HELP,
     ),
     quiet: bool = typer.Option(False, "--quiet", "-q"),
 ) -> None:
@@ -1153,8 +1151,8 @@ def server_scan(
             "Only run on systems you are authorized to assess.[/dim]"
         )
     result = assess_host(label=label)
-    _emit(result, fmt, output)
-    if fail_on and result.highest_severity() >= _cli_severity(fail_on, "--fail-on"):
+    emit(result, fmt, output)
+    if fail_on and result.highest_severity() >= cli_severity(fail_on, "--fail-on"):
         raise typer.Exit(1)
 
 
@@ -1169,7 +1167,7 @@ def policy_check(
         None, "--config", "-c", help="Path to an .argus.yml with policies:."
     ),
     config_from_ref: str | None = typer.Option(
-        None, "--config-from-ref", metavar="REF", help=_CONFIG_FROM_REF_HELP,
+        None, "--config-from-ref", metavar="REF", help=CONFIG_FROM_REF_HELP,
     ),
     report: Path | None = typer.Option(
         None, "--report", "-r",
@@ -1239,7 +1237,7 @@ def policy_check(
 
     # A policy check is always a gate, so a crashed scanner fails it unless
     # fail_on_error is explicitly false in the config.
-    _fail_on_scanner_errors(result, cfg, gating=True)
+    fail_on_scanner_errors(result, cfg, gating=True)
     if outcome.passed:
         console.print("[green]Policy check passed[/green] "
                       f"({len(outcome.violations)} warning(s)).")
@@ -1325,7 +1323,7 @@ def fix(
         if scanners_opt:
             cfg.scanners = [s.strip() for s in scanners_opt.split(",") if s.strip()]
         if min_severity:
-            cfg.min_severity = _cli_severity(min_severity, "--min-severity")
+            cfg.min_severity = cli_severity(min_severity, "--min-severity")
 
         progress = None if quiet else (lambda msg: err_console.print(f"[dim]· {escape(msg)}[/dim]"))
         result = ScanEngine(cfg, progress=progress).scan(project)
@@ -1347,7 +1345,7 @@ def fix(
             no_verify=no_verify,
         )
         outcome = run_fix_workflow(project, result.findings, options)
-        _print_fix_outcome(outcome, open_pr=open_pr or annotate_pr, dry_run=dry_run)
+        print_fix_outcome(outcome, open_pr=open_pr or annotate_pr, dry_run=dry_run)
 
         if outcome.error:
             raise typer.Exit(1)
@@ -1435,7 +1433,7 @@ def push(
         )
         raise typer.Exit(2)
 
-    floor = _cli_severity(min_severity, "--min-severity") if min_severity else Severity.LOW
+    floor = cli_severity(min_severity, "--min-severity") if min_severity else Severity.LOW
 
     if report is not None:
         raw = sys.stdin.read() if str(report) == "-" else report.read_text(encoding="utf-8")
@@ -1455,7 +1453,7 @@ def push(
             raise typer.Exit(2) from exc
         try:
             if resolved.web is not None:
-                result = _posture_result(resolved.web.url, quiet=quiet)
+                result = posture_result(resolved.web.url, quiet=quiet)
             else:
                 project = resolved.project
                 assert project is not None
@@ -1512,7 +1510,7 @@ def review(
         None, "--config", "-c", help="Path to an .argus.yml config file."
     ),
     config_from_ref: str | None = typer.Option(
-        None, "--config-from-ref", metavar="REF", help=_CONFIG_FROM_REF_HELP,
+        None, "--config-from-ref", metavar="REF", help=CONFIG_FROM_REF_HELP,
     ),
     min_severity: str | None = typer.Option(
         None, "--min-severity", help="Only review findings at/above this severity."
@@ -1544,7 +1542,7 @@ def review(
     from argus.remediation.hosting import HostingError, RepoRef, parse_remote
     from argus.targets import resolve
 
-    threshold = _cli_severity(fail_on, "--fail-on") if fail_on else None
+    threshold = cli_severity(fail_on, "--fail-on") if fail_on else None
 
     # --- resolve repo, PR number, and base ref (flags, then CI env) ---
     ref: RepoRef | None = None
@@ -1597,13 +1595,13 @@ def review(
         if exclude:
             cfg.exclude_scanners = [s.strip() for s in exclude.split(",") if s.strip()]
         if min_severity:
-            cfg.min_severity = _cli_severity(min_severity, "--min-severity")
+            cfg.min_severity = cli_severity(min_severity, "--min-severity")
 
         progress = None if quiet else (lambda m: err_console.print(f"[dim]· {escape(m)}[/dim]"))
         result = ScanEngine(cfg, progress=progress).scan(project)
 
         if baseline is not None:
-            _apply_baseline(result, baseline, quiet=quiet)
+            apply_baseline(result, baseline, quiet=quiet)
 
         changed = pr_review.changed_lines(project.root, base_ref)
         try:
@@ -1623,7 +1621,7 @@ def review(
 
         if fail_on_error is not None:
             cfg.fail_on_error = fail_on_error
-        _fail_on_scanner_errors(result, cfg, gating=threshold is not None)
+        fail_on_scanner_errors(result, cfg, gating=threshold is not None)
         if threshold is not None and result.highest_severity() >= threshold \
                 and result.findings:
             err_console.print(f"[red]Failing:[/red] findings at/above {threshold.label}.")
@@ -1664,7 +1662,7 @@ def learn(
         if scanners_opt:
             cfg.scanners = [s.strip() for s in scanners_opt.split(",") if s.strip()]
         if min_severity:
-            cfg.min_severity = _cli_severity(min_severity, "--min-severity")
+            cfg.min_severity = cli_severity(min_severity, "--min-severity")
         progress = None if quiet else (lambda m: err_console.print(f"[dim]· {escape(m)}[/dim]"))
         result = ScanEngine(cfg, progress=progress).scan(project)
         console.print(render_lessons(result))
@@ -1740,20 +1738,7 @@ def version() -> None:
     """Print the Argus version."""
     console.print(f"Argus v{__version__}")
 
-
-# --- helpers ---------------------------------------------------------------
-def _cli_severity(value: str, option: str) -> Severity:
-    """Parse a severity flag, turning a typo into a usage error (exit 2).
-
-    Exit 1 means "the gate found something"; a misspelled ``--fail-on`` must
-    not be confused with that, nor crash with a traceback.
-    """
-    try:
-        return Severity.parse(value)
-    except ValueError as exc:
-        raise typer.BadParameter(str(exc), param_hint=option) from exc
-
-
+# --- command-local helpers ------------------------------------------
 def _required_policies(cfg: Config) -> list[dict]:
     """Validated policies for `policy check`; exit 2 if there are none.
 
@@ -1772,106 +1757,6 @@ def _required_policies(cfg: Config) -> list[dict]:
         raise typer.Exit(2)
     return policies
 
-
-def _write_stdout(text: str) -> None:
-    """Write machine-readable output (JSON) to stdout verbatim.
-
-    Rich's console.print soft-wraps long lines to the terminal width and
-    treats ``[...]`` as markup, which corrupts JSON. Use this for anything a
-    caller may pipe into a parser.
-    """
-    sys.stdout.write(text)
-    if not text.endswith("\n"):
-        sys.stdout.write("\n")
-    sys.stdout.flush()
-
-
-def _print_scanner_failure(result: ScanResult, *, details: bool = True) -> None:
-    if details:
-        for err in result.errors:
-            err_console.print(f"[yellow]Scanner failed:[/yellow] {escape(err)}")
-    err_console.print(
-        "[red]Failing:[/red] one or more scanners failed "
-        f"({escape(', '.join(result.scanners_failed or ['unknown']))}); "
-        "pass --no-fail-on-error or set fail_on_error: false to ignore."
-    )
-
-
-def _fail_on_scanner_errors(result: ScanResult, cfg: Config, *, gating: bool) -> None:
-    """Exit 1 when scanners crashed in a run that gates (fail closed).
-
-    A crashed scanner contributes no findings, so treating its silence as a
-    pass would let a parser crash (possibly provoked by the scanned repo)
-    open the gate.
-    """
-    if result.errors and cfg.errors_fail_gate(gating):
-        _print_scanner_failure(result)
-        raise typer.Exit(1)
-
-
-def _posture_result(url: str, *, quiet: bool) -> ScanResult:
-    """Build a ScanResult from live posture checks against a URL."""
-    from datetime import datetime, timezone
-
-    from argus.dynamic import probe
-
-    started = datetime.now(timezone.utc)
-    result = ScanResult(target=url, started_at=started, argus_version=__version__,
-                        scanners_run=["posture"])
-    for finding in probe(url):
-        result.add(finding)
-    result.findings = result.sorted_findings()
-    result.finished_at = datetime.now(timezone.utc)
-    result.project_summary = {"name": url, "origin": "url", "target": url}
-    return result
-
-
-def _apply_baseline(result: ScanResult, baseline: Path, *, quiet: bool) -> None:
-    """Drop findings already present in a baseline report (diff-aware scanning)."""
-    from argus.baseline import BaselineError, filter_new, load_fingerprints
-
-    try:
-        known = load_fingerprints(baseline)
-    except BaselineError as exc:
-        err_console.print(f"[yellow]Baseline ignored:[/yellow] {exc}")
-        return
-    result.findings, suppressed = filter_new(result.findings, known)
-    if not quiet:
-        err_console.print(
-            f"[dim]· Baseline: {suppressed} known finding(s) suppressed, "
-            f"{len(result.findings)} new.[/dim]"
-        )
-
-
-def _apply_diff(result: ScanResult, root: Path, ref_spec: str, *, quiet: bool) -> None:
-    """Keep only findings that touch the git diff described by ``ref_spec``."""
-    from argus.analysis.diff_scan import filter_findings, resolve_diff
-    from argus.remediation import git_ops
-
-    if not git_ops.is_git_repo(root):
-        err_console.print(
-            "[yellow]Diff ignored:[/yellow] not a git repository "
-            f"({root})."
-        )
-        return
-    try:
-        scope = resolve_diff(root, ref_spec)
-    except Exception as exc:
-        err_console.print(f"[yellow]Diff ignored:[/yellow] {exc}")
-        return
-    if scope.empty:
-        if not quiet:
-            err_console.print("[dim]· Diff: no changed files in range.[/dim]")
-        result.findings = []
-        return
-    result.findings, suppressed = filter_findings(result.findings, scope)
-    if not quiet:
-        err_console.print(
-            f"[dim]· Diff ({ref_spec}): {suppressed} finding(s) outside changed "
-            f"lines/files suppressed, {len(result.findings)} in scope.[/dim]"
-        )
-
-
 def _focused_scan(
     target: str,
     scanners: list[str],
@@ -1888,7 +1773,7 @@ def _focused_scan(
     from argus.core.engine import ScanEngine
     from argus.targets import resolve
 
-    threshold = _cli_severity(fail_on, "--fail-on") if fail_on else None
+    threshold = cli_severity(fail_on, "--fail-on") if fail_on else None
     try:
         resolved = resolve(target)
     except Exception as exc:
@@ -1942,219 +1827,11 @@ def _focused_scan(
             elif not result.findings and not result.errors:
                 console.print("[green]No findings.[/green]")
 
-        _fail_on_scanner_errors(result, cfg, gating=threshold is not None)
+        fail_on_scanner_errors(result, cfg, gating=threshold is not None)
         if threshold is not None and result.highest_severity() >= threshold:
             raise typer.Exit(1)
     finally:
         resolved.cleanup()
-
-
-def _build_config(*, config, project, trust_remote=False, config_from_ref=None, scanners,
-                  profile=None, exclude, ai_provider, ai_model, no_ai, attack_sim, patches,
-                  min_severity, fail_on, fail_on_error: bool | None = None,
-                  reachability=False, symbol_reachability=False, no_cache=False,
-                  verify_secrets=False, secrets_history=False, diff_ref: str | None = None) -> Config:
-    cfg = load_project_config(project, config, trust_remote=trust_remote,
-                              config_from_ref=config_from_ref)
-    if profile:
-        from argus.profiles import PROFILES, apply_profile
-        key = profile.strip().lower()
-        selected = apply_profile(profile)
-        if selected:
-            cfg.scanners = selected
-        prof = PROFILES.get(key)
-        if prof and prof.fail_on_error:
-            cfg.fail_on_error = True
-        if prof and not prof.cache:
-            cfg.cache = False
-    if reachability or symbol_reachability:
-        dep = cfg.scanner_options.setdefault("dependencies", {})
-        dep["reachability"] = True
-        if symbol_reachability:
-            dep["symbol_reachability"] = True
-    if diff_ref:
-        cfg.scanner_options.setdefault("dependency-diff", {})["ref"] = diff_ref
-        if cfg.scanners and "dependency-diff" not in cfg.scanners:
-            cfg.scanners = [*cfg.scanners, "dependency-diff"]
-    if no_cache:
-        cfg.cache = False
-    if verify_secrets:
-        cfg.scanner_options.setdefault("secrets", {})["verify"] = True
-    if secrets_history:
-        cfg.scanner_options.setdefault("secrets", {})["history"] = True
-    if scanners:
-        cfg.scanners = [s.strip() for s in scanners.split(",") if s.strip()]
-    if exclude:
-        cfg.exclude_scanners = [s.strip() for s in exclude.split(",") if s.strip()]
-    if ai_provider:
-        cfg.ai.provider = ai_provider
-    if ai_model:
-        cfg.ai.model = ai_model
-    if no_ai:
-        cfg.ai.enabled = False
-    if attack_sim:
-        cfg.attack_simulation = True
-    if patches:
-        cfg.generate_patches = True
-    if min_severity:
-        cfg.min_severity = _cli_severity(min_severity, "--min-severity")
-    if fail_on:
-        cfg.fail_on = _cli_severity(fail_on, "--fail-on")
-    if fail_on_error is not None:
-        cfg.fail_on_error = fail_on_error
-    return cfg
-
-
-def _print_fix_outcome(outcome, *, open_pr: bool, dry_run: bool) -> None:
-    report = outcome.applied
-    if report.fixes:
-        table = Table(title="Fixes" + (" (dry run)" if dry_run else ""))
-        table.add_column("File", style="bold")
-        table.add_column("Line", justify="right")
-        table.add_column("Rule", style="dim")
-        table.add_column("Verified", justify="center")
-        for f in report.fixes:
-            table.add_row(escape(f.path), str(f.line), escape(f.rule_id),
-                          "[green]yes[/green]" if f.verified else "[yellow]no[/yellow]")
-        console.print(table)
-    else:
-        console.print("[yellow]No deterministic fixes were applicable to these "
-                      "findings.[/yellow]")
-
-    for msg in outcome.messages:
-        console.print(f"[dim]· {escape(msg)}[/dim]")
-
-    if outcome.pull_request:
-        console.print(Panel(f"[green]Pull request opened:[/green]\n"
-                            f"{outcome.pull_request.url}", border_style="green"))
-    elif outcome.committed and not open_pr:
-        console.print("[green]Fixes committed to the branch.[/green] "
-                      "Add --open-pr to push and open a pull request.")
-
-    if outcome.error:
-        err_console.print(f"[red]Stopped:[/red] {outcome.error}")
-
-
-def _emit(result: ScanResult, formats: list[str], output: Path | None,
-          audience: str | None = None) -> None:
-    from argus.security import SECURITY_DISCLAIMER
-    result.project_summary.setdefault("disclaimer", SECURITY_DISCLAIMER)
-    # Count file-bound formats (everything except the console table) so we know
-    # whether a single -o file path is enough or we must disambiguate by extension.
-    file_formats = [f for f in formats if f != "table"]
-    if output is None and len(file_formats) > 1:
-        err_console.print(
-            "[red]Error:[/red] multiple machine-readable -f formats require -o "
-            "(a directory or path); writing them all to stdout would concatenate "
-            "and corrupt the streams."
-        )
-        raise typer.Exit(2)
-    treat_as_dir = output is not None and (
-        output.is_dir() or (output.suffix == "" and not output.exists())
-    )
-
-    for fmt in formats:
-        if fmt == "table":
-            if audience:
-                from argus.reporting.audience import render_for_audience
-                console.print(render_for_audience(result, audience))
-            else:
-                _print_table(result)
-            continue
-        cls = registry.reporters().get(fmt)
-        if cls is None:
-            available = ", ".join(["table", *sorted(registry.reporters())])
-            err_console.print(
-                f"[red]Error:[/red] unknown format {fmt!r}. "
-                f"Available: {available}."
-            )
-            raise typer.Exit(2)
-        rendered = cls().render(result)
-        extension = cls().extension
-        if output is None:
-            # Write raw to stdout, never through Rich, which would soft-wrap and
-            # corrupt machine-readable formats (JSON/SARIF/CSV) when piped.
-            sys.stdout.write(rendered)
-            if not rendered.endswith("\n"):
-                sys.stdout.write("\n")
-        elif treat_as_dir:
-            output.mkdir(parents=True, exist_ok=True)
-            dest = output / f"argus-report.{extension}"
-            dest.write_text(rendered, encoding="utf-8")
-            console.print(f"[green]Wrote {dest}[/green]")
-        elif len(file_formats) > 1:
-            # A single file path was given for several formats: keep the stem and
-            # give each format its own extension (report.html, report.sarif, ...).
-            dest = output.with_suffix(f".{extension}")
-            dest.write_text(rendered, encoding="utf-8")
-            console.print(f"[green]Wrote {dest}[/green]")
-        else:
-            output.write_text(rendered, encoding="utf-8")
-            console.print(f"[green]Wrote {output}[/green]")
-
-
-def _print_table(result: ScanResult) -> None:
-    if result.errors:
-        for err in result.errors:
-            err_console.print(f"[yellow]Scanner failed:[/yellow] {escape(err)}")
-
-    findings = result.sorted_findings()
-    counts = result.counts_by_severity()
-
-    summary = " · ".join(f"{label}: {n}" for label, n in counts.items())
-    console.print(Panel(
-        f"[bold]{result.project_summary.get('name', result.target)}[/bold]\n"
-        f"Aggregate risk: [bold]{result.aggregate_risk()}/100[/bold]   "
-        f"Findings: [bold]{len(findings)}[/bold]\n{summary}",
-        title="Argus scan", border_style="cyan",
-    ))
-
-    if not findings:
-        if result.errors:
-            console.print("[yellow]No findings, but one or more scanners failed.[/yellow]")
-        else:
-            console.print("[green]No findings at or above the configured severity.[/green]")
-        return
-
-    table = Table(show_lines=False)
-    table.add_column("Sev", style="bold")
-    table.add_column("Risk", justify="right")
-    table.add_column("Title")
-    table.add_column("Location", style="dim")
-    table.add_column("Rule", style="dim")
-
-    colors = {
-        Severity.CRITICAL: "red", Severity.HIGH: "orange3",
-        Severity.MEDIUM: "yellow", Severity.LOW: "blue", Severity.INFO: "white",
-    }
-    for f in findings:
-        c = colors.get(f.severity, "white")
-        table.add_row(
-            f"[{c}]{f.severity.label}[/{c}]",
-            str(f.risk_score()),
-            escape(f.title),
-            escape(f.location.as_ref()),
-            escape(f.rule_id),
-        )
-    console.print(table)
-
-
-def _print_posture(result: ScanResult, fail_on: Severity | None) -> None:
-    from argus.reporting.posture import render_posture_panel
-
-    summary = evaluate_posture(result, fail_on)
-    border = {
-        "pass": "green",
-        "clean": "green",
-        "review": "yellow",
-        "fail": "red",
-    }[summary.status.value]
-    console.print(Panel(
-        render_posture_panel(summary),
-        title="Security posture",
-        border_style=border,
-    ))
-
 
 _STARTER_CONFIG = """\
 # Argus configuration. See docs/configuration.md for all options.
@@ -2206,40 +1883,7 @@ scanner_options:
 """
 
 
-def _load_plugin_commands() -> None:
-    """Let installed add-on packages contribute CLI commands.
-
-    Each entry point in the ``argus.commands`` group is a callable that receives
-    the Typer ``app`` and registers one or more commands on it. This is how
-    optional/commercial add-ons (for example the Kubernetes assessment package)
-    add a subcommand without the core shipping or depending on their code. A
-    failing plugin is skipped with a warning; it never breaks the core CLI.
-
-    Command plugins go through the same allowlist/blocklist/pins as scanner
-    plugins (ARGUS_PLUGIN_ALLOWLIST and friends, see argus.plugins.signing).
-    """
-    import warnings
-    from importlib import metadata
-
-    from argus.plugins.signing import verify_plugin_entry
-
-    try:
-        eps = metadata.entry_points(group="argus.commands")
-    except Exception:  # pragma: no cover - environment dependent
-        return
-    for ep in eps:
-        if not verify_plugin_entry(ep):
-            warnings.warn(f"Blocked Argus command plugin {ep.name!r} "
-                          "(not allowed by ARGUS_PLUGIN_* settings)", stacklevel=2)
-            continue
-        try:
-            ep.load()(app)
-        except Exception as exc:  # pragma: no cover - defensive
-            warnings.warn(f"Failed to load Argus command plugin {ep.name!r}: {exc}",
-                          stacklevel=2)
-
-
-_load_plugin_commands()
+load_plugin_commands(app)
 
 
 if __name__ == "__main__":  # pragma: no cover

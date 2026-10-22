@@ -6,7 +6,8 @@ from importlib import metadata
 
 import pytest
 
-import argus.cli.main as cli_main
+from argus.cli.main import app
+from argus.cli.plugins import load_plugin_commands
 from argus.plugins.signing import (
     BUILTIN_ENTRY_POINT,
     plugin_fingerprint,
@@ -52,9 +53,9 @@ def test_command_entry_points_respect_allowlist(monkeypatch) -> None:
 
     monkeypatch.setenv("ARGUS_PLUGIN_ALLOWLIST", "someone-else")
     with pytest.warns(UserWarning, match="Blocked"):
-        cli_main._load_plugin_commands()
+        load_plugin_commands(app)
     assert CALLS == []
 
     monkeypatch.setenv("ARGUS_PLUGIN_ALLOWLIST", "cmd")
-    cli_main._load_plugin_commands()
+    load_plugin_commands(app)
     assert CALLS == ["loaded"]
