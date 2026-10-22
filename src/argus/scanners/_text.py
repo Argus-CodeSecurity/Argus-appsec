@@ -25,9 +25,13 @@ MAX_SCAN_LINE = 2000
 WINDOW_OVERLAP = 256
 
 #: Remote content piped straight into a shell (``curl ... | sh``). One
-#: definition shared by the malware, cicd, iac and lang-sast scanners. Linear:
-#: ``[^\n|]*`` stops at the first pipe and cannot overlap with ``\|``.
-CURL_PIPE_SHELL = r"\b(?:curl|wget|fetch)\s[^\n|]*\|\s*(?:sudo\s+(?:-\S+\s+)*)?(?:ba|z)?sh\b"
+#: definition shared by the malware, cicd, iac and lang-sast scanners.
+#: At least one argument (a URL, a variable, flags) must sit between the
+#: download command and the pipe: a real fetch always has one, while prose
+#: that merely names the pattern ("avoid curl | bash") does not.
+#: Linear: ``\s+`` and ``[^\s|]`` cannot match the same character, and
+#: ``[^\n|]*`` stops at the first pipe.
+CURL_PIPE_SHELL = r"\b(?:curl|wget|fetch)\s+[^\s|][^\n|]*\|\s*(?:sudo\s+(?:-\S+\s+)*)?(?:ba|z)?sh\b"
 CURL_PIPE_SHELL_RE = re.compile(CURL_PIPE_SHELL, re.IGNORECASE)
 
 
