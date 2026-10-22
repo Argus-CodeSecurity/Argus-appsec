@@ -28,9 +28,10 @@ from __future__ import annotations
 import json
 import logging
 import re
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from functools import lru_cache
 from importlib import resources
+from typing import Any
 
 from argus.core.models import (
     Confidence,
@@ -116,13 +117,24 @@ def _parse_requirements(text: str) -> list[tuple[str, str]]:
     return _unique_pairs(pairs)
 
 
-def _loads(text: str) -> dict | None:
+def _loads(text: str) -> Any:
     """Parse JSON tolerantly: strips a UTF-8 BOM (common in Windows-authored files)
-    and returns None instead of raising on malformed input."""
+    and returns None instead of raising on malformed input.
+
+    Manifests come from the scanned repository, so the result can be any JSON
+    type: callers must type-check every value they use. RecursionError is caught
+    too, since deeply nested input makes the decoder raise it.
+    """
     try:
         return json.loads(text.lstrip("\ufeff"))
-    except (json.JSONDecodeError, ValueError):
+    except (ValueError, RecursionError):  # JSONDecodeError is a ValueError
         return None
+
+
+def _dict_section(data: dict, key: str) -> dict:
+    """``data[key]`` if it is a JSON object, else an empty dict."""
+    value = data.get(key)
+    return value if isinstance(value, dict) else {}
 
 
 def _parse_package_json(text: str) -> list[tuple[str, str]]:
@@ -131,7 +143,9 @@ def _parse_package_json(text: str) -> list[tuple[str, str]]:
     if not isinstance(data, dict):
         return pairs
     for key in ("dependencies", "devDependencies", "optionalDependencies"):
-        for name, ver in (data.get(key) or {}).items():
+        for name, ver in _dict_section(data, key).items():
+            if not isinstance(ver, str):
+                continue  # e.g. {"a": 1}: not a version spec
             cleaned = ver.lstrip("^~>=< ").strip()
             if re.match(r"^\d", cleaned):
                 pairs.append((name.lower(), cleaned))
@@ -155,19 +169,20 @@ def _parse_package_lock(text: str) -> list[tuple[str, str]]:
             if name and re.match(r"^\d", ver):
                 pairs.append((name.lower(), ver))  # keep every pinned version
 
-    def _walk(tree: object) -> None:  # lockfileVersion 1
-        if not isinstance(tree, dict):
-            return
-        for name, meta in tree.items():
-            if not isinstance(meta, dict):
+    if not packages:  # lockfileVersion 1: nested "dependencies" trees
+        # Explicit stack, not recursion: nesting depth is attacker-controlled.
+        stack = [data.get("dependencies")]
+        while stack:
+            tree = stack.pop()
+            if not isinstance(tree, dict):
                 continue
-            ver = str(meta.get("version", ""))
-            if re.match(r"^\d", ver):
-                pairs.append((name.lower(), ver))
-            _walk(meta.get("dependencies"))
-
-    if not packages:
-        _walk(data.get("dependencies"))
+            for name, meta in tree.items():
+                if not isinstance(meta, dict):
+                    continue
+                ver = str(meta.get("version", ""))
+                if re.match(r"^\d", ver):
+                    pairs.append((name.lower(), ver))
+                stack.append(meta.get("dependencies"))
     return _unique_pairs(pairs)
 
 
@@ -260,12 +275,15 @@ def _parse_composer_lock(text: str) -> list[tuple[str, str]]:
     if not isinstance(data, dict):
         return pairs
     for section in ("packages", "packages-dev"):
-        for entry in data.get(section) or []:
+        entries = data.get(section)
+        if not isinstance(entries, list):
+            continue
+        for entry in entries:
             if not isinstance(entry, dict):
                 continue
             name = entry.get("name", "")
             ver = str(entry.get("version", "")).lstrip("v").strip()
-            if name and re.match(r"^\d", ver):
+            if isinstance(name, str) and name and re.match(r"^\d", ver):
                 pairs.append((name, ver))
     return _unique_pairs(pairs)
 
@@ -277,7 +295,7 @@ def _parse_pipfile_lock(text: str) -> list[tuple[str, str]]:
     if not isinstance(data, dict):
         return pairs
     for section in ("default", "develop"):
-        for name, meta in (data.get(section) or {}).items():
+        for name, meta in _dict_section(data, section).items():
             if not isinstance(meta, dict):
                 continue
             ver = str(meta.get("version", "")).lstrip("=<>~ ").strip()
@@ -304,6 +322,21 @@ _PARSERS = {
 }
 
 
+def safe_parse(parser: Callable[[str], list[tuple[str, str]]], text: str,
+               where: str) -> list[tuple[str, str]]:
+    """Run a manifest parser, treating any failure as "no packages in this file".
+
+    The parsers type-check what they read, so this is a backstop: one malformed
+    manifest in a hostile repository must not take down every consumer of the
+    inventory (dependency, supply-chain and SBOM scanners alike).
+    """
+    try:
+        return parser(text)
+    except (ValueError, TypeError, AttributeError, KeyError, RecursionError) as exc:
+        log.warning("could not parse %s (%s); skipping it", where, type(exc).__name__)
+        return []
+
+
 def collect_packages(project) -> list[tuple[str, str, str, str]]:
     """Return ``(ecosystem, manifest_path, package, version)`` for every dependency.
 
@@ -313,7 +346,7 @@ def collect_packages(project) -> list[tuple[str, str, str, str]]:
     per_eco: dict[str, dict[tuple[str, str], tuple[str, str, str]]] = {}
     for manifest_name, (ecosystem, parser) in _PARSERS.items():
         for f in project.files_matching(manifest_name):
-            for pkg, version in parser(f.text()):
+            for pkg, version in safe_parse(parser, f.text(), f.rel_path):
                 bucket = per_eco.setdefault(ecosystem, {})
                 bucket.setdefault((pkg, version), (f.rel_path, pkg, version))
     out: list[tuple[str, str, str, str]] = []

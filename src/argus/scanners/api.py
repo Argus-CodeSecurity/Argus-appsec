@@ -27,10 +27,12 @@ def _parse_openapi(text: str, path: str) -> dict | None:
     if path.endswith((".yaml", ".yml")):
         try:
             import yaml
-            return yaml.safe_load(text)
+            data = yaml.safe_load(text)
         except Exception:
             return None
-    return _loads(text)
+    else:
+        data = _loads(text)
+    return data if isinstance(data, dict) else None
 
 
 @scanner
@@ -56,15 +58,21 @@ class ApiScanner(Scanner):
             spec = _parse_openapi(f.text(), f.rel_path)
             if not isinstance(spec, dict):
                 continue
-            paths = spec.get("paths") or {}
+            # The spec comes from the scanned repo: check every type before use.
+            paths = spec.get("paths")
+            if not isinstance(paths, dict):
+                paths = {}
             has_global_security = bool(spec.get("security"))
-            security_schemes = (spec.get("components") or {}).get("securitySchemes") or {}
+            components = spec.get("components")
+            security_schemes = (components.get("securitySchemes")
+                                if isinstance(components, dict) else None) or {}
 
             for route, methods in paths.items():
-                if not isinstance(methods, dict):
+                if not isinstance(route, str) or not isinstance(methods, dict):
                     continue
                 for method, op in methods.items():
-                    if method.startswith("x-") or not isinstance(op, dict):
+                    if (not isinstance(method, str) or method.startswith("x-")
+                            or not isinstance(op, dict)):
                         continue
                     op_security = op.get("security")
                     secured = (

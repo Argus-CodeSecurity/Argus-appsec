@@ -29,7 +29,7 @@ from argus.core.models import (
     Severity,
 )
 from argus.core.plugin import Scanner, ScannerContext, scanner
-from argus.scanners.dependencies import _loads, collect_packages
+from argus.scanners.dependencies import _PARSERS, _loads, collect_packages
 from argus.supply_chain.intel import is_malicious, load_malicious_packages
 
 _SUSPICIOUS_SCRIPT = re.compile(
@@ -141,7 +141,9 @@ class SupplyChainScanner(Scanner):
     )
 
     def applies_to(self, project) -> bool:
-        return bool(collect_packages(project)) or bool(project.files_matching("package.json"))
+        # File presence only: parsing every manifest here ran untrusted input
+        # through the parsers before the scan (and outside its error handling).
+        return bool(project.files_matching(*_PARSERS))
 
     def scan(self, ctx: ScannerContext) -> Iterable[Finding]:
         opts = ctx.config.options_for(self.name)
