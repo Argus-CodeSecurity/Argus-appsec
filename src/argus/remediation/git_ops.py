@@ -1,33 +1,61 @@
-"""Thin wrappers over the ``git`` CLI for the fix workflow.
+"""Thin wrappers over the ``git`` CLI for the fix and review workflows.
 
 Kept deliberately small and explicit: each function is one git command. Commits
 fall back to a fixed identity only when none is configured (so they succeed in
 bare CI containers) and never override a user's real identity.
+
+Every call goes through :func:`argus.core.gitexec.run` with the
+:data:`~argus.core.gitexec.WORKTREE` profile: these functions act on the
+operator's own checkout (creating branches, committing with their hooks and
+signing setup, pushing with their credentials), so only the git features the
+workflow never needs are switched off. Reading an untrusted repository uses
+:mod:`argus.scanners._git` instead.
 """
 
 from __future__ import annotations
 
 import os
-import shutil
 import subprocess
+from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
+
+from argus.core import gitexec
+from argus.core.gitexec import git_available
+
+__all__ = [
+    "GitError",
+    "RepoInfo",
+    "branch_exists",
+    "checkout",
+    "commit",
+    "create_branch",
+    "current_branch",
+    "default_branch",
+    "delete_branch",
+    "diff",
+    "git_available",
+    "has_uncommitted_changes",
+    "inspect",
+    "is_git_repo",
+    "path_prefix",
+    "push",
+    "remote_url",
+    "reset_hard",
+    "rev_parse",
+    "show_file",
+    "stage_all",
+    "stage_paths",
+    "verify_commit",
+]
 
 # Per-command timeout in seconds; a hung git (credential prompt, huge history,
 # network filesystem) must not hang a CI job forever.
 _DEFAULT_TIMEOUT = 300.0
 
-# Config overrides for every call. A scanned repository's own .git/config can
-# name programs git will run (fsmonitor hook, external diff); disable them.
-_SAFE_CONFIG = ("-c", "core.fsmonitor=", "-c", "diff.external=")
-
 
 class GitError(RuntimeError):
     """A git command failed."""
-
-
-def git_available() -> bool:
-    return shutil.which("git") is not None
 
 
 def _timeout() -> float:
@@ -37,25 +65,25 @@ def _timeout() -> float:
         return _DEFAULT_TIMEOUT
 
 
-def _run(root: Path, *args: str, check: bool = True,
-         timeout: float | None = None) -> subprocess.CompletedProcess[str]:
-    if not git_available():
-        raise GitError("git is not installed or not on PATH.")
-    # Capture bytes and decode leniently: git output carries file content and
-    # paths in whatever encoding the repo uses, and one stray byte must not
-    # abort the run (strict decoding raised, or on Windows left stdout None).
+def _run(root: Path, *args: str, check: bool = True, timeout: float | None = None,
+         config: Sequence[str] = ()) -> subprocess.CompletedProcess[str]:
+    """Run one git command through the shared runner; raise GitError on failure.
+
+    Output is decoded leniently (git output carries file content and paths in
+    whatever encoding the repo uses) and capped. Output past the cap is never
+    returned as if complete: with ``check`` it raises, otherwise the result
+    carries a non-zero return code so callers treat it as unavailable.
+    """
     try:
-        raw = subprocess.run(
-            ["git", *_SAFE_CONFIG, "-C", str(root), *args],
-            capture_output=True, timeout=timeout or _timeout(),
-        )
-    except subprocess.TimeoutExpired as exc:
-        raise GitError(f"git {' '.join(args)} timed out after {exc.timeout:g}s") from exc
-    proc = subprocess.CompletedProcess(
-        raw.args, raw.returncode,
-        (raw.stdout or b"").decode("utf-8", errors="replace"),
-        (raw.stderr or b"").decode("utf-8", errors="replace"),
-    )
+        res = gitexec.run(root, *args, profile=gitexec.WORKTREE, config=config,
+                          timeout=timeout or _timeout(), capture_stderr=True)
+    except gitexec.GitExecError as exc:
+        raise GitError(str(exc)) from exc
+    returncode, stderr = res.returncode, res.stderr
+    if res.truncated:
+        returncode = 1
+        stderr = f"output exceeded {gitexec.DEFAULT_MAX_OUTPUT} bytes"
+    proc = subprocess.CompletedProcess(["git", *args], returncode, res.stdout, stderr)
     if check and proc.returncode != 0:
         raise GitError(f"git {' '.join(args)} failed: {proc.stderr.strip()}")
     return proc
@@ -63,7 +91,7 @@ def _run(root: Path, *args: str, check: bool = True,
 
 def _safe_ref(ref: str) -> bool:
     """Reject empty refs and anything git could parse as an option."""
-    return bool(ref) and not ref.startswith("-") and "\0" not in ref
+    return gitexec.is_safe_ref(ref)
 
 
 def is_git_repo(root: Path) -> bool:
@@ -100,8 +128,8 @@ def diff(root: Path, *args: str) -> str:
     file names match the scanner's paths. External diff drivers and textconv
     filters are disabled.
     """
-    return _run(root, "-c", "core.quotePath=false", "diff",
-                "--no-ext-diff", "--no-textconv", *args).stdout
+    return _run(root, "diff", "--no-ext-diff", "--no-textconv", *args,
+                config=("core.quotePath=false",)).stdout
 
 
 def rev_parse(root: Path, ref: str) -> str | None:
@@ -226,14 +254,14 @@ def commit(root: Path, message: str, *, author_name: str = "Argus",
     identity: list[str] = []
     if not (_config_value(root, "user.name")
             or (os.environ.get("GIT_AUTHOR_NAME") and os.environ.get("GIT_COMMITTER_NAME"))):
-        identity += ["-c", f"user.name={author_name}"]
+        identity.append(f"user.name={author_name}")
     if not (_config_value(root, "user.email")
             or (os.environ.get("GIT_AUTHOR_EMAIL") and os.environ.get("GIT_COMMITTER_EMAIL"))):
-        identity += ["-c", f"user.email={author_email}"]
-    args = [*identity, "commit", "-m", message]
+        identity.append(f"user.email={author_email}")
+    args = ["commit", "-m", message]
     if no_verify:
         args.append("--no-verify")
-    _run(root, *args)
+    _run(root, *args, config=identity)
     return _run(root, "rev-parse", "HEAD").stdout.strip()
 
 

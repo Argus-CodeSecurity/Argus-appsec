@@ -167,3 +167,109 @@ def test_history_reports_truncation(tmp_path, monkeypatch, caplog):
         _, truncated = secrets_history.find_history_secrets(repo)
     assert truncated
     assert "only the newest commits" in caplog.text
+
+
+# --- the shared runner (argus.core.gitexec) ---------------------------------
+
+
+def test_profiles_pin_what_each_job_can_live_without(tmp_path):
+    from argus.core import gitexec
+
+    untrusted = gitexec.git_argv(tmp_path, "log", profile=gitexec.UNTRUSTED)
+    worktree = gitexec.git_argv(tmp_path, "log", profile=gitexec.WORKTREE)
+    for argv in (untrusted, worktree):
+        assert argv[:2] == ["git", "--no-pager"]
+        for pin in ("core.fsmonitor=", "diff.external=", "core.pager=cat",
+                    "log.showSignature=false"):
+            assert pin in argv
+        assert "--no-textconv" in argv and "--no-ext-diff" in argv
+    # Only untrusted reads switch off hooks, credential helpers and transports;
+    # the fix workflow commits with the operator's hooks and pushes with their
+    # credentials.
+    assert any(item.startswith("core.hooksPath=") for item in untrusted)
+    assert "credential.helper=" in untrusted and "protocol.allow=never" in untrusted
+    assert not any(item.startswith("core.hooksPath=") for item in worktree)
+    assert "credential.helper=" not in worktree
+
+
+def test_profiles_environment(monkeypatch):
+    from argus.core import gitexec
+
+    monkeypatch.setenv("GIT_EXTERNAL_DIFF", "/tmp/evil")
+    monkeypatch.setenv("GIT_DIR", "/elsewhere")
+    untrusted = gitexec.git_env(gitexec.UNTRUSTED)
+    worktree = gitexec.git_env(gitexec.WORKTREE)
+    for env in (untrusted, worktree):
+        assert env["GIT_TERMINAL_PROMPT"] == "0"
+        assert env["GIT_PAGER"] == "cat" and env["PAGER"] == "cat"
+        assert "GIT_EXTERNAL_DIFF" not in env
+    assert untrusted["GIT_CONFIG_NOSYSTEM"] == "1"
+    assert "GIT_DIR" not in untrusted
+    assert "GIT_CONFIG_NOSYSTEM" not in worktree
+
+
+@pytest.mark.parametrize("ref", ["", "-p", "--output=x", "a\0b", "a\nb", "a\rb"])
+def test_unsafe_refs_are_rejected(ref):
+    from argus.core.gitexec import is_safe_ref
+
+    assert not is_safe_ref(ref)
+
+
+def test_safe_refs_are_accepted():
+    from argus.core.gitexec import is_safe_ref
+
+    for ref in ("main", "origin/main", "HEAD~1", "v1.2.3", "abc123"):
+        assert is_safe_ref(ref)
+
+
+def test_fix_workflow_git_calls_do_not_execute_repo_config(tmp_path):
+    from argus.remediation import git_ops
+
+    repo, marker = _hostile_repo(tmp_path)
+    (repo / "requirements.txt").write_text("requests==2.1\n", encoding="utf-8")
+    assert git_ops.is_git_repo(repo)
+    assert git_ops.has_uncommitted_changes(repo)
+    assert "requests==2.1" in git_ops.diff(repo, "HEAD")
+    assert git_ops.show_file(repo, "HEAD", "requirements.txt") == "requests==2.0\n"
+    assert git_ops.current_branch(repo)
+    assert not marker.exists(), marker.read_text()
+
+
+def test_inventory_reads_at_ref_without_executing_repo_config(tmp_path):
+    from argus.inventory import collect_packages_at_ref
+
+    repo, marker = _hostile_repo(tmp_path)
+    assert collect_packages_at_ref(repo, "HEAD~0") == [
+        ("PyPI", "requirements.txt", "requests", "2.0")]
+    assert not marker.exists(), marker.read_text()
+
+
+def test_worktree_output_is_capped(tmp_path):
+    from argus.core import gitexec
+
+    repo, _ = _hostile_repo(tmp_path)
+    res = gitexec.run(repo, "log", "-p", "--all", profile=gitexec.WORKTREE, max_output=10)
+    assert res.truncated and len(res.stdout) == 10
+
+
+def test_history_secret_ids_differ_per_secret(tmp_path):
+    from argus.core.config import Config
+    from argus.core.plugin import ScannerContext
+    from argus.core.project import Project
+    from argus.scanners.secrets import SecretsScanner
+
+    repo = _plain_repo(tmp_path)
+    (repo / "a.py").write_text('K1 = "AKIAIOSFODNN7EXAMPLE"\nK2 = "AKIAJ2345678ABCDEFGH"\n',
+                               encoding="utf-8")
+    _git_plain(repo, "add", "-A")
+    _git_plain(repo, "commit", "-q", "-m", "keys")
+    (repo / "a.py").write_text("K = None\n", encoding="utf-8")
+    _git_plain(repo, "commit", "-q", "-am", "remove keys")
+
+    cfg = Config(scanner_options={"secrets": {"history": True}})
+    ctx = ScannerContext(project=Project.from_path(repo), config=cfg)
+    ids = [f.id for f in SecretsScanner().scan(ctx)
+           if f.rule_id == "secrets.history.aws-access-key-id"]
+    assert len(ids) == 2 and len(set(ids)) == 2
+    # Keyed on the fingerprint of the full value, not a position in history.
+    assert all(len(i.rsplit(":", 1)[1]) == 16 for i in ids)

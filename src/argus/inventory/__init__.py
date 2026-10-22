@@ -3,11 +3,10 @@
 from __future__ import annotations
 
 import os
-import shutil
 import stat
-import subprocess
 from pathlib import Path
 
+from argus.core import gitexec
 from argus.core.project import MAX_TEXT_BYTES
 from argus.scanners.dependencies import _PARSERS, collect_packages, safe_parse
 
@@ -28,16 +27,17 @@ def split_ref_spec(ref_spec: str, *, head: str = "HEAD") -> tuple[str, str]:
     return spec, head
 
 
-def _git(root: Path, *args: str) -> subprocess.CompletedProcess[bytes] | None:
-    """Run git with an argument list and a timeout; None if it cannot run."""
-    if shutil.which("git") is None:
-        return None
+def _git(root: Path, *args: str, max_output: int = gitexec.DEFAULT_MAX_OUTPUT,
+         ) -> gitexec.GitResult | None:
+    """Run git on the (untrusted) scanned repository; None if it cannot run.
+
+    Uses the hardened runner, so the repository's own config cannot launch
+    programs, and the output is capped.
+    """
     try:
-        return subprocess.run(
-            ["git", "-C", str(root), *args],
-            capture_output=True, timeout=_GIT_TIMEOUT, check=False,
-        )
-    except (OSError, subprocess.SubprocessError):
+        return gitexec.run(root, *args, profile=gitexec.UNTRUSTED,
+                           timeout=_GIT_TIMEOUT, max_output=max_output)
+    except gitexec.GitExecError:
         return None
 
 
@@ -53,11 +53,11 @@ def resolve_commit(root: Path, ref: str) -> str:
     Raises ValueError for a rejected or unknown ref.
     """
     ref = ref.strip()
-    if not ref or ref.startswith("-") or any(c in ref for c in "\0\n\r"):
+    if not gitexec.is_safe_ref(ref):
         raise ValueError(f"invalid git ref: {ref!r}")
     proc = _git(root, "rev-parse", "--verify", "--quiet", "--end-of-options",
                 f"{ref}^{{commit}}")
-    sha = proc.stdout.decode("ascii", "replace").strip() if proc is not None else ""
+    sha = proc.stdout.strip() if proc is not None else ""
     if proc is None or proc.returncode != 0 or not _is_sha(sha):
         raise ValueError(f"unknown git ref: {ref!r}")
     return sha
@@ -74,14 +74,14 @@ def _read_at_commit(root: Path, sha: str, rel_path: str) -> str | None:
     if size is None or size.returncode != 0:
         return None
     try:
-        if int(size.stdout.strip() or b"0") > MAX_TEXT_BYTES:
+        if int(size.stdout.strip() or "0") > MAX_TEXT_BYTES:
             return None
     except ValueError:
         return None
-    blob = _git(root, "cat-file", "blob", spec)
-    if blob is None or blob.returncode != 0:
+    blob = _git(root, "cat-file", "blob", spec, max_output=MAX_TEXT_BYTES)
+    if blob is None or blob.returncode != 0 or blob.truncated:
         return None
-    return blob.stdout.decode("utf-8", errors="replace")
+    return blob.stdout
 
 
 def _read_worktree_manifest(path: Path) -> str | None:

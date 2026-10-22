@@ -34,7 +34,8 @@ their own threat models.
 | Argument injection via a URL beginning with `-` | URL passed after a `--` separator | `targets.py` `_clone` |
 | Protocol downgrade slipping past the check | `GIT_ALLOW_PROTOCOL` pins transports at the git level (defense in depth) | `targets.py` `_clone` |
 | Credential-prompt hang | `GIT_TERMINAL_PROMPT=0`; clone has a 300s timeout | `targets.py` `_clone` |
-| Command injection anywhere git is used | Every git call uses an argument array (`["git", "-C", root, ...]`), never a shell | `remediation/git_ops.py`, `targets.py` |
+| Command injection anywhere git is used | Every git call uses an argument array (`["git", "-C", root, ...]`), never a shell; user- or config-supplied refs are validated (no leading `-`, no control characters) and passed after `--end-of-options` | `core/gitexec.py`, `targets.py` |
+| A scanned repo's `.git/config` launching programs (`core.fsmonitor`, `gpg.program`, `diff.external`, textconv, `core.pager`, hooks) | One runner pins those keys with `-c`, adds `--no-textconv`/`--no-ext-diff`/`--no-show-signature`, ignores the system config, disables transports and prompts, and caps output and run time. Scanners and dependency-diff use its untrusted profile; the fix/review workflow uses a narrower profile that keeps the operator's hooks, signing and credentials | `core/gitexec.py` |
 
 ### 2. Reading files from a hostile repository
 

@@ -135,10 +135,40 @@ def test_refs_that_look_like_options_are_rejected(tmp_path):
     assert git_ops.show_file(root, "HEAD", "app.py") == "a = 1\n"
 
 
-def test_git_timeout_raises_git_error(tmp_path, monkeypatch):
-    def hang(*args, **kwargs):
-        raise subprocess.TimeoutExpired(cmd="git", timeout=1)
+class _HungGit:
+    """A git process whose stdout never ends until it is killed."""
 
-    monkeypatch.setattr(git_ops.subprocess, "run", hang)
+    def __init__(self, *args, **kwargs) -> None:
+        import io
+        import threading
+
+        self._killed = threading.Event()
+        self.returncode = None
+        self.stderr = io.BytesIO(b"")
+        hung = self
+
+        class _Out:
+            def read(self, n: int) -> bytes:
+                hung._killed.wait(10)
+                return b""
+
+            def close(self) -> None:
+                pass
+
+        self.stdout = _Out()
+
+    def kill(self) -> None:
+        self._killed.set()
+        self.returncode = -9
+
+    def wait(self) -> int:
+        return self.returncode or 0
+
+
+def test_git_timeout_raises_git_error(tmp_path, monkeypatch):
+    from argus.core import gitexec
+
+    monkeypatch.setenv("ARGUS_GIT_TIMEOUT", "0.2")
+    monkeypatch.setattr(gitexec.subprocess, "Popen", _HungGit)
     with pytest.raises(git_ops.GitError, match="timed out"):
         git_ops.diff(tmp_path, "HEAD")
