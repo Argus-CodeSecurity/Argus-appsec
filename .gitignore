@@ -21,6 +21,8 @@ coverage.xml
 .argus/
 argus-report.*
 *.sarif
+# SARIF inputs used by the importer tests are source, not scan output.
+!tests/fixtures/sarif/*.sarif
 
 # Benchmarks: cloned corpora are throwaway; results/ IS tracked (published numbers)
 benchmarks/.corpora/
