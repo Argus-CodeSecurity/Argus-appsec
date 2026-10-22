@@ -21,6 +21,7 @@ without cache and parallelism.
 
 from __future__ import annotations
 
+import dataclasses
 import fnmatch
 import re
 from collections.abc import Callable
@@ -64,7 +65,7 @@ class ScanEngine:
 
         # 1. Analyze
         self._progress("Analyzing project structure...")
-        project.extra_ignores = tuple(self.config.exclude_paths)
+        project = self._working_copy(project)
         RepositoryAnalyzer().analyze(project)
         result.project_summary = project.summary()
 
@@ -244,6 +245,28 @@ class ScanEngine:
         return findings
 
     # --- steps --------------------------------------------------------------
+    def _working_copy(self, project: Project) -> Project:
+        """The engine's own copy of the caller's project, with config applied.
+
+        The scan sets ``extra_ignores`` from ``exclude_paths`` and the analyzer
+        fills in languages, frameworks, architecture and metadata. Doing that
+        on the caller's object would leak one scan's config into the next use
+        of the same Project (another engine, another config), so the engine
+        works on a copy. Mutable containers are copied too, and the cached file
+        list is reused only when the ignore globs are unchanged.
+        """
+        ignores = tuple(self.config.exclude_paths)
+        keep_files = ignores == project.extra_ignores
+        return dataclasses.replace(
+            project,
+            extra_ignores=ignores,
+            languages=dict(project.languages),
+            frameworks=list(project.frameworks),
+            architecture=dict(project.architecture),
+            metadata=dict(project.metadata),
+            _files_cache=project._files_cache if keep_files else None,
+        )
+
     def _select_scanners(self, project: Project) -> tuple[list[Scanner], list[str], list[str]]:
         """Pick the scanners to run.
 
