@@ -247,6 +247,33 @@ class SecretsScanner(Scanner):
         secrets, truncated = secrets_history.find_history_secrets(root)
         for i, hs in enumerate(secrets, start=1):
             yield self._history_finding(hs, i, truncated)
+        if truncated:
+            # Reported even with zero findings: a capped or timed-out walk that
+            # found nothing must not read as "history is clean".
+            yield self._history_incomplete_finding()
+
+    def _history_incomplete_finding(self) -> Finding:
+        """An INFO note that the history pass stopped before reading everything."""
+        return Finding(
+            id=f"{self.name}:history-incomplete:1",
+            rule_id=f"{self.name}.history-scan-incomplete",
+            scanner=self.name,
+            title="Git history secret scan was incomplete",
+            description=(
+                "The git history walk hit its size or time limit, so older commits "
+                "were not checked for secrets. Secrets that exist only in those "
+                "commits are not covered by this scan."
+            ),
+            location=Location(path="(git history)"),
+            severity=Severity.INFO,
+            confidence=Confidence.LOW,
+            likelihood=Likelihood.UNLIKELY,
+            remediation=Remediation(
+                summary="Run a full history scan locally (e.g. gitleaks or "
+                        "trufflehog) if older commits may hold credentials.",
+            ),
+            tags=["secret", "history", "analysis-gap"],
+        )
 
     def _history_failed_finding(self, exc: BaseException) -> Finding:
         """An INFO note that the history pass did not complete."""
@@ -272,8 +299,12 @@ class SecretsScanner(Scanner):
     def _history_finding(self, hs, index: int, truncated: bool) -> Finding:
         note = (" (history scan was truncated at the size cap; some older commits "
                 "were not read)") if truncated else ""
+        # Key the id on the fingerprint of the full matched value: the redacted
+        # form is the same for, say, every AWS key id ("AKI..."), and an index
+        # shifts whenever history changes, so neither identifies the secret.
+        fingerprint = getattr(hs, "fingerprint", "") or str(index)
         return Finding(
-            id=f"{self.name}:history:{hs.rule}:{index}",
+            id=f"{self.name}:history:{hs.rule}:{fingerprint}",
             rule_id=f"{self.name}.history.{hs.rule}",
             scanner=self.name,
             title=f"Secret in git history: {hs.rule.replace('-', ' ')}",
