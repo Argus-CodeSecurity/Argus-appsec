@@ -185,7 +185,9 @@ def scan(
     ),
     fail_on_error: bool | None = typer.Option(
         None, "--fail-on-error/--no-fail-on-error",
-        help="Exit non-zero if any scanner crashes (default: off; on for ci/production profiles).",
+        help="Exit non-zero if any scanner crashes. Default: on whenever --fail-on "
+             "(or fail_on in config) is set, since a crashed scanner reports "
+             "nothing; --no-fail-on-error opts out.",
     ),
     baseline: Path | None = typer.Option(
         None, "--baseline",
@@ -341,11 +343,9 @@ def scan(
             _print_posture(result, cfg.fail_on)
 
         if engine.should_fail(result):
-            if cfg.fail_on_error and result.errors:
-                err_console.print(
-                    "[red]Failing:[/red] one or more scanners failed "
-                    f"({', '.join(result.scanners_failed or ['unknown'])})."
-                )
+            if engine.fails_on_errors(result):
+                # The table output already listed each failure.
+                _print_scanner_failure(result, details="table" not in fmt)
             else:
                 err_console.print(
                     f"[red]Failing:[/red] findings at/above "
@@ -584,6 +584,10 @@ def supply_chain_cmd(
     ),
     auth_map: bool = typer.Option(False, "--auth-map", help="Include endpoint authorization map."),
     fail_on: str | None = typer.Option(None, "--fail-on", help="Exit non-zero on findings at/above severity."),
+    fail_on_error: bool | None = typer.Option(
+        None, "--fail-on-error/--no-fail-on-error",
+        help="Exit non-zero if any scanner crashes (default: on when --fail-on is set).",
+    ),
     quiet: bool = typer.Option(False, "--quiet", "-q"),
 ) -> None:
     """Run supply-chain scanners: malicious packages, typosquats, dependency diffs, provenance."""
@@ -596,6 +600,7 @@ def supply_chain_cmd(
     from argus.remediation import git_ops
     from argus.targets import resolve
 
+    threshold = _cli_severity(fail_on, "--fail-on") if fail_on else None
     try:
         resolved = resolve(target)
     except Exception as exc:
@@ -608,6 +613,7 @@ def supply_chain_cmd(
     try:
         cfg = Config()
         cfg.trust_project_config = resolved.project.origin == "local"
+        cfg.fail_on_error = fail_on_error
         cfg.ai.enabled = False
         cfg.scanners = [
             "supply-chain", "dependency-diff", "dependencies", "provenance",
@@ -633,6 +639,7 @@ def supply_chain_cmd(
         result = ScanEngine(cfg, progress=progress).scan(resolved.project)
 
         payload: dict = {
+            "errors": result.errors,
             "findings": len(result.findings),
             "highest_severity": result.highest_severity().label,
             "dependency_changes": [],
@@ -675,7 +682,8 @@ def supply_chain_cmd(
             if len(result.findings) > 50:
                 err_console.print(f"[dim]… and {len(result.findings) - 50} more[/dim]")
 
-        if fail_on and result.highest_severity() >= _cli_severity(fail_on, "--fail-on"):
+        _fail_on_scanner_errors(result, cfg, gating=threshold is not None)
+        if threshold is not None and result.highest_severity() >= threshold:
             raise typer.Exit(1)
     finally:
         resolved.cleanup()
@@ -1201,6 +1209,9 @@ def policy_check(
                 f"({v.finding.location.as_ref()})"
             )
 
+    # A policy check is always a gate, so a crashed scanner fails it unless
+    # fail_on_error is explicitly false in the config.
+    _fail_on_scanner_errors(result, cfg, gating=True)
     if outcome.passed:
         console.print("[green]Policy check passed[/green] "
                       f"({len(outcome.violations)} warning(s)).")
@@ -1475,6 +1486,10 @@ def review(
     fail_on: str | None = typer.Option(
         None, "--fail-on", help="Exit non-zero if a reviewed finding is at/above this."
     ),
+    fail_on_error: bool | None = typer.Option(
+        None, "--fail-on-error/--no-fail-on-error",
+        help="Exit non-zero if any scanner crashes (default: on when --fail-on is set).",
+    ),
     dry_run: bool = typer.Option(
         False, "--dry-run", help="Show what would be posted without calling GitHub."
     ),
@@ -1494,6 +1509,8 @@ def review(
     from argus.remediation import git_ops, pr_review
     from argus.remediation.hosting import HostingError, RepoRef, parse_remote
     from argus.targets import resolve
+
+    threshold = _cli_severity(fail_on, "--fail-on") if fail_on else None
 
     # --- resolve repo, PR number, and base ref (flags, then CI env) ---
     ref: RepoRef | None = None
@@ -1569,11 +1586,13 @@ def review(
             f"({outcome.inline} inline, {outcome.leftover} in summary) on PR #{pr_number}."
         )
 
-        if fail_on and result.findings:
-            floor = _cli_severity(fail_on, "--fail-on")
-            if max(f.severity for f in result.findings) >= floor:
-                err_console.print(f"[red]Failing:[/red] findings at/above {floor.label}.")
-                raise typer.Exit(1)
+        if fail_on_error is not None:
+            cfg.fail_on_error = fail_on_error
+        _fail_on_scanner_errors(result, cfg, gating=threshold is not None)
+        if threshold is not None and result.highest_severity() >= threshold \
+                and result.findings:
+            err_console.print(f"[red]Failing:[/red] findings at/above {threshold.label}.")
+            raise typer.Exit(1)
     finally:
         resolved.cleanup()
 
@@ -1687,6 +1706,29 @@ def _cli_severity(value: str, option: str) -> Severity:
         raise typer.BadParameter(str(exc), param_hint=option) from exc
 
 
+def _print_scanner_failure(result: ScanResult, *, details: bool = True) -> None:
+    if details:
+        for err in result.errors:
+            err_console.print(f"[yellow]Scanner failed:[/yellow] {escape(err)}")
+    err_console.print(
+        "[red]Failing:[/red] one or more scanners failed "
+        f"({escape(', '.join(result.scanners_failed or ['unknown']))}); "
+        "pass --no-fail-on-error or set fail_on_error: false to ignore."
+    )
+
+
+def _fail_on_scanner_errors(result: ScanResult, cfg: Config, *, gating: bool) -> None:
+    """Exit 1 when scanners crashed in a run that gates (fail closed).
+
+    A crashed scanner contributes no findings, so treating its silence as a
+    pass would let a parser crash (possibly provoked by the scanned repo)
+    open the gate.
+    """
+    if result.errors and cfg.errors_fail_gate(gating):
+        _print_scanner_failure(result)
+        raise typer.Exit(1)
+
+
 def _posture_result(url: str, *, quiet: bool) -> ScanResult:
     """Build a ScanResult from live posture checks against a URL."""
     from datetime import datetime, timezone
@@ -1766,6 +1808,7 @@ def _focused_scan(
     from argus.core.engine import ScanEngine
     from argus.targets import resolve
 
+    threshold = _cli_severity(fail_on, "--fail-on") if fail_on else None
     try:
         resolved = resolve(target)
     except Exception as exc:
@@ -1786,6 +1829,7 @@ def _focused_scan(
 
         payload = {
             "scanners": scanners,
+            "errors": result.errors,
             "findings": len(result.findings),
             "highest_severity": result.highest_severity().label,
             "items": [
@@ -1815,10 +1859,11 @@ def _focused_scan(
             console.print(table)
             if len(result.findings) > 50:
                 err_console.print(f"[dim]… and {len(result.findings) - 50} more[/dim]")
-            elif not result.findings:
+            elif not result.findings and not result.errors:
                 console.print("[green]No findings.[/green]")
 
-        if fail_on and result.highest_severity() >= _cli_severity(fail_on, "--fail-on"):
+        _fail_on_scanner_errors(result, cfg, gating=threshold is not None)
+        if threshold is not None and result.highest_severity() >= threshold:
             raise typer.Exit(1)
     finally:
         resolved.cleanup()

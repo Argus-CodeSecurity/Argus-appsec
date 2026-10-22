@@ -483,8 +483,13 @@ class ScanEngine:
         return passthrough + kept
 
     # --- CI gating helper ---------------------------------------------------
+    def fails_on_errors(self, result: ScanResult) -> bool:
+        """True when scanner errors in ``result`` must fail the run."""
+        gating = self.config.fail_on is not None
+        return bool(result.errors) and self.config.errors_fail_gate(gating)
+
     def should_fail(self, result: ScanResult) -> bool:
-        if self.config.fail_on_error and result.errors:
+        if self.fails_on_errors(result):
             return True
         if self.config.fail_on is None:
             return False

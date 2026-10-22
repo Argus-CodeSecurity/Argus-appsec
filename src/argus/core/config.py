@@ -115,8 +115,11 @@ class Config:
     generate_patches: bool = False
     # Fail the process (non-zero exit) at/above this severity, for CI gating.
     fail_on: Severity | None = None
-    # Fail when any scanner crashes (recommended for ci/production profiles).
-    fail_on_error: bool = False
+    # Fail when any scanner crashes. None (the default) means "fail on scanner
+    # errors whenever a fail_on threshold gates the run": a crashed scanner
+    # reports nothing, and a gate must not read that as a pass. Set False to
+    # opt out explicitly.
+    fail_on_error: bool | None = None
     # Reuse cached findings for unchanged files (file-local scanners only).
     cache: bool = True
     # Run scanners concurrently. Output stays deterministic either way.
@@ -209,7 +212,7 @@ class Config:
         cfg.cache = _bool(data, "cache", cfg.cache)
         cfg.parallel = _bool(data, "parallel", cfg.parallel)
         if data.get("fail_on_error") is not None:
-            cfg.fail_on_error = _bool(data, "fail_on_error", cfg.fail_on_error)
+            cfg.fail_on_error = _bool(data, "fail_on_error", False)
 
         options = _mapping(data, "scanner_options")
         for name, value in options.items():
@@ -246,6 +249,17 @@ class Config:
 
     def options_for(self, scanner_name: str) -> dict[str, Any]:
         return self.scanner_options.get(scanner_name, {})
+
+    def errors_fail_gate(self, gating: bool) -> bool:
+        """Whether scanner errors should fail this run.
+
+        ``gating`` says whether the run has a pass/fail threshold at all (a
+        fail_on severity, a policy check). An explicit ``fail_on_error``
+        always wins; otherwise errors fail exactly the runs that gate.
+        """
+        if self.fail_on_error is not None:
+            return self.fail_on_error
+        return gating
 
 
 def load_project_config(
