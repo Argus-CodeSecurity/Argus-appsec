@@ -73,6 +73,7 @@ nav:
       - Configuration drift: drift.md
       - Host agent: agent.md
       - Fixing & pull requests: fixing.md
+      - Editors & AI assistants: editors.md
       - MCP server (AI agents): mcp.md
       - Web dashboard: dashboard.md
   - Deeper:

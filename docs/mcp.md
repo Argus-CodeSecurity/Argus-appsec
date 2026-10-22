@@ -9,6 +9,10 @@ call it as a tool.
 It is self-contained (no extra dependency), speaks JSON-RPC over stdio, and is
 read-only: no tool modifies your files.
 
+For ready-made Claude Code, Cursor and VS Code setups (MCP config plus a hook
+that checks every edited file), see [Editors and AI assistants](editors.md)
+and `argus init --editor`.
+
 ## Run it
 
 ```bash

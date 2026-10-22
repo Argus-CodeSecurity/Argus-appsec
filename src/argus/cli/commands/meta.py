@@ -63,14 +63,73 @@ def providers() -> None:
 
 
 def init(
-    path: Path = typer.Argument(Path(".argus.yml"), help="Where to write the config."),
+    path: Path = typer.Argument(
+        Path(".argus.yml"), help="Where to write the config (not used with --editor)."
+    ),
+    editor: list[str] = typer.Option(
+        None,
+        "--editor",
+        help="Set up an editor or AI assistant: claude, cursor or vscode. "
+        "Repeatable. Writes that editor's MCP and hook config in the project "
+        "instead of .argus.yml.",
+        show_default=False,
+    ),
+    project_dir: Path = typer.Option(
+        Path("."), "--project-dir", help="Project directory for --editor files."
+    ),
+    force: bool = typer.Option(
+        False,
+        "--force",
+        help="Replace existing files. Existing JSON configs keep their other "
+        "settings; only the Argus entries are added or replaced.",
+    ),
 ) -> None:
-    """Write a starter .argus.yml configuration file."""
-    if path.exists():
-        err_console.print(f"[yellow]{path} already exists; not overwriting.[/yellow]")
+    """Write a starter .argus.yml, or editor config with --editor."""
+    if editor:
+        _init_editors(editor, project_dir, force=force)
+        return
+    if path.exists() and not force:
+        err_console.print(
+            f"[yellow]{escape(str(path))} already exists; not overwriting (use --force).[/yellow]"
+        )
         raise typer.Exit(1)
     path.write_text(starter_config(), encoding="utf-8")
-    console.print(f"[green]Wrote {path}.[/green] Edit it to tune your scans.")
+    console.print(f"[green]Wrote {escape(str(path))}.[/green] Edit it to tune your scans.")
+
+
+def _init_editors(editors: list[str], project_dir: Path, *, force: bool) -> None:
+    """Write the editor files, or nothing at all if any of them conflicts."""
+    from argus.integrations.editors import EDITORS, plan, write
+
+    chosen = list(dict.fromkeys(e.strip().lower() for e in editors))
+    unknown = [e for e in chosen if e not in EDITORS]
+    if unknown:
+        raise typer.BadParameter(
+            f"unknown editor(s) {', '.join(unknown)} (choose from: {', '.join(EDITORS)})",
+            param_hint="--editor",
+        )
+    if not project_dir.is_dir():
+        err_console.print(
+            f"[red]Error:[/red] --project-dir {escape(str(project_dir))} is not a directory."
+        )
+        raise typer.Exit(2)
+
+    planned = plan(project_dir, chosen, force=force)
+    blocked = [p for p in planned if p.action in ("exists", "error")]
+    if blocked:
+        for p in blocked:
+            err_console.print(f"[yellow]{escape(p.file.path)} {escape(p.problem)}.[/yellow]")
+        hint = " Use --force to merge the Argus entries into them." if not force else ""
+        err_console.print(f"Nothing written.{hint}")
+        raise typer.Exit(1)
+    write(planned)
+    verbs = {"create": "Wrote", "merge": "Updated", "overwrite": "Replaced"}
+    for p in planned:
+        console.print(f"{verbs[p.action]} {escape(p.file.path)}")
+    console.print(
+        "Next: restart the editor, approve the argus MCP server when asked, and "
+        "run the checks in docs/editors.md."
+    )
 
 
 def version() -> None:
