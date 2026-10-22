@@ -2127,12 +2127,6 @@ def _print_posture(result: ScanResult, fail_on: Severity | None) -> None:
     ))
 
 
-def _print_scan_warnings(result: ScanResult) -> None:
-    """Print scanner failures (always, including when table output is skipped)."""
-    for err in result.errors:
-        err_console.print(f"[yellow]Scanner failed:[/yellow] {escape(err)}")
-
-
 _STARTER_CONFIG = """\
 # Argus configuration. See docs/configuration.md for all options.
 
