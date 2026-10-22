@@ -27,11 +27,12 @@ from argus.core.models import (
 from argus.core.plugin import Scanner, ScannerContext, scanner
 from argus.scanners._text import iter_scan_lines
 
-# name -> (compiled pattern, severity). Ordered most to least specific.
+# name -> compiled pattern. Ordered most to least specific. A `val` group, when
+# present, marks the secret part of the match (what redact_line masks).
 _SIGNATURES: dict[str, re.Pattern[str]] = {
     "aws-access-key-id": re.compile(r"\bAKIA[0-9A-Z]{16}\b"),
     "aws-secret-access-key": re.compile(
-        r"(?i)aws.{0,20}?(secret|sk).{0,20}?['\"][0-9a-zA-Z/+]{40}['\"]"),
+        r"(?i)aws.{0,20}?(secret|sk).{0,20}?['\"](?P<val>[0-9a-zA-Z/+]{40})['\"]"),
     "github-token": re.compile(r"\bgh[pousr]_[0-9A-Za-z]{36,}\b"),
     "gitlab-token": re.compile(r"\bglpat-[0-9A-Za-z_\-]{20,}\b"),
     "slack-token": re.compile(r"\bxox[baprs]-[0-9A-Za-z\-]{10,}\b"),
@@ -39,7 +40,7 @@ _SIGNATURES: dict[str, re.Pattern[str]] = {
     "stripe-secret-key": re.compile(r"\bsk_live_[0-9A-Za-z]{20,}\b"),
     "private-key-block": re.compile(r"-----BEGIN (?:RSA |EC |OPENSSH |DSA |PGP )?PRIVATE KEY-----"),
     "jwt": re.compile(r"\beyJ[A-Za-z0-9_\-]{10,}\.[A-Za-z0-9_\-]{10,}\.[A-Za-z0-9_\-]{10,}\b"),
-    "generic-bearer": re.compile(r"(?i)bearer\s+[A-Za-z0-9_\-\.=]{20,}"),
+    "generic-bearer": re.compile(r"(?i)bearer\s+(?P<val>[A-Za-z0-9_\-\.=]{20,})"),
 }
 
 # Generic key-ish assignments whose RHS we entropy-check. The key must start at a
@@ -64,6 +65,60 @@ def _secret_assignments(line: str) -> Iterator[re.Match[str]]:
     for m in _ASSIGNMENT.finditer(line):
         if _SECRET_KEY_NAME.search(m.group("key")):
             yield m
+
+
+# Any `key = value` / `key: value` pair, quoted or bare, for redaction only. It is
+# deliberately broader than _ASSIGNMENT (no length or entropy floor): masking a
+# value that was not a secret costs nothing, leaving one in clear does.
+_REDACT_PAIR = re.compile(
+    r"""(?<![A-Za-z0-9_\-\.])(?P<key>[A-Za-z0-9_\-\.]{1,80})['"]?\s*[:=]\s*"""
+    r"""(?:"(?P<dq>[^"\n]{1,500})"|'(?P<sq>[^'\n]{1,500})'|(?P<bare>[^\s'",;]{1,500}))"""
+)
+
+
+def _secret_span(m: re.Match[str]) -> tuple[int, int]:
+    """The part of a signature match that is the secret itself."""
+    if "val" in m.re.groupindex and m.group("val") is not None:
+        return m.span("val")
+    return m.span()
+
+
+def redact_line(line: str) -> str:
+    """Return ``line`` with every secret-looking value masked.
+
+    Applies every signature (all matches, not just the first) and masks the
+    value of any pair whose key names a secret. Used for the snippet of every
+    secret-type finding, since snippets end up in SARIF uploads and PR comments
+    that are public on fork pull requests. Pass the full line (at most
+    MAX_SCAN_LINE characters) and truncate afterwards, never before: a token cut
+    in half no longer matches its signature and would leak partially.
+    """
+    spans: list[tuple[int, int]] = []
+    for pattern in _SIGNATURES.values():
+        spans.extend(_secret_span(m) for m in pattern.finditer(line))
+    for m in _REDACT_PAIR.finditer(line):
+        if not _SECRET_KEY_NAME.search(m.group("key")):
+            continue
+        group = next(g for g in ("dq", "sq", "bare") if m.group(g) is not None)
+        spans.append(m.span(group))
+    spans.extend(m.span("val") for m in _secret_assignments(line))
+    if not spans:
+        return line
+    merged: list[list[int]] = []
+    for start, end in sorted(spans):
+        if merged and start <= merged[-1][1]:
+            merged[-1][1] = max(merged[-1][1], end)
+        else:
+            merged.append([start, end])
+    out: list[str] = []
+    pos = 0
+    for start, end in merged:
+        out.append(line[pos:start])
+        out.append(SecretsScanner._redact(line[start:end]))
+        pos = end
+    out.append(line[pos:])
+    return "".join(out)
+
 
 # Values that look like placeholders, not real secrets.
 _PLACEHOLDER = re.compile(
@@ -128,35 +183,43 @@ class SecretsScanner(Scanner):
 
             # Over-long (minified) lines are windowed, not skipped, so padding a
             # line cannot hide a key and no single search sees unbounded text.
+            # Every match is reported, not just the first per rule and line, and a
+            # value seen in two overlapping windows of a long line only once.
+            seen: set[tuple[str, int, str]] = set()
             for lineno, line in iter_scan_lines(f.lines()):
                 for rule, pattern in _SIGNATURES.items():
-                    m = pattern.search(line)
-                    if not m:
-                        continue
-                    counter += 1
-                    finding = self._make_finding(
-                        rule_id=rule, index=counter, path=f.rel_path, lineno=lineno,
-                        line=line, matched=m.group(0),
-                        severity=Severity.LOW if is_example else Severity.CRITICAL,
-                        confidence=Confidence.LOW if is_example else Confidence.HIGH,
-                        title=f"Hardcoded credential: {rule.replace('-', ' ')}",
-                    )
-                    if verify:
-                        self._apply_verification(finding, rule, m.group(0))
-                    yield finding
+                    for m in pattern.finditer(line):
+                        key = (rule, lineno, m.group(0))
+                        if key in seen:
+                            continue
+                        seen.add(key)
+                        counter += 1
+                        finding = self._make_finding(
+                            rule_id=rule, index=counter, path=f.rel_path, lineno=lineno,
+                            line=line,
+                            severity=Severity.LOW if is_example else Severity.CRITICAL,
+                            confidence=Confidence.LOW if is_example else Confidence.HIGH,
+                            title=f"Hardcoded credential: {rule.replace('-', ' ')}",
+                        )
+                        if verify:
+                            self._apply_verification(finding, rule, m.group(0))
+                        yield finding
 
                 if not entropy_enabled:
                     continue
-                am = next(_secret_assignments(line), None)
-                if am:
+                for am in _secret_assignments(line):
                     val = am.group("val")
                     if _PLACEHOLDER.search(val) or " " in val.strip():
                         continue
+                    key = ("high-entropy-string", lineno, val)
+                    if key in seen:
+                        continue
+                    seen.add(key)
                     if _shannon_entropy(val) >= entropy_threshold:
                         counter += 1
                         yield self._make_finding(
                             rule_id="high-entropy-string", index=counter,
-                            path=f.rel_path, lineno=lineno, line=line, matched=val,
+                            path=f.rel_path, lineno=lineno, line=line,
                             severity=Severity.LOW if is_example else Severity.HIGH,
                             confidence=Confidence.LOW if is_example else Confidence.MEDIUM,
                             title=f"Possible hardcoded secret in '{am.group('key')}'",
@@ -209,10 +272,12 @@ class SecretsScanner(Scanner):
         )
 
     def _make_finding(self, *, rule_id: str, index: int, path: str, lineno: int,
-                      line: str, matched: str, severity: Severity,
+                      line: str, severity: Severity,
                       confidence: Confidence, title: str) -> Finding:
-        redacted = self._redact(matched)
-        snippet = line.strip().replace(matched, redacted)
+        # Mask every secret on the line, not only the one this finding is about:
+        # a second token or an AWS secret next to its key id would otherwise
+        # stay in clear in the snippet.
+        snippet = redact_line(line).strip()
         return Finding(
             id=f"{self.name}:{rule_id}:{index}",
             rule_id=f"{self.name}.{rule_id}",

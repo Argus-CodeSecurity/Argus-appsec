@@ -15,6 +15,7 @@ from argus.core.models import (
 )
 from argus.core.plugin import Scanner, ScannerContext, scanner
 from argus.scanners._text import CURL_PIPE_SHELL_RE, MAX_SCAN_LINE, iter_scan_lines
+from argus.scanners.secrets import redact_line
 
 _WORKFLOW_PATH = re.compile(
     r"(^|/)\.github/workflows/.+\.(ya?ml)$"
@@ -156,7 +157,7 @@ class CicdScanner(Scanner):
                         scanner="cicd",
                         title=title,
                         description=why,
-                        location=Location(path=f.rel_path, start_line=lineno, snippet=line.strip()[:200]),
+                        location=Location(path=f.rel_path, start_line=lineno, snippet=redact_line(line).strip()[:200]),
                         severity=severity,
                         confidence=Confidence.MEDIUM,
                         likelihood=Likelihood.POSSIBLE,

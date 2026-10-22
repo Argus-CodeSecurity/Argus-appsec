@@ -15,6 +15,7 @@ from argus.core.models import (
 )
 from argus.core.plugin import Scanner, ScannerContext, scanner
 from argus.scanners._text import MAX_SCAN_LINE, search_line
+from argus.scanners.secrets import redact_line
 
 _COMPOSE = re.compile(r"(?i)docker-compose\.(ya?ml)$|compose\.ya?ml$")
 _HELM_VALUES = re.compile(r"(?i)(^|/)values\.ya?ml$|(^|/)helm/.+\.ya?ml$")
@@ -184,7 +185,7 @@ class ContainerScanner(Scanner):
             scanner="container",
             title=title,
             description=fix,
-            location=Location(path=path, start_line=lineno, snippet=line.strip()[:200]),
+            location=Location(path=path, start_line=lineno, snippet=redact_line(line).strip()[:200]),
             severity=severity,
             confidence=Confidence.MEDIUM,
             likelihood=Likelihood.POSSIBLE,
