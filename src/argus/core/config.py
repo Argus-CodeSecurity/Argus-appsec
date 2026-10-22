@@ -83,6 +83,16 @@ def _bool(data: dict[str, Any], key: str, default: bool, *, prefix: str = "") ->
     return value
 
 
+def _non_negative_int(data: dict[str, Any], key: str, default: int, *,
+                      prefix: str = "") -> int:
+    value = data.get(key)
+    if value is None:
+        return default
+    if not isinstance(value, int) or isinstance(value, bool) or value < 0:
+        raise ConfigError(f"{prefix}{key}: expected a whole number >= 0, got {value!r}")
+    return value
+
+
 def _severity(value: Any, key: str) -> Severity:
     try:
         return Severity.parse(value)
@@ -97,6 +107,11 @@ class AIConfig:
     enabled: bool = True              # if False, findings are not AI-enriched
     temperature: float = 0.0
     max_tokens: int = 1500
+    # With a real model, only this many findings (highest risk first) are sent
+    # to it; the rest get offline heuristic reasoning. Bounds cost and runtime
+    # (up to three model calls per finding). Not applied to the heuristic
+    # provider. 0 means no model calls at all.
+    max_findings: int = 25
 
 
 @dataclass
@@ -240,6 +255,8 @@ class Config:
                     enabled=_bool(ai, "enabled", cfg.ai.enabled, prefix="ai."),
                     temperature=float(ai.get("temperature", cfg.ai.temperature)),
                     max_tokens=int(ai.get("max_tokens", cfg.ai.max_tokens)),
+                    max_findings=_non_negative_int(ai, "max_findings",
+                                                   cfg.ai.max_findings, prefix="ai."),
                 )
             except (TypeError, ValueError) as exc:
                 if isinstance(exc, ConfigError):

@@ -295,14 +295,37 @@ class ScanEngine:
         simulator = AttackSimulationAgent()
         patcher = PatchAgent()
 
+        # Each finding can cost up to three sequential model calls, so with a
+        # real model only the highest-risk findings go to it (ai.max_findings).
+        # The rest get the offline heuristic treatment, so every finding still
+        # has reasoning and a big result set cannot stall CI for hours. The
+        # heuristic provider itself is fast and local, so it is not capped.
+        model_ids: set[int] | None = None
+        fallback_ctx = agent_ctx
+        if ai.name != "heuristic":
+            from argus.ai.heuristic import HeuristicProvider
+
+            ranked = sorted(range(len(result.findings)),
+                            key=lambda i: -result.findings[i].risk_score())
+            model_ids = set(ranked[:self.config.ai.max_findings])
+            fallback_ctx = AgentContext(project=project, config=self.config,
+                                        ai=HeuristicProvider())
+            skipped = len(result.findings) - len(model_ids)
+            if skipped:
+                self._progress(
+                    f"AI enrichment limited to the top {len(model_ids)} finding(s) "
+                    f"by risk; {skipped} use offline reasoning (ai.max_findings)."
+                )
+
         total = len(result.findings)
         for i, finding in enumerate(result.findings, start=1):
             self._progress(f"Enriching findings ({i}/{total})...")
-            enrichment.process(finding, agent_ctx)
+            ctx = agent_ctx if model_ids is None or i - 1 in model_ids else fallback_ctx
+            enrichment.process(finding, ctx)
             if self.config.attack_simulation:
-                simulator.process(finding, agent_ctx)
+                simulator.process(finding, ctx)
             if self.config.generate_patches:
-                patcher.process(finding, agent_ctx)
+                patcher.process(finding, ctx)
 
     def _filter(self, findings: list[Finding]) -> list[Finding]:
         return [f for f in findings if f.severity >= self.config.min_severity]
