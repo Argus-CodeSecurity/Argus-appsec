@@ -11,6 +11,7 @@ import typer
 
 from argus.cli.commands import (
     baseline,
+    check,
     focused,
     inventory,
     meta,
@@ -26,6 +27,7 @@ from argus.cli.commands import (
 def register_commands(app: typer.Typer) -> None:
     """Attach every built-in command and command group to ``app``."""
     app.command()(scan.scan)
+    app.command()(check.check)
     app.command()(supply_chain.sbom)
     app.command()(supply_chain.dependencies)
     app.command(name="supply-chain")(supply_chain.supply_chain_cmd)
