@@ -16,8 +16,11 @@ from sqlmodel import Session  # noqa: E402
 from argus.core.config import Config  # noqa: E402
 from argus.core.engine import ScanEngine  # noqa: E402
 from argus.dashboard import db, store  # noqa: E402
-from argus.dashboard.app import app  # noqa: E402
+from argus.dashboard.app import CSRF_TOKEN, app  # noqa: E402
 from argus.reporting.json_reporter import JSONReporter  # noqa: E402
+
+# /api/scans only accepts JSON (CSRF protection).
+JSON = {"Content-Type": "application/json"}
 
 
 @pytest.fixture(autouse=True)
@@ -35,7 +38,8 @@ def report(vulnerable_project) -> str:
 
 @pytest.fixture
 def client() -> TestClient:
-    return TestClient(app)
+    # Loopback Host header: the dashboard rejects other hosts (DNS rebinding).
+    return TestClient(app, base_url="http://127.0.0.1")
 
 
 # --- ingest + store ---------------------------------------------------------
@@ -72,7 +76,7 @@ def test_overall_stats(report):
 
 # --- HTTP API + pages -------------------------------------------------------
 def test_api_ingest_and_pages_render(client, report):
-    r = client.post("/api/scans", content=report)
+    r = client.post("/api/scans", content=report, headers=JSON)
     assert r.status_code == 200
     body = r.json()
     assert body["scan_id"] and body["findings"] > 0
@@ -91,20 +95,21 @@ def test_api_ingest_and_pages_render(client, report):
 
 def test_upload_form_ingests_file(client, report):
     r = client.post("/upload", files={"file": ("report.json", report, "application/json")},
+                    data={"csrf_token": CSRF_TOKEN},
                     follow_redirects=False)
     assert r.status_code == 303
     assert r.headers["location"].startswith("/scans/")
 
 
 def test_bad_report_is_rejected(client):
-    r = client.post("/api/scans", content="not json")
+    r = client.post("/api/scans", content="not json", headers=JSON)
     assert r.status_code == 400
     assert "error" in r.json()
 
 
 def test_oversized_api_ingest_is_rejected(client, monkeypatch):
     monkeypatch.setattr("argus.dashboard.app._MAX_REPORT_BYTES", 64)
-    r = client.post("/api/scans", content=b"{" + b"x" * 200 + b"}")
+    r = client.post("/api/scans", content=b"{" + b"x" * 200 + b"}", headers=JSON)
     assert r.status_code == 413
     assert "byte limit" in r.json()["error"]
 
@@ -114,6 +119,7 @@ def test_oversized_upload_is_rejected(client, monkeypatch):
     r = client.post(
         "/upload",
         files={"file": ("report.json", b"{" + b"x" * 200 + b"}", "application/json")},
+        data={"csrf_token": CSRF_TOKEN},
         follow_redirects=False,
     )
     assert r.status_code == 413

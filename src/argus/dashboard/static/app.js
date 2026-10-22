@@ -16,6 +16,20 @@
     });
   }
 
+  // --- clickable table rows (no inline handlers: the CSP forbids them) ----
+  function followRow(e) {
+    var row = e.target.closest("tr[data-href]");
+    if (!row) return;
+    var href = row.getAttribute("data-href") || "";
+    // Only same-origin absolute paths.
+    if (href.charAt(0) !== "/" || href.charAt(1) === "/") return;
+    location.href = href;
+  }
+  document.addEventListener("click", followRow);
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Enter") followRow(e);
+  });
+
   // --- findings filter ----------------------------------------------------
   var search = document.getElementById("search");
   var sevFilter = document.getElementById("sev-filter");
