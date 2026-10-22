@@ -269,7 +269,8 @@ the same order, so every setting below behaves exactly as it does for
   `argus policy check --report results.json`.
 - **Enrichment and fixes**: imported findings go through the configured AI
   provider (offline heuristics by default; `--no-ai` turns it off) and,
-  with `--patches`, patch generation.
+  with `--patches`, patch generation. Deterministic fixes are attached with
+  `--no-ai` too.
 
 ## Exit codes
 

@@ -42,7 +42,9 @@ fail_on: ""             # e.g. high
 # Attack Simulation Mode: safe, sandboxed exploit demonstrations per finding.
 attack_simulation: false
 
-# Generate fix patches (and verify the deterministic ones).
+# Generate fix patches (and verify the deterministic ones). Argus's
+# deterministic, verified fixes are attached even with AI enrichment off
+# (--no-ai); only model-proposed drafts need a provider.
 generate_patches: false
 
 # Reuse cached findings for unchanged files (content-hash keyed; file-local
@@ -270,7 +272,7 @@ argus scan TARGET
       --no-ai               disable AI enrichment
       --include-ignored     also scan untracked files that git ignores
       --attack-sim          enable Attack Simulation Mode
-      --patches             generate/verify fix patches
+      --patches             generate/verify fix patches (deterministic ones also with --no-ai)
       --min-severity SEV    report findings at/above this severity
       --fail-on SEV         non-zero exit if any finding is at/above this severity
       --[no-]fail-on-error  fail (or not) when a scanner crashes

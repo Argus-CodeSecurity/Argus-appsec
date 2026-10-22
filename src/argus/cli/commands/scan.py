@@ -52,7 +52,10 @@ def scan(
     no_ai: bool = typer.Option(False, "--no-ai", help="Disable AI enrichment entirely."),
     attack_sim: bool = typer.Option(False, "--attack-sim", help="Enable Attack Simulation Mode."),
     patches: bool = typer.Option(
-        False, "--patches", help="Generate (and where possible verify) fix patches."
+        False,
+        "--patches",
+        help="Generate (and where possible verify) fix patches. Deterministic, "
+        "verified fixes are attached even with --no-ai.",
     ),
     reachability: bool = typer.Option(
         False,

@@ -260,6 +260,8 @@ class ScanEngine:
         result.findings = self._filter(result.findings)
         if self.config.ai.enabled:
             self._run_agents(result, project, ai)
+        elif self.config.generate_patches:
+            self._deterministic_patches(result, project, ai)
 
         from argus.analysis.risk_engine import enrich_contextual_risk
         from argus.analysis.security_graph import build_security_graph
@@ -492,6 +494,26 @@ class ScanEngine:
             if self.config.attack_simulation:
                 simulator.process(finding, ctx)
             if self.config.generate_patches:
+                patcher.process(finding, ctx)
+
+    def _deterministic_patches(self, result: ScanResult, project: Project, ai: AIProvider) -> None:
+        """Attach Argus's deterministic, verified fixes when AI enrichment is off.
+
+        ``--patches`` asks for fixes and ``--no-ai`` for no model; the
+        rewrites in :mod:`argus.remediation.rewrites` need neither the
+        provider nor the other agents, so they are attached regardless. Only
+        findings a rewrite actually changes are touched, so the rest keep
+        exactly the remediation their scanner gave them.
+        """
+        from argus.agents import AgentContext, PatchAgent
+        from argus.remediation.rewrites import fix_line
+
+        ctx = AgentContext(project=project, config=self.config, ai=ai)
+        patcher = PatchAgent()
+        for finding in result.findings:
+            snippet = finding.location.snippet or ""
+            fixed = fix_line(finding.rule_id, snippet) if snippet else None
+            if fixed and fixed != snippet:
                 patcher.process(finding, ctx)
 
     def _filter(self, findings: list[Finding]) -> list[Finding]:
