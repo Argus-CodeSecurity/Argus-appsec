@@ -97,6 +97,10 @@ Upgrading is recommended for every user.
 - The CLI is split into one module per command group under
   `argus.cli.commands`; commands, options, help text and exit codes are
   unchanged. `argus.cli.main:app` remains the entry point.
+- All git calls go through one hardened runner, `argus.core.gitexec`. The fix
+  and review workflow, the dependency diff and `--config-from-ref` now get the
+  same config pins, timeouts and output caps as the git-based scanners. Git
+  never prompts for credentials (`GIT_TERMINAL_PROMPT=0`).
 - The default Anthropic model is `claude-sonnet-5-5` (override with
   `ARGUS_AI_MODEL`, `ai.model` or `--ai-model`); model calls default to a 60 s
   timeout and 2 retries; the default `max_tokens` is 4096.
@@ -129,6 +133,10 @@ Upgrading is recommended for every user.
   unique.
 - The fix applier keeps original line endings, skips non-UTF-8 files, and
   restores the working tree and branch on failure.
+- `argus dependencies`, `argus supply-chain` and `argus sbom` exit 2 with a
+  message for an unknown or option-like `--diff` ref instead of a traceback.
+- `ScanEngine.scan` no longer modifies the `Project` passed in, so its
+  `exclude_paths` no longer carry over to a later scan of the same object.
 
 ## [0.8.1] - 2026-09-07
 
