@@ -1,8 +1,12 @@
-"""A minimal MCP (Model Context Protocol) stdio server exposing Argus as a tool.
+"""A minimal MCP (Model Context Protocol) stdio server exposing Argus as tools.
 
 AI coding agents increasingly run scanners automatically after they generate
 code. This server lets an agent call Argus over MCP, so "scan what you just wrote"
-becomes a single tool call. It speaks JSON-RPC 2.0 over newline-delimited stdio
+becomes a single tool call: ``argus_scan`` for a directory, the fast
+``argus_check_files`` / ``argus_check_snippet`` for just-written code,
+``argus_check_package`` before adding a dependency and ``argus_fix`` for a
+verified fix as a diff (see :mod:`argus.mcp.tools` and
+:mod:`argus.mcp.packages`). It speaks JSON-RPC 2.0 over newline-delimited stdio
 and implements the handful of methods a client needs (``initialize``,
 ``tools/list``, ``tools/call``), with no external SDK, so it stays dependency-light
 and works offline like the rest of Argus.
@@ -10,11 +14,12 @@ and works offline like the rest of Argus.
 The dispatch is a pure function (:func:`handle_request`) so it is fully testable
 without touching real stdio.
 
-The agent calling the tool is not fully trusted (it may be acting on prompt
-injection), so the tool only scans paths inside the server's working directory
+The agent calling the tools is not fully trusted (it may be acting on prompt
+injection), so the tools only read paths inside the server's working directory
 or the directories listed in ``ARGUS_MCP_ROOTS`` (``os.pathsep``-separated),
-never honours rules shipped inside the scanned tree, and gives up on a scan
-after ``ARGUS_MCP_SCAN_TIMEOUT`` seconds (default 600).
+never honour rules or suppressions shipped inside the scanned tree, never
+write to the project, and give up after ``ARGUS_MCP_SCAN_TIMEOUT`` seconds
+(default 600).
 """
 
 from __future__ import annotations
@@ -24,6 +29,7 @@ import json
 import os
 import sys
 import threading
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any, TextIO
 
@@ -43,9 +49,33 @@ ROOTS_ENV = "ARGUS_MCP_ROOTS"
 TIMEOUT_ENV = "ARGUS_MCP_SCAN_TIMEOUT"
 _DEFAULT_TIMEOUT = 600.0
 
+_SEVERITY_ARG = {
+    "type": "string",
+    "enum": ["info", "low", "medium", "high", "critical"],
+    "description": "Only return findings at or above this severity.",
+    "default": "low",
+}
+
+
+def _annotations(title: str, *, open_world: bool) -> dict[str, Any]:
+    """MCP tool annotations (protocol 2025-03-26 and later; older clients ignore them).
+
+    Every Argus tool is read-only: none writes to the project or applies a fix.
+    """
+    return {
+        "title": title,
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": open_world,
+    }
+
+
 TOOLS: list[dict[str, Any]] = [
     {
         "name": "argus_scan",
+        "title": "Scan a directory",
+        "annotations": _annotations("Scan a directory", open_world=True),
         "description": (
             "Scan a local path for security vulnerabilities across code (SAST + "
             "taint), dependencies (CVEs), secrets, infrastructure-as-code, and "
@@ -63,14 +93,116 @@ TOOLS: list[dict[str, Any]] = [
                         "server's working directory (or ARGUS_MCP_ROOTS)."
                     ),
                 },
-                "min_severity": {
-                    "type": "string",
-                    "enum": ["info", "low", "medium", "high", "critical"],
-                    "description": "Only return findings at or above this severity.",
-                    "default": "low",
-                },
+                "min_severity": _SEVERITY_ARG,
             },
             "required": ["path"],
+        },
+    },
+    {
+        "name": "argus_check_files",
+        "title": "Check edited files",
+        "annotations": _annotations("Check edited files", open_world=False),
+        "description": (
+            "Fast security check of specific files, meant to run after you write or "
+            "edit them. Runs only the file-local scanners (secrets, SAST patterns, "
+            "AST taint, IaC, LLM/AI usage, malware) with no network access. Returns "
+            "findings with an id, severity, file:line, rule id and a one-line fix; "
+            "pass an id to argus_fix for a verified fix when fix_available is true. "
+            "Read-only."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "paths": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "minItems": 1,
+                    "maxItems": 100,
+                    "description": (
+                        "Files to check, absolute or relative to the project root. "
+                        "Must be inside the server's working directory (or "
+                        "ARGUS_MCP_ROOTS)."
+                    ),
+                },
+                "min_severity": _SEVERITY_ARG,
+            },
+            "required": ["paths"],
+        },
+    },
+    {
+        "name": "argus_check_snippet",
+        "title": "Check a code snippet",
+        "annotations": _annotations("Check a code snippet", open_world=False),
+        "description": (
+            "Security check of code text before it is written anywhere. The code is "
+            "scanned in a private temporary directory, never in the project, with the "
+            "same file-local scanners as argus_check_files. Give a filename hint (for "
+            "example app.py or .github/workflows/ci.yml) or a language. Read-only."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "code": {"type": "string", "description": "The source text to check."},
+                "filename": {
+                    "type": "string",
+                    "description": "File name hint; picks the scanners and rules.",
+                },
+                "language": {
+                    "type": "string",
+                    "description": "Language, used when no filename is given (e.g. python).",
+                },
+                "min_severity": _SEVERITY_ARG,
+            },
+            "required": ["code"],
+        },
+    },
+    {
+        "name": "argus_check_package",
+        "title": "Check a dependency",
+        "annotations": _annotations("Check a dependency", open_world=True),
+        "description": (
+            "Before adding a dependency, check it: known-malicious package intel, "
+            "typosquat resemblance to popular packages, known vulnerabilities for the "
+            "given version (OSV), and whether the name exists on the registry (npm, "
+            "PyPI, crates.io); a name that does not exist may be hallucinated. Uses "
+            "the network unless the server runs with ARGUS_MCP_OFFLINE=1; checks that "
+            "cannot run report unknown. Read-only."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "ecosystem": {
+                    "type": "string",
+                    "description": "npm, PyPI, crates.io, Go, Maven, RubyGems, NuGet or Packagist.",
+                },
+                "name": {"type": "string", "description": "Package name."},
+                "version": {
+                    "type": "string",
+                    "description": "Exact version, for the vulnerability lookup.",
+                },
+            },
+            "required": ["ecosystem", "name"],
+        },
+    },
+    {
+        "name": "argus_fix",
+        "title": "Get a verified fix",
+        "annotations": _annotations("Get a verified fix", open_world=False),
+        "description": (
+            "For a finding id returned by argus_check_files or argus_check_snippet, "
+            "return Argus's deterministic fix as a unified diff when one exists and "
+            "verifies (the rule no longer fires on the fixed line and the file still "
+            "parses). Never applies the fix: review the diff and apply it yourself."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "finding_id": {
+                    "type": "string",
+                    "description": "The id of a finding from a previous check.",
+                },
+            },
+            "required": ["finding_id"],
         },
     },
 ]
@@ -89,6 +221,17 @@ def _tool_text(text: str, *, is_error: bool = False) -> dict[str, Any]:
     return {"content": [{"type": "text", "text": text}], "isError": is_error}
 
 
+def _tool_json(payload: dict[str, Any]) -> dict[str, Any]:
+    """A tool result as structured content plus the same JSON as text.
+
+    ``structuredContent`` is the 2025-06-18 form; the text block keeps older
+    clients working, as the specification recommends.
+    """
+    result = _tool_text(json.dumps(payload, indent=2))
+    result["structuredContent"] = payload
+    return result
+
+
 # --- the scan tool ---------------------------------------------------------
 def allowed_roots() -> list[Path]:
     """Directories the tool may scan: ARGUS_MCP_ROOTS, else the working directory."""
@@ -98,12 +241,18 @@ def allowed_roots() -> list[Path]:
 
 
 def resolve_scan_path(path: str) -> Path:
-    """Resolve ``path`` (relative to the working directory) and confine it to the roots.
+    """Resolve ``path`` and confine it to the roots.
 
-    Symlinks and ``..`` are resolved first, so neither can step outside.
+    A relative path is taken relative to the first allowed root (the working
+    directory unless ``ARGUS_MCP_ROOTS`` is set), so a client that starts the
+    server somewhere else can still pass project-relative paths. Symlinks and
+    ``..`` are resolved first, so neither can step outside.
     """
-    resolved = Path(path).expanduser().resolve()
     roots = allowed_roots()
+    candidate = Path(path).expanduser()
+    if not candidate.is_absolute():
+        candidate = roots[0] / candidate
+    resolved = candidate.resolve()
     if not any(resolved == root or resolved.is_relative_to(root) for root in roots):
         shown = ", ".join(str(r) for r in roots)
         raise ValueError(
@@ -198,6 +347,22 @@ def _run_scan(arguments: dict[str, Any]) -> dict[str, Any]:
 
 
 # --- dispatch --------------------------------------------------------------
+ToolFn = Callable[[dict[str, Any]], dict[str, Any]]
+
+
+def _handlers() -> dict[str, tuple[str, ToolFn]]:
+    """Tool name -> (verb for error messages, implementation)."""
+    from argus.mcp import packages, tools
+
+    return {
+        "argus_scan": ("Scan", _run_scan),
+        "argus_check_files": ("Check", tools.check_files),
+        "argus_check_snippet": ("Check", tools.check_snippet),
+        "argus_check_package": ("Package check", packages.check_package),
+        "argus_fix": ("Fix", tools.fix),
+    }
+
+
 def handle_request(req: dict[str, Any]) -> dict[str, Any] | None:
     """Handle one JSON-RPC request. Returns a response dict, or None for a
     notification (which has no id and expects no reply)."""
@@ -221,13 +386,21 @@ def handle_request(req: dict[str, Any]) -> dict[str, Any] | None:
     if method == "tools/call":
         params = req.get("params") or {}
         name = params.get("name")
-        if name != "argus_scan":
+        handler = _handlers().get(name) if isinstance(name, str) else None
+        if handler is None:
             return _ok(req_id, _tool_text(f"Unknown tool: {name!r}", is_error=True))
+        arguments = params.get("arguments") or {}
+        if not isinstance(arguments, dict):
+            return _ok(req_id, _tool_text("Tool arguments must be an object", is_error=True))
+        verb, fn = handler
         try:
-            payload = _run_scan(params.get("arguments") or {})
+            if name == "argus_scan":
+                payload = fn(arguments)  # applies the timeout around the scan itself
+            else:
+                payload = _run_with_timeout(lambda: fn(arguments), _scan_timeout())
         except Exception as exc:  # tool errors are reported in-band, not as protocol errors
-            return _ok(req_id, _tool_text(f"Scan failed: {exc}", is_error=True))
-        return _ok(req_id, _tool_text(json.dumps(payload, indent=2)))
+            return _ok(req_id, _tool_text(f"{verb} failed: {exc}", is_error=True))
+        return _ok(req_id, _tool_json(payload))
 
     # Notifications (e.g. notifications/initialized) carry no id and get no reply.
     if req_id is None:

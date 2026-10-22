@@ -7,7 +7,7 @@ Protocol](https://modelcontextprotocol.io) server so any MCP-capable agent can
 call it as a tool.
 
 It is self-contained (no extra dependency), speaks JSON-RPC over stdio, and is
-read-only: the scan never modifies your files.
+read-only: no tool modifies your files.
 
 ## Run it
 
@@ -33,18 +33,30 @@ Most MCP clients take a small JSON config. Register Argus as a server:
 }
 ```
 
-Once connected, the agent sees one tool:
+Once connected, the agent sees five tools:
 
 | Tool | Arguments | Returns |
 | --- | --- | --- |
-| `argus_scan` | `path` (required), `min_severity` (optional: info/low/medium/high/critical) | A structured summary plus a list of findings, each with rule id, severity, CWE/OWASP, location, and remediation. |
+| `argus_scan` | `path` (required), `min_severity` (optional: info/low/medium/high/critical) | A full scan of a directory or file: a structured summary plus findings, each with rule id, severity, CWE/OWASP, location, and remediation. |
+| `argus_check_files` | `paths` (required, 1 to 100 files), `min_severity` (default low) | The fast, file-level check (`argus check`): only the file-local scanners, no network. Findings carry an `id`, path, line, rule id, severity, a one-line `fix`, a `hook` line and `fix_available`. |
+| `argus_check_snippet` | `code` (required), `filename` or `language`, `min_severity` | The same check on code text, scanned in a private temporary directory, never in the project. |
+| `argus_check_package` | `ecosystem`, `name` (required), `version` | A verdict on a dependency before it is added: known malicious, typosquat, known vulnerabilities (OSV, needs `version`) and whether the name exists on the registry. |
+| `argus_fix` | `finding_id` (required) | For a finding from a previous check, Argus's deterministic, verified fix as a unified diff, or the reason there is none. Never applied. |
 
-A typical agent instruction is simply: *"After you write code, call `argus_scan`
-on the project directory and fix anything critical or high before finishing."*
+A typical agent instruction: *"After you write or edit files, call
+`argus_check_files` on them and fix anything critical or high before
+finishing. Before adding a dependency, call `argus_check_package`."*
+
+Every tool declares MCP tool annotations (`readOnlyHint: true`,
+`destructiveHint: false`, `idempotentHint: true`, and `openWorldHint: true`
+only for `argus_scan` and `argus_check_package`, which can use the network).
+Clients that support protocol 2025-06-18 also receive each result as
+`structuredContent`; the same JSON is always in the text content for older
+clients.
 
 ## What comes back
 
-The tool returns JSON so the agent can act on it programmatically:
+`argus_scan` returns JSON so the agent can act on it programmatically:
 
 ```json
 {
@@ -74,18 +86,112 @@ The tool returns JSON so the agent can act on it programmatically:
 Findings are capped per call (the `summary` always reports the true `total_findings`
 and whether the list was `truncated`, so coverage is never silently hidden).
 
+### Checking files and snippets
+
+`argus_check_files` and `argus_check_snippet` return:
+
+```json
+{
+  "checked": ["app.py"],
+  "skipped": [],
+  "summary": {
+    "total_findings": 1,
+    "returned": 1,
+    "truncated": false,
+    "by_severity": {"critical": 0, "high": 1, "medium": 0, "low": 0, "info": 0},
+    "highest": "high",
+    "scanner_errors": []
+  },
+  "findings": [
+    {
+      "id": "patterns.python-yaml-load|app.py|3f2a9c1b7d4e",
+      "scan_id": "patterns:python-yaml-load:1",
+      "rule_id": "patterns.python-yaml-load",
+      "scanner": "patterns",
+      "severity": "high",
+      "title": "Unsafe yaml.load without SafeLoader",
+      "path": "app.py",
+      "line": 5,
+      "column": null,
+      "cwe": ["CWE-502"],
+      "owasp": ["A08:2021-Software and Data Integrity Failures"],
+      "fix": "Use yaml.safe_load, or yaml.load(..., Loader=yaml.SafeLoader).",
+      "fix_available": true,
+      "hook": "app.py:5:1: error high patterns.python-yaml-load: Unsafe yaml.load without SafeLoader. Fix: Use yaml.safe_load, or yaml.load(..., Loader=yaml.SafeLoader)."
+    }
+  ]
+}
+```
+
+`argus_check_snippet` returns `filename` (the sanitized file name the code
+was checked as) instead of `checked`. A filename hint keeps its directories,
+because some rules depend on them (`.github/workflows/ci.yml`,
+`Dockerfile`); `..` and absolute parts are refused.
+
+The `id` is the finding fingerprint: rule, path and a digest of the flagged
+code. It stays the same across checks while the code is unchanged, unlike
+`scan_id` (the per-scan id used in `argus scan` reports), which restarts
+from 1 in every check.
+
+### Fixes
+
+`argus_fix` takes a finding `id` from a check made by the same server
+process. When Argus has a deterministic rewrite for the rule, it re-reads the
+file, confirms the flagged line is unchanged, applies the rewrite on a dry
+run, and returns it only if it verifies (the rule no longer fires on the new
+line and the file still parses):
+
+```json
+{
+  "finding_id": "patterns.python-yaml-load|app.py|3f2a9c1b7d4e",
+  "rule_id": "patterns.python-yaml-load",
+  "path": "app.py",
+  "line": 5,
+  "applied": false,
+  "available": true,
+  "verified": true,
+  "before": "    return yaml.load(raw)",
+  "after": "    return yaml.safe_load(raw)",
+  "diff": "--- a/app.py\n+++ b/app.py\n@@ -2,4 +2,4 @@\n ...",
+  "note": "Not applied. Review the diff and apply it yourself."
+}
+```
+
+Otherwise `available` is `false` with a `reason` (no deterministic fix for
+the rule, the line changed since the check, the rewrite did not verify) and,
+where it helps, the one-line `guidance`.
+
+### Packages
+
+`argus_check_package` returns a `verdict`, the first that applies of:
+`malicious` (in the malicious-package intel), `possibly_hallucinated` (the
+registry says the name does not exist), `vulnerable` (OSV advisories for the
+given version), `suspicious` (the name resembles a popular package),
+`unknown` (a check could not run) and `no_known_issues`. The details are in
+`malicious`, `typosquat`, `registry` and `vulnerabilities`.
+
+The registry lookup is only made for npm, PyPI and crates.io. For other
+ecosystems, or when the lookup fails, `registry.status` is `unknown`:
+Argus never guesses that a package is hallucinated. Without a `version`, the
+vulnerability lookup is `not_checked`.
+
 ## Notes
 
-- **Read-only.** The `argus_scan` tool only reads the path you give it.
+- **Read-only.** No tool writes to your project; `argus_fix` only returns a
+  diff.
 - **Confined to your project.** Paths must be inside the directory the server
   was started in, or inside one of the directories listed in `ARGUS_MCP_ROOTS`
-  (separated by `;` on Windows and `:` elsewhere). This stops a
-  prompt-injected agent from scanning your home directory.
+  (separated by `;` on Windows and `:` elsewhere). Relative paths are taken
+  relative to the first of those directories. This stops a prompt-injected
+  agent from reading your home directory.
 - **Untrusted by default.** Rules and suppressions shipped inside the scanned
   directory (`.argus/rules`, `argus-ignore` comments) are not honoured, since
   the agent may have just cloned it.
-- **Bounded.** A scan stops after `ARGUS_MCP_SCAN_TIMEOUT` seconds (default
-  600).
+- **Bounded.** Every tool call stops after `ARGUS_MCP_SCAN_TIMEOUT` seconds
+  (default 600).
 - **Local paths only.** It does not clone remote repositories from an agent call.
-- **Offline by default**, like the rest of Argus, so an agent can scan without a
-  network round-trip (dependency CVE lookups still use the network when enabled).
+- **Network.** `argus_check_files`, `argus_check_snippet` and `argus_fix`
+  never use the network. `argus_scan` uses it for dependency CVE lookups, and
+  `argus_check_package` for OSV, the malicious-package feeds and the registry.
+  Set `ARGUS_MCP_OFFLINE=1` to keep `argus_check_package` offline: the
+  bundled intel and typosquat checks still run, the rest report `unknown`.
