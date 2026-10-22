@@ -25,15 +25,17 @@ from __future__ import annotations
 import contextlib
 import sys
 from pathlib import Path
+from typing import Any
 
 import typer
 from rich.console import Console
 from rich.markup import escape
 from rich.panel import Panel
 from rich.table import Table
+from typer.core import TyperGroup
 
 from argus import __version__
-from argus.core.config import Config
+from argus.core.config import Config, ConfigError
 from argus.core.models import ScanResult, Severity
 from argus.core.plugin import registry
 from argus.plugins import register_builtins
@@ -49,11 +51,30 @@ for _stream in (sys.stdout, sys.stderr):
 # even without the entry-point discovery path (e.g. running from source).
 register_builtins()
 
+class _ArgusGroup(TyperGroup):
+    """Root command group that turns configuration errors into exit status 2.
+
+    A config problem (bad type in .argus.yml, unknown scanner name, invalid
+    policy) can surface in any command, sometimes deep inside the engine.
+    Catching it once here keeps every command consistent: the run stops with a
+    clear message and exit 2, never a traceback that CI could confuse with a
+    gate decision.
+    """
+
+    def invoke(self, ctx: Any) -> Any:
+        try:
+            return super().invoke(ctx)
+        except ConfigError as exc:
+            err_console.print(f"[red]Configuration error:[/red] {escape(str(exc))}")
+            raise typer.Exit(2) from exc
+
+
 app = typer.Typer(
     name="argus",
     help="Argus, an open-source AI Security Engineer.",
     add_completion=False,
     no_args_is_help=True,
+    cls=_ArgusGroup,
 )
 console = Console()
 err_console = Console(stderr=True)

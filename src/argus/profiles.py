@@ -56,8 +56,10 @@ PROFILES: dict[str, ScanProfile] = {
 
 
 def apply_profile(name: str) -> list[str]:
+    from argus.core.config import ConfigError
+
     key = name.strip().lower()
     if key not in PROFILES:
         known = ", ".join(sorted(PROFILES))
-        raise ValueError(f"Unknown profile {name!r}. Choose from: {known}")
+        raise ConfigError(f"Unknown profile {name!r}. Choose from: {known}")
     return list(PROFILES[key].scanners)

@@ -23,6 +23,64 @@ from argus.core.models import Severity
 CONFIG_FILENAMES = (".argus.yml", ".argus.yaml")
 
 
+class ConfigError(ValueError):
+    """The configuration is invalid.
+
+    Commands report this and exit 2 instead of scanning with a configuration
+    that does not say what the user meant (a CI gate must fail closed).
+    """
+
+
+class ConfigFileNotFoundError(ConfigError, FileNotFoundError):
+    """An explicitly requested config file does not exist."""
+
+
+def _str_list(data: dict[str, Any], key: str) -> list[str]:
+    value = data.get(key)
+    if value is None:
+        return []
+    if not isinstance(value, list) or not all(isinstance(v, str) for v in value):
+        raise ConfigError(
+            f"{key}: expected a list of strings (e.g. {key}: [\"value\"]), "
+            f"got {value!r}"
+        )
+    return [v.strip() for v in value if v.strip()]
+
+
+def _dict_list(data: dict[str, Any], key: str) -> list[dict[str, Any]]:
+    value = data.get(key)
+    if value is None:
+        return []
+    if not isinstance(value, list) or not all(isinstance(v, dict) for v in value):
+        raise ConfigError(f"{key}: expected a list of mappings, got {value!r}")
+    return list(value)
+
+
+def _mapping(data: dict[str, Any], key: str) -> dict[str, Any]:
+    value = data.get(key)
+    if value is None:
+        return {}
+    if not isinstance(value, dict):
+        raise ConfigError(f"{key}: expected a mapping, got {type(value).__name__}")
+    return dict(value)
+
+
+def _bool(data: dict[str, Any], key: str, default: bool, *, prefix: str = "") -> bool:
+    value = data.get(key)
+    if value is None:
+        return default
+    if not isinstance(value, bool):
+        raise ConfigError(f"{prefix}{key}: expected true or false, got {value!r}")
+    return value
+
+
+def _severity(value: Any, key: str) -> Severity:
+    try:
+        return Severity.parse(value)
+    except ValueError as exc:
+        raise ConfigError(f"{key}: {exc}") from exc
+
+
 @dataclass
 class AIConfig:
     provider: str = "heuristic"       # heuristic | anthropic | openai | ollama
@@ -92,7 +150,7 @@ class Config:
             # back to defaults here silently drops fail_on/allow gating, which in CI
             # means a typo'd path turns the security gate off without any signal.
             if not chosen.exists():
-                raise FileNotFoundError(f"config file not found: {chosen}")
+                raise ConfigFileNotFoundError(f"config file not found: {chosen}")
         elif project_root:
             for name in CONFIG_FILENAMES:
                 candidate = Path(project_root) / name
@@ -101,38 +159,79 @@ class Config:
                     break
         if chosen and chosen.exists():
             with open(chosen, encoding="utf-8") as fh:
-                data = yaml.safe_load(fh) or {}
+                return cls.from_yaml(fh.read(), source=str(chosen))
         return cls.from_dict(data)
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> Config:
-        cfg = cls()
-        cfg.scanners = list(data.get("scanners", cfg.scanners))
-        cfg.exclude_scanners = list(data.get("exclude_scanners", cfg.exclude_scanners))
-        cfg.exclude_paths = list(data.get("exclude_paths", cfg.exclude_paths))
-        cfg.attack_simulation = bool(data.get("attack_simulation", cfg.attack_simulation))
-        cfg.generate_patches = bool(data.get("generate_patches", cfg.generate_patches))
-        cfg.scanner_options = dict(data.get("scanner_options", {}))
-        cfg.allow = [e for e in data.get("allow", []) if isinstance(e, dict)]
-        cfg.policies = [p for p in data.get("policies", []) if isinstance(p, dict)]
-        cfg.autofix = data["autofix"] if isinstance(data.get("autofix"), dict) else {}
-        cfg.cache = bool(data.get("cache", cfg.cache))
-        cfg.parallel = bool(data.get("parallel", cfg.parallel))
-        if "min_severity" in data:
-            cfg.min_severity = Severity.parse(data["min_severity"])
-        if data.get("fail_on"):
-            cfg.fail_on = Severity.parse(data["fail_on"])
-        if "fail_on_error" in data:
-            cfg.fail_on_error = bool(data["fail_on_error"])
-        ai = data.get("ai", {})
-        if ai:
-            cfg.ai = AIConfig(
-                provider=ai.get("provider", cfg.ai.provider),
-                model=ai.get("model", cfg.ai.model),
-                enabled=bool(ai.get("enabled", cfg.ai.enabled)),
-                temperature=float(ai.get("temperature", cfg.ai.temperature)),
-                max_tokens=int(ai.get("max_tokens", cfg.ai.max_tokens)),
+    def from_yaml(cls, text: str, *, source: str = "config") -> Config:
+        """Parse YAML config text; any problem is a :class:`ConfigError`."""
+        try:
+            data = yaml.safe_load(text)
+        except yaml.YAMLError as exc:
+            raise ConfigError(f"{source}: invalid YAML: {exc}") from exc
+        if data is None:
+            data = {}
+        if not isinstance(data, dict):
+            raise ConfigError(
+                f"{source}: expected a mapping of settings at the top level, "
+                f"got {type(data).__name__}"
             )
+        try:
+            return cls.from_dict(data)
+        except ConfigError as exc:
+            raise ConfigError(f"{source}: {exc}") from exc
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> Config:
+        """Build a Config from parsed settings, validating every field's type.
+
+        Values are checked strictly rather than coerced: ``list("dist/*")`` is a
+        list of characters (and ``*`` then excludes every file), and
+        ``bool("false")`` is True. Either would silently change what the scan
+        covers, so a wrong type is a :class:`ConfigError` instead.
+        """
+        cfg = cls()
+        cfg.scanners = _str_list(data, "scanners")
+        cfg.exclude_scanners = _str_list(data, "exclude_scanners")
+        cfg.exclude_paths = _str_list(data, "exclude_paths")
+        cfg.attack_simulation = _bool(data, "attack_simulation", cfg.attack_simulation)
+        cfg.generate_patches = _bool(data, "generate_patches", cfg.generate_patches)
+        cfg.cache = _bool(data, "cache", cfg.cache)
+        cfg.parallel = _bool(data, "parallel", cfg.parallel)
+        if data.get("fail_on_error") is not None:
+            cfg.fail_on_error = _bool(data, "fail_on_error", cfg.fail_on_error)
+
+        options = _mapping(data, "scanner_options")
+        for name, value in options.items():
+            if not isinstance(value, dict):
+                raise ConfigError(
+                    f"scanner_options.{name}: expected a mapping, "
+                    f"got {type(value).__name__}"
+                )
+        cfg.scanner_options = {str(k): dict(v) for k, v in options.items()}
+        cfg.allow = _dict_list(data, "allow")
+        cfg.policies = _dict_list(data, "policies")
+        cfg.autofix = _mapping(data, "autofix")
+
+        if data.get("min_severity") not in (None, ""):
+            cfg.min_severity = _severity(data["min_severity"], "min_severity")
+        if data.get("fail_on") not in (None, ""):
+            cfg.fail_on = _severity(data["fail_on"], "fail_on")
+
+        ai = _mapping(data, "ai")
+        if ai:
+            try:
+                cfg.ai = AIConfig(
+                    provider=str(ai.get("provider", cfg.ai.provider)),
+                    model=ai.get("model", cfg.ai.model),
+                    enabled=_bool(ai, "enabled", cfg.ai.enabled, prefix="ai."),
+                    temperature=float(ai.get("temperature", cfg.ai.temperature)),
+                    max_tokens=int(ai.get("max_tokens", cfg.ai.max_tokens)),
+                )
+            except (TypeError, ValueError) as exc:
+                if isinstance(exc, ConfigError):
+                    raise
+                raise ConfigError(f"ai: {exc}") from exc
         return cfg
 
     def options_for(self, scanner_name: str) -> dict[str, Any]:
