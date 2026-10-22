@@ -46,6 +46,10 @@ class FixOptions:
     # Skip commit hooks (git commit --no-verify). Off by default: hooks such as
     # DCO sign-off or secret scanning must run unless the user opts out.
     no_verify: bool = False
+    # Append fix.applied / fix.pr_opened records to .argus/audit.log. The
+    # CLI passes the config's audit_log setting; ARGUS_AUDIT_LOG=off also
+    # turns them off.
+    audit: bool = True
 
 
 @dataclass
@@ -166,6 +170,7 @@ def run_fix_workflow(project: Project, findings: list[Finding], options: FixOpti
             include_unverified=options.include_unverified,
             dry_run=False,
             only_rules=options.only_rules,
+            audit=options.audit,
         )
         outcome.applied = report
         if options.only_rules is not None:
@@ -256,16 +261,17 @@ def _push_and_open_pr(
         outcome.note(f"Opened pull request: {pr.url}")
         # Appended after the push, so this record is in the working tree of
         # the fix branch, not in the pull request itself.
-        record_fix_events(
-            root,
-            "fix.pr_opened",
-            report.fixes,
-            branch=options.branch,
-            base=base,
-            commit=outcome.commit_sha,
-            pr_url=redact_credentials(pr.url or ""),
-            pr_number=pr.number,
-        )
+        if options.audit:
+            record_fix_events(
+                root,
+                "fix.pr_opened",
+                report.fixes,
+                branch=options.branch,
+                base=base,
+                commit=outcome.commit_sha,
+                pr_url=redact_credentials(pr.url or ""),
+                pr_number=pr.number,
+            )
     except HostingError as exc:
         outcome.error = str(exc)
         return

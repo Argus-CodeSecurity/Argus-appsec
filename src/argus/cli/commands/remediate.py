@@ -115,6 +115,7 @@ def fix(
             annotate=annotate_pr,
             only_rules=only_rules,
             no_verify=no_verify,
+            audit=cfg.audit_log,
         )
         outcome = run_fix_workflow(project, result.findings, options)
         print_fix_outcome(outcome, open_pr=open_pr or annotate_pr, dry_run=dry_run)

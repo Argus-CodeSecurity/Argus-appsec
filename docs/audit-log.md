@@ -40,8 +40,8 @@ same rule: one `suppression.added` per baseline file content and one
 ### Turning it off
 
 Set `audit_log: false` in `.argus.yml`, or `ARGUS_AUDIT_LOG=off` in the
-environment (also `0`, `false`, `no`). The environment switch also covers
-`argus fix`.
+environment (also `0`, `false`, `no`). Both also cover the `fix.applied`
+and `fix.pr_opened` records of `argus fix`.
 
 ## Format
 
