@@ -1187,6 +1187,7 @@ def policy_check(
             cfg = load_config_from_ref(Path.cwd(), config_from_ref, config)
         else:
             cfg = Config.load(path=config)
+        policies = _required_policies(cfg)
     else:
         try:
             resolved = resolve(target)
@@ -1199,6 +1200,8 @@ def policy_check(
         try:
             cfg = load_project_config(resolved.project, config,
                                       config_from_ref=config_from_ref)
+            # Validate before scanning so a broken policy fails fast.
+            policies = _required_policies(cfg)
             cfg.ai.enabled = False
             if scanners_opt:
                 cfg.scanners = [s.strip() for s in scanners_opt.split(",") if s.strip()]
@@ -1209,14 +1212,7 @@ def policy_check(
         finally:
             resolved.cleanup()
 
-    if not cfg.policies:
-        err_console.print(
-            "[yellow]No policies configured.[/yellow] Add a ``policies:`` section "
-            "to .argus.yml (see docs/configuration.md)."
-        )
-        raise typer.Exit(0)
-
-    outcome = evaluate(result, cfg.policies)
+    outcome = evaluate(result, policies)
     if outcome.blocked:
         table = Table(title="Policy violations (BLOCK)")
         table.add_column("Policy", style="bold")
@@ -1727,6 +1723,25 @@ def _cli_severity(value: str, option: str) -> Severity:
         return Severity.parse(value)
     except ValueError as exc:
         raise typer.BadParameter(str(exc), param_hint=option) from exc
+
+
+def _required_policies(cfg: Config) -> list[dict]:
+    """Validated policies for `policy check`; exit 2 if there are none.
+
+    Invalid policies raise PolicyError (a ConfigError, so exit 2). Having no
+    policies at all is also a usage error: the user asked for a policy gate,
+    and passing it with nothing to check would be a silent pass.
+    """
+    from argus.policy import load_policies
+
+    policies = load_policies(cfg.policies)
+    if not policies:
+        err_console.print(
+            "[red]Error:[/red] no policies configured. Add a ``policies:`` section "
+            "to .argus.yml or pass --config (see docs/configuration.md)."
+        )
+        raise typer.Exit(2)
+    return policies
 
 
 def _write_stdout(text: str) -> None:

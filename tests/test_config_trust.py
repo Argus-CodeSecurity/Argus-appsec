@@ -85,6 +85,15 @@ def test_scan_ignores_remote_config(remote_repo: Path) -> None:
     assert res.exit_code == 1, res.output
 
 
+def test_policy_check_ignores_remote_policies(remote_repo: Path) -> None:
+    # A permissive in-repo policy set must not be what the gate evaluates.
+    (remote_repo / ".argus.yml").write_text(
+        "policies:\n  - id: only-warn\n    when:\n      scanner: secrets\n"
+        "    action: warn\n", encoding="utf-8")
+    res = runner.invoke(app, ["policy", "check", "https://github.com/evil/repo", "--quiet"])
+    assert res.exit_code == 2, res.output  # no trusted policies configured
+
+
 def test_baseline_create_ignores_remote_config(remote_repo: Path, tmp_path: Path) -> None:
     out = tmp_path / "baseline.json"
     res = runner.invoke(app, ["baseline", "create", "https://github.com/evil/repo",
