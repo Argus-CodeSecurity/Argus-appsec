@@ -75,7 +75,9 @@ comment on the offending line. The reason is **required**, so every suppression
 explains itself:
 
 ```python
-subprocess.run(cmd, shell=True)  # argus-ignore: python-shell-true reason="fixed internal command, no user input"
+subprocess.run(
+    cmd, shell=True
+)  # argus-ignore: python-shell-true reason="fixed internal command, no user input"
 ```
 
 - Scope by rule id (full `patterns.python-shell-true`, short `python-shell-true`,

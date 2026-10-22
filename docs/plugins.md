@@ -18,15 +18,21 @@ set the class attributes, and implement `scan`.
 from collections.abc import Iterable
 
 from argus.plugin_api import (
-    Confidence, Finding, Location, Remediation, Scanner, ScannerContext,
-    Severity, scanner,
+    Confidence,
+    Finding,
+    Location,
+    Remediation,
+    Scanner,
+    ScannerContext,
+    Severity,
+    scanner,
 )
 
 
 @scanner  # registers the scanner with the global registry
 class TodoScanner(Scanner):
-    name = "todo"                    # unique id (used in config and finding ids)
-    category = "hygiene"             # grouping shown in `argus scanners`
+    name = "todo"  # unique id (used in config and finding ids)
+    category = "hygiene"  # grouping shown in `argus scanners`
     description = "Flags TODO/FIXME markers left in code."
 
     def applies_to(self, project) -> bool:
@@ -36,7 +42,7 @@ class TodoScanner(Scanner):
     def scan(self, ctx: ScannerContext) -> Iterable[Finding]:
         counter = 0
         for f in ctx.project.files():
-            if f.language is None:            # skip non-source files
+            if f.language is None:  # skip non-source files
                 continue
             for lineno, line in enumerate(f.lines(), start=1):
                 if "TODO" in line or "FIXME" in line:
@@ -47,8 +53,7 @@ class TodoScanner(Scanner):
                         scanner=self.name,
                         title="Unresolved TODO/FIXME",
                         description="A TODO or FIXME marker remains in the code.",
-                        location=Location(path=f.rel_path, start_line=lineno,
-                                          snippet=line.strip()),
+                        location=Location(path=f.rel_path, start_line=lineno, snippet=line.strip()),
                         severity=Severity.INFO,
                         confidence=Confidence.HIGH,
                         remediation=Remediation(summary="Resolve or ticket the item."),
@@ -111,7 +116,7 @@ from argus.plugin_api import AIProvider, ai_provider
 @ai_provider
 class MyProvider(AIProvider):
     name = "myprovider"
-    is_remote = True                 # does this send code off the machine?
+    is_remote = True  # does this send code off the machine?
     default_model = "my-model-v1"
 
     @classmethod

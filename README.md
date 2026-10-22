@@ -176,6 +176,7 @@ Everything is a plugin. Here is a whole scanner:
 ```python
 from argus.plugin_api import Finding, Location, Scanner, ScannerContext, Severity, scanner
 
+
 @scanner
 class HelloScanner(Scanner):
     name = "hello"
@@ -187,8 +188,11 @@ class HelloScanner(Scanner):
             for i, line in enumerate(f.lines(), 1):
                 if "TODO" in line:
                     yield Finding(
-                        id=f"hello:todo:{i}", rule_id="hello.todo", scanner=self.name,
-                        title="TODO left in code", description="A TODO marker.",
+                        id=f"hello:todo:{i}",
+                        rule_id="hello.todo",
+                        scanner=self.name,
+                        title="TODO left in code",
+                        description="A TODO marker.",
                         location=Location(path=f.rel_path, start_line=i),
                         severity=Severity.INFO,
                     )
