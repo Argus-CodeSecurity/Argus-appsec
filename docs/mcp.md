@@ -77,6 +77,15 @@ and whether the list was `truncated`, so coverage is never silently hidden).
 ## Notes
 
 - **Read-only.** The `argus_scan` tool only reads the path you give it.
+- **Confined to your project.** Paths must be inside the directory the server
+  was started in, or inside one of the directories listed in `ARGUS_MCP_ROOTS`
+  (separated by `;` on Windows and `:` elsewhere). This stops a
+  prompt-injected agent from scanning your home directory.
+- **Untrusted by default.** Rules and suppressions shipped inside the scanned
+  directory (`.argus/rules`, `argus-ignore` comments) are not honoured, since
+  the agent may have just cloned it.
+- **Bounded.** A scan stops after `ARGUS_MCP_SCAN_TIMEOUT` seconds (default
+  600).
 - **Local paths only.** It does not clone remote repositories from an agent call.
 - **Offline by default**, like the rest of Argus, so an agent can scan without a
   network round-trip (dependency CVE lookups still use the network when enabled).

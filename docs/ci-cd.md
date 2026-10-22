@@ -43,13 +43,16 @@ All inputs are optional; the useful ones:
 |-------|---------|---------|
 | `path` | `.` | Directory to scan |
 | `fail-on` | *(never fail)* | Severity gate: `critical`/`high`/`medium`/`low` |
+| `fail-on-error` | *(fail when `fail-on` is set)* | `true` or `false` to always or never fail when a scanner crashes |
 | `scanners` / `exclude-scanners` | all | Choose scanners |
-| `min-severity` |, | Report floor |
-| `config` |, | Path to an `.argus.yml` |
+| `min-severity` | *(none)* | Report floor |
+| `config` | *(none)* | Path to an `.argus.yml` |
+| `pr-config-from-base` | `true` | On pull requests, read Argus config from the base branch so a PR cannot relax its own gate |
 | `diff-aware` | `true` | Baseline PRs against the base branch |
+| `pr-comment` | `false` | Post findings the PR introduces as an inline review |
 | `upload-sarif` | `true` | Upload to Code Scanning |
-| `argus-version` | latest | Pin the argus-appsec version |
-| `extra-args` |, | Anything else `argus scan` accepts |
+| `argus-version` | *(the action's own version)* | Install a specific argus-appsec version from PyPI instead |
+| `extra-args` | *(none)* | Anything else `argus scan` accepts |
 
 ### Hand-rolled workflow
 

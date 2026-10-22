@@ -29,6 +29,11 @@ min_severity: info
 # Use this to gate CI.
 fail_on: ""             # e.g. high
 
+# Fail the run when a scanner crashes. Unset (the default) means: fail whenever
+# fail_on is set, because a crashed scanner reports nothing and a gate must not
+# read that as a pass. CLI: --fail-on-error / --no-fail-on-error.
+# fail_on_error: true
+
 # Attack Simulation Mode: safe, sandboxed exploit demonstrations per finding.
 attack_simulation: false
 
@@ -49,6 +54,8 @@ ai:
   enabled: true         # false disables all AI enrichment
   temperature: 0.0
   max_tokens: 4096
+  max_findings: 25      # only the highest-risk findings go to a model; the rest
+                        # get offline reasoning (keeps CI runs bounded)
 
 # Per-scanner options, keyed by scanner name.
 scanner_options:
@@ -188,6 +195,33 @@ Credentials for cloud providers and git hosts are read from the environment (see
 | `OPENAI_API_KEY` | `openai` provider |
 | `OLLAMA_HOST` | `ollama` provider (default `http://localhost:11434`) |
 | `GITHUB_TOKEN` / `GITLAB_TOKEN` | opening pull requests with `argus fix --open-pr` |
+| `ARGUS_AI_MODEL` | model override for the configured provider |
+| `ARGUS_AI_TIMEOUT` / `ARGUS_AI_MAX_RETRIES` | per-call model timeout in seconds (default 60) and retries (default 2) |
+| `ARGUS_GIT_TIMEOUT` | timeout for git commands in seconds (default 300) |
+| `ARGUS_CACHE_DIR` | cache location for scan results and OSV data |
+| `ARGUS_DAST_URL` | target for dynamic checks (same as `--live-target`) |
+| `ARGUS_MCP_ROOTS` / `ARGUS_MCP_SCAN_TIMEOUT` | directories the MCP server may scan, and its scan timeout (default 600) |
+| `ARGUS_DASHBOARD_TOKEN` / `ARGUS_DASHBOARD_ALLOWED_HOSTS` / `ARGUS_DASHBOARD_MAX_SCANS` | dashboard access control and retention, see [Web dashboard](dashboard.md) |
+| `ARGUS_WATCH_KEEP_SNAPSHOTS` | number of `argus watch` snapshots kept per target (default 50) |
+
+## Which configuration is trusted
+
+The scanned repository is treated as untrusted input, because in CI it is
+often a pull request from someone outside your team. Its configuration could
+otherwise exclude every path, switch scanners off, or allowlist its own
+findings.
+
+| Situation | `.argus.yml`, `.argus/rules`, `.argus/exceptions.yml`, `argus-ignore` comments |
+|---|---|
+| Local path (`argus scan .`) | Honoured |
+| Cloned remote (`argus scan https://...`) | Ignored unless `--trust-remote-config` |
+| `--config-from-ref REF` | Config read from that git ref; the checked-out tree is untrusted |
+| `--config PATH` | That file is always honoured (you chose it) |
+| `argus agent`, `argus mcp` | The monitored or scanned directory is never trusted |
+
+For pull requests, use `--config-from-ref origin/<base-branch>` so the gate uses
+the configuration already merged on the base branch. The GitHub Action does
+this automatically (`pr-config-from-base`, on by default).
 
 ## CLI flags
 
@@ -208,7 +242,10 @@ argus scan TARGET
       --patches             generate/verify fix patches
       --min-severity SEV    report findings at/above this severity
       --fail-on SEV         non-zero exit if any finding is at/above this severity
+      --[no-]fail-on-error  fail (or not) when a scanner crashes
+      --live-target URL     run safe, read-only posture checks against a URL you own
   -b, --branch NAME         branch to clone for remote targets
       --trust-remote-config load .argus.yml from a cloned remote repo (off by default)
+      --config-from-ref REF read config from a git ref; treat the tree as untrusted
   -q, --quiet               suppress progress output
 ```

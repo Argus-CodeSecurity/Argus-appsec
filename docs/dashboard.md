@@ -17,10 +17,32 @@ pip install "argus-appsec[dashboard]"
 argus dashboard            # serves http://127.0.0.1:8000
 ```
 
-Options: `argus dashboard --host 0.0.0.0 --port 9000`.
+Options: `--host` (default `127.0.0.1`) and `--port` (default `8000`).
 
 The database lives at `~/.argus/dashboard.db` by default; override with the
-`ARGUS_DASHBOARD_DB` environment variable.
+`ARGUS_DASHBOARD_DB` environment variable. On Linux and macOS the database is
+created readable by your user only.
+
+## Access and security
+
+The dashboard holds code snippets and a list of your vulnerabilities, so it is
+locked down by default:
+
+- It binds to `127.0.0.1` and only answers requests whose `Host` header is a
+  loopback name, which blocks DNS-rebinding attacks from web pages you visit.
+  Add further names with `ARGUS_DASHBOARD_ALLOWED_HOSTS` (comma-separated).
+- Binding to any other address requires a token. Set `ARGUS_DASHBOARD_TOKEN`
+  and the dashboard accepts it as a bearer token, or once through a login link
+  (`http://HOST:PORT/?token=...`). Without a token, a non-loopback `--host` is
+  refused with exit code 2. Serve it behind TLS when it leaves your machine.
+- Uploads and the API reject cross-site requests, and every page is sent with a
+  restrictive Content Security Policy.
+- Only the newest `ARGUS_DASHBOARD_MAX_SCANS` scans are kept (default 1000).
+
+```bash
+export ARGUS_DASHBOARD_TOKEN="$(python -c 'import secrets; print(secrets.token_urlsafe(32))')"
+argus dashboard --host 0.0.0.0 --port 9000
+```
 
 ## Getting scans in
 
@@ -37,8 +59,13 @@ argus scan . -f json -o report.json
 
 ```bash
 argus scan . -f json | curl -s -X POST --data-binary @- \
+  -H "Content-Type: application/json" \
   http://127.0.0.1:8000/api/scans
 ```
+
+The `Content-Type` header is required; other content types are rejected with
+HTTP 415. Add `-H "Authorization: Bearer $ARGUS_DASHBOARD_TOKEN"` when a token
+is set.
 
 Each scan is grouped into a **project** by name, so scanning the same project over
 time builds its history and trend automatically.
