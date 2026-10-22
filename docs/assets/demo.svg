@@ -33,7 +33,7 @@
 
   <line x1="20" y1="284" x2="800" y2="284" stroke="#21262d"/>
 
-  <text x="20" y="312" fill="#c9d1d9">Risk score 74/100  ·  1 critical, 2 high, 2 medium</text>
+  <text x="20" y="312" fill="#c9d1d9">Risk score 74/100  |  1 critical, 2 high, 2 medium</text>
   <text x="20" y="338" fill="#8b949e">Each finding explains the why, the attacker path, and the fix.</text>
   <text x="20" y="368" fill="#3fb950">verified fixes ready for 3 findings  ->  argus fix --open-pr</text>
   <text x="20" y="398" fill="#8b949e">code never left this machine (offline heuristic provider)</text>

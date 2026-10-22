@@ -19,8 +19,12 @@ def _scan(target: str, *findings: Finding) -> ScanResult:
 
 def _f(rule: str, path: str = "a.py", line: int = 1, sev=Severity.HIGH) -> Finding:
     return Finding(
-        id=f"x:{rule}", rule_id=rule, scanner="patterns", title=rule,
-        description="", location=Location(path=path, start_line=line, snippet="bad()"),
+        id=f"x:{rule}",
+        rule_id=rule,
+        scanner="patterns",
+        title=rule,
+        description="",
+        location=Location(path=path, start_line=line, snippet="bad()"),
         severity=sev,
     )
 
@@ -44,8 +48,14 @@ def test_compare_scans_severity_change():
 
 
 def test_compare_inventories_dependency_change():
-    before = {"target": "a", "dependencies": [{"ecosystem": "pypi", "name": "flask", "version": "2.0"}]}
-    after = {"target": "b", "dependencies": [{"ecosystem": "pypi", "name": "flask", "version": "3.0"}]}
+    before = {
+        "target": "a",
+        "dependencies": [{"ecosystem": "pypi", "name": "flask", "version": "2.0"}],
+    }
+    after = {
+        "target": "b",
+        "dependencies": [{"ecosystem": "pypi", "name": "flask", "version": "3.0"}],
+    }
     drift = compare_inventories(before, after)
     assert drift["summary"]["deps_changed"] == 1
 

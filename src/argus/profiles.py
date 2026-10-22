@@ -11,6 +11,11 @@ class ScanProfile:
     scanners: list[str]
     description: str
     fail_on_error: bool = False
+    # Whether the per-file findings cache may be used. Off for CI: hosted
+    # runners start empty (nothing to reuse), and on a shared self-hosted runner
+    # an earlier job, possibly running a contributor's code, could have written
+    # cache entries that mark a file as clean.
+    cache: bool = True
 
 
 # Empty scanners list means "all applicable" in ScanEngine.
@@ -28,10 +33,28 @@ PROFILES: dict[str, ScanProfile] = {
     "deep": ScanProfile(
         "deep",
         [
-            "secrets", "patterns", "malware", "ast-python", "ast-python-xfile",
-            "ast-js", "lang-sast", "dependencies", "dependency-diff", "supply-chain",
-            "provenance", "authz", "api", "business-logic", "git-security",
-            "iac", "cicd", "container", "container-image", "cloud", "llm", "dast",
+            "secrets",
+            "patterns",
+            "malware",
+            "ast-python",
+            "ast-python-xfile",
+            "ast-js",
+            "lang-sast",
+            "dependencies",
+            "dependency-diff",
+            "supply-chain",
+            "provenance",
+            "authz",
+            "api",
+            "business-logic",
+            "git-security",
+            "iac",
+            "cicd",
+            "container",
+            "container-image",
+            "cloud",
+            "llm",
+            "dast",
         ],
         "Maximum depth: AST taint, supply chain, authz, API, infra, LLM.",
     ),
@@ -45,6 +68,7 @@ PROFILES: dict[str, ScanProfile] = {
         ["secrets", "patterns", "dependencies", "cicd", "iac"],
         "Pull-request gate: new risk in code, deps, and pipeline config.",
         fail_on_error=True,
+        cache=False,
     ),
     "production": ScanProfile(
         "production",
@@ -56,8 +80,10 @@ PROFILES: dict[str, ScanProfile] = {
 
 
 def apply_profile(name: str) -> list[str]:
+    from argus.core.config import ConfigError
+
     key = name.strip().lower()
     if key not in PROFILES:
         known = ", ".join(sorted(PROFILES))
-        raise ValueError(f"Unknown profile {name!r}. Choose from: {known}")
+        raise ConfigError(f"Unknown profile {name!r}. Choose from: {known}")
     return list(PROFILES[key].scanners)

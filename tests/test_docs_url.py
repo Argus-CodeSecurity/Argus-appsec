@@ -11,8 +11,14 @@ from argus.core.plugin import registry
 
 
 def _finding(scanner: str) -> Finding:
-    return Finding(id="x", rule_id=f"{scanner}.r", scanner=scanner, title="t",
-                   description="d", location=Location(path="a.py", start_line=1))
+    return Finding(
+        id="x",
+        rule_id=f"{scanner}.r",
+        scanner=scanner,
+        title="t",
+        description="d",
+        location=Location(path="a.py", start_line=1),
+    )
 
 
 def test_docs_url_maps_scanner_to_page():

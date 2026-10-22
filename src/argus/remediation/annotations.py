@@ -13,6 +13,7 @@ The comment-building here is pure and unit-tested; the network call lives in
 from __future__ import annotations
 
 from argus.remediation.applier import ApplyReport
+from argus.reporting.md_escape import md_code, md_fence
 
 
 def build_fix_comments(report: ApplyReport) -> list[dict]:
@@ -20,12 +21,7 @@ def build_fix_comments(report: ApplyReport) -> list[dict]:
     comments: list[dict] = []
     for fix in report.fixes:
         mark = "verified" if fix.verified else "proposed (unverified, please review)"
-        body = (
-            f"**Argus fixed `{fix.rule_id}`** ({mark}).\n\n"
-            "```diff\n"
-            f"- {fix.before.strip()}\n"
-            f"+ {fix.after.strip()}\n"
-            "```"
-        )
+        fence = md_fence(f"- {fix.before.strip()}\n+ {fix.after.strip()}", "diff")
+        body = f"**Argus fixed {md_code(fix.rule_id)}** ({mark}).\n\n" + "\n".join(fence)
         comments.append({"path": fix.path, "line": fix.line, "side": "RIGHT", "body": body})
     return comments

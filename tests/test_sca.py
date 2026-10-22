@@ -38,32 +38,38 @@ def _scan_deps(tmp_path: Path) -> list:
 
 # --- parser units ----------------------------------------------------------
 def test_parse_package_lock_v3_transitive():
-    text = json.dumps({
-        "lockfileVersion": 3,
-        "packages": {
-            "": {"name": "app"},
-            "node_modules/lodash": {"version": "4.17.20"},
-            "node_modules/lodash/node_modules/minimist": {"version": "1.2.5"},
-        },
-    })
+    text = json.dumps(
+        {
+            "lockfileVersion": 3,
+            "packages": {
+                "": {"name": "app"},
+                "node_modules/lodash": {"version": "4.17.20"},
+                "node_modules/lodash/node_modules/minimist": {"version": "1.2.5"},
+            },
+        }
+    )
     deps = _parse_package_lock(text)
     assert dict(deps) == {"lodash": "4.17.20", "minimist": "1.2.5"}
 
 
 def test_parse_package_lock_v1_nested():
-    text = json.dumps({
-        "dependencies": {
-            "lodash": {"version": "4.17.20",
-                       "dependencies": {"minimist": {"version": "1.2.5"}}},
-        },
-    })
+    text = json.dumps(
+        {
+            "dependencies": {
+                "lodash": {
+                    "version": "4.17.20",
+                    "dependencies": {"minimist": {"version": "1.2.5"}},
+                },
+            },
+        }
+    )
     assert dict(_parse_package_lock(text)) == {"lodash": "4.17.20", "minimist": "1.2.5"}
 
 
 def test_parse_yarn_lock():
     text = (
-        '# yarn lockfile v1\n'
-        'lodash@^4.17.0:\n'
+        "# yarn lockfile v1\n"
+        "lodash@^4.17.0:\n"
         '  version "4.17.20"\n'
         '"@babel/core@npm:^7.0.0":\n'
         '  version: "7.10.0"\n'
@@ -82,10 +88,12 @@ def test_parse_poetry_lock():
 
 
 def test_parse_pipfile_lock():
-    text = json.dumps({
-        "default": {"flask": {"version": "==2.0.1"}},
-        "develop": {"pytest": {"version": "==7.0.0"}},
-    })
+    text = json.dumps(
+        {
+            "default": {"flask": {"version": "==2.0.1"}},
+            "develop": {"pytest": {"version": "==7.0.0"}},
+        }
+    )
     assert dict(_parse_pipfile_lock(text)) == {"flask": "2.0.1", "pytest": "7.0.0"}
 
 
@@ -122,7 +130,7 @@ def test_parse_gemfile_lock():
         "  specs:\n"
         "    actionpack (6.0.3)\n"
         "    rack (2.2.3)\n"
-        "      rack-test (>= 0.6.3)\n"   # nested constraint, not a resolved spec
+        "      rack-test (>= 0.6.3)\n"  # nested constraint, not a resolved spec
         "\n"
         "PLATFORMS\n"
         "  ruby\n"
@@ -131,10 +139,12 @@ def test_parse_gemfile_lock():
 
 
 def test_parse_composer_lock():
-    text = json.dumps({
-        "packages": [{"name": "symfony/http-kernel", "version": "v4.4.0"}],
-        "packages-dev": [{"name": "phpunit/phpunit", "version": "9.5.0"}],
-    })
+    text = json.dumps(
+        {
+            "packages": [{"name": "symfony/http-kernel", "version": "v4.4.0"}],
+            "packages-dev": [{"name": "phpunit/phpunit", "version": "9.5.0"}],
+        }
+    )
     assert dict(_parse_composer_lock(text)) == {
         "symfony/http-kernel": "4.4.0",
         "phpunit/phpunit": "9.5.0",
@@ -143,26 +153,32 @@ def test_parse_composer_lock():
 
 # --- end-to-end: transitive vulnerability from a lock file -----------------
 def test_transitive_vuln_from_package_lock(tmp_path: Path):
-    (tmp_path / "package-lock.json").write_text(json.dumps({
-        "lockfileVersion": 3,
-        "packages": {
-            "": {"name": "app"},
-            "node_modules/lodash": {"version": "4.17.20"},        # < 4.17.21 (vuln)
-            "node_modules/express/node_modules/minimist": {"version": "1.2.5"},  # transitive, vuln
-        },
-    }), encoding="utf-8")
+    (tmp_path / "package-lock.json").write_text(
+        json.dumps(
+            {
+                "lockfileVersion": 3,
+                "packages": {
+                    "": {"name": "app"},
+                    "node_modules/lodash": {"version": "4.17.20"},  # < 4.17.21 (vuln)
+                    "node_modules/express/node_modules/minimist": {
+                        "version": "1.2.5"
+                    },  # transitive, vuln
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
 
     findings = _scan_deps(tmp_path)
     cves = {f.metadata.get("cve") for f in findings}
-    assert "CVE-2021-23337" in cves   # lodash (direct)
-    assert "CVE-2021-44906" in cves   # minimist (transitive)
+    assert "CVE-2021-23337" in cves  # lodash (direct)
+    assert "CVE-2021-44906" in cves  # minimist (transitive)
 
 
 def test_go_module_flows_to_finding_via_osv(tmp_path: Path, monkeypatch):
     """A go.mod dependency is queried under the 'Go' ecosystem and reported."""
     (tmp_path / "go.mod").write_text(
-        "module example.com/app\n\ngo 1.21\n\n"
-        "require github.com/dgrijalva/jwt-go v3.2.0\n",
+        "module example.com/app\n\ngo 1.21\n\nrequire github.com/dgrijalva/jwt-go v3.2.0\n",
         encoding="utf-8",
     )
 
@@ -204,42 +220,55 @@ def test_go_module_flows_to_finding_via_osv(tmp_path: Path, monkeypatch):
 def test_manifest_and_lock_not_double_reported(tmp_path: Path):
     # lodash appears in both package.json and package-lock.json at the same version.
     (tmp_path / "package.json").write_text(
-        json.dumps({"dependencies": {"lodash": "4.17.20"}}), encoding="utf-8")
-    (tmp_path / "package-lock.json").write_text(json.dumps({
-        "lockfileVersion": 3,
-        "packages": {"": {}, "node_modules/lodash": {"version": "4.17.20"}},
-    }), encoding="utf-8")
+        json.dumps({"dependencies": {"lodash": "4.17.20"}}), encoding="utf-8"
+    )
+    (tmp_path / "package-lock.json").write_text(
+        json.dumps(
+            {
+                "lockfileVersion": 3,
+                "packages": {"": {}, "node_modules/lodash": {"version": "4.17.20"}},
+            }
+        ),
+        encoding="utf-8",
+    )
 
     findings = _scan_deps(tmp_path)
     lodash_hits = [f for f in findings if f.metadata.get("cve") == "CVE-2021-23337"]
-    assert len(lodash_hits) == 1   # de-duplicated across the two files
+    assert len(lodash_hits) == 1  # de-duplicated across the two files
 
 
 # --- multi-version: a package pinned at two versions must not collapse --------
 def test_parser_preserves_multiple_versions_of_one_package():
     # npm nested node_modules pins lodash at two different versions.
-    text = json.dumps({
-        "lockfileVersion": 3,
-        "packages": {
-            "": {"name": "app"},
-            "node_modules/lodash": {"version": "4.17.20"},
-            "node_modules/foo/node_modules/lodash": {"version": "4.17.19"},
-        },
-    })
+    text = json.dumps(
+        {
+            "lockfileVersion": 3,
+            "packages": {
+                "": {"name": "app"},
+                "node_modules/lodash": {"version": "4.17.20"},
+                "node_modules/foo/node_modules/lodash": {"version": "4.17.19"},
+            },
+        }
+    )
     pairs = _parse_package_lock(text)
     assert ("lodash", "4.17.20") in pairs
-    assert ("lodash", "4.17.19") in pairs   # the older copy is no longer dropped
+    assert ("lodash", "4.17.19") in pairs  # the older copy is no longer dropped
 
 
 def test_both_versions_are_queried_and_reported(tmp_path: Path, monkeypatch):
-    (tmp_path / "package-lock.json").write_text(json.dumps({
-        "lockfileVersion": 3,
-        "packages": {
-            "": {"name": "app"},
-            "node_modules/lodash": {"version": "4.17.20"},
-            "node_modules/foo/node_modules/lodash": {"version": "4.17.19"},
-        },
-    }), encoding="utf-8")
+    (tmp_path / "package-lock.json").write_text(
+        json.dumps(
+            {
+                "lockfileVersion": 3,
+                "packages": {
+                    "": {"name": "app"},
+                    "node_modules/lodash": {"version": "4.17.20"},
+                    "node_modules/foo/node_modules/lodash": {"version": "4.17.19"},
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
 
     from argus.scanners import osv
 
@@ -249,8 +278,12 @@ def test_both_versions_are_queried_and_reported(tmp_path: Path, monkeypatch):
         pairs = list(deps.items() if hasattr(deps, "items") else deps)
         queried.extend(pairs)
         adv = osv.OSVAdvisory(
-            id="GHSA-jf85-cpcp-j695", summary="lodash prototype pollution",
-            severity=osv.Severity.HIGH, cve="CVE-2021-23337", fixed="4.17.21")
+            id="GHSA-jf85-cpcp-j695",
+            summary="lodash prototype pollution",
+            severity=osv.Severity.HIGH,
+            cve="CVE-2021-23337",
+            fixed="4.17.21",
+        )
         return {p: [adv] for p in pairs}
 
     monkeypatch.setattr(osv, "query", _fake_query)
@@ -271,8 +304,11 @@ def test_both_versions_are_queried_and_reported(tmp_path: Path, monkeypatch):
     assert ("lodash", "4.17.20") in queried
     assert ("lodash", "4.17.19") in queried
     # ...and both produced a finding.
-    versions = {f.metadata.get("installed_version") for f in findings
-                if f.metadata.get("cve") == "CVE-2021-23337"}
+    versions = {
+        f.metadata.get("installed_version")
+        for f in findings
+        if f.metadata.get("cve") == "CVE-2021-23337"
+    }
     assert versions == {"4.17.19", "4.17.20"}
 
 

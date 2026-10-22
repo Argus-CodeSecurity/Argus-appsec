@@ -31,7 +31,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 """
-    rules = {f.rule_id for f in CicdScanner().scan(_ctx(tmp_path, (".github/workflows/ci.yml", wf)))}
+    rules = {
+        f.rule_id for f in CicdScanner().scan(_ctx(tmp_path, (".github/workflows/ci.yml", wf)))
+    }
     assert "cicd.pull-request-target" in rules
 
 
@@ -42,7 +44,9 @@ jobs:
     steps:
       - uses: actions/checkout@main
 """
-    rules = {f.rule_id for f in CicdScanner().scan(_ctx(tmp_path, (".github/workflows/ci.yml", wf)))}
+    rules = {
+        f.rule_id for f in CicdScanner().scan(_ctx(tmp_path, (".github/workflows/ci.yml", wf)))
+    }
     assert "cicd.unpinned-action" in rules
 
 
@@ -54,7 +58,9 @@ jobs:
       - uses: docker/setup-buildx-action@f7ce87c1d6bead3e36075b2ce75da1f6cc28aaca # v3.9.0
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 """
-    rules = {f.rule_id for f in CicdScanner().scan(_ctx(tmp_path, (".github/workflows/ci.yml", wf)))}
+    rules = {
+        f.rule_id for f in CicdScanner().scan(_ctx(tmp_path, (".github/workflows/ci.yml", wf)))
+    }
     assert "cicd.unpinned-action" not in rules
 
 
@@ -65,7 +71,9 @@ services:
     image: nginx:latest
     privileged: true
 """
-    rules = {f.rule_id for f in ContainerScanner().scan(_ctx(tmp_path, ("docker-compose.yml", compose)))}
+    rules = {
+        f.rule_id for f in ContainerScanner().scan(_ctx(tmp_path, ("docker-compose.yml", compose)))
+    }
     assert "container.privileged" in rules
     assert "container.image-latest" in rules
 

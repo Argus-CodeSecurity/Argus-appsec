@@ -19,7 +19,8 @@ from argus.scanners.dependencies import _loads
 _OPENAPI_GLOB = re.compile(r"(?i)(openapi|swagger).*\.(ya?ml|json)$|/openapi\.(ya?ml|json)$")
 
 _SENSITIVE = re.compile(
-    r"/(?:admin|internal|users?|accounts?|secrets?|tokens?|keys?)(?:/|$)", re.I,
+    r"/(?:admin|internal|users?|accounts?|secrets?|tokens?|keys?)(?:/|$)",
+    re.I,
 )
 
 
@@ -27,10 +28,13 @@ def _parse_openapi(text: str, path: str) -> dict | None:
     if path.endswith((".yaml", ".yml")):
         try:
             import yaml
-            return yaml.safe_load(text)
+
+            data = yaml.safe_load(text)
         except Exception:
             return None
-    return _loads(text)
+    else:
+        data = _loads(text)
+    return data if isinstance(data, dict) else None
 
 
 @scanner
@@ -41,7 +45,8 @@ class ApiScanner(Scanner):
 
     def applies_to(self, project) -> bool:
         return any(
-            _OPENAPI_GLOB.search(f.rel_path) or f.rel_path.endswith(("openapi.yaml", "openapi.json"))
+            _OPENAPI_GLOB.search(f.rel_path)
+            or f.rel_path.endswith(("openapi.yaml", "openapi.json"))
             for f in project.files()
         )
 
@@ -50,21 +55,33 @@ class ApiScanner(Scanner):
         for f in ctx.project.files():
             if not (
                 _OPENAPI_GLOB.search(f.rel_path)
-                or f.rel_path.endswith(("openapi.yaml", "openapi.json", "swagger.yaml", "swagger.json"))
+                or f.rel_path.endswith(
+                    ("openapi.yaml", "openapi.json", "swagger.yaml", "swagger.json")
+                )
             ):
                 continue
             spec = _parse_openapi(f.text(), f.rel_path)
             if not isinstance(spec, dict):
                 continue
-            paths = spec.get("paths") or {}
+            # The spec comes from the scanned repo: check every type before use.
+            paths = spec.get("paths")
+            if not isinstance(paths, dict):
+                paths = {}
             has_global_security = bool(spec.get("security"))
-            security_schemes = (spec.get("components") or {}).get("securitySchemes") or {}
+            components = spec.get("components")
+            security_schemes = (
+                components.get("securitySchemes") if isinstance(components, dict) else None
+            ) or {}
 
             for route, methods in paths.items():
-                if not isinstance(methods, dict):
+                if not isinstance(route, str) or not isinstance(methods, dict):
                     continue
                 for method, op in methods.items():
-                    if method.startswith("x-") or not isinstance(op, dict):
+                    if (
+                        not isinstance(method, str)
+                        or method.startswith("x-")
+                        or not isinstance(op, dict)
+                    ):
                         continue
                     op_security = op.get("security")
                     secured = (
@@ -88,7 +105,10 @@ class ApiScanner(Scanner):
                             confidence=Confidence.MEDIUM,
                             likelihood=Likelihood.POSSIBLE,
                             cwe=["CWE-306"],
-                            owasp=["A01:2021-Broken Access Control", "A05:2021-Security Misconfiguration"],
+                            owasp=[
+                                "A01:2021-Broken Access Control",
+                                "A05:2021-Security Misconfiguration",
+                            ],
                             why_vulnerable="Undocumented auth allows deployment without API protection.",
                             remediation=Remediation(
                                 summary="Add securitySchemes and require them on sensitive operations.",
@@ -113,6 +133,8 @@ class ApiScanner(Scanner):
                     cwe=["CWE-770"],
                     owasp=["A04:2021-Insecure Design"],
                     why_vulnerable="GraphQL expands attack surface vs REST.",
-                    remediation=Remediation(summary="Disable introspection in production; enforce auth per resolver."),
+                    remediation=Remediation(
+                        summary="Disable introspection in production; enforce auth per resolver."
+                    ),
                     tags=["api", "graphql"],
                 )

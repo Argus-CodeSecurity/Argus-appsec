@@ -136,10 +136,12 @@ REWRITES: dict[str, Callable[[str], str | None]] = {
 # Deliberately NOT auto by default (they can change runtime behavior): weak-hash
 # (changes digests), shell=True->False (breaks string commands), tls-verify
 # (breaks self-signed), torch.load / trust_remote_code (can break model loading).
-AUTO_APPLY: frozenset[str] = frozenset({
-    "patterns.python-yaml-load",   # yaml.load -> safe_load: the recommended default
-    "patterns.flask-debug-true",   # debug=True -> False: never ship debug on
-})
+AUTO_APPLY: frozenset[str] = frozenset(
+    {
+        "patterns.python-yaml-load",  # yaml.load -> safe_load: the recommended default
+        "patterns.flask-debug-true",  # debug=True -> False: never ship debug on
+    }
+)
 
 
 def auto_apply_rules(config: object | None = None) -> set[str]:
@@ -205,8 +207,8 @@ def detection_pattern(rule_id: str) -> re.Pattern[str] | None:
 def verify_line_fixed(rule_id: str, fixed_line: str) -> bool:
     """True if the scanner would no longer flag the fixed line.
 
-    Honors the rule's ``suppress`` idiom as well as its ``pattern`` — the same
-    logic the scanners use — so a rewrite that adds a recognized safe form (e.g.
+    Honors the rule's ``suppress`` idiom as well as its ``pattern`` (the same
+    logic the scanners use), so a rewrite that adds a recognized safe form (e.g.
     ``weights_only=True``) verifies even when the raw pattern still matches. This
     is the local proxy for a fix "resolving" the finding; the applier separately
     gates the whole file on still parsing before any fix is reported.

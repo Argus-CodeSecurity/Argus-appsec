@@ -13,6 +13,7 @@ The database file defaults to ``~/.argus/dashboard.db``; override with the
 
 from __future__ import annotations
 
+import contextlib
 import os
 from collections.abc import Iterator
 from datetime import datetime, timezone
@@ -77,7 +78,24 @@ def _db_path() -> str:
         return raw
     directory = Path.home() / ".argus"
     directory.mkdir(parents=True, exist_ok=True)
+    if os.name != "nt":
+        # Scan history describes vulnerabilities in your code: owner-only.
+        with contextlib.suppress(OSError):
+            os.chmod(directory, 0o700)
     return str(directory / "dashboard.db")
+
+
+def _restrict_db_file(path: str) -> None:
+    """Create the SQLite file 0600 (POSIX) before SQLite does with the umask.
+
+    SQLite gives its journal/WAL files the same mode as the database file.
+    """
+    if os.name == "nt" or path == ":memory:":
+        return
+    with contextlib.suppress(OSError):
+        fd = os.open(path, os.O_RDWR | os.O_CREAT, 0o600)
+        os.close(fd)
+        os.chmod(path, 0o600)
 
 
 _engine = None
@@ -99,6 +117,7 @@ def get_engine():
     global _engine
     if _engine is None:
         path = _db_path()
+        _restrict_db_file(path)
         url = "sqlite://" if path == ":memory:" else f"sqlite:///{path}"
         _engine = _make_engine(url)
     return _engine

@@ -64,7 +64,11 @@ nav:
       - Triage & baselines: triage.md
   - Using in your pipeline:
       - CI/CD integration: ci-cd.md
+      - Infrastructure scanning: infrastructure-scanning.md
+      - Policy as code: policy.md
       - Continuous monitoring: monitoring.md
+      - Configuration drift: drift.md
+      - Host agent: agent.md
       - Fixing & pull requests: fixing.md
       - MCP server (AI agents): mcp.md
       - Web dashboard: dashboard.md

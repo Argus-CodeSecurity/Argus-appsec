@@ -8,7 +8,7 @@ from __future__ import annotations
 import os
 from typing import Any
 
-from argus.ai.base import AIProvider
+from argus.ai.base import AIProvider, max_retries, request_timeout
 from argus.core.plugin import ai_provider
 
 
@@ -36,7 +36,11 @@ class OpenAIProvider(AIProvider):
         if self._client is None:
             from openai import OpenAI
 
-            self._client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
+            self._client = OpenAI(
+                api_key=os.environ["OPENAI_API_KEY"],
+                timeout=request_timeout(),
+                max_retries=max_retries(),
+            )
         return self._client
 
     def complete(self, system: str, user: str) -> str:

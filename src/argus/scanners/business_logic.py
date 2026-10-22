@@ -7,6 +7,7 @@ from collections.abc import Iterable
 
 from argus.core.models import Confidence, Finding, Likelihood, Location, Remediation, Severity
 from argus.core.plugin import Scanner, ScannerContext, scanner
+from argus.scanners._text import MAX_SCAN_LINE
 
 _PRICE_MUTATION = re.compile(
     r"(?:price|amount|total|cost|fee)\s*[=:]\s*(?:req\.|request\.|params\.|body\.|input\.)",
@@ -34,7 +35,9 @@ _RACE_HINT = re.compile(
 )
 
 
-def _f(rule: str, path: str, line: int, snippet: str, title: str, why: str, sev: Severity) -> Finding:
+def _f(
+    rule: str, path: str, line: int, snippet: str, title: str, why: str, sev: Severity
+) -> Finding:
     return Finding(
         id=f"business-logic:{rule}:{path}:{line}",
         rule_id=rule,
@@ -61,48 +64,85 @@ def _f(rule: str, path: str, line: int, snippet: str, title: str, why: str, sev:
 class BusinessLogicScanner(Scanner):
     name = "business-logic"
     category = "logic"
-    description = "Detects workflow abuse patterns: price/qty manipulation, coupon abuse, state bypass."
+    description = (
+        "Detects workflow abuse patterns: price/qty manipulation, coupon abuse, state bypass."
+    )
     file_local = True
 
     def applies_to(self, project) -> bool:
-        return any(f.suffix in (".py", ".js", ".ts", ".java", ".php", ".rb") for f in project.files())
+        return any(
+            f.suffix in (".py", ".js", ".ts", ".java", ".php", ".rb") for f in project.files()
+        )
 
     def scan(self, ctx: ScannerContext) -> Iterable[Finding]:
         for f in ctx.project.files():
             if f.suffix not in (".py", ".js", ".ts", ".java", ".php", ".rb"):
                 continue
-            lines = f.text().splitlines()
+            # Cut to the shared scan limit: _RACE_HINT runs on a window of these.
+            lines = [ln[:MAX_SCAN_LINE] for ln in f.text().splitlines()]
             for i, line in enumerate(lines, 1):
                 if _PRICE_MUTATION.search(line):
-                    yield _f("logic.price-from-request", f.rel_path, i, line,
-                             "Price derived from user-controlled input",
-                             "Client-controlled pricing enables purchase at arbitrary amounts.",
-                             Severity.HIGH)
+                    yield _f(
+                        "logic.price-from-request",
+                        f.rel_path,
+                        i,
+                        line,
+                        "Price derived from user-controlled input",
+                        "Client-controlled pricing enables purchase at arbitrary amounts.",
+                        Severity.HIGH,
+                    )
                 if _QUANTITY_MUTATION.search(line):
-                    yield _f("logic.quantity-from-request", f.rel_path, i, line,
-                             "Quantity derived from user-controlled input",
-                             "Attackers can manipulate order quantities or inventory.",
-                             Severity.MEDIUM)
+                    yield _f(
+                        "logic.quantity-from-request",
+                        f.rel_path,
+                        i,
+                        line,
+                        "Quantity derived from user-controlled input",
+                        "Attackers can manipulate order quantities or inventory.",
+                        Severity.MEDIUM,
+                    )
                 if _COUPON_BYPASS.search(line):
-                    yield _f("logic.coupon-abuse", f.rel_path, i, line,
-                             "Suspicious coupon/discount logic",
-                             "Discount validation may be bypassed.",
-                             Severity.HIGH)
-                window = "\n".join(lines[max(0, i - 5):i])
-                if _STATE_SKIP.search(line) and not re.search(r"auth|permission|role|owner", window, re.I):
-                    yield _f("logic.state-transition", f.rel_path, i, line,
-                             "State transition without obvious authorization guard",
-                             "Workflow state may be advanced without proper checks.",
-                             Severity.MEDIUM)
+                    yield _f(
+                        "logic.coupon-abuse",
+                        f.rel_path,
+                        i,
+                        line,
+                        "Suspicious coupon/discount logic",
+                        "Discount validation may be bypassed.",
+                        Severity.HIGH,
+                    )
+                window = "\n".join(lines[max(0, i - 5) : i])
+                if _STATE_SKIP.search(line) and not re.search(
+                    r"auth|permission|role|owner", window, re.I
+                ):
+                    yield _f(
+                        "logic.state-transition",
+                        f.rel_path,
+                        i,
+                        line,
+                        "State transition without obvious authorization guard",
+                        "Workflow state may be advanced without proper checks.",
+                        Severity.MEDIUM,
+                    )
                 if _ADMIN_NO_GUARD.search(line):
-                    ctx_window = "\n".join(lines[i:min(len(lines), i + 8)])
+                    ctx_window = "\n".join(lines[i : min(len(lines), i + 8)])
                     if not re.search(r"admin|superuser|permission|role", ctx_window, re.I):
-                        yield _f("logic.admin-function", f.rel_path, i, line,
-                                 "Sensitive administrative function",
-                                 "Verify strong authorization before administrative actions.",
-                                 Severity.HIGH)
-                if _RACE_HINT.search("\n".join(lines[max(0, i - 1):min(len(lines), i + 3)])):
-                    yield _f("logic.race-hint", f.rel_path, i, line,
-                             "Possible check-then-act race",
-                             "Concurrent requests may bypass validation (TOCTOU).",
-                             Severity.LOW)
+                        yield _f(
+                            "logic.admin-function",
+                            f.rel_path,
+                            i,
+                            line,
+                            "Sensitive administrative function",
+                            "Verify strong authorization before administrative actions.",
+                            Severity.HIGH,
+                        )
+                if _RACE_HINT.search("\n".join(lines[max(0, i - 1) : min(len(lines), i + 3)])):
+                    yield _f(
+                        "logic.race-hint",
+                        f.rel_path,
+                        i,
+                        line,
+                        "Possible check-then-act race",
+                        "Concurrent requests may bypass validation (TOCTOU).",
+                        Severity.LOW,
+                    )

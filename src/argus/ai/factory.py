@@ -28,8 +28,7 @@ def build_provider(cfg: AIConfig) -> AIProvider:
 
     if requested not in providers:
         warnings.warn(
-            f"Unknown AI provider {requested!r}; using 'heuristic'. "
-            f"Available: {sorted(providers)}",
+            f"Unknown AI provider {requested!r}; using 'heuristic'. Available: {sorted(providers)}",
             stacklevel=2,
         )
         requested = "heuristic"

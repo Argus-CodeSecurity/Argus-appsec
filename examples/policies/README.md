@@ -20,4 +20,4 @@ and never depend on LLM output. Customize the pack for your organization's risk 
 | `warn-authz-bypass` | warn | Authorization scanner |
 | `block-reachable-critical-cve` | block | High+ reachable dependency CVEs |
 
-See [configuration.md](../docs/configuration.md) for the full policy syntax.
+See [configuration.md](../../docs/configuration.md) for the full policy syntax.

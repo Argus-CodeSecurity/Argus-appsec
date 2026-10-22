@@ -8,7 +8,7 @@ Checks:
 
 * **Known malicious packages** - bundled seed list (OSV/GitHub advisory sourced).
 * **Typosquatting** - edit distance <= 1 from a popular package in the same ecosystem.
-* **Suspicious npm lifecycle scripts** — ``preinstall`` / ``postinstall`` with shell
+* **Suspicious npm lifecycle scripts**: ``preinstall`` / ``postinstall`` with shell
   or network patterns in ``package.json``.
 """
 
@@ -29,55 +29,53 @@ from argus.core.models import (
     Severity,
 )
 from argus.core.plugin import Scanner, ScannerContext, scanner
-from argus.scanners.dependencies import _loads, collect_packages
-from argus.supply_chain.intel import is_malicious, load_malicious_packages
-
-_SUSPICIOUS_SCRIPT = re.compile(
-    r"(curl|wget|bash|sh\s|powershell|Invoke-|eval\(|child_process|"
-    r"http://|https://|\.exe|chmod\s|/etc/passwd|~/.ssh)",
-    re.IGNORECASE,
+from argus.scanners._text import MAX_SCAN_LINE
+from argus.scanners.dependencies import _PARSERS, _loads, collect_packages
+from argus.supply_chain.intel import (
+    is_malicious,
+    levenshtein,
+    load_malicious_packages,
+    normalize_name,
 )
+from argus.supply_chain.scripts import LIFECYCLE_HOOKS, SUSPICIOUS_INSTALL_SCRIPT
 
 
 @lru_cache(maxsize=1)
 def _load_popular() -> dict:
-    with resources.files("argus.scanners.data").joinpath("supply_chain.json").open(
-        encoding="utf-8"
-    ) as fh:
+    with (
+        resources.files("argus.scanners.data")
+        .joinpath("supply_chain.json")
+        .open(encoding="utf-8") as fh
+    ):
         return json.load(fh).get("popular", {})
-
-
-def _levenshtein(a: str, b: str) -> int:
-    if a == b:
-        return 0
-    if not a:
-        return len(b)
-    if not b:
-        return len(a)
-    prev = list(range(len(b) + 1))
-    for i, ca in enumerate(a, 1):
-        curr = [i]
-        for j, cb in enumerate(b, 1):
-            cost = 0 if ca == cb else 1
-            curr.append(min(curr[j - 1] + 1, prev[j] + 1, prev[j - 1] + cost))
-        prev = curr
-    return prev[-1]
 
 
 def _typosquat_candidates(name: str, ecosystem: str) -> list[str]:
     popular = _load_popular().get(ecosystem, [])
     hits: list[str] = []
-    lower = name.lower()
+    # Compare normalized names, so a PyPI spelling variant of a popular package
+    # (python_dateutil for python-dateutil) is not mistaken for a typosquat.
+    _, norm = normalize_name(ecosystem, name)
     for pkg in popular:
-        if lower == pkg.lower():
+        _, other = normalize_name(ecosystem, pkg)
+        if norm == other:
             continue
-        if _levenshtein(lower, pkg.lower()) <= 1:
+        if levenshtein(norm, other) <= 1:
             hits.append(pkg)
     return hits
 
 
 def _known_malicious(ecosystem: str, name: str, *, online: bool = True) -> bool:
     return is_malicious(ecosystem, name, online=online)
+
+
+def _hook_line(f, hook: str) -> int | None:
+    """Line of the ``"hook":`` key in a package.json, if it can be found."""
+    key = re.compile(rf'"{re.escape(hook)}"\s*:')
+    for lineno, line in enumerate(f.lines(), start=1):
+        if len(line) <= MAX_SCAN_LINE and key.search(line):
+            return lineno
+    return None
 
 
 def _scan_npm_scripts(project, counter: int) -> Iterable[Finding]:
@@ -88,9 +86,9 @@ def _scan_npm_scripts(project, counter: int) -> Iterable[Finding]:
         scripts = data.get("scripts") or {}
         if not isinstance(scripts, dict):
             continue
-        for hook in ("preinstall", "postinstall", "prepare"):
+        for hook in LIFECYCLE_HOOKS:
             body = scripts.get(hook)
-            if not isinstance(body, str) or not _SUSPICIOUS_SCRIPT.search(body):
+            if not isinstance(body, str) or not SUSPICIOUS_INSTALL_SCRIPT.search(body):
                 continue
             counter += 1
             yield Finding(
@@ -102,7 +100,11 @@ def _scan_npm_scripts(project, counter: int) -> Iterable[Finding]:
                     f"The `{hook}` script in package.json contains patterns associated "
                     f"with shell execution, downloads, or credential access."
                 ),
-                location=Location(path=f.rel_path, snippet=body[:200]),
+                # The line number lets the engine merge this with the malware
+                # scanner's finding for the same script (same file, line, CWE).
+                location=Location(
+                    path=f.rel_path, start_line=_hook_line(f, hook), snippet=body[:200]
+                ),
                 severity=Severity.HIGH,
                 confidence=Confidence.MEDIUM,
                 likelihood=Likelihood.POSSIBLE,
@@ -136,12 +138,12 @@ def _scan_npm_scripts(project, counter: int) -> Iterable[Finding]:
 class SupplyChainScanner(Scanner):
     name = "supply-chain"
     category = "supply-chain"
-    description = (
-        "Flags known malicious packages, typosquats, and suspicious install scripts."
-    )
+    description = "Flags known malicious packages, typosquats, and suspicious install scripts."
 
     def applies_to(self, project) -> bool:
-        return bool(collect_packages(project)) or bool(project.files_matching("package.json"))
+        # File presence only: parsing every manifest here ran untrusted input
+        # through the parsers before the scan (and outside its error handling).
+        return bool(project.files_matching(*_PARSERS))
 
     def scan(self, ctx: ScannerContext) -> Iterable[Finding]:
         opts = ctx.config.options_for(self.name)
@@ -208,8 +210,7 @@ class SupplyChainScanner(Scanner):
                     scanner="supply-chain",
                     title=f"Possible typosquat: {pkg}",
                     description=(
-                        f"`{pkg}` is one edit away from popular package(s): "
-                        f"{', '.join(typos)}."
+                        f"`{pkg}` is one edit away from popular package(s): {', '.join(typos)}."
                     ),
                     location=Location(path=path, snippet=f"{pkg}=={version}"),
                     severity=Severity.HIGH,

@@ -9,6 +9,8 @@ one result per finding, mapping Argus severities onto SARIF levels and attaching
 from __future__ import annotations
 
 import json
+import re
+from urllib.parse import quote
 
 from argus import __version__
 from argus.core.models import ScanResult, Severity
@@ -31,6 +33,24 @@ _SECURITY_SEVERITY = {
     Severity.HIGH: "7.5",
     Severity.CRITICAL: "9.5",
 }
+
+
+# Locations that are not files in the repository: placeholders such as
+# "(git history)" and URLs from dynamic scans.
+_URL = re.compile(r"^[A-Za-z][A-Za-z0-9+.-]*://")
+
+
+def _is_file_path(path: str) -> bool:
+    return bool(path) and not path.startswith("(") and not _URL.match(path)
+
+
+def _artifact_uri(path: str) -> str:
+    """Percent-encode a repo-relative path for SARIF ``artifactLocation.uri``.
+
+    SARIF requires a valid URI reference; spaces, "#", "%" or non-ASCII
+    characters in a raw path make consumers drop or misplace the result.
+    """
+    return quote(path.replace("\\", "/"), safe="/")
 
 
 @reporter
@@ -97,15 +117,23 @@ class SARIFReporter(Reporter):
         if f.location.snippet:
             region["snippet"] = {"text": f.location.snippet}
 
-        physical: dict = {"artifactLocation": {"uri": f.location.path}}
-        if region:
-            physical["region"] = region
+        path = f.location.path or ""
+        location: dict
+        if _is_file_path(path):
+            physical: dict = {"artifactLocation": {"uri": _artifact_uri(path)}}
+            if region:
+                physical["region"] = region
+            location = {"physicalLocation": physical}
+        else:
+            # Not a file (git history, a URL, ...): a physical location would
+            # point at a path that does not exist in the repository.
+            location = {"logicalLocations": [{"name": path or "(unknown)", "kind": "resource"}]}
 
         return {
             "ruleId": f.rule_id,
             "level": _LEVEL[f.severity],
             "message": {"text": self._message(f)},
-            "locations": [{"physicalLocation": physical}],
+            "locations": [location],
             "partialFingerprints": {"argusFingerprint": f.fingerprint()},
             "properties": {
                 "confidence": f.confidence.label,

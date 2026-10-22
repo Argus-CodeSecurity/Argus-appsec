@@ -19,9 +19,41 @@ from pathlib import Path
 from argus.core.models import Finding
 from argus.remediation import git_ops
 from argus.remediation.hosting import RepoRef, post_issue_comment, post_pr_review
+from argus.reporting.md_escape import md_code, md_text
 
 # `@@ -old,+new @@` hunk header; we only need the new-side start and length.
 _HUNK = re.compile(r"^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@")
+
+_C_ESCAPES = {"a": 7, "b": 8, "t": 9, "n": 10, "v": 11, "f": 12, "r": 13, '"': 34, "\\": 92}
+
+
+def _unquote_path(path: str) -> str:
+    r"""Undo git's C-style quoting (``"caf\303\251.py"``) of a diff path.
+
+    ``core.quotePath=false`` keeps non-ASCII names raw, but git still quotes
+    paths containing control characters, quotes or backslashes.
+    """
+    if len(path) < 2 or not (path.startswith('"') and path.endswith('"')):
+        return path
+    body = path[1:-1]
+    out = bytearray()
+    i = 0
+    while i < len(body):
+        ch = body[i]
+        if ch == "\\" and i + 1 < len(body):
+            nxt = body[i + 1]
+            octal = body[i + 1 : i + 4]
+            if len(octal) == 3 and all(c in "01234567" for c in octal):
+                out.append(int(octal, 8))
+                i += 4
+                continue
+            if nxt in _C_ESCAPES:
+                out.append(_C_ESCAPES[nxt])
+                i += 2
+                continue
+        out += ch.encode("utf-8")
+        i += 1
+    return out.decode("utf-8", errors="replace")
 
 
 def parse_changed_lines(diff_text: str) -> dict[str, set[int]]:
@@ -33,9 +65,13 @@ def parse_changed_lines(diff_text: str) -> dict[str, set[int]]:
     """
     changed: dict[str, set[int]] = {}
     current: set[int] | None = None
-    for line in diff_text.splitlines():
+    # Split on "\n" only: str.splitlines() also breaks on \x0c,   and
+    # friends, which would let file content masquerade as hunk headers.
+    for line in diff_text.split("\n"):
+        line = line.rstrip("\r")
         if line.startswith("+++ "):
-            path = line[4:].strip()
+            # git appends a tab after names that contain spaces.
+            path = _unquote_path(line[4:].rstrip("\t"))
             if path == "/dev/null":
                 current = None
                 continue
@@ -48,7 +84,8 @@ def parse_changed_lines(diff_text: str) -> dict[str, set[int]]:
         if m and current is not None:
             start = int(m.group(1))
             length = int(m.group(2)) if m.group(2) is not None else 1
-            for n in range(start, start + max(length, 1)):
+            # "+N,0" is a pure deletion: no line exists on the new side.
+            for n in range(start, start + length):
                 current.add(n)
     # Drop files that ended up with no added lines (pure deletions).
     return {p: lines for p, lines in changed.items() if lines}
@@ -60,24 +97,36 @@ def changed_lines(root: str | Path, base: str, head: str = "HEAD") -> dict[str, 
     Uses a three-dot diff (``base...head``) so it matches what the PR shows,
     the changes on the head branch since it diverged from base. Returns an empty
     map if git or the refs are unavailable (caller then falls back to a
-    summary-only review).
+    summary-only review, which still lists every finding).
     """
-    text = git_ops.diff(Path(root), "--unified=0", "--no-color", f"{base}...{head}")
+    root = Path(root)
+    if not (git_ops.verify_commit(root, base) and git_ops.verify_commit(root, head)):
+        return {}
+    try:
+        text = git_ops.diff(root, "--unified=0", "--no-color", f"{base}...{head}")
+    except git_ops.GitError:
+        return {}
     return parse_changed_lines(text)
 
 
-def finding_comment(f: Finding) -> dict:
-    """Build one inline GitHub review-comment payload for a finding."""
-    parts = [f"**Argus | {f.severity.label} · {f.title}**", f"`{f.rule_id}`"]
+def finding_comment(f: Finding, path_prefix: str = "") -> dict:
+    """Build one inline GitHub review-comment payload for a finding.
+
+    Everything interpolated comes from the scanned (possibly hostile) PR, so it
+    is escaped: no links, HTML or @mentions can ride along on the bot's token.
+    ``path_prefix`` turns the scan-relative path into the repository-relative
+    path GitHub expects when a subdirectory was scanned.
+    """
+    parts = [f"**Argus | {f.severity.label} | {md_text(f.title)}**", md_code(f.rule_id)]
     if f.why_vulnerable:
-        parts.append(f"\n{f.why_vulnerable}")
+        parts.append("\n" + md_text(f.why_vulnerable, multiline=True))
     if f.remediation and f.remediation.summary:
-        parts.append(f"\n**Fix:** {f.remediation.summary}")
+        parts.append(f"\n**Fix:** {md_text(f.remediation.summary)}")
     mapping = ", ".join(f.cwe + f.owasp)
     if mapping:
-        parts.append(f"\n_{mapping}_")
+        parts.append(f"\n_{md_text(mapping)}_")
     return {
-        "path": f.location.path,
+        "path": path_prefix + f.location.path,
         "line": f.location.start_line,
         "side": "RIGHT",
         "body": "  \n".join(parts),
@@ -85,45 +134,66 @@ def finding_comment(f: Finding) -> dict:
 
 
 def split_comments(
-    findings: list[Finding], changed: dict[str, set[int]]
+    findings: list[Finding], changed: dict[str, set[int]], path_prefix: str = ""
 ) -> tuple[list[dict], list[Finding]]:
     """Split findings into (inline comments on changed lines, everything else).
 
     GitHub rejects a whole review if any comment targets a line outside the diff,
     so only findings whose line is in ``changed`` become inline comments; the
-    rest are returned to be summarized in the review body.
+    rest are returned to be summarized in the review body. ``changed`` is keyed
+    by repository-relative path; ``path_prefix`` maps finding paths onto it.
     """
     inline: list[dict] = []
     leftover: list[Finding] = []
     for f in findings:
         line = f.location.start_line
-        if line is not None and line in changed.get(f.location.path, set()):
-            inline.append(finding_comment(f))
+        if line is not None and line in changed.get(path_prefix + f.location.path, set()):
+            inline.append(finding_comment(f, path_prefix))
         else:
             leftover.append(f)
     return inline, leftover
 
 
+# GitHub rejects comment/review bodies over 65,536 characters (HTTP 422).
+MAX_SUMMARY_ENTRIES = 50
+MAX_BODY_CHARS = 60_000
+
+
 def review_summary(total: int, inline_count: int, leftover: list[Finding]) -> str:
-    """Markdown body for the review / PR comment."""
+    """Markdown body for the review / PR comment.
+
+    Lists at most :data:`MAX_SUMMARY_ENTRIES` leftover findings and keeps the
+    body under :data:`MAX_BODY_CHARS`, so a large scan cannot make GitHub
+    reject the whole review.
+    """
     if total == 0:
         return "### Argus: no new findings in this pull request."
-    header = (
-        f"### Argus found {total} new finding"
-        f"{'s' if total != 1 else ''} in this pull request"
-    )
+    header = f"### Argus found {total} new finding{'s' if total != 1 else ''} in this pull request"
     lines = [header, ""]
     if inline_count:
         lines.append(
             f"{inline_count} shown inline on the changed lines below."
             + (" Others are listed here:" if leftover else "")
         )
-    for f in leftover:
-        lines.append(f"- **{f.severity.label}** `{f.rule_id}` "
-                     f"- {f.title} ({f.location.as_ref()})")
-    lines += ["", "_Only findings introduced by this PR are shown "
-              "(diff-aware). Nothing was modified._"]
-    return "\n".join(lines)
+    footer = [
+        "",
+        "_Only findings introduced by this PR are shown (diff-aware). Nothing was modified._",
+    ]
+    budget = MAX_BODY_CHARS - len("\n".join(lines + footer)) - 100
+    shown = 0
+    for f in leftover[:MAX_SUMMARY_ENTRIES]:
+        entry = (
+            f"- **{f.severity.label}** {md_code(f.rule_id)} "
+            f"- {md_text(f.title)} ({md_code(f.location.as_ref())})"
+        )
+        if len(entry) + 1 > budget:
+            break
+        lines.append(entry)
+        budget -= len(entry) + 1
+        shown += 1
+    if shown < len(leftover):
+        lines.append(f"- ...and {len(leftover) - shown} more (see the full report).")
+    return "\n".join(lines + footer)
 
 
 @dataclass
@@ -145,6 +215,7 @@ def post_findings_review(
     token: str | None = None,
     dry_run: bool = False,
     post_clean: bool = False,
+    path_prefix: str = "",
 ) -> ReviewOutcome:
     """Post ``findings`` to PR ``number`` as an inline review plus a summary.
 
@@ -153,10 +224,12 @@ def post_findings_review(
     (then a short "no new findings" comment is left). ``dry_run`` builds the
     outcome without any network call.
     """
-    inline, leftover = split_comments(findings, changed)
+    inline, leftover = split_comments(findings, changed, path_prefix)
     summary = review_summary(len(findings), len(inline), leftover)
     outcome = ReviewOutcome(
-        total=len(findings), inline=len(inline), leftover=len(leftover),
+        total=len(findings),
+        inline=len(inline),
+        leftover=len(leftover),
         summary=summary,
     )
     if dry_run:

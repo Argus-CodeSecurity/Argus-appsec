@@ -63,15 +63,18 @@ def _status_verdict(status: int | None, *, live=(200,), invalid=(401,)) -> str:
 
 
 def _verify_github(secret: str) -> str:
-    return _status_verdict(_get(
-        "https://api.github.com/user",
-        {"Authorization": f"Bearer {secret}", "User-Agent": "argus-secret-verify"},
-    ))
+    return _status_verdict(
+        _get(
+            "https://api.github.com/user",
+            {"Authorization": f"Bearer {secret}", "User-Agent": "argus-secret-verify"},
+        )
+    )
 
 
 def _verify_openai(secret: str) -> str:
-    return _status_verdict(_get(
-        "https://api.openai.com/v1/models", {"Authorization": f"Bearer {secret}"}))
+    return _status_verdict(
+        _get("https://api.openai.com/v1/models", {"Authorization": f"Bearer {secret}"})
+    )
 
 
 def _verify_stripe(secret: str) -> str:
@@ -79,8 +82,9 @@ def _verify_stripe(secret: str) -> str:
     import base64
 
     token = base64.b64encode(f"{secret}:".encode()).decode()
-    return _status_verdict(_get(
-        "https://api.stripe.com/v1/balance", {"Authorization": f"Basic {token}"}))
+    return _status_verdict(
+        _get("https://api.stripe.com/v1/balance", {"Authorization": f"Basic {token}"})
+    )
 
 
 def _verify_slack(secret: str) -> str:
@@ -90,7 +94,8 @@ def _verify_slack(secret: str) -> str:
 
         resp = httpx.get(
             "https://slack.com/api/auth.test",
-            headers={"Authorization": f"Bearer {secret}"}, timeout=_TIMEOUT,
+            headers={"Authorization": f"Bearer {secret}"},
+            timeout=_TIMEOUT,
         )
         if resp.status_code == 200:
             return LIVE if resp.json().get("ok") is True else INVALID

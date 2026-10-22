@@ -10,12 +10,20 @@ Plugins register themselves against a process-global :class:`Registry`. Built-in
 plugins register on import; third-party packages register through the
 ``argus.plugins`` entry-point group declared in ``pyproject.toml``. Adding a new
 language, scanner, or report format therefore never requires editing the core.
+
+Third-party code should import these names from :mod:`argus.plugin_api`, the
+stable, versioned surface. Every plugin class carries an ``api_version``; the
+registry skips (and logs) a plugin built for a different
+:data:`PLUGIN_API_VERSION` instead of loading code written against an
+incompatible contract.
 """
 
 from __future__ import annotations
 
 import abc
+import logging
 from collections.abc import Iterable
+from dataclasses import dataclass
 from importlib import metadata
 from typing import TYPE_CHECKING, ClassVar
 
@@ -27,14 +35,59 @@ if TYPE_CHECKING:
     from argus.core.project import Project
 
 
-class ScannerContext:
-    """Everything a scanner needs, passed in so scanners stay side-effect-light."""
+#: Version of the plugin contract in :mod:`argus.plugin_api`. It is bumped only
+#: when a change would break existing plugins (a removed or renamed name, a
+#: changed method signature). Additive changes keep the same number.
+PLUGIN_API_VERSION = 1
 
-    def __init__(self, project: Project, config: Config,
-                 ai: AIProvider | None = None) -> None:
-        self.project = project
-        self.config = config
-        self.ai = ai
+logger = logging.getLogger("argus.plugins")
+
+
+class PluginVersionError(ValueError):
+    """A plugin declares a plugin API version this Argus does not implement."""
+
+
+def _api_major(value: object) -> int | None:
+    """The major part of a declared ``api_version``, or None if unreadable.
+
+    ``api_version`` is an integer. A string such as ``"1"`` or ``"1.2"`` is
+    tolerated and read as its leading major number.
+    """
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, int):
+        return value
+    if isinstance(value, str):
+        head = value.strip().split(".", 1)[0]
+        if head.isdigit():
+            return int(head)
+    return None
+
+
+def check_api_version(kind: str, cls: type) -> None:
+    """Raise :class:`PluginVersionError` unless ``cls`` targets this plugin API."""
+    declared = getattr(cls, "api_version", None)
+    if _api_major(declared) != PLUGIN_API_VERSION:
+        label = getattr(cls, "name", "") or cls.__name__
+        raise PluginVersionError(
+            f"{kind} plugin {label!r} ({cls.__module__}.{cls.__qualname__}) "
+            f"declares plugin API version {declared!r}, but this Argus implements "
+            f"version {PLUGIN_API_VERSION}. Install a release of the plugin built "
+            "for this plugin API version."
+        )
+
+
+@dataclass(eq=False)
+class ScannerContext:
+    """Everything a scanner needs, passed in so scanners stay side-effect-light.
+
+    ``eq=False`` keeps identity comparison and hashing, as before this became a
+    dataclass.
+    """
+
+    project: Project
+    config: Config
+    ai: AIProvider | None = None
 
 
 class Scanner(abc.ABC):
@@ -44,6 +97,10 @@ class Scanner(abc.ABC):
     ``applies_to`` lets a scanner opt out cheaply (e.g. a Terraform scanner on a
     project with no ``.tf`` files) so the engine can skip it.
     """
+
+    #: Plugin API version this class was written against. Leave the default:
+    #: it is the version of :mod:`argus.plugin_api` the plugin was built with.
+    api_version: ClassVar[int] = PLUGIN_API_VERSION
 
     #: Unique, stable identifier (used in config, CLI flags, and finding ids).
     name: ClassVar[str] = ""
@@ -81,6 +138,8 @@ class Scanner(abc.ABC):
 class Reporter(abc.ABC):
     """Base class for a report format."""
 
+    #: Plugin API version this class was written against (see :class:`Scanner`).
+    api_version: ClassVar[int] = PLUGIN_API_VERSION
     name: ClassVar[str] = ""
     #: Default file extension (without the dot).
     extension: ClassVar[str] = "txt"
@@ -99,6 +158,8 @@ class Registry:
         self._scanners: dict[str, type[Scanner]] = {}
         self._reporters: dict[str, type[Reporter]] = {}
         self._ai_providers: dict[str, type[AIProvider]] = {}
+        # Plugins skipped for an incompatible api_version: (kind, name) -> reason.
+        self._rejected: dict[tuple[str, str], str] = {}
         self._loaded_entrypoints = False
 
     # --- registration -------------------------------------------------------
@@ -117,9 +178,29 @@ class Registry:
                 f"refusing {cls.__module__}.{cls.__qualname__}"
             )
 
+    def _accepts(self, kind: str, cls: type) -> bool:
+        """Whether ``cls`` targets this plugin API; log and record it if not.
+
+        A mismatch is not raised: the class is left unregistered so the rest of
+        the plugin package, and the scan, carry on without it.
+        """
+        try:
+            check_api_version(kind, cls)
+        except PluginVersionError as exc:
+            self._rejected[(kind, getattr(cls, "name", "") or cls.__name__)] = str(exc)
+            logger.warning("Skipping %s", exc)
+            return False
+        return True
+
+    def rejected(self) -> dict[tuple[str, str], str]:
+        """Plugins skipped for an incompatible API version, with the reason."""
+        return dict(self._rejected)
+
     def register_scanner(self, cls: type[Scanner]) -> type[Scanner]:
         if not cls.name:
             raise ValueError(f"Scanner {cls.__name__} must define a name")
+        if not self._accepts("Scanner", cls):
+            return cls
         existing = self._scanners.get(cls.name)
         if existing is not None:
             self._reject_collision("Scanner", cls.name, existing, cls)
@@ -129,6 +210,8 @@ class Registry:
     def register_reporter(self, cls: type[Reporter]) -> type[Reporter]:
         if not cls.name:
             raise ValueError(f"Reporter {cls.__name__} must define a name")
+        if not self._accepts("Reporter", cls):
+            return cls
         existing = self._reporters.get(cls.name)
         if existing is not None:
             self._reject_collision("Reporter", cls.name, existing, cls)
@@ -138,6 +221,8 @@ class Registry:
     def register_ai_provider(self, cls: type[AIProvider]) -> type[AIProvider]:
         if not cls.name:
             raise ValueError(f"AIProvider {cls.__name__} must define a name")
+        if not self._accepts("AIProvider", cls):
+            return cls
         existing = self._ai_providers.get(cls.name)
         if existing is not None:
             self._reject_collision("AIProvider", cls.name, existing, cls)
@@ -160,23 +245,33 @@ class Registry:
     def get_scanner(self, name: str) -> type[Scanner]:
         self._ensure_entrypoints()
         if name not in self._scanners:
-            raise KeyError(f"Unknown scanner: {name!r}. "
-                           f"Available: {sorted(self._scanners)}")
+            raise KeyError(
+                self._skipped_reason("Scanner", name)
+                or f"Unknown scanner: {name!r}. Available: {sorted(self._scanners)}"
+            )
         return self._scanners[name]
 
     def get_reporter(self, name: str) -> type[Reporter]:
         self._ensure_entrypoints()
         if name not in self._reporters:
-            raise KeyError(f"Unknown reporter: {name!r}. "
-                           f"Available: {sorted(self._reporters)}")
+            raise KeyError(
+                self._skipped_reason("Reporter", name)
+                or f"Unknown reporter: {name!r}. Available: {sorted(self._reporters)}"
+            )
         return self._reporters[name]
 
     def get_ai_provider(self, name: str) -> type[AIProvider]:
         self._ensure_entrypoints()
         if name not in self._ai_providers:
-            raise KeyError(f"Unknown AI provider: {name!r}. "
-                           f"Available: {sorted(self._ai_providers)}")
+            raise KeyError(
+                self._skipped_reason("AIProvider", name)
+                or f"Unknown AI provider: {name!r}. Available: {sorted(self._ai_providers)}"
+            )
         return self._ai_providers[name]
+
+    def _skipped_reason(self, kind: str, name: str) -> str | None:
+        reason = self._rejected.get((kind, name))
+        return f"{name!r} is installed but was skipped: {reason}" if reason else None
 
     # --- discovery ----------------------------------------------------------
     def _ensure_entrypoints(self) -> None:
@@ -196,16 +291,18 @@ class Registry:
         for ep in eps:
             try:
                 from argus.plugins.signing import verify_plugin_entry
+
                 if not verify_plugin_entry(ep):
                     import warnings
+
                     warnings.warn(f"Blocked untrusted Argus plugin {ep.name!r}", stacklevel=2)
                     continue
                 register = ep.load()
                 register()
             except Exception as exc:  # pragma: no cover - defensive
                 import warnings
-                warnings.warn(f"Failed to load Argus plugin {ep.name!r}: {exc}",
-                              stacklevel=2)
+
+                warnings.warn(f"Failed to load Argus plugin {ep.name!r}: {exc}", stacklevel=2)
 
 
 #: The shared registry every part of Argus talks to.

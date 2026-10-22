@@ -5,6 +5,10 @@
 # scan is *diff-aware*: it first scans the base branch to build a baseline, then
 # reports only findings that are new in the PR, so you are never blocked by
 # pre-existing issues, only by ones the PR introduces.
+#
+# Note: event data such as the base branch name is read from the environment
+# (GITHUB_BASE_REF) rather than interpolated with ${{ }} into run: blocks, so a
+# crafted branch name cannot inject shell commands.
 name: Argus Security Scan
 
 on:
@@ -14,16 +18,23 @@ on:
 
 permissions:
   contents: read
-  security-events: write   # required to upload SARIF
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   argus:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write # required to upload SARIF
     steps:
       - name: Checkout (full history for baseline diffing)
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - uses: actions/setup-python@0b93645e9fea7318ecaed2b359559ac225c90a2b # v5.3.0
         with:
@@ -32,7 +43,7 @@ jobs:
       - name: Install Argus
         # Install with the [ast] extra so the self-scan runs the full taint tier
         # (the AST analysis clears regex false positives). In your own project,
-        # replace this with `pip install "argus-appsec[ast]"` once on PyPI.
+        # replace this with `pip install "argus-appsec[ast]"`.
         run: pip install ".[ast]"
 
       # On a pull request, scan the base branch first to establish a baseline of
@@ -41,16 +52,23 @@ jobs:
       - name: Build baseline from base branch (PRs only)
         if: github.event_name == 'pull_request'
         run: |
-          git worktree add /tmp/base "origin/${{ github.base_ref }}"
+          git worktree add /tmp/base "origin/${GITHUB_BASE_REF}"
           # Write the baseline outside the working tree so it is not itself scanned.
           argus scan /tmp/base -f json -o /tmp/baseline.json --quiet || true
 
       - name: Run Argus (diff-aware on PRs)
+        env:
+          # Optional: use a cloud model for richer analysis. Only provided on
+          # pushes to main, never to code from a pull request.
+          ANTHROPIC_API_KEY: ${{ github.event_name == 'push' && secrets.ANTHROPIC_API_KEY || '' }}
         run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            argus scan . --diff "origin/${{ github.base_ref }}...HEAD" \
+          if [ "${GITHUB_EVENT_NAME}" = "pull_request" ]; then
+            # Read the Argus config from the base branch: the PR checkout is
+            # contributor-controlled and must not be able to relax the scan.
+            argus scan . --diff "origin/${GITHUB_BASE_REF}...HEAD" \
+              --config-from-ref "origin/${GITHUB_BASE_REF}" \
               -f sarif -o argus.sarif --quiet
-            argus supply-chain . --diff "origin/${{ github.base_ref }}...HEAD" \
+            argus supply-chain . --diff "origin/${GITHUB_BASE_REF}...HEAD" \
               -o supply-chain.json --quiet || true
             argus infrastructure . --fail-on high --quiet || true
           elif [ -f /tmp/baseline.json ]; then
@@ -58,9 +76,6 @@ jobs:
           else
             argus scan . -f sarif -o argus.sarif --quiet
           fi
-        env:
-          # Optional: use a cloud model for richer analysis. Omit to run offline.
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
 
       - name: Upload SARIF to Code Scanning
         uses: github/codeql-action/upload-sarif@1b549b9259bda1cb5ddde3b41741a82a2d15a841 # v3.28.13
@@ -73,23 +88,18 @@ jobs:
   argus-gate:
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           fetch-depth: 0
+          persist-credentials: false
       - uses: actions/setup-python@0b93645e9fea7318ecaed2b359559ac225c90a2b # v5.3.0
         with:
           python-version: "3.12"
       - run: pip install ".[ast]"
-      - name: Build baseline from base branch
-        run: |
-          git worktree add /tmp/base "origin/${{ github.base_ref }}"
-          argus scan /tmp/base -f json -o /tmp/baseline.json --quiet || true
       - name: Fail on newly introduced High+ findings
         run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            argus scan . --diff "origin/${{ github.base_ref }}...HEAD" --fail-on high --quiet
-            argus policy check .
-          else
-            argus scan . --baseline /tmp/baseline.json --fail-on high --quiet
-          fi
+          argus scan . --diff "origin/${GITHUB_BASE_REF}...HEAD" \
+            --config-from-ref "origin/${GITHUB_BASE_REF}" --fail-on high --quiet

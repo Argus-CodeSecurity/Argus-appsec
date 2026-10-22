@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 import re
 from collections.abc import Iterable
 from pathlib import PurePosixPath
@@ -16,33 +15,32 @@ from argus.core.models import (
     Severity,
 )
 from argus.core.plugin import Scanner, ScannerContext, scanner
+from argus.scanners.dependencies import _loads
 
 _ATTESTATION_NAMES = re.compile(
     r"(?i)(provenance|attestation|\.intoto\.jsonl|slsa\.provenance)",
 )
 
 
-def _loads(text: str) -> dict | list | None:
-    try:
-        return json.loads(text)
-    except (json.JSONDecodeError, ValueError):
-        return None
-
-
 def _check_provenance(path: str, data: dict, counter: int) -> Iterable[Finding]:
-    """Validate minimal SLSA provenance fields when present."""
+    """Validate minimal SLSA provenance fields when present.
+
+    ``data`` is attacker-controlled JSON, so every nested value is type-checked
+    before use.
+    """
     # SLSA v1 predicate
     predicate = data.get("predicate") or data
     if isinstance(predicate, dict) and predicate.get("buildType"):
-        builder = (predicate.get("builder") or {}).get("id", "")
-        if not builder:
+        builder = predicate.get("builder")
+        builder_id = builder.get("id", "") if isinstance(builder, dict) else ""
+        if not isinstance(builder_id, str) or not builder_id.strip():
             counter += 1
             yield Finding(
                 id=f"provenance:missing-builder:{counter}",
                 rule_id="provenance.missing-builder-id",
                 scanner="provenance",
                 title="Provenance attestation missing builder identity",
-                description="The attestation has no builder.id — provenance is incomplete.",
+                description="The attestation has no builder.id, so provenance is incomplete.",
                 location=Location(path=path),
                 severity=Severity.MEDIUM,
                 confidence=Confidence.HIGH,
@@ -93,10 +91,7 @@ class ProvenanceScanner(Scanner):
     description = "Reads SLSA/in-toto provenance files and flags integrity gaps."
 
     def applies_to(self, project) -> bool:
-        return any(
-            _ATTESTATION_NAMES.search(f.rel_path)
-            for f in project.files()
-        )
+        return any(_ATTESTATION_NAMES.search(f.rel_path) for f in project.files())
 
     def scan(self, ctx: ScannerContext) -> Iterable[Finding]:
         counter = 0

@@ -12,9 +12,10 @@ Finds committed credentials two ways:
 
 from __future__ import annotations
 
+import logging
 import math
 import re
-from collections.abc import Iterable
+from collections.abc import Iterable, Iterator
 
 from argus.core.models import (
     Confidence,
@@ -25,12 +26,17 @@ from argus.core.models import (
     Severity,
 )
 from argus.core.plugin import Scanner, ScannerContext, scanner
+from argus.scanners._text import iter_scan_lines
 
-# name -> (compiled pattern, severity). Ordered most to least specific.
+log = logging.getLogger("argus.scanners.secrets")
+
+# name -> compiled pattern. Ordered most to least specific. A `val` group, when
+# present, marks the secret part of the match (what redact_line masks).
 _SIGNATURES: dict[str, re.Pattern[str]] = {
     "aws-access-key-id": re.compile(r"\bAKIA[0-9A-Z]{16}\b"),
     "aws-secret-access-key": re.compile(
-        r"(?i)aws.{0,20}?(secret|sk).{0,20}?['\"][0-9a-zA-Z/+]{40}['\"]"),
+        r"(?i)aws.{0,20}?(secret|sk).{0,20}?['\"](?P<val>[0-9a-zA-Z/+]{40})['\"]"
+    ),
     "github-token": re.compile(r"\bgh[pousr]_[0-9A-Za-z]{36,}\b"),
     "gitlab-token": re.compile(r"\bglpat-[0-9A-Za-z_\-]{20,}\b"),
     "slack-token": re.compile(r"\bxox[baprs]-[0-9A-Za-z\-]{10,}\b"),
@@ -38,30 +44,100 @@ _SIGNATURES: dict[str, re.Pattern[str]] = {
     "stripe-secret-key": re.compile(r"\bsk_live_[0-9A-Za-z]{20,}\b"),
     "private-key-block": re.compile(r"-----BEGIN (?:RSA |EC |OPENSSH |DSA |PGP )?PRIVATE KEY-----"),
     "jwt": re.compile(r"\beyJ[A-Za-z0-9_\-]{10,}\.[A-Za-z0-9_\-]{10,}\.[A-Za-z0-9_\-]{10,}\b"),
-    "generic-bearer": re.compile(r"(?i)bearer\s+[A-Za-z0-9_\-\.=]{20,}"),
+    "generic-bearer": re.compile(r"(?i)bearer\s+(?P<val>[A-Za-z0-9_\-\.=]{20,})"),
 }
 
-# Generic key-ish assignments whose RHS we entropy-check.
+# Generic key-ish assignments whose RHS we entropy-check. The key must start at a
+# name boundary and is bounded, and whether it names a secret is checked
+# separately (_SECRET_KEY_NAME): the old single pattern put two unbounded name
+# classes around an alternation they could also match, which made a failed
+# search cubic in the line length.
 _ASSIGNMENT = re.compile(
-    r"""(?ix)
-    (?P<key>[A-Za-z0-9_\-\.]*(?:secret|token|passw(?:or)?d|api[_\-]?key|access[_\-]?key|
-        private[_\-]?key|client[_\-]?secret|auth)[A-Za-z0-9_\-\.]*)
+    r"""(?x)
+    (?<![A-Za-z0-9_\-\.])(?P<key>[A-Za-z0-9_\-\.]{1,80})
     \s*[:=]\s*
     ['"](?P<val>[^'"\n]{12,120})['"]
     """
 )
+_SECRET_KEY_NAME = re.compile(
+    r"(?i)secret|token|passw(?:or)?d|api[_\-]?key|access[_\-]?key|"
+    r"private[_\-]?key|client[_\-]?secret|auth"
+)
+
+
+def _secret_assignments(line: str) -> Iterator[re.Match[str]]:
+    """Assignments on ``line`` whose key name looks like it holds a secret."""
+    for m in _ASSIGNMENT.finditer(line):
+        if _SECRET_KEY_NAME.search(m.group("key")):
+            yield m
+
+
+# Any `key = value` / `key: value` pair, quoted or bare, for redaction only. It is
+# deliberately broader than _ASSIGNMENT (no length or entropy floor): masking a
+# value that was not a secret costs nothing, leaving one in clear does.
+_REDACT_PAIR = re.compile(
+    r"""(?<![A-Za-z0-9_\-\.])(?P<key>[A-Za-z0-9_\-\.]{1,80})['"]?\s*[:=]\s*"""
+    r"""(?:"(?P<dq>[^"\n]{1,500})"|'(?P<sq>[^'\n]{1,500})'|(?P<bare>[^\s'",;]{1,500}))"""
+)
+
+
+def _secret_span(m: re.Match[str]) -> tuple[int, int]:
+    """The part of a signature match that is the secret itself."""
+    if "val" in m.re.groupindex and m.group("val") is not None:
+        return m.span("val")
+    return m.span()
+
+
+def redact_line(line: str) -> str:
+    """Return ``line`` with every secret-looking value masked.
+
+    Applies every signature (all matches, not just the first) and masks the
+    value of any pair whose key names a secret. Used for the snippet of every
+    secret-type finding, since snippets end up in SARIF uploads and PR comments
+    that are public on fork pull requests. Pass the full line (at most
+    MAX_SCAN_LINE characters) and truncate afterwards, never before: a token cut
+    in half no longer matches its signature and would leak partially.
+    """
+    spans: list[tuple[int, int]] = []
+    for pattern in _SIGNATURES.values():
+        spans.extend(_secret_span(m) for m in pattern.finditer(line))
+    for m in _REDACT_PAIR.finditer(line):
+        if not _SECRET_KEY_NAME.search(m.group("key")):
+            continue
+        group = next(g for g in ("dq", "sq", "bare") if m.group(g) is not None)
+        spans.append(m.span(group))
+    spans.extend(m.span("val") for m in _secret_assignments(line))
+    if not spans:
+        return line
+    merged: list[list[int]] = []
+    for start, end in sorted(spans):
+        if merged and start <= merged[-1][1]:
+            merged[-1][1] = max(merged[-1][1], end)
+        else:
+            merged.append([start, end])
+    out: list[str] = []
+    pos = 0
+    for start, end in merged:
+        out.append(line[pos:start])
+        out.append(SecretsScanner._redact(line[start:end]))
+        pos = end
+    out.append(line[pos:])
+    return "".join(out)
+
 
 # Values that look like placeholders, not real secrets.
 _PLACEHOLDER = re.compile(
     r"(?i)^(x{3,}|\*{3,}|<[^>]+>|\$\{[^}]+\}|change[_\- ]?me|your[_\-]|example|"
-    r"placeholder|dummy|sample|test|todo|none|null|redacted|\.{3})")
+    r"placeholder|dummy|sample|test|todo|none|null|redacted|\.{3})"
+)
 
 # Files where secrets are expected to be templates or fixtures, so downgrade
 # confidence. Anchored with (^|/) so a top-level tests/ or fixtures/ dir matches,
 # not just nested ones (a real repo often has tests/certs/*.key test material).
 _EXAMPLE_FILE = re.compile(
     r"(?i)(\.example$|\.sample$|\.template$|(^|/)tests?/|(^|/)fixtures?/|"
-    r"(^|/)testdata/|\.md$)")
+    r"(^|/)testdata/|\.md$)"
+)
 
 
 def _shannon_entropy(s: str) -> float:
@@ -82,8 +158,22 @@ class SecretsScanner(Scanner):
     description = "Detects committed credentials via signatures and entropy analysis."
 
     # Only scan plausible text/source/config files.
-    _SKIP_SUFFIXES = {".png", ".jpg", ".jpeg", ".gif", ".pdf", ".zip", ".gz",
-                      ".jar", ".class", ".woff", ".woff2", ".ttf", ".ico", ".lock"}
+    _SKIP_SUFFIXES = {
+        ".png",
+        ".jpg",
+        ".jpeg",
+        ".gif",
+        ".pdf",
+        ".zip",
+        ".gz",
+        ".jar",
+        ".class",
+        ".woff",
+        ".woff2",
+        ".ttf",
+        ".ico",
+        ".lock",
+    }
 
     def cacheable(self, ctx: ScannerContext) -> bool:
         # Live verification makes network calls whose result depends on the
@@ -112,45 +202,69 @@ class SecretsScanner(Scanner):
                 continue
             is_example = bool(_EXAMPLE_FILE.search(f.rel_path))
 
-            for lineno, line in enumerate(f.lines(), start=1):
-                if len(line) > 1000:  # skip minified/huge lines
-                    continue
-
+            # Over-long (minified) lines are windowed, not skipped, so padding a
+            # line cannot hide a key and no single search sees unbounded text.
+            # Every match is reported, not just the first per rule and line, and a
+            # value seen in two overlapping windows of a long line only once.
+            seen: set[tuple[str, int, str]] = set()
+            for lineno, line in iter_scan_lines(f.lines()):
                 for rule, pattern in _SIGNATURES.items():
-                    m = pattern.search(line)
-                    if not m:
-                        continue
-                    counter += 1
-                    finding = self._make_finding(
-                        rule_id=rule, index=counter, path=f.rel_path, lineno=lineno,
-                        line=line, matched=m.group(0),
-                        severity=Severity.LOW if is_example else Severity.CRITICAL,
-                        confidence=Confidence.LOW if is_example else Confidence.HIGH,
-                        title=f"Hardcoded credential: {rule.replace('-', ' ')}",
-                    )
-                    if verify:
-                        self._apply_verification(finding, rule, m.group(0))
-                    yield finding
+                    for m in pattern.finditer(line):
+                        key = (rule, lineno, m.group(0))
+                        if key in seen:
+                            continue
+                        seen.add(key)
+                        counter += 1
+                        finding = self._make_finding(
+                            rule_id=rule,
+                            index=counter,
+                            path=f.rel_path,
+                            lineno=lineno,
+                            line=line,
+                            severity=Severity.LOW if is_example else Severity.CRITICAL,
+                            confidence=Confidence.LOW if is_example else Confidence.HIGH,
+                            title=f"Hardcoded credential: {rule.replace('-', ' ')}",
+                        )
+                        if verify:
+                            self._apply_verification(finding, rule, m.group(0))
+                        yield finding
 
                 if not entropy_enabled:
                     continue
-                am = _ASSIGNMENT.search(line)
-                if am:
+                for am in _secret_assignments(line):
                     val = am.group("val")
                     if _PLACEHOLDER.search(val) or " " in val.strip():
                         continue
+                    key = ("high-entropy-string", lineno, val)
+                    if key in seen:
+                        continue
+                    seen.add(key)
                     if _shannon_entropy(val) >= entropy_threshold:
                         counter += 1
                         yield self._make_finding(
-                            rule_id="high-entropy-string", index=counter,
-                            path=f.rel_path, lineno=lineno, line=line, matched=val,
+                            rule_id="high-entropy-string",
+                            index=counter,
+                            path=f.rel_path,
+                            lineno=lineno,
+                            line=line,
                             severity=Severity.LOW if is_example else Severity.HIGH,
                             confidence=Confidence.LOW if is_example else Confidence.MEDIUM,
                             title=f"Possible hardcoded secret in '{am.group('key')}'",
                         )
 
         if opts.get("history"):
-            yield from self._scan_history(ctx.project.root)
+            # The history pass runs git and parses its output. If it fails, the
+            # working-tree findings already produced must survive: an exception
+            # escaping this generator makes the engine drop all of them.
+            try:
+                history = list(self._scan_history(ctx.project.root))
+            except Exception as exc:
+                log.warning(
+                    "secrets: git history scan failed (%s); reporting working-tree findings only",
+                    type(exc).__name__,
+                )
+                history = [self._history_failed_finding(exc)]
+            yield from history
 
     def _scan_history(self, root) -> Iterable[Finding]:
         """Report secrets found anywhere in git history (including deleted ones)."""
@@ -159,12 +273,67 @@ class SecretsScanner(Scanner):
         secrets, truncated = secrets_history.find_history_secrets(root)
         for i, hs in enumerate(secrets, start=1):
             yield self._history_finding(hs, i, truncated)
+        if truncated:
+            # Reported even with zero findings: a capped or timed-out walk that
+            # found nothing must not read as "history is clean".
+            yield self._history_incomplete_finding()
+
+    def _history_incomplete_finding(self) -> Finding:
+        """An INFO note that the history pass stopped before reading everything."""
+        return Finding(
+            id=f"{self.name}:history-incomplete:1",
+            rule_id=f"{self.name}.history-scan-incomplete",
+            scanner=self.name,
+            title="Git history secret scan was incomplete",
+            description=(
+                "The git history walk hit its size or time limit, so older commits "
+                "were not checked for secrets. Secrets that exist only in those "
+                "commits are not covered by this scan."
+            ),
+            location=Location(path="(git history)"),
+            severity=Severity.INFO,
+            confidence=Confidence.LOW,
+            likelihood=Likelihood.UNLIKELY,
+            remediation=Remediation(
+                summary="Run a full history scan locally (e.g. gitleaks or "
+                "trufflehog) if older commits may hold credentials.",
+            ),
+            tags=["secret", "history", "analysis-gap"],
+        )
+
+    def _history_failed_finding(self, exc: BaseException) -> Finding:
+        """An INFO note that the history pass did not complete."""
+        return Finding(
+            id=f"{self.name}:history-failed:1",
+            rule_id=f"{self.name}.history-scan-failed",
+            scanner=self.name,
+            title="Git history secret scan did not complete",
+            description=(
+                f"The git history pass failed ({type(exc).__name__}), so secrets "
+                "that exist only in history are not covered by this scan. "
+                "Working-tree findings are unaffected."
+            ),
+            location=Location(path="(git history)"),
+            severity=Severity.INFO,
+            confidence=Confidence.LOW,
+            likelihood=Likelihood.UNLIKELY,
+            remediation=Remediation(summary="Re-run the history scan or run it locally."),
+            tags=["secret", "history", "analysis-gap"],
+            metadata={"error": type(exc).__name__},
+        )
 
     def _history_finding(self, hs, index: int, truncated: bool) -> Finding:
-        note = (" (history scan was truncated at the size cap; some older commits "
-                "were not read)") if truncated else ""
+        note = (
+            (" (history scan was truncated at the size cap; some older commits were not read)")
+            if truncated
+            else ""
+        )
+        # Key the id on the fingerprint of the full matched value: the redacted
+        # form is the same for, say, every AWS key id ("AKI..."), and an index
+        # shifts whenever history changes, so neither identifies the secret.
+        fingerprint = getattr(hs, "fingerprint", "") or str(index)
         return Finding(
-            id=f"{self.name}:history:{hs.rule}:{index}",
+            id=f"{self.name}:history:{hs.rule}:{fingerprint}",
             rule_id=f"{self.name}.history.{hs.rule}",
             scanner=self.name,
             title=f"Secret in git history: {hs.rule.replace('-', ' ')}",
@@ -195,11 +364,22 @@ class SecretsScanner(Scanner):
             tags=["secret", "history", hs.rule],
         )
 
-    def _make_finding(self, *, rule_id: str, index: int, path: str, lineno: int,
-                      line: str, matched: str, severity: Severity,
-                      confidence: Confidence, title: str) -> Finding:
-        redacted = self._redact(matched)
-        snippet = line.strip().replace(matched, redacted)
+    def _make_finding(
+        self,
+        *,
+        rule_id: str,
+        index: int,
+        path: str,
+        lineno: int,
+        line: str,
+        severity: Severity,
+        confidence: Confidence,
+        title: str,
+    ) -> Finding:
+        # Mask every secret on the line, not only the one this finding is about:
+        # a second token or an AWS secret next to its key id would otherwise
+        # stay in clear in the snippet.
+        snippet = redact_line(line).strip()
         return Finding(
             id=f"{self.name}:{rule_id}:{index}",
             rule_id=f"{self.name}.{rule_id}",

@@ -27,8 +27,12 @@ _AUTHOR = "Argus AppSec"
 
 # Dependency ecosystem -> Package URL (purl) type.
 _PURL_TYPE = {
-    "PyPI": "pypi", "npm": "npm", "Go": "golang", "crates.io": "cargo",
-    "RubyGems": "gem", "Packagist": "composer",
+    "PyPI": "pypi",
+    "npm": "npm",
+    "Go": "golang",
+    "crates.io": "cargo",
+    "RubyGems": "gem",
+    "Packagist": "composer",
 }
 
 
@@ -69,11 +73,13 @@ class VexReporter(Reporter):
                 stmt["justification"] = "vulnerable_code_not_in_execute_path"
                 stmt["impact_statement"] = (
                     "The vulnerable package is present but its code is never imported "
-                    "by this project, so the vulnerability is not reachable.")
+                    "by this project, so the vulnerability is not reachable."
+                )
             else:
                 fixed = f.metadata.get("fixed_version")
                 stmt["action_statement"] = (
-                    f"Upgrade to {fixed} or later." if fixed else "Upgrade to a patched version.")
+                    f"Upgrade to {fixed} or later." if fixed else "Upgrade to a patched version."
+                )
             statements.append(stmt)
 
         timestamp = result.started_at.isoformat()

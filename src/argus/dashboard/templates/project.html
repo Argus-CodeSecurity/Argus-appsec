@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}{{ project.name }} · Argus Dashboard{% endblock %}
+{% block title %}{{ project.name }} | Argus Dashboard{% endblock %}
 {% block content %}
 
 <nav class="crumbs"><a href="/">Projects</a> <span>/</span> {{ project.name }}</nav>
@@ -38,7 +38,7 @@
     </thead>
     <tbody>
       {% for s in scans %}
-      <tr onclick="location='/scans/{{ s.id }}'">
+      <tr class="row-link" data-href="/scans/{{ s.id }}" tabindex="0">
         <td class="strong">{{ s.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
         <td><span class="risk risk-{{ risk_band(s.risk_score)|lower }}">{{ s.risk_score }}</span></td>
         <td class="col-bar">

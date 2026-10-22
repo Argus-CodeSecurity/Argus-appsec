@@ -11,10 +11,14 @@ from argus.scanners.secret_rotation import RotationTracker, track_rotations
 
 def _live_finding() -> Finding:
     return Finding(
-        id="1", rule_id="secrets.aws-access-key-id", scanner="secrets",
-        title="Hardcoded credential", description="d",
+        id="1",
+        rule_id="secrets.aws-access-key-id",
+        scanner="secrets",
+        title="Hardcoded credential",
+        description="d",
         location=Location(path="a.py", start_line=1, snippet="KEY = 'AKIAIOSFODNN7EXAMPLE'"),
-        severity=Severity.CRITICAL, metadata={"verification": secret_verify.LIVE},
+        severity=Severity.CRITICAL,
+        metadata={"verification": secret_verify.LIVE},
     )
 
 

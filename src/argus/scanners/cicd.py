@@ -14,6 +14,8 @@ from argus.core.models import (
     Severity,
 )
 from argus.core.plugin import Scanner, ScannerContext, scanner
+from argus.scanners._text import CURL_PIPE_SHELL_RE, MAX_SCAN_LINE, iter_scan_lines
+from argus.scanners.secrets import redact_line
 
 _WORKFLOW_PATH = re.compile(
     r"(^|/)\.github/workflows/.+\.(ya?ml)$"
@@ -51,7 +53,10 @@ _RULES: list[tuple[str, str, re.Pattern[str], Severity, str, str]] = [
     (
         "cicd.excessive-permissions",
         "Workflow grants write-all or contents: write globally",
-        re.compile(r"permissions:\s*\n\s*contents:\s*write|permissions:\s*write-all"),
+        # The block form (`permissions:` then `contents: write` on the next line)
+        # spans two lines, so it is detected by _permission_block_lines; a
+        # pattern containing `\n` can never match when scanning line by line.
+        re.compile(r"permissions:\s*write-all"),
         Severity.MEDIUM,
         "Broad write permissions increase blast radius if the workflow is abused.",
         "Grant least privilege per job; use OIDC instead of long-lived tokens.",
@@ -59,9 +64,7 @@ _RULES: list[tuple[str, str, re.Pattern[str], Severity, str, str]] = [
     (
         "cicd.script-injection",
         "Expression interpolated directly into run script",
-        re.compile(
-            r"run:\s*[^\n]*\$\{\{\s*github\.(event\.(issue|comment|discussion)|head_ref)"
-        ),
+        re.compile(r"run:\s*[^\n]*\$\{\{\s*github\.(event\.(issue|comment|discussion)|head_ref)"),
         Severity.HIGH,
         "Untrusted event fields in run scripts enable command injection.",
         "Pass values through env vars and quote them, or use action inputs.",
@@ -69,9 +72,7 @@ _RULES: list[tuple[str, str, re.Pattern[str], Severity, str, str]] = [
     (
         "cicd.hardcoded-secret",
         "Possible secret in workflow environment",
-        re.compile(
-            r"(?i)(password|secret|token|api_key)\s*:\s*['\"]?[A-Za-z0-9_./+=-]{8,}"
-        ),
+        re.compile(r"(?i)(password|secret|token|api_key)\s*:\s*['\"]?[A-Za-z0-9_./+=-]{8,}"),
         Severity.CRITICAL,
         "Secrets in workflow YAML are visible in git history and fork PRs.",
         "Use platform secret stores (GitHub Secrets, GitLab CI variables).",
@@ -79,7 +80,7 @@ _RULES: list[tuple[str, str, re.Pattern[str], Severity, str, str]] = [
     (
         "cicd.curl-pipe-bash",
         "Downloads and pipes remote script in CI",
-        re.compile(r"(?i)(curl|wget)[^\n|]*\|\s*(sudo\s+)?(bash|sh)\b"),
+        CURL_PIPE_SHELL_RE,
         Severity.HIGH,
         "Remote script execution in CI is a supply-chain pivot point.",
         "Vendor scripts with checksum verification or mirror internally.",
@@ -95,11 +96,35 @@ _RULES: list[tuple[str, str, re.Pattern[str], Severity, str, str]] = [
 ]
 
 
+_PERMISSIONS_KEY = re.compile(r"^\s*permissions:\s*(?:#.*)?$")
+_CONTENTS_WRITE = re.compile(r"^\s*contents:\s*['\"]?write\b")
+
+
+def _permission_block_lines(lines: list[str]) -> list[int]:
+    """Line numbers of a `permissions:` mapping whose entries grant contents: write."""
+    out: list[int] = []
+    for idx, line in enumerate(lines):
+        if len(line) > MAX_SCAN_LINE or not _PERMISSIONS_KEY.match(line):
+            continue
+        indent = len(line) - len(line.lstrip())
+        for entry in lines[idx + 1 : idx + 20]:
+            if not entry.strip() or entry.lstrip().startswith("#"):
+                continue
+            if len(entry) - len(entry.lstrip()) <= indent:
+                break  # left the permissions mapping
+            if len(entry) <= MAX_SCAN_LINE and _CONTENTS_WRITE.match(entry):
+                out.append(idx + 1)
+                break
+    return out
+
+
 @scanner
 class CicdScanner(Scanner):
     name = "cicd"
     category = "cicd"
-    description = "Flags risky patterns in GitHub Actions, GitLab CI, Jenkins, and other CI configs."
+    description = (
+        "Flags risky patterns in GitHub Actions, GitLab CI, Jenkins, and other CI configs."
+    )
 
     file_local = True
 
@@ -113,9 +138,15 @@ class CicdScanner(Scanner):
                 continue
             lines = f.lines()
             for rule_id, title, pattern, severity, why, fix in _RULES:
-                for lineno, line in enumerate(lines, start=1):
-                    if not pattern.search(line):
+                reported: set[int] = set()
+                hits = [(n, seg) for n, seg in iter_scan_lines(lines) if pattern.search(seg)]
+                if rule_id == "cicd.excessive-permissions":
+                    hits += [(n, lines[n - 1]) for n in _permission_block_lines(lines)]
+                    hits.sort(key=lambda h: h[0])
+                for lineno, line in hits:
+                    if lineno in reported:
                         continue
+                    reported.add(lineno)
                     counter += 1
                     yield Finding(
                         id=f"cicd:{rule_id}:{counter}",
@@ -123,13 +154,17 @@ class CicdScanner(Scanner):
                         scanner="cicd",
                         title=title,
                         description=why,
-                        location=Location(path=f.rel_path, start_line=lineno, snippet=line.strip()[:200]),
+                        location=Location(
+                            path=f.rel_path,
+                            start_line=lineno,
+                            snippet=redact_line(line).strip()[:200],
+                        ),
                         severity=severity,
                         confidence=Confidence.MEDIUM,
                         likelihood=Likelihood.POSSIBLE,
-                        cwe=["CWE-94"] if "injection" in rule_id else (
-                            ["CWE-250"] if "privileged" in rule_id else ["CWE-798"]
-                        ),
+                        cwe=["CWE-94"]
+                        if "injection" in rule_id
+                        else (["CWE-250"] if "privileged" in rule_id else ["CWE-798"]),
                         owasp=["A05:2021-Security Misconfiguration"],
                         why_vulnerable=why,
                         remediation=Remediation(summary=fix, guidance=fix),

@@ -60,10 +60,27 @@ def _finding_drift(f: Finding) -> FindingDrift:
     )
 
 
+def _keyed(findings: list[Finding]) -> dict[str, Finding]:
+    """Map findings to keys that stay unique for repeated identical lines.
+
+    ``Finding.fingerprint`` is content-based, so two identical vulnerable lines
+    in one file share it and a plain dict kept only one of them. Repeats get
+    an occurrence suffix in line order ("<fingerprint>#2"); the first keeps
+    the plain fingerprint.
+    """
+    keyed: dict[str, Finding] = {}
+    counts: dict[str, int] = {}
+    for f in sorted(findings, key=lambda f: (f.fingerprint(), f.location.start_line or 0)):
+        fp = f.fingerprint()
+        counts[fp] = counts.get(fp, 0) + 1
+        keyed[fp if counts[fp] == 1 else f"{fp}#{counts[fp]}"] = f
+    return keyed
+
+
 def compare_scans(before: ScanResult, after: ScanResult) -> ScanDriftReport:
-    """Diff two scan reports by stable finding fingerprint."""
-    before_map = {f.fingerprint(): f for f in before.findings}
-    after_map = {f.fingerprint(): f for f in after.findings}
+    """Diff two scan reports by stable finding fingerprint (plus occurrence)."""
+    before_map = _keyed(before.findings)
+    after_map = _keyed(after.findings)
     report = ScanDriftReport(
         before_target=before.target,
         after_target=after.target,
@@ -74,13 +91,15 @@ def compare_scans(before: ScanResult, after: ScanResult) -> ScanDriftReport:
         else:
             old = before_map[fp]
             if old.severity != f.severity:
-                report.severity_changed.append({
-                    "fingerprint": fp,
-                    "rule_id": f.rule_id,
-                    "location": f.location.as_ref(),
-                    "before_severity": old.severity.label,
-                    "after_severity": f.severity.label,
-                })
+                report.severity_changed.append(
+                    {
+                        "fingerprint": f.fingerprint(),
+                        "rule_id": f.rule_id,
+                        "location": f.location.as_ref(),
+                        "before_severity": old.severity.label,
+                        "after_severity": f.severity.label,
+                    }
+                )
     for fp, f in before_map.items():
         if fp not in after_map:
             report.removed.append(_finding_drift(f))
@@ -100,13 +119,15 @@ def compare_inventories(before: dict[str, Any], after: dict[str, Any]) -> dict[s
         if k not in b_deps:
             dep_added.append(d)
         elif b_deps[k].get("version") != d.get("version"):
-            dep_changed.append({
-                "ecosystem": d.get("ecosystem"),
-                "name": d.get("name"),
-                "before_version": b_deps[k].get("version"),
-                "after_version": d.get("version"),
-                "manifest": d.get("manifest"),
-            })
+            dep_changed.append(
+                {
+                    "ecosystem": d.get("ecosystem"),
+                    "name": d.get("name"),
+                    "before_version": b_deps[k].get("version"),
+                    "after_version": d.get("version"),
+                    "manifest": d.get("manifest"),
+                }
+            )
     for k, d in b_deps.items():
         if k not in a_deps:
             dep_removed.append(d)

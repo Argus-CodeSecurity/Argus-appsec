@@ -7,6 +7,7 @@ routes that accept object IDs without obvious ownership checks nearby.
 
 from __future__ import annotations
 
+import bisect
 import re
 from collections.abc import Iterable
 
@@ -19,6 +20,7 @@ from argus.core.models import (
     Severity,
 )
 from argus.core.plugin import Scanner, ScannerContext, scanner
+from argus.scanners._text import MAX_SCAN_LINE
 from argus.scanners.patterns import _is_test_file
 
 _FASTAPI_ROUTE = re.compile(
@@ -76,10 +78,8 @@ _PUBLIC_ROUTE = re.compile(
     r"redoc|static|assets|favicon|metrics|probe)(?:/|$)",
     re.IGNORECASE,
 )
-_ROUTER_DEPS = re.compile(
-    r"APIRouter\s*\([^)]*dependencies\s*=\s*\[[^\]]*Depends",
-    re.IGNORECASE | re.DOTALL,
-)
+_ROUTER_CALL = re.compile(r"APIRouter\s*\(", re.IGNORECASE)
+_ROUTER_DEPS_KEY = re.compile(r"dependencies\s*=\s*\[", re.IGNORECASE)
 _OWNERSHIP_HINT = re.compile(
     r"(owner|tenant|user_id|account_id|current_user|request\.user|"
     r"get_current_user|authorize|permission|forbidden|403)",
@@ -87,8 +87,42 @@ _OWNERSHIP_HINT = re.compile(
 )
 
 
+def _has_router_auth(text: str) -> bool:
+    """True if some `APIRouter(` is followed by `dependencies=[` before any `)`,
+    with `Depends` appearing before the list's closing `]`.
+
+    This used to be one DOTALL regex over the whole file, which backtracked
+    across the rest of the file for every unterminated `APIRouter(` (cubic on a
+    hostile file). Here every token is located once and the ordering
+    conditions are checked with binary search, so the cost is O(n log n).
+    """
+    calls = [m.end() for m in _ROUTER_CALL.finditer(text)]
+    if not calls:
+        return False
+    closes = [m.start() for m in re.finditer(r"\)", text)]
+    brackets = [m.start() for m in re.finditer(r"\]", text)]
+    depends = [m.start() for m in re.finditer(r"(?i)Depends", text)]
+    for key in _ROUTER_DEPS_KEY.finditer(text):
+        # Nearest preceding APIRouter( call, with no `)` between it and the key.
+        ci = bisect.bisect_right(calls, key.start()) - 1
+        if ci < 0:
+            continue
+        pi = bisect.bisect_left(closes, calls[ci])
+        if pi < len(closes) and closes[pi] < key.start():
+            continue
+        # `Depends` before the first `]` after the opening bracket.
+        bi = bisect.bisect_left(brackets, key.end())
+        limit = brackets[bi] if bi < len(brackets) else len(text)
+        di = bisect.bisect_left(depends, key.end())
+        if di < len(depends) and depends[di] + len("Depends") <= limit:
+            return True
+    return False
+
+
 def _lines(text: str) -> list[str]:
-    return text.splitlines()
+    # Lines are cut to the shared scan limit: the route and JWT checks below
+    # run on them and on windows of them, and none needs more than that.
+    return [line[:MAX_SCAN_LINE] for line in text.splitlines()]
 
 
 def _window(lines: list[str], idx: int, before: int = 8, after: int = 12) -> str:
@@ -114,9 +148,7 @@ def _route_path(line: str) -> str | None:
 class AuthzScanner(Scanner):
     name = "authz"
     category = "auth"
-    description = (
-        "Analyzes authentication/authorization patterns on routes and JWT usage."
-    )
+    description = "Analyzes authentication/authorization patterns on routes and JWT usage."
 
     def applies_to(self, project) -> bool:
         exts = (".py", ".js", ".jsx", ".ts", ".tsx", ".mjs")
@@ -131,7 +163,7 @@ class AuthzScanner(Scanner):
                 continue
             text = f.text()
             lines = _lines(text)
-            file_has_router_auth = bool(_ROUTER_DEPS.search(text))
+            file_has_router_auth = _has_router_auth(text)
             for i, line in enumerate(lines):
                 for finding in self._check_jwt(f.rel_path, line, i + 1, counter):
                     counter += 1
@@ -140,16 +172,28 @@ class AuthzScanner(Scanner):
                     counter += 1
                     yield finding
                 for finding in self._check_routes(
-                    f.rel_path, lines, i, counter, file_has_router_auth,
+                    f.rel_path,
+                    lines,
+                    i,
+                    counter,
+                    file_has_router_auth,
                 ):
                     counter += 1
                     yield finding
 
     def _check_oauth_session(
-        self, path: str, line: str, line_no: int, counter: int,
+        self,
+        path: str,
+        line: str,
+        line_no: int,
+        counter: int,
     ) -> Iterable[Finding]:
         lower = line.lower()
-        if ("oauth" in lower or "openid" in lower) and re.search(r"callback|redirect", lower) and not re.search(r"state|nonce|pkce", lower):
+        if (
+            ("oauth" in lower or "openid" in lower)
+            and re.search(r"callback|redirect", lower)
+            and not re.search(r"state|nonce|pkce", lower)
+        ):
             yield Finding(
                 id=f"authz:oauth-state:{counter + 1}",
                 rule_id="authz.oauth-missing-state",
@@ -182,7 +226,9 @@ class AuthzScanner(Scanner):
                 cwe=["CWE-598"],
                 owasp=["A07:2021-Identification and Authentication Failures"],
                 why_vulnerable="URL query parameters are not a secure token channel.",
-                remediation=Remediation(summary="Exchange codes server-side; never pass tokens in URLs."),
+                remediation=Remediation(
+                    summary="Exchange codes server-side; never pass tokens in URLs."
+                ),
                 tags=["auth", "oauth", "session"],
             )
         if _SESSION_INSECURE.search(line):
@@ -205,13 +251,12 @@ class AuthzScanner(Scanner):
                 tags=["auth", "session"],
             )
 
-    def _check_jwt(self, path: str, line: str, line_no: int,
-                   counter: int) -> Iterable[Finding]:
+    def _check_jwt(self, path: str, line: str, line_no: int, counter: int) -> Iterable[Finding]:
         if "jwt" not in line.lower() and "jsonwebtoken" not in line.lower():
             return
-        if not (_JWT_WEAK.search(line) or (
-            "algorithms" in line.lower() and _JWT_NONE_ALG.search(line)
-        )):
+        if not (
+            _JWT_WEAK.search(line) or ("algorithms" in line.lower() and _JWT_NONE_ALG.search(line))
+        ):
             return
         yield Finding(
             id=f"authz:jwt-weak:{counter + 1}",
@@ -233,8 +278,7 @@ class AuthzScanner(Scanner):
                 "forge tokens and impersonate users."
             ),
             attacker_perspective=(
-                "Craft a JWT with alg=none or tamper claims after stripping "
-                "signature verification."
+                "Craft a JWT with alg=none or tamper claims after stripping signature verification."
             ),
             business_impact="Full authentication bypass for affected endpoints.",
             remediation=Remediation(
@@ -248,7 +292,11 @@ class AuthzScanner(Scanner):
         )
 
     def _check_routes(
-        self, path: str, lines: list[str], idx: int, counter: int,
+        self,
+        path: str,
+        lines: list[str],
+        idx: int,
+        counter: int,
         file_has_router_auth: bool = False,
     ) -> Iterable[Finding]:
         route_path = _route_path(lines[idx])
@@ -319,9 +367,7 @@ class AuthzScanner(Scanner):
                 business_impact="Cross-account data exposure or unauthorized actions.",
                 remediation=Remediation(
                     summary="Verify the authenticated principal may access the requested ID.",
-                    guidance=(
-                        "Compare route/user ID to session tenant; return 403 on mismatch."
-                    ),
+                    guidance=("Compare route/user ID to session tenant; return 403 on mismatch."),
                 ),
                 tags=["auth", "authorization", "idor"],
                 metadata={"route": route_path},

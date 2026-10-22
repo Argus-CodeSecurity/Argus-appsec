@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from argus.core.models import ScanResult, Severity
 from argus.core.plugin import Reporter, reporter
+from argus.reporting.md_escape import md_code, md_fence, md_text
 
 _SEV_LABEL = {
     Severity.CRITICAL: "CRITICAL",
@@ -17,33 +18,6 @@ _SEV_LABEL = {
     Severity.LOW: "LOW",
     Severity.INFO: "INFO",
 }
-
-
-def _fence(content: str, lang: str = "") -> list[str]:
-    """Wrap untrusted content in a code fence that it cannot break out of.
-
-    Scanned source (snippets, diffs) can itself contain backtick runs; we pick a
-    fence longer than the longest run inside so the block stays intact when the
-    Markdown is rendered (e.g. as a PR comment).
-    """
-    longest = run = 0
-    for ch in content:
-        run = run + 1 if ch == "`" else 0
-        longest = max(longest, run)
-    ticks = "`" * max(3, longest + 1)
-    return [f"{ticks}{lang}", content, ticks]
-
-
-def _inline(text: str) -> str:
-    """Neutralize characters that would break inline code spans, table cells, or
-    the single-line structure of a Markdown bullet."""
-    return (
-        text.replace("\\", "\\\\")
-        .replace("\r", " ")
-        .replace("\n", " ")
-        .replace("`", "'")
-        .replace("|", "\\|")
-    )
 
 
 @reporter
@@ -55,7 +29,7 @@ class MarkdownReporter(Reporter):
     def render(self, result: ScanResult) -> str:
         out: list[str] = []
         summary = result.project_summary
-        out.append(f"# Argus Security Report, {summary.get('name', result.target)}")
+        out.append(f"# Argus Security Report, {md_text(summary.get('name', result.target))}")
         out.append("")
         out.append(self._overview(result))
         out.append("")
@@ -76,10 +50,10 @@ class MarkdownReporter(Reporter):
 
     def _overview(self, result: ScanResult) -> str:
         s = result.project_summary
-        langs = ", ".join(f"{k} ({v})" for k, v in (s.get("languages") or {}).items())
+        langs = md_text(", ".join(f"{k} ({v})" for k, v in (s.get("languages") or {}).items()))
         arch = s.get("architecture", {}) or {}
         lines = [
-            f"**Target:** `{result.target}`  ",
+            f"**Target:** {md_code(result.target)}  ",
             f"**Scanned:** {result.started_at:%Y-%m-%d %H:%M UTC}  ",
             f"**Argus:** v{result.argus_version}  ",
             f"**Aggregate risk:** {result.aggregate_risk()} / 100  ",
@@ -87,11 +61,11 @@ class MarkdownReporter(Reporter):
             f"**Languages:** {langs or 'n/a'}  ",
         ]
         if s.get("frameworks"):
-            lines.append(f"**Frameworks:** {', '.join(s['frameworks'])}  ")
+            lines.append(f"**Frameworks:** {md_text(', '.join(s['frameworks']))}  ")
         if arch.get("apis"):
-            lines.append(f"**APIs:** {', '.join(arch['apis'])}  ")
+            lines.append(f"**APIs:** {md_text(', '.join(arch['apis']))}  ")
         if arch.get("datastores"):
-            lines.append(f"**Datastores:** {', '.join(arch['datastores'])}  ")
+            lines.append(f"**Datastores:** {md_text(', '.join(arch['datastores']))}  ")
         if result.errors:
             lines.append(f"**Scan warnings:** {len(result.errors)}  ")
         return "\n".join(lines)
@@ -100,50 +74,54 @@ class MarkdownReporter(Reporter):
         counts = result.counts_by_severity()
         header = "| " + " | ".join(counts.keys()) + " | Total |"
         divider = "|" + "|".join(["---"] * (len(counts) + 1)) + "|"
-        row = "| " + " | ".join(str(v) for v in counts.values()) + \
-              f" | {sum(counts.values())} |"
+        row = "| " + " | ".join(str(v) for v in counts.values()) + f" | {sum(counts.values())} |"
         return "\n".join(["## Summary", "", header, divider, row])
 
     def _finding(self, index: int, f) -> str:
         label = _SEV_LABEL.get(f.severity, f.severity.label)
         lines = [
-            f"### {index}. [{label}] {_inline(f.title)}",
+            f"### {index}. [{label}] {md_text(f.title)}",
             "",
             f"- **Severity:** {f.severity.label} "
-            f"(risk {f.risk_score()}/100) · **Confidence:** {f.confidence.label} · "
+            f"(risk {f.risk_score()}/100), **Confidence:** {f.confidence.label}, "
             f"**Likelihood:** {f.likelihood.label}",
-            f"- **Location:** `{_inline(f.location.as_ref())}`",
-            f"- **Scanner/Rule:** `{_inline(f.scanner)}` / `{_inline(f.rule_id)}`",
+            f"- **Location:** {md_code(f.location.as_ref())}",
+            f"- **Scanner/Rule:** {md_code(f.scanner)} / {md_code(f.rule_id)}",
         ]
         if f.cwe or f.owasp:
-            lines.append(f"- **Mapping:** {_inline(', '.join(f.cwe + f.owasp))}")
+            lines.append(f"- **Mapping:** {md_text(', '.join(f.cwe + f.owasp))}")
         lines.append("")
         if f.location.snippet:
-            lines.extend(_fence(f.location.snippet))
+            lines.extend(md_fence(f.location.snippet))
             lines.append("")
         if f.why_vulnerable:
-            lines.append(f"**Why it's a vulnerability:** {f.why_vulnerable}")
+            lines.append(
+                "**Why it's a vulnerability:** " + md_text(f.why_vulnerable, multiline=True)
+            )
             lines.append("")
         if f.attacker_perspective:
-            lines.append(f"**How an attacker exploits it:** {f.attacker_perspective}")
+            lines.append(
+                "**How an attacker exploits it:** "
+                + md_text(f.attacker_perspective, multiline=True)
+            )
             lines.append("")
         if f.business_impact:
-            lines.append(f"**Business impact:** {f.business_impact}")
+            lines.append("**Business impact:** " + md_text(f.business_impact, multiline=True))
             lines.append("")
 
         if f.exploit:
             lines.append(self._exploit(f.exploit))
 
         if f.remediation:
-            lines.append("**Remediation:** " + f.remediation.summary)
+            lines.append("**Remediation:** " + md_text(f.remediation.summary))
             if f.remediation.guidance and f.remediation.guidance != f.remediation.summary:
                 lines.append("")
-                lines.append(f.remediation.guidance)
+                lines.append(md_text(f.remediation.guidance, multiline=True))
             if f.remediation.patch:
                 status = "verified" if f.remediation.verified else "proposed"
                 lines.append("")
                 lines.append(f"**Suggested patch ({status}):**")
-                lines.extend(_fence(f.remediation.patch.rstrip(), "diff"))
+                lines.extend(md_fence(f.remediation.patch.rstrip(), "diff"))
             lines.append("")
         return "\n".join(lines)
 
@@ -160,10 +138,9 @@ class MarkdownReporter(Reporter):
         ]
         for label, value in rows:
             if value:
-                lines.append(f"- **{label}:** {_inline(value)}")
+                lines.append(f"- **{label}:** {md_text(value)}")
         lines.append("")
-        lines.append("_Simulation generated in an isolated context; no live target "
-                     "was contacted._")
+        lines.append("_Simulation generated in an isolated context; no live target was contacted._")
         lines.append("</details>")
         lines.append("")
         return "\n".join(lines)

@@ -16,8 +16,15 @@ def _result(*severities: Severity) -> ScanResult:
         argus_version="0.7.0",
     )
     r.findings = [
-        Finding(id=str(i), rule_id="r", scanner="s", title="t", description="d",
-                location=Location(path="a.py", start_line=1), severity=sev)
+        Finding(
+            id=str(i),
+            rule_id="r",
+            scanner="s",
+            title="t",
+            description="d",
+            location=Location(path="a.py", start_line=1),
+            severity=sev,
+        )
         for i, sev in enumerate(severities)
     ]
     return r
@@ -29,7 +36,12 @@ def _badge(*severities):
 
 def test_clean_is_brightgreen():
     b = _badge()
-    assert b == {"schemaVersion": 1, "label": "security", "message": "no findings", "color": "brightgreen"}
+    assert b == {
+        "schemaVersion": 1,
+        "label": "security",
+        "message": "no findings",
+        "color": "brightgreen",
+    }
 
 
 def test_critical_is_red():

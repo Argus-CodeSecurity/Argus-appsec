@@ -12,11 +12,17 @@ from argus.remediation.hosting import HostingError, RepoRef, post_pr_review
 
 def _report() -> ApplyReport:
     r = ApplyReport()
-    r.fixes = [AppliedFix(
-        path="a.py", rule_id="patterns.python-yaml-load", line=3,
-        before="  yaml.load(x)", after="  yaml.safe_load(x)",
-        finding_id="f", verified=True,
-    )]
+    r.fixes = [
+        AppliedFix(
+            path="a.py",
+            rule_id="patterns.python-yaml-load",
+            line=3,
+            before="  yaml.load(x)",
+            after="  yaml.safe_load(x)",
+            finding_id="f",
+            verified=True,
+        )
+    ]
     return r
 
 
@@ -43,8 +49,7 @@ def test_post_pr_review_builds_correct_request(monkeypatch):
         return FakeResp()
 
     monkeypatch.setattr(hosting.httpx, "post", fake_post)
-    post_pr_review(_github_ref(), 7, build_fix_comments(_report()),
-                   summary="hi", token="t")
+    post_pr_review(_github_ref(), 7, build_fix_comments(_report()), summary="hi", token="t")
     assert captured["url"].endswith("/repos/o/r/pulls/7/reviews")
     assert captured["headers"]["Authorization"] == "Bearer t"
     assert captured["json"]["event"] == "COMMENT"
@@ -59,8 +64,9 @@ def test_post_pr_review_is_github_only():
 
 def test_post_pr_review_empty_is_noop(monkeypatch):
     calls = {"n": 0}
-    monkeypatch.setattr(hosting.httpx, "post",
-                        lambda *a, **k: calls.__setitem__("n", calls["n"] + 1))
+    monkeypatch.setattr(
+        hosting.httpx, "post", lambda *a, **k: calls.__setitem__("n", calls["n"] + 1)
+    )
     post_pr_review(_github_ref(), 1, [], token="t")
     assert calls["n"] == 0
 

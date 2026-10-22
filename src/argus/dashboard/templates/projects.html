@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Projects · Argus Dashboard{% endblock %}
+{% block title %}Projects | Argus Dashboard{% endblock %}
 {% block content %}
 
 <div class="page-head">
@@ -38,7 +38,7 @@
   <tbody>
     {% for row in projects %}
     {% set latest = row.latest %}
-    <tr onclick="location='/projects/{{ row.project.slug }}'">
+    <tr class="row-link" data-href="/projects/{{ row.project.slug }}" tabindex="0">
       <td class="strong">{{ row.project.name }}</td>
       <td>
         {% if latest %}

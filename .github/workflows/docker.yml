@@ -1,6 +1,10 @@
 # Build and publish the official Argus container image to GitHub Container
 # Registry. Runs on every release (tagged with the version and `latest`) and can
-# be triggered manually for a one-off build.
+# be triggered manually for a one-off build. Every pushed image carries a signed
+# build-provenance attestation and an SBOM, verifiable with:
+#
+#   gh attestation verify oci://ghcr.io/argus-codesecurity/argus:<version> \
+#     --owner Argus-CodeSecurity
 #
 # Usage once published:
 #   docker run --rm -v "$PWD:/work" ghcr.io/argus-codesecurity/argus scan /work
@@ -13,13 +17,23 @@ on:
 
 permissions:
   contents: read
-  packages: write
+
+concurrency:
+  group: docker-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   docker:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write # push to ghcr.io
+      id-token: write # sign the provenance attestation (OIDC)
+      attestations: write # record the attestation
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
 
       - uses: docker/setup-buildx-action@f7ce87c1d6bead3e36075b2ce75da1f6cc28aaca # v3.9.0
 
@@ -42,6 +56,7 @@ jobs:
             type=raw,value=latest,enable=${{ github.event_name == 'release' }}
 
       - name: Build and push
+        id: push
         uses: docker/build-push-action@471d1dc4e07e5cdedd4c2171150001c434f0b7a4 # v6.15.0
         with:
           context: .
@@ -49,5 +64,14 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          provenance: mode=max
+          sbom: true
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@520d128f165991a6c774bcb264f323e3d70747f4 # v2.2.0
+        with:
+          subject-name: ghcr.io/${{ github.repository_owner }}/argus
+          subject-digest: ${{ steps.push.outputs.digest }}
+          push-to-registry: true

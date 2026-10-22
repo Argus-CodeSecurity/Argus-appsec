@@ -8,19 +8,16 @@ changes between dependency versions in a PR diff.
 from __future__ import annotations
 
 import logging
-import re
 from dataclasses import dataclass, field
 
 import httpx
 
+from argus.supply_chain.scripts import LIFECYCLE_HOOKS, SUSPICIOUS_INSTALL_SCRIPT
+
 log = logging.getLogger("argus.supply_chain.behavior")
 
 _REGISTRY = "https://registry.npmjs.org"
-_SUSPICIOUS = re.compile(
-    r"(curl|wget|bash|powershell|eval\(|child_process|http://|https://|"
-    r"chmod\s|/etc/passwd|~/.ssh|process\.env)",
-    re.IGNORECASE,
-)
+_SUSPICIOUS = SUSPICIOUS_INSTALL_SCRIPT
 
 
 @dataclass
@@ -46,7 +43,9 @@ class BehaviorFingerprint:
         return tags
 
 
-def npm_fingerprint(name: str, version: str, *, timeout: float = 10.0) -> BehaviorFingerprint | None:
+def npm_fingerprint(
+    name: str, version: str, *, timeout: float = 10.0
+) -> BehaviorFingerprint | None:
     """Fetch npm registry metadata for one exact version (read-only)."""
     url = f"{_REGISTRY}/{name}/{version}"
     try:
@@ -59,12 +58,21 @@ def npm_fingerprint(name: str, version: str, *, timeout: float = 10.0) -> Behavi
     except Exception as exc:
         log.debug("npm fingerprint failed for %s@%s: %s", name, version, exc)
         return None
+    return fingerprint_from_manifest(name, version, data)
 
-    scripts = data.get("scripts") or {}
-    install_hooks = [
-        h for h in ("preinstall", "install", "postinstall", "prepare")
-        if isinstance(scripts.get(h), str)
-    ]
+
+def fingerprint_from_manifest(name: str, version: str, data: object) -> BehaviorFingerprint | None:
+    """Build a fingerprint from one version's registry manifest (any source).
+
+    Shared by the host registry fetch and the sandboxed ``npm view``; the data is
+    untrusted, so every field is type-checked.
+    """
+    if not isinstance(data, dict):
+        return None
+    scripts = data.get("scripts")
+    if not isinstance(scripts, dict):
+        scripts = {}
+    install_hooks = [h for h in LIFECYCLE_HOOKS if isinstance(scripts.get(h), str)]
     script_bodies = " ".join(str(scripts.get(h, "")) for h in install_hooks)
     bins_raw = data.get("bin") or {}
     bins = sorted(bins_raw.keys()) if isinstance(bins_raw, dict) else []
@@ -99,9 +107,7 @@ def compare_fingerprints(
     if "install-script" in added:
         hooks = ", ".join(new.install_scripts) or "install"
         anomalies.append(f"install lifecycle script(s) added: {hooks}")
-    if "suspicious-script" in added or (
-        new.suspicious_script and not old.suspicious_script
-    ):
+    if "suspicious-script" in added or (new.suspicious_script and not old.suspicious_script):
         anomalies.append("suspicious patterns in install scripts (network/shell/env access)")
     if "executable-bin" in added:
         anomalies.append(f"new executable bin entries: {', '.join(new.bins)}")

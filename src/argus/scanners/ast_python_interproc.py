@@ -48,6 +48,7 @@ from argus.scanners.ast_python import (
     _SOURCE_RE,
     SINKS,
     _Analyzer,
+    analysis_skipped_finding,
     is_available,
     new_parser,
 )
@@ -73,7 +74,7 @@ class _FileParse:
         self.root = root
 
     def text(self, node) -> str:
-        return self.src[node.start_byte:node.end_byte].decode("utf-8", "ignore")
+        return self.src[node.start_byte : node.end_byte].decode("utf-8", "ignore")
 
 
 @scanner
@@ -83,9 +84,11 @@ class ASTPythonInterprocScanner(Scanner):
     # Cross-file: a call site's verdict depends on another file, so per-file
     # caching would be unsound. Left non-file_local on purpose.
     file_local = False
-    description = ("Cross-file/inter-procedural taint for Python (depth-1): "
-                   "untrusted input passed into a function whose parameter reaches "
-                   "a sink. Needs the [ast] extra.")
+    description = (
+        "Cross-file/inter-procedural taint for Python (depth-1): "
+        "untrusted input passed into a function whose parameter reaches "
+        "a sink. Needs the [ast] extra."
+    )
 
     def applies_to(self, project) -> bool:
         return is_available() and len(project.files_matching("*.py")) > 0
@@ -98,6 +101,9 @@ class ASTPythonInterprocScanner(Scanner):
         if parser is None:
             return
 
+        # Every per-file step is isolated: a file that breaks the parser or the
+        # analysis is skipped and noted instead of failing the whole scanner.
+        skipped: list[Finding] = []
         parses: list[_FileParse] = []
         for f in ctx.project.files():
             if f.language != "Python" or f.is_probably_binary():
@@ -107,22 +113,36 @@ class ASTPythonInterprocScanner(Scanner):
                 continue
             try:
                 tree = parser.parse(src)
-            except Exception:
+            except Exception as exc:
+                skipped.append(analysis_skipped_finding(self.name, f.rel_path, exc))
                 continue
             parses.append(_FileParse(f.rel_path, src, tree.root_node))
 
         # Pass 1: summarize dangerous parameters across every function.
         dangerous: dict[str, list[_DangerousParam]] = {}
+        usable: list[_FileParse] = []
         for fp in parses:
-            for summary in self._summarize_file(fp):
+            try:
+                summaries = list(self._summarize_file(fp))
+            except Exception as exc:
+                skipped.append(analysis_skipped_finding(self.name, fp.path, exc))
+                continue
+            usable.append(fp)
+            for summary in summaries:
                 dangerous.setdefault(summary.func_name, []).append(summary)
+        yield from skipped
         if not dangerous:
             return
 
         # Pass 2: find call sites that pass a direct source into a dangerous param.
         seen: set[tuple[str, int, str]] = set()
-        for fp in parses:
-            yield from self._scan_calls(fp, dangerous, seen)
+        for fp in usable:
+            try:
+                found = list(self._scan_calls(fp, dangerous, seen))
+            except Exception as exc:
+                yield analysis_skipped_finding(self.name, fp.path, exc)
+                continue
+            yield from found
 
     # --- pass 1 -------------------------------------------------------------
     def _summarize_file(self, fp: _FileParse) -> Iterable[_DangerousParam]:
@@ -141,14 +161,20 @@ class ASTPythonInterprocScanner(Scanner):
                 sinks = analyzer.seeded_sinks(body, {pname})
                 if sinks:
                     sink_id, sink_line = sinks[0]
-                    yield _DangerousParam(func_name, index, pname, sink_id,
-                                          sink_line, fp.path)
+                    yield _DangerousParam(func_name, index, pname, sink_id, sink_line, fp.path)
+
+    @staticmethod
+    def _iter_nodes(root, node_type: str):
+        """Pre-order walk yielding nodes of ``node_type``, without recursion."""
+        stack = [root]
+        while stack:
+            node = stack.pop()
+            if node.type == node_type:
+                yield node
+            stack.extend(reversed(node.children))
 
     def _iter_functions(self, node):
-        if node.type == "function_definition":
-            yield node
-        for child in node.children:
-            yield from self._iter_functions(child)
+        return self._iter_nodes(node, "function_definition")
 
     def _param_names(self, fp: _FileParse, params_node):
         """Ordered (index, name) for positional params; stops at *args/**kwargs.
@@ -162,13 +188,11 @@ class ASTPythonInterprocScanner(Scanner):
             t = child.type
             if t == "identifier":
                 out.append((idx, fp.text(child)))
-            elif t in ("typed_parameter", "typed_default_parameter",
-                       "default_parameter"):
+            elif t in ("typed_parameter", "typed_default_parameter", "default_parameter"):
                 nm = child.child_by_field_name("name")
                 # typed_parameter has no "name" field; its first identifier is it.
                 if nm is None:
-                    nm = next((c for c in child.children
-                               if c.type == "identifier"), None)
+                    nm = next((c for c in child.children if c.type == "identifier"), None)
                 out.append((idx, fp.text(nm) if nm is not None else None))
             elif t in ("list_splat_pattern", "dictionary_splat_pattern"):
                 out.append((idx, None))
@@ -207,10 +231,7 @@ class ASTPythonInterprocScanner(Scanner):
                 yield self._finding(fp, call, line, summary)
 
     def _iter_calls(self, node):
-        if node.type == "call":
-            yield node
-        for child in node.children:
-            yield from self._iter_calls(child)
+        return self._iter_nodes(node, "call")
 
     def _call_args(self, fp: _FileParse, args_node):
         positional: list = []
@@ -226,8 +247,7 @@ class ASTPythonInterprocScanner(Scanner):
         return positional, keyword
 
     # --- finding ------------------------------------------------------------
-    def _finding(self, fp: _FileParse, call, line: int,
-                 summary: _DangerousParam) -> Finding:
+    def _finding(self, fp: _FileParse, call, line: int, summary: _DangerousParam) -> Finding:
         sink = _SINK_BY_ID.get(summary.sink_id)
         title = sink.title if sink else "Tainted input reaches a dangerous sink"
         cwe = sink.cwe if sink else []
@@ -241,9 +261,11 @@ class ASTPythonInterprocScanner(Scanner):
             confidence = Confidence.LOW
             tags.append("test-context")
         snippet = fp.text(call).replace("\n", " ")[:240]
-        where = (f"{summary.def_path}:{summary.sink_line}"
-                 if summary.def_path != fp.path
-                 else f"line {summary.sink_line}")
+        where = (
+            f"{summary.def_path}:{summary.sink_line}"
+            if summary.def_path != fp.path
+            else f"line {summary.sink_line}"
+        )
         return Finding(
             id=f"{self.name}:{summary.sink_id}:{fp.path}:{line}",
             rule_id=f"{self.name}.{summary.sink_id}",
@@ -254,17 +276,22 @@ class ASTPythonInterprocScanner(Scanner):
                 f"`{summary.func_name}()`, whose body reaches a sink at {where}."
             ),
             location=Location(path=fp.path, start_line=line, snippet=snippet),
-            severity=severity, confidence=confidence, likelihood=Likelihood.LIKELY,
-            cwe=cwe, owasp=owasp,
+            severity=severity,
+            confidence=confidence,
+            likelihood=Likelihood.LIKELY,
+            cwe=cwe,
+            owasp=owasp,
             why_vulnerable=(
                 f"A value from an untrusted source flows into `{summary.func_name}()` "
                 f"via parameter `{summary.name}` and reaches a sink at {where}, one "
                 "call hop away, so the intra-file scanners do not see it."
             ),
-            attacker_perspective=(sink.attack if sink else
-                                  "Control the untrusted input to reach the sink."),
-            business_impact=(sink.impact if sink else
-                             "Depends on the sink; see the referenced weakness."),
+            attacker_perspective=(
+                sink.attack if sink else "Control the untrusted input to reach the sink."
+            ),
+            business_impact=(
+                sink.impact if sink else "Depends on the sink; see the referenced weakness."
+            ),
             remediation=Remediation(
                 summary=(sink.fix if sink else "Validate input before the sink."),
                 guidance=(
@@ -275,6 +302,9 @@ class ASTPythonInterprocScanner(Scanner):
                 ),
             ),
             tags=tags,
-            metadata={"analysis": "taint-dataflow-interprocedural",
-                      "sink_location": where, "callee": summary.func_name},
+            metadata={
+                "analysis": "taint-dataflow-interprocedural",
+                "sink_location": where,
+                "callee": summary.func_name,
+            },
         )

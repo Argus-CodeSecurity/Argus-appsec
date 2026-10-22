@@ -1,4 +1,4 @@
-/* Argus Dashboard — minimal, professional. Colors from the validated data-viz
+/* Argus dashboard styles. Colors from the validated data-viz
    palette; severity/risk always shown with a label, never color alone. */
 
 :root {
@@ -70,7 +70,7 @@ a:hover { text-decoration: underline; }
 .nav a { color: var(--ink-2); font-size: 14px; }
 .icon-btn {
   background: none; border: 1px solid var(--border); color: var(--ink-2);
-  width: 32px; height: 32px; border-radius: 8px; cursor: pointer; font-size: 15px;
+  height: 32px; padding: 0 12px; border-radius: 8px; cursor: pointer; font-size: 13px;
 }
 .main { padding: 28px 24px 64px; }
 .footer { color: var(--muted); font-size: 12px; padding-bottom: 40px; }

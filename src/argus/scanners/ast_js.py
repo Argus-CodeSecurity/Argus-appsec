@@ -26,6 +26,7 @@ import re
 from collections.abc import Iterable
 from dataclasses import dataclass, field
 from functools import lru_cache
+from typing import Any
 
 from argus.core.models import (
     Confidence,
@@ -36,12 +37,12 @@ from argus.core.models import (
     Severity,
 )
 from argus.core.plugin import Scanner, ScannerContext, scanner
+from argus.scanners.ast_python import analysis_skipped_finding, make_parser
 from argus.scanners.patterns import _is_test_file  # shared test-path helper
 
 # File extension -> tree-sitter language module + factory attribute.
 _LANGS = {
-    "javascript": ("tree_sitter_javascript", "language",
-                   {".js", ".jsx", ".mjs", ".cjs"}),
+    "javascript": ("tree_sitter_javascript", "language", {".js", ".jsx", ".mjs", ".cjs"}),
     "typescript": ("tree_sitter_typescript", "language_typescript", {".ts", ".mts", ".cts"}),
     "tsx": ("tree_sitter_typescript", "language_tsx", {".tsx"}),
 }
@@ -53,7 +54,7 @@ def _load_parsers():
     try:
         import importlib
 
-        from tree_sitter import Language, Parser
+        from tree_sitter import Language
     except ImportError:
         return None
     parsers = {}
@@ -61,7 +62,7 @@ def _load_parsers():
         try:
             mod = importlib.import_module(module)
             lang = Language(getattr(mod, factory)())
-            parsers[name] = Parser(lang)
+            parsers[name] = make_parser(lang)
         except Exception:  # a missing grammar shouldn't disable the others
             continue
     return parsers or None
@@ -93,8 +94,16 @@ _SOURCE_RE = re.compile(
 # does nothing against XSS/injection, so listing it here would clear taint that
 # is still live.
 _SANITIZERS = {
-    "parseInt", "parseFloat", "Number", "encodeURIComponent", "encodeURI",
-    "escape", "sanitize", "escapeHtml", "sanitizeHtml", "quote",
+    "parseInt",
+    "parseFloat",
+    "Number",
+    "encodeURIComponent",
+    "encodeURI",
+    "escape",
+    "sanitize",
+    "escapeHtml",
+    "sanitizeHtml",
+    "quote",
 }
 
 
@@ -120,21 +129,25 @@ CALL_SINKS: list[Sink] = [
     Sink(
         id="ast-sql-injection",
         fn=re.compile(r"(^|\.)(query|execute|executeQuery|raw|unsafe)$"),
-        cwe=["CWE-89"], owasp=["A03:2021-Injection"], severity=Severity.HIGH,
+        cwe=["CWE-89"],
+        owasp=["A03:2021-Injection"],
+        severity=Severity.HIGH,
         title="SQL injection (tainted value concatenated into a query)",
         why="Untrusted input is built into the SQL query string, so it can change "
-            "the query's structure. (Parameterized queries with bound values are "
-            "not flagged.)",
+        "the query's structure. (Parameterized queries with bound values are "
+        "not flagged.)",
         attack="Supply `' OR '1'='1` or a stacked query in the tainted parameter.",
         impact="Unauthorized data access or modification, up to full DB compromise.",
         fix="Use parameterized queries / bound placeholders (e.g. "
-            "query('... WHERE id = ?', [id])) instead of string concatenation.",
+        "query('... WHERE id = ?', [id])) instead of string concatenation.",
         args="first",  # only the query text; params array is the safe path
     ),
     Sink(
         id="ast-command-injection",
         fn=re.compile(r"(^|\.)(execSync|spawnSync)$"),
-        cwe=["CWE-78"], owasp=["A03:2021-Injection"], severity=Severity.HIGH,
+        cwe=["CWE-78"],
+        owasp=["A03:2021-Injection"],
+        severity=Severity.HIGH,
         title="OS command injection (tainted value reaches a shell command)",
         why="Untrusted input reaches child_process exec, which runs it via the shell.",
         attack="Inject `; rm -rf` or `$(...)` through the tainted parameter.",
@@ -143,16 +156,20 @@ CALL_SINKS: list[Sink] = [
     ),
     Sink(
         id="ast-path-traversal",
-        fn=re.compile(r"(^|\.)(readFile|readFileSync|createReadStream|sendFile|"
-                      r"writeFile|writeFileSync)$"),
-        cwe=["CWE-22"], owasp=["A01:2021-Broken Access Control"], severity=Severity.MEDIUM,
+        fn=re.compile(
+            r"(^|\.)(readFile|readFileSync|createReadStream|sendFile|"
+            r"writeFile|writeFileSync)$"
+        ),
+        cwe=["CWE-22"],
+        owasp=["A01:2021-Broken Access Control"],
+        severity=Severity.MEDIUM,
         title="Path traversal (tainted value reaches a file operation)",
         why="A filesystem path built from untrusted input reaches a file API without "
-            "normalization, so `../` can escape the intended directory.",
+        "normalization, so `../` can escape the intended directory.",
         attack="Request a path such as `../../etc/passwd`.",
         impact="Disclosure of sensitive files, or writing outside the intended area.",
         fix="Resolve the path and confirm it stays within an allowed base directory "
-            "(path.resolve + prefix check), or use a vetted sanitizer.",
+        "(path.resolve + prefix check), or use a vetted sanitizer.",
     ),
     Sink(
         id="ast-code-injection",
@@ -160,10 +177,12 @@ CALL_SINKS: list[Sink] = [
         # or a real member access (.eval). The old optional `(^|\.)?` also matched
         # names merely ending in the word -- retrieval, myFunction, medieval.
         fn=re.compile(r"(^|\.)(eval|Function)$"),
-        cwe=["CWE-95"], owasp=["A03:2021-Injection"], severity=Severity.HIGH,
+        cwe=["CWE-95"],
+        owasp=["A03:2021-Injection"],
+        severity=Severity.HIGH,
         title="Code injection (tainted value reaches eval/Function)",
         why="Untrusted input flows into eval or the Function constructor, which "
-            "execute it as code.",
+        "execute it as code.",
         attack="Provide a JavaScript expression in the tainted value.",
         impact="Remote code execution in the JS runtime.",
         fix="Never eval untrusted input; use JSON.parse or an explicit dispatch.",
@@ -171,15 +190,17 @@ CALL_SINKS: list[Sink] = [
     Sink(
         id="ast-xss",
         fn=re.compile(r"(^|\.)(write|insertAdjacentHTML)$"),
-        cwe=["CWE-79"], owasp=["A03:2021-Injection"], severity=Severity.MEDIUM,
+        cwe=["CWE-79"],
+        owasp=["A03:2021-Injection"],
+        severity=Severity.MEDIUM,
         title="Cross-site scripting (tainted value written as HTML)",
         why="Untrusted input is written to the document as HTML, so an attacker's "
-            "markup/script executes in the victim's browser.",
+        "markup/script executes in the victim's browser.",
         attack="Get the app to render an attacker-controlled string containing "
-               "`<script>` or an event handler.",
+        "`<script>` or an event handler.",
         impact="Session theft and actions performed as the victim.",
         fix="Use textContent, a framework-escaped binding, or sanitize with a vetted "
-            "library (DOMPurify) before inserting HTML.",
+        "library (DOMPurify) before inserting HTML.",
         args="rest",  # insertAdjacentHTML(position, html): the payload is not first
     ),
 ]
@@ -193,14 +214,18 @@ class ASTJsScanner(Scanner):
     name = "ast-js"
     category = "sast"
     file_local = True
-    description = ("Data-flow (taint) analysis for JavaScript/TypeScript via "
-                   "tree-sitter; multi-hop injection/XSS the regex tier misses. "
-                   "Needs the [ast] extra.")
+    description = (
+        "Data-flow (taint) analysis for JavaScript/TypeScript via "
+        "tree-sitter; multi-hop injection/XSS the regex tier misses. "
+        "Needs the [ast] extra."
+    )
 
     def applies_to(self, project) -> bool:
         return is_available() and bool(
-            project.files_matching("*.js", "*.jsx", "*.mjs", "*.cjs",
-                                   "*.ts", "*.tsx", "*.mts", "*.cts"))
+            project.files_matching(
+                "*.js", "*.jsx", "*.mjs", "*.cjs", "*.ts", "*.tsx", "*.mts", "*.cts"
+            )
+        )
 
     def scan(self, ctx: ScannerContext) -> Iterable[Finding]:
         parsers = _load_parsers()
@@ -213,17 +238,25 @@ class ASTJsScanner(Scanner):
             src = f.text().encode("utf-8", "replace")
             if not src.strip():
                 continue
+            # Per-file isolation: one hostile file is skipped and noted, it does
+            # not take the findings for every other file down with it.
             try:
                 tree = parsers[lang].parse(src)
-            except Exception:
+                analyzer = _JsAnalyzer(src, f.rel_path, _is_test_file(f.rel_path))
+                findings = list(analyzer.run(tree.root_node))
+            except Exception as exc:
+                yield analysis_skipped_finding(self.name, f.rel_path, exc)
                 continue
-            analyzer = _JsAnalyzer(src, f.rel_path, _is_test_file(f.rel_path))
-            yield from analyzer.run(tree.root_node)
+            yield from findings
 
 
 _FUNCTION_NODES = {
-    "function_declaration", "function_expression", "arrow_function",
-    "method_definition", "generator_function", "generator_function_declaration",
+    "function_declaration",
+    "function_expression",
+    "arrow_function",
+    "method_definition",
+    "generator_function",
+    "generator_function_declaration",
 }
 
 
@@ -233,37 +266,43 @@ class _JsAnalyzer:
         self._path = path
         self._in_test = in_test
         self._seen: set[tuple[str, int]] = set()
+        self._lines: list[str] | None = None
 
     def run(self, root) -> Iterable[Finding]:
         yield from self._walk(root, set())
 
-    def _walk(self, node, tainted: set[str]) -> Iterable[Finding]:
-        t = node.type
-        if t in _FUNCTION_NODES:
-            body = node.child_by_field_name("body")
-            if body is not None:
-                yield from self._walk(body, set())   # fresh per-function scope
-            return
-        if t == "variable_declarator":
-            self._handle_decl(node, tainted)
-            value = node.child_by_field_name("value")
-            if value is not None:
-                yield from self._walk(value, tainted)
-            return
-        if t == "assignment_expression":
-            finding = self._handle_assignment(node, tainted)
-            if finding is not None:
-                yield finding
-            right = node.child_by_field_name("right")
-            if right is not None:
-                yield from self._walk(right, tainted)
-            return
-        if t == "call_expression":
-            finding = self._check_call_sink(node, tainted)
-            if finding is not None:
-                yield finding
-        for child in node.children:
-            yield from self._walk(child, tainted)
+    def _walk(self, root, tainted: set[str]) -> Iterable[Finding]:
+        # Explicit stack instead of recursion (deeply nested input would raise
+        # RecursionError); children are pushed in reverse to keep the pre-order
+        # the taint updates depend on.
+        stack: list[tuple[Any, set[str]]] = [(root, tainted)]
+        while stack:
+            node, scope = stack.pop()
+            t = node.type
+            if t in _FUNCTION_NODES:
+                body = node.child_by_field_name("body")
+                if body is not None:
+                    stack.append((body, set()))  # fresh per-function scope
+                continue
+            if t == "variable_declarator":
+                self._handle_decl(node, scope)
+                value = node.child_by_field_name("value")
+                if value is not None:
+                    stack.append((value, scope))
+                continue
+            if t == "assignment_expression":
+                finding = self._handle_assignment(node, scope)
+                if finding is not None:
+                    yield finding
+                right = node.child_by_field_name("right")
+                if right is not None:
+                    stack.append((right, scope))
+                continue
+            if t == "call_expression":
+                finding = self._check_call_sink(node, scope)
+                if finding is not None:
+                    yield finding
+            stack.extend((child, scope) for child in reversed(node.children))
 
     # --- taint propagation --------------------------------------------------
     def _handle_decl(self, node, tainted: set[str]) -> None:
@@ -285,8 +324,11 @@ class _JsAnalyzer:
         # XSS: el.innerHTML = <tainted>
         if left.type == "member_expression":
             prop = left.child_by_field_name("property")
-            if (prop is not None and self._text(prop) in _HTML_SINK_PROPS
-                    and self._tainted(right, tainted)):
+            if (
+                prop is not None
+                and self._text(prop) in _HTML_SINK_PROPS
+                and self._tainted(right, tainted)
+            ):
                 return self._html_assignment_finding(node)
         # Taint update for a plain identifier target.
         if left.type == "identifier":
@@ -303,9 +345,20 @@ class _JsAnalyzer:
         text = self._text(node)
         if _SOURCE_RE.search(text):
             return True
-        if node.type == "identifier" and text in tainted:
-            return True
-        return any(self._tainted(c, tainted) for c in node.children)
+        if node.type == "identifier":
+            return text in tainted
+        # Below the root only tainted identifiers can still match (a
+        # descendant's text is a token-aligned slice of the text just checked),
+        # so walk for those alone; see ast_python._Analyzer._tainted.
+        stack = list(node.children)
+        while stack:
+            child = stack.pop()
+            if child.type == "call_expression" and self._is_sanitizer(child):
+                continue
+            if child.type == "identifier" and self._text(child) in tainted:
+                return True
+            stack.extend(child.children)
+        return False
 
     # --- sinks --------------------------------------------------------------
     def _check_call_sink(self, call, tainted: set[str]) -> Finding | None:
@@ -315,7 +368,7 @@ class _JsAnalyzer:
         fn_text = self._text(fn)
         sink = next((s for s in CALL_SINKS if s.fn.search(fn_text)), None)
         if sink is None:
-            # child_process.exec — not RegExp.prototype.exec
+            # child_process.exec, not RegExp.prototype.exec
             if fn.type == "member_expression" and self._text(fn).endswith(".exec"):
                 obj = fn.child_by_field_name("object")
                 obj_text = self._text(obj) if obj else ""
@@ -341,16 +394,19 @@ class _JsAnalyzer:
     def _html_assignment_finding(self, node) -> Finding | None:
         line = node.start_point[0] + 1
         sink = Sink(
-            id="ast-xss", fn=re.compile(""), cwe=["CWE-79"],
-            owasp=["A03:2021-Injection"], severity=Severity.MEDIUM,
+            id="ast-xss",
+            fn=re.compile(""),
+            cwe=["CWE-79"],
+            owasp=["A03:2021-Injection"],
+            severity=Severity.MEDIUM,
             title="Cross-site scripting (tainted value assigned to innerHTML)",
             why="Untrusted input is assigned to an element's HTML, so attacker "
-                "markup/script executes in the victim's browser.",
+            "markup/script executes in the victim's browser.",
             attack="Render an attacker-controlled string containing `<script>` or an "
-                   "event-handler attribute.",
+            "event-handler attribute.",
             impact="Session theft and actions performed as the victim.",
             fix="Use textContent or sanitize with a vetted library (DOMPurify) before "
-                "assigning HTML.",
+            "assigning HTML.",
         )
         return self._finding(sink, line, node)
 
@@ -363,11 +419,13 @@ class _JsAnalyzer:
         return last in _SANITIZERS
 
     def _text(self, node) -> str:
-        return self._src[node.start_byte:node.end_byte].decode("utf-8", "ignore")
+        return self._src[node.start_byte : node.end_byte].decode("utf-8", "ignore")
 
     def _line_text(self, line: int) -> str:
+        if self._lines is None:  # split once per file, not once per finding
+            self._lines = self._src.decode("utf-8", "ignore").splitlines()
         try:
-            return self._src.decode("utf-8", "ignore").splitlines()[line - 1].strip()
+            return self._lines[line - 1].strip()
         except IndexError:  # pragma: no cover
             return ""
 
@@ -389,18 +447,22 @@ class _JsAnalyzer:
             scanner=ASTJsScanner.name,
             title=sink.title,
             description=sink.why,
-            location=Location(path=self._path, start_line=line,
-                              snippet=self._line_text(line)[:240]),
-            severity=severity, confidence=confidence, likelihood=Likelihood.LIKELY,
-            cwe=sink.cwe, owasp=sink.owasp,
+            location=Location(
+                path=self._path, start_line=line, snippet=self._line_text(line)[:240]
+            ),
+            severity=severity,
+            confidence=confidence,
+            likelihood=Likelihood.LIKELY,
+            cwe=sink.cwe,
+            owasp=sink.owasp,
             why_vulnerable=sink.why,
             attacker_perspective=sink.attack,
             business_impact=sink.impact,
             remediation=Remediation(
-                summary=sink.fix, guidance=sink.fix,
-                references=sink.references or [
-                    f"https://cwe.mitre.org/data/definitions/{sink.cwe[0].split('-')[1]}.html"
-                ],
+                summary=sink.fix,
+                guidance=sink.fix,
+                references=sink.references
+                or [f"https://cwe.mitre.org/data/definitions/{sink.cwe[0].split('-')[1]}.html"],
             ),
             tags=tags,
             metadata={"analysis": "taint-dataflow"},

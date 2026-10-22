@@ -9,12 +9,22 @@ and works offline like the rest of Argus.
 
 The dispatch is a pure function (:func:`handle_request`) so it is fully testable
 without touching real stdio.
+
+The agent calling the tool is not fully trusted (it may be acting on prompt
+injection), so the tool only scans paths inside the server's working directory
+or the directories listed in ``ARGUS_MCP_ROOTS`` (``os.pathsep``-separated),
+never honours rules shipped inside the scanned tree, and gives up on a scan
+after ``ARGUS_MCP_SCAN_TIMEOUT`` seconds (default 600).
 """
 
 from __future__ import annotations
 
+import contextlib
 import json
+import os
 import sys
+import threading
+from pathlib import Path
 from typing import Any, TextIO
 
 from argus import __version__
@@ -28,6 +38,10 @@ SERVER_INFO = {"name": "argus-appsec", "version": __version__}
 # agent's context. The summary always reports the true total and whether the list
 # was truncated, so coverage is never silently hidden.
 _MAX_FINDINGS = 200
+
+ROOTS_ENV = "ARGUS_MCP_ROOTS"
+TIMEOUT_ENV = "ARGUS_MCP_SCAN_TIMEOUT"
+_DEFAULT_TIMEOUT = 600.0
 
 TOOLS: list[dict[str, Any]] = [
     {
@@ -44,7 +58,10 @@ TOOLS: list[dict[str, Any]] = [
             "properties": {
                 "path": {
                     "type": "string",
-                    "description": "Local directory or file to scan.",
+                    "description": (
+                        "Local directory or file to scan. Must be inside the "
+                        "server's working directory (or ARGUS_MCP_ROOTS)."
+                    ),
                 },
                 "min_severity": {
                     "type": "string",
@@ -73,6 +90,62 @@ def _tool_text(text: str, *, is_error: bool = False) -> dict[str, Any]:
 
 
 # --- the scan tool ---------------------------------------------------------
+def allowed_roots() -> list[Path]:
+    """Directories the tool may scan: ARGUS_MCP_ROOTS, else the working directory."""
+    raw = os.environ.get(ROOTS_ENV, "")
+    roots = [Path(p).expanduser() for p in raw.split(os.pathsep) if p.strip()]
+    return [r.resolve() for r in (roots or [Path.cwd()])]
+
+
+def resolve_scan_path(path: str) -> Path:
+    """Resolve ``path`` (relative to the working directory) and confine it to the roots.
+
+    Symlinks and ``..`` are resolved first, so neither can step outside.
+    """
+    resolved = Path(path).expanduser().resolve()
+    roots = allowed_roots()
+    if not any(resolved == root or resolved.is_relative_to(root) for root in roots):
+        shown = ", ".join(str(r) for r in roots)
+        raise ValueError(
+            f"path {path!r} is outside the allowed roots ({shown}); "
+            f"set {ROOTS_ENV} to allow other directories"
+        )
+    if not resolved.exists():
+        raise ValueError(f"path {path!r} does not exist")
+    return resolved
+
+
+def _scan_timeout() -> float:
+    try:
+        return max(1.0, float(os.environ.get(TIMEOUT_ENV, _DEFAULT_TIMEOUT)))
+    except ValueError:
+        return _DEFAULT_TIMEOUT
+
+
+def _run_with_timeout(fn: Any, timeout: float) -> Any:
+    """Run ``fn`` in a daemon thread; raise TimeoutError if it overruns.
+
+    The scan cannot be interrupted, so it keeps running in the background, but
+    the client gets an answer and the server keeps serving requests.
+    """
+    box: dict[str, Any] = {}
+
+    def target() -> None:
+        try:
+            box["value"] = fn()
+        except BaseException as exc:  # re-raised in the caller's thread
+            box["error"] = exc
+
+    worker = threading.Thread(target=target, name="argus-mcp-scan", daemon=True)
+    worker.start()
+    worker.join(timeout)
+    if worker.is_alive():
+        raise TimeoutError(f"scan did not finish within {timeout:g}s ({TIMEOUT_ENV})")
+    if "error" in box:
+        raise box["error"]
+    return box["value"]
+
+
 def _run_scan(arguments: dict[str, Any]) -> dict[str, Any]:
     """Run a scan and return a compact, structured result for an agent."""
     from argus.core.config import Config
@@ -84,10 +157,18 @@ def _run_scan(arguments: dict[str, Any]) -> dict[str, Any]:
     path = arguments.get("path")
     if not path or not isinstance(path, str):
         raise ValueError("'path' (a local directory or file) is required")
+    target = resolve_scan_path(path)
 
     register_builtins()
     min_sev = Severity.parse(str(arguments.get("min_severity", "low")))
-    result = ScanEngine(Config(min_severity=min_sev)).scan(Project.from_path(path))
+    cfg = Config(min_severity=min_sev)
+    # The scanned tree may be untrusted (the agent may have just cloned it), so
+    # in-repo extension points such as .argus/rules are not honoured.
+    cfg.trust_project_config = False
+    result = _run_with_timeout(
+        lambda: ScanEngine(cfg).scan(Project.from_path(target)),
+        _scan_timeout(),
+    )
 
     findings = result.sorted_findings()
     shown = findings[:_MAX_FINDINGS]
@@ -125,11 +206,14 @@ def handle_request(req: dict[str, Any]) -> dict[str, Any] | None:
 
     if method == "initialize":
         params = req.get("params") or {}
-        return _ok(req_id, {
-            "protocolVersion": params.get("protocolVersion", PROTOCOL_VERSION),
-            "capabilities": {"tools": {}},
-            "serverInfo": SERVER_INFO,
-        })
+        return _ok(
+            req_id,
+            {
+                "protocolVersion": params.get("protocolVersion", PROTOCOL_VERSION),
+                "capabilities": {"tools": {}},
+                "serverInfo": SERVER_INFO,
+            },
+        )
 
     if method == "tools/list":
         return _ok(req_id, {"tools": TOOLS})
@@ -151,10 +235,23 @@ def handle_request(req: dict[str, Any]) -> dict[str, Any] | None:
     return _err(req_id, -32601, f"Method not found: {method}")
 
 
+def _force_utf8(stream: Any, **kwargs: str) -> None:
+    """MCP is UTF-8 JSON; on Windows the console default (e.g. cp1252) mangles it."""
+    reconfigure = getattr(stream, "reconfigure", None)
+    if reconfigure is None:
+        return
+    with contextlib.suppress(ValueError, OSError):
+        reconfigure(encoding="utf-8", **kwargs)
+
+
 def run_stdio(stdin: TextIO | None = None, stdout: TextIO | None = None) -> None:
     """Serve MCP over newline-delimited JSON-RPC on stdio until EOF."""
-    stdin = stdin or sys.stdin
-    stdout = stdout or sys.stdout
+    if stdin is None:
+        stdin = sys.stdin
+        _force_utf8(stdin, errors="replace")
+    if stdout is None:
+        stdout = sys.stdout
+        _force_utf8(stdout, newline="\n")
     for line in stdin:
         line = line.strip()
         if not line:

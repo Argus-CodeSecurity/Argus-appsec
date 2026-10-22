@@ -14,6 +14,7 @@ scanners and agents can consult it instead of re-deriving it.
 from __future__ import annotations
 
 import re
+from functools import lru_cache
 from typing import Any
 
 from argus.analysis.languages import detect_language
@@ -70,17 +71,50 @@ _SERVICE_SIGNS: dict[str, tuple[str, ...]] = {
 
 # Manifest files we know how to read dependency names out of.
 _MANIFESTS = (
-    "requirements.txt", "pyproject.toml", "Pipfile", "setup.py",
-    "package.json", "go.mod", "Cargo.toml", "pom.xml", "build.gradle",
-    "composer.json", "Gemfile",
+    "requirements.txt",
+    "pyproject.toml",
+    "Pipfile",
+    "setup.py",
+    "package.json",
+    "go.mod",
+    "Cargo.toml",
+    "pom.xml",
+    "build.gradle",
+    "composer.json",
+    "Gemfile",
 )
 
 # Common auth signals in source.
 _AUTH_PATTERNS = (
-    r"\bjwt\b", r"jsonwebtoken", r"passport", r"oauth", r"OAuth",
-    r"@login_required", r"authorize", r"Authentication", r"bcrypt",
-    r"session\[", r"Bearer ",
+    r"\bjwt\b",
+    r"jsonwebtoken",
+    r"passport",
+    r"oauth",
+    r"OAuth",
+    r"@login_required",
+    r"authorize",
+    r"Authentication",
+    r"bcrypt",
+    r"session\[",
+    r"Bearer ",
 )
+
+
+@lru_cache(maxsize=256)
+def _needle_re(needle: str) -> re.Pattern[str]:
+    """Match ``needle`` as the start of a dependency-name word.
+
+    The needle must not follow a letter or digit ("pg" must not match "jpg"
+    or "upgrade"). Short needles (under 5 characters) must also end the word
+    ("pg" matches "pg", "pg-pool" and "pg8000" but not "pgpy"); longer ones
+    may be a prefix ("psycopg" matches "psycopg2-binary").
+    """
+    tail = r"(?![A-Za-z])" if len(needle) < 5 else ""
+    return re.compile(r"(?<![A-Za-z0-9])" + re.escape(needle) + tail)
+
+
+def _has_needle(needle: str, text: str) -> bool:
+    return _needle_re(needle).search(text) is not None
 
 
 class RepositoryAnalyzer:
@@ -133,8 +167,7 @@ class RepositoryAnalyzer:
         project.frameworks = self._detect_frameworks(manifest_deps, source_blob)
         arch["datastores"] = self._match_signs(_DATASTORE_SIGNS, manifest_deps, source_blob)
         arch["third_party"] = self._match_signs(_SERVICE_SIGNS, manifest_deps, source_blob)
-        arch["cloud"] = [s for s in ("AWS", "Google Cloud", "Azure")
-                         if s in arch["third_party"]]
+        arch["cloud"] = [s for s in ("AWS", "Google Cloud", "Azure") if s in arch["third_party"]]
         arch["apis"] = self._detect_apis(project, source_blob)
         arch["auth"] = self._detect_auth(source_blob)
         project.architecture = arch
@@ -147,16 +180,24 @@ class RepositoryAnalyzer:
         name = f.name
         low = rel.lower()
 
-        if name.startswith("Dockerfile") or name == "Containerfile" or name in ("docker-compose.yml", "docker-compose.yaml", "compose.yaml"):
+        if (
+            name.startswith("Dockerfile")
+            or name == "Containerfile"
+            or name in ("docker-compose.yml", "docker-compose.yaml", "compose.yaml")
+        ):
             arch["containers"].append(rel)
         if f.suffix in (".tf", ".hcl"):
             arch["iac"].append(rel)
         is_k8s = "k8s" in low or "kubernetes" in low or self._looks_like_k8s(f)
         if is_k8s and rel not in arch["iac"]:
             arch["iac"].append(rel)
-        if (".github/workflows/" in low or low.endswith(".gitlab-ci.yml")
-                or "azure-pipelines" in low or low.endswith("jenkinsfile")
-                or "bitbucket-pipelines" in low):
+        if (
+            ".github/workflows/" in low
+            or low.endswith(".gitlab-ci.yml")
+            or "azure-pipelines" in low
+            or low.endswith("jenkinsfile")
+            or "bitbucket-pipelines" in low
+        ):
             arch["ci_cd"].append(rel)
 
     @staticmethod
@@ -181,13 +222,13 @@ class RepositoryAnalyzer:
         return deps
 
     @staticmethod
-    def _match_signs(signs: dict[str, tuple[str, ...]], deps: set[str],
-                     source: str) -> list[str]:
+    def _match_signs(signs: dict[str, tuple[str, ...]], deps: set[str], source: str) -> list[str]:
         found: list[str] = []
         deps_joined = " ".join(deps)
         for label, needles in signs.items():
-            if any(n.lower() in deps_joined for n in needles) or \
-               any(n in source for n in needles):
+            if any(_has_needle(n.lower(), deps_joined) for n in needles) or any(
+                _has_needle(n, source) for n in needles
+            ):
                 found.append(label)
         return found
 
@@ -196,16 +237,18 @@ class RepositoryAnalyzer:
         found: list[str] = []
         deps_joined = " ".join(deps)
         for name, (dep_needles, src_regexes) in _FRAMEWORK_SIGNS.items():
-            if any(n.lower() in deps_joined for n in dep_needles) or \
-               any(re.search(rx, source) for rx in src_regexes):
+            if any(_has_needle(n.lower(), deps_joined) for n in dep_needles) or any(
+                re.search(rx, source) for rx in src_regexes
+            ):
                 found.append(name)
         return found
 
     @staticmethod
     def _detect_apis(project: Project, source: str) -> list[str]:
         apis: list[str] = []
-        if re.search(r"@app\.(route|get|post|put|delete)|@router\.|app\.(get|post|put|delete)\(",
-                     source):
+        if re.search(
+            r"@app\.(route|get|post|put|delete)|@router\.|app\.(get|post|put|delete)\(", source
+        ):
             apis.append("REST/HTTP")
         if "graphql" in source.lower() or project.find_file("schema.graphql"):
             apis.append("GraphQL")

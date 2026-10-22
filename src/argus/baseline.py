@@ -31,9 +31,7 @@ def load_fingerprints(path: str | Path) -> set[str]:
     try:
         result = ScanResult.model_validate_json(text)
     except ValueError as exc:
-        raise BaselineError(
-            f"Baseline {p} is not a valid Argus JSON report: {exc}"
-        ) from exc
+        raise BaselineError(f"Baseline {p} is not a valid Argus JSON report: {exc}") from exc
     return {f.fingerprint() for f in result.findings}
 
 

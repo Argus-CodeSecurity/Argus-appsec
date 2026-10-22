@@ -7,14 +7,23 @@ from argus.core.models import Confidence, Finding
 
 def assign_verification_state(finding: Finding) -> str:
     """Return verification state: detected|likely|confirmed|verified|fixed|accepted|false_positive."""
+    # "fixed" means a fix was written to disk, which only the applier knows.
+    # A proposed patch (even a self-verified one) leaves the code unchanged.
+    if finding.metadata.get("remediation_applied"):
+        return "fixed"
+
     existing = finding.metadata.get("verification")
     if existing in {
-        "verified", "confirmed", "fixed", "accepted", "false_positive", "likely", "detected",
+        "verified",
+        "confirmed",
+        "fixed",
+        "accepted",
+        "false_positive",
+        "likely",
+        "detected",
     }:
         return str(existing)
 
-    if finding.remediation and finding.remediation.verified:
-        return "fixed"
     if finding.metadata.get("finding_kind") == "dynamic":
         return "verified"
     if finding.scanner in ("secret_verify", "dast", "host", "fim", "container-image"):

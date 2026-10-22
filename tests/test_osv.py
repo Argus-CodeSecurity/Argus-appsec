@@ -37,10 +37,12 @@ def test_query_batches_all_packages(monkeypatch):
         if request.url.path == "/v1/querybatch":
             batch_calls["n"] += 1
             import json
+
             queries = json.loads(request.content)["queries"]
             # Each queried package is "vulnerable" so we can assert full coverage.
-            return httpx.Response(200, json={"results": [{"vulns": [{"id": "OSV-1"}]}
-                                                         for _ in queries]})
+            return httpx.Response(
+                200, json={"results": [{"vulns": [{"id": "OSV-1"}]} for _ in queries]}
+            )
         return httpx.Response(200, json=_vuln_json("OSV-1"))
 
     deps = {"a": "1", "b": "2", "c": "3", "d": "4", "e": "5"}

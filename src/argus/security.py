@@ -7,6 +7,14 @@ SECURITY_DISCLAIMER = (
     "scan as a guarantee of safety."
 )
 
-VERIFICATION_STATES = frozenset({
-    "detected", "likely", "confirmed", "verified", "fixed", "accepted", "false_positive",
-})
+VERIFICATION_STATES = frozenset(
+    {
+        "detected",
+        "likely",
+        "confirmed",
+        "verified",
+        "fixed",
+        "accepted",
+        "false_positive",
+    }
+)

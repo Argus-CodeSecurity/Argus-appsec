@@ -7,23 +7,29 @@ import pytest
 from argus.targets import _is_safe_clone_url, resolve
 
 
-@pytest.mark.parametrize("url", [
-    "https://github.com/octo/repo.git",
-    "http://example.com/x/y.git",
-    "git@github.com:octo/repo.git",
-    "ssh://git@host.example/owner/repo.git",
-    "git://example.com/repo.git",
-])
+@pytest.mark.parametrize(
+    "url",
+    [
+        "https://github.com/octo/repo.git",
+        "http://example.com/x/y.git",
+        "git@github.com:octo/repo.git",
+        "ssh://git@host.example/owner/repo.git",
+        "git://example.com/repo.git",
+    ],
+)
 def test_safe_clone_urls_allowed(url):
     assert _is_safe_clone_url(url)
 
 
-@pytest.mark.parametrize("url", [
-    "ext::sh -c 'touch /tmp/pwned'",   # git ext:: transport -> command execution
-    "file:///etc/passwd",              # local file transport
-    "-oProxyCommand=evil",             # option injection
-    "fd::17/repo",
-])
+@pytest.mark.parametrize(
+    "url",
+    [
+        "ext::sh -c 'touch /tmp/pwned'",  # git ext:: transport -> command execution
+        "file:///etc/passwd",  # local file transport
+        "-oProxyCommand=evil",  # option injection
+        "fd::17/repo",
+    ],
+)
 def test_dangerous_clone_urls_rejected(url):
     assert not _is_safe_clone_url(url)
 

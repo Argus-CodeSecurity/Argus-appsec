@@ -58,123 +58,209 @@ class Case:
 # Vulnerable cases must fire at least one finding; safe cases must fire none.
 CASES: list[Case] = [
     # secrets
-    Case("secret-aws-key", "secrets", "config.py", True,
-         'AWS_ACCESS_KEY_ID = "AKIAIOSFODNN7EXAMPLE"\n'
-         'AWS_SECRET_ACCESS_KEY = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"\n'),
-    Case("secret-placeholder", "secrets", "config.py", False,
-         'AWS_ACCESS_KEY_ID = "REPLACE_WITH_YOUR_KEY"  # example placeholder\n'),
-
+    Case(
+        "secret-aws-key",
+        "secrets",
+        "config.py",
+        True,
+        'AWS_ACCESS_KEY_ID = "AKIAIOSFODNN7EXAMPLE"\n'
+        'AWS_SECRET_ACCESS_KEY = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"\n',
+    ),
+    Case(
+        "secret-placeholder",
+        "secrets",
+        "config.py",
+        False,
+        'AWS_ACCESS_KEY_ID = "REPLACE_WITH_YOUR_KEY"  # example placeholder\n',
+    ),
     # SAST: command execution through the shell
-    Case("sast-shell-true", "sast", "run.py", True,
-         'import subprocess\n'
-         'def run(host):\n'
-         '    subprocess.run("ping " + host, shell=True)\n'),
-    Case("sast-shell-safe", "sast", "run.py", False,
-         'import subprocess\n'
-         'def run(host):\n'
-         '    subprocess.run(["ping", host])\n'),
-
+    Case(
+        "sast-shell-true",
+        "sast",
+        "run.py",
+        True,
+        'import subprocess\ndef run(host):\n    subprocess.run("ping " + host, shell=True)\n',
+    ),
+    Case(
+        "sast-shell-safe",
+        "sast",
+        "run.py",
+        False,
+        'import subprocess\ndef run(host):\n    subprocess.run(["ping", host])\n',
+    ),
     # SAST: unsafe deserialization
-    Case("sast-yaml-load", "sast", "load.py", True,
-         'import yaml\n'
-         'def load(raw):\n'
-         '    return yaml.load(raw)\n'),
-    Case("sast-yaml-safe", "sast", "load.py", False,
-         'import yaml\n'
-         'def load(raw):\n'
-         '    return yaml.safe_load(raw)\n'),
-
+    Case(
+        "sast-yaml-load",
+        "sast",
+        "load.py",
+        True,
+        "import yaml\ndef load(raw):\n    return yaml.load(raw)\n",
+    ),
+    Case(
+        "sast-yaml-safe",
+        "sast",
+        "load.py",
+        False,
+        "import yaml\ndef load(raw):\n    return yaml.safe_load(raw)\n",
+    ),
     # SAST: weak hash
-    Case("sast-weak-hash", "sast", "hash.py", True,
-         'import hashlib\n'
-         'def digest(pw):\n'
-         '    return hashlib.md5(pw.encode()).hexdigest()\n'),
-    Case("sast-strong-hash", "sast", "hash.py", False,
-         'import hashlib\n'
-         'def digest(pw):\n'
-         '    return hashlib.sha256(pw.encode()).hexdigest()\n'),
-
+    Case(
+        "sast-weak-hash",
+        "sast",
+        "hash.py",
+        True,
+        "import hashlib\ndef digest(pw):\n    return hashlib.md5(pw.encode()).hexdigest()\n",
+    ),
+    Case(
+        "sast-strong-hash",
+        "sast",
+        "hash.py",
+        False,
+        "import hashlib\ndef digest(pw):\n    return hashlib.sha256(pw.encode()).hexdigest()\n",
+    ),
     # Taint: SQL injection from a request parameter
-    Case("taint-sql-injection", "taint", "view.py", True,
-         'from flask import request\n'
-         'def q(cursor):\n'
-         '    uid = request.args.get("id")\n'
-         '    cursor.execute("SELECT * FROM users WHERE id = \'%s\'" % uid)\n'),
-    Case("taint-sql-parameterized", "taint", "view.py", False,
-         'from flask import request\n'
-         'def q(cursor):\n'
-         '    uid = request.args.get("id")\n'
-         '    cursor.execute("SELECT * FROM users WHERE id = %s", (uid,))\n'),
-
+    Case(
+        "taint-sql-injection",
+        "taint",
+        "view.py",
+        True,
+        "from flask import request\n"
+        "def q(cursor):\n"
+        '    uid = request.args.get("id")\n'
+        "    cursor.execute(\"SELECT * FROM users WHERE id = '%s'\" % uid)\n",
+    ),
+    Case(
+        "taint-sql-parameterized",
+        "taint",
+        "view.py",
+        False,
+        "from flask import request\n"
+        "def q(cursor):\n"
+        '    uid = request.args.get("id")\n'
+        '    cursor.execute("SELECT * FROM users WHERE id = %s", (uid,))\n',
+    ),
     # IaC: container hardening
-    Case("iac-docker-latest-root", "iac", "Dockerfile", True,
-         'FROM python:latest\n'
-         'COPY . /app\n'
-         'CMD ["python", "app.py"]\n'),
-    Case("iac-docker-pinned-nonroot", "iac", "Dockerfile", False,
-         'FROM python:3.12-slim\n'
-         'RUN useradd --create-home app\n'
-         'USER app\n'
-         'COPY . /app\n'
-         'CMD ["python", "app.py"]\n'),
-
+    Case(
+        "iac-docker-latest-root",
+        "iac",
+        "Dockerfile",
+        True,
+        'FROM python:latest\nCOPY . /app\nCMD ["python", "app.py"]\n',
+    ),
+    Case(
+        "iac-docker-pinned-nonroot",
+        "iac",
+        "Dockerfile",
+        False,
+        "FROM python:3.12-slim\n"
+        "RUN useradd --create-home app\n"
+        "USER app\n"
+        "COPY . /app\n"
+        'CMD ["python", "app.py"]\n',
+    ),
     # LLM / AI security (OWASP Top 10 for LLM Apps). There is no standard public
     # benchmark for these classes, so this labeled set is itself a contribution.
-
     # LLM01 Prompt Injection: untrusted input concatenated into a prompt.
-    Case("llm-prompt-injection", "llm", "ai.py", True,
-         'import openai\n'
-         'def ask(request):\n'
-         '    prompt = "Summarize: " + request.args.get("q")\n'
-         '    return openai.ChatCompletion.create(model="gpt-4", messages=[{"role": "user", "content": prompt}])\n'),
-    Case("llm-prompt-injection-safe", "llm", "ai.py", False,
-         'import openai\n'
-         'def ask(request):\n'
-         '    q = request.args.get("q")\n'
-         '    return openai.ChatCompletion.create(model="gpt-4", messages=[{"role": "user", "content": q}])\n'),
-
+    Case(
+        "llm-prompt-injection",
+        "llm",
+        "ai.py",
+        True,
+        "import openai\n"
+        "def ask(request):\n"
+        '    prompt = "Summarize: " + request.args.get("q")\n'
+        '    return openai.ChatCompletion.create(model="gpt-4", messages=[{"role": "user", "content": prompt}])\n',
+    ),
+    Case(
+        "llm-prompt-injection-safe",
+        "llm",
+        "ai.py",
+        False,
+        "import openai\n"
+        "def ask(request):\n"
+        '    q = request.args.get("q")\n'
+        '    return openai.ChatCompletion.create(model="gpt-4", messages=[{"role": "user", "content": q}])\n',
+    ),
     # LLM02 Insecure Output Handling: model output flows into eval().
-    Case("llm-insecure-output", "llm", "ai.py", True,
-         'import openai\n'
-         'def run():\n'
-         '    resp = openai.ChatCompletion.create(model="gpt-4", messages=[])\n'
-         '    out = resp.choices[0].message.content\n'
-         '    eval(out)\n'),
-    Case("llm-insecure-output-safe", "llm", "ai.py", False,
-         'import openai\n'
-         'import json\n'
-         'def run():\n'
-         '    resp = openai.ChatCompletion.create(model="gpt-4", messages=[])\n'
-         '    out = resp.choices[0].message.content\n'
-         '    data = json.loads(out)\n'
-         '    return data["answer"]\n'),
-
+    Case(
+        "llm-insecure-output",
+        "llm",
+        "ai.py",
+        True,
+        "import openai\n"
+        "def run():\n"
+        '    resp = openai.ChatCompletion.create(model="gpt-4", messages=[])\n'
+        "    out = resp.choices[0].message.content\n"
+        "    eval(out)\n",
+    ),
+    Case(
+        "llm-insecure-output-safe",
+        "llm",
+        "ai.py",
+        False,
+        "import openai\n"
+        "import json\n"
+        "def run():\n"
+        '    resp = openai.ChatCompletion.create(model="gpt-4", messages=[])\n'
+        "    out = resp.choices[0].message.content\n"
+        "    data = json.loads(out)\n"
+        '    return data["answer"]\n',
+    ),
     # LLM05 Supply Chain: remote code + unsafe deserialization at model load.
-    Case("llm-trust-remote-code", "llm", "ai.py", True,
-         'from transformers import AutoModel\n'
-         'm = AutoModel.from_pretrained("acme/x", trust_remote_code=True)\n'),
-    Case("llm-torch-load-pickle", "llm", "ai.py", True,
-         'import torch\n'
-         'weights = torch.load("model.pt")\n'),
-    Case("llm-torch-load-safe", "llm", "ai.py", False,
-         'import torch\n'
-         'weights = torch.load("model.pt", weights_only=True)\n'),
-
+    Case(
+        "llm-trust-remote-code",
+        "llm",
+        "ai.py",
+        True,
+        "from transformers import AutoModel\n"
+        'm = AutoModel.from_pretrained("acme/x", trust_remote_code=True)\n',
+    ),
+    Case(
+        "llm-torch-load-pickle",
+        "llm",
+        "ai.py",
+        True,
+        'import torch\nweights = torch.load("model.pt")\n',
+    ),
+    Case(
+        "llm-torch-load-safe",
+        "llm",
+        "ai.py",
+        False,
+        'import torch\nweights = torch.load("model.pt", weights_only=True)\n',
+    ),
     # LLM06 Sensitive Information Disclosure: secret embedded in a prompt.
-    Case("llm-secret-in-prompt", "llm", "ai.py", True,
-         'import openai\n'
-         'system_prompt = "You are a bot. Use API key sk-abcdef1234567890abcdef to authenticate."\n'),
-    Case("llm-secret-in-prompt-safe", "llm", "ai.py", False,
-         'import openai\n'
-         'system_prompt = "You are a helpful assistant."\n'),
-
+    Case(
+        "llm-secret-in-prompt",
+        "llm",
+        "ai.py",
+        True,
+        "import openai\n"
+        'system_prompt = "You are a bot. Use API key sk-abcdef1234567890abcdef to authenticate."\n',
+    ),
+    Case(
+        "llm-secret-in-prompt-safe",
+        "llm",
+        "ai.py",
+        False,
+        'import openai\nsystem_prompt = "You are a helpful assistant."\n',
+    ),
     # LLM08 Excessive Agency: agent wired to a shell-execution tool.
-    Case("llm-agent-shell-tool", "llm", "ai.py", True,
-         'from langchain.tools import ShellTool\n'
-         'tool = ShellTool()\n'),
-    Case("llm-agent-tool-safe", "llm", "ai.py", False,
-         'from langchain.agents import initialize_agent\n'
-         'agent = initialize_agent(tools=[], llm=None)\n'),
+    Case(
+        "llm-agent-shell-tool",
+        "llm",
+        "ai.py",
+        True,
+        "from langchain.tools import ShellTool\ntool = ShellTool()\n",
+    ),
+    Case(
+        "llm-agent-tool-safe",
+        "llm",
+        "ai.py",
+        False,
+        "from langchain.agents import initialize_agent\n"
+        "agent = initialize_agent(tools=[], llm=None)\n",
+    ),
 ]
 
 
@@ -242,8 +328,10 @@ def main(write_json: bool = False) -> int:
         vuln = d["tp"] + d["fn"]
         print(f"{name:<10} {recall:>7.0%} {precision:>10.0%} {vuln:>6} {d['fp']:>9}")
         report["domains"][name] = {  # type: ignore[index]
-            "recall": round(recall, 3), "precision": round(precision, 3),
-            "vulnerable_cases": vuln, "false_positives": d["fp"],
+            "recall": round(recall, 3),
+            "precision": round(precision, 3),
+            "vulnerable_cases": vuln,
+            "false_positives": d["fp"],
         }
         for k in tot:
             tot[k] += d[k]
@@ -251,11 +339,15 @@ def main(write_json: bool = False) -> int:
     overall_recall = _rate(tot["tp"], tot["tp"] + tot["fn"])
     overall_precision = _rate(tot["tp"], tot["tp"] + tot["fp"])
     print("-" * 52)
-    print(f"{'OVERALL':<10} {overall_recall:>7.0%} {overall_precision:>10.0%} "
-          f"{tot['tp'] + tot['fn']:>6} {tot['fp']:>9}")
+    print(
+        f"{'OVERALL':<10} {overall_recall:>7.0%} {overall_precision:>10.0%} "
+        f"{tot['tp'] + tot['fn']:>6} {tot['fp']:>9}"
+    )
     report["overall"] = {
-        "recall": round(overall_recall, 3), "precision": round(overall_precision, 3),
-        "vulnerable_cases": tot["tp"] + tot["fn"], "false_positives": tot["fp"],
+        "recall": round(overall_recall, 3),
+        "precision": round(overall_precision, 3),
+        "vulnerable_cases": tot["tp"] + tot["fn"],
+        "false_positives": tot["fp"],
     }
     if misses:
         print("\nMissed (false negatives):", ", ".join(misses))
@@ -264,8 +356,7 @@ def main(write_json: bool = False) -> int:
 
     if write_json:
         RESULTS_DIR.mkdir(parents=True, exist_ok=True)
-        (RESULTS_DIR / "accuracy.json").write_text(
-            json.dumps(report, indent=2), encoding="utf-8")
+        (RESULTS_DIR / "accuracy.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
         print(f"\nWrote {RESULTS_DIR / 'accuracy.json'}")
 
     # Exit non-zero if the corpus is not perfectly classified, so CI can gate.

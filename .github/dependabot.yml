@@ -1,6 +1,9 @@
 # Keep dependencies and Action pins current. A security scanner with stale or
 # unpinned dependencies is one typosquat away from being the supply-chain attack
 # it warns about, so updates are automated and reviewed.
+#
+# The cooldown holds back brand-new releases for a few days, which is when most
+# compromised package versions are caught and yanked.
 version: 2
 updates:
   - package-ecosystem: pip
@@ -8,6 +11,8 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    cooldown:
+      default-days: 5
     groups:
       python-dependencies:
         patterns:
@@ -18,3 +23,16 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    cooldown:
+      default-days: 5
+    groups:
+      github-actions:
+        patterns:
+          - "*"
+
+  - package-ecosystem: docker
+    directory: "/"
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 5

@@ -9,12 +9,19 @@ environment variables.
 Privacy: the payload carries only finding *metadata* (rule id, severity, title,
 location reference, CWE) plus the aggregate risk score and severity counts. It
 never sends source code, snippets, or secret values. httpx does not follow
-redirects by default, so the bearer token cannot be bounced to another host.
+redirects by default, so the bearer token cannot be bounced to another host,
+and the token is only sent over HTTPS (plain HTTP is allowed for loopback
+addresses only, for a local test server).
+
+Every failure surfaces as :class:`PushError`, so callers have one exception to
+handle.
 """
 
 from __future__ import annotations
 
+import ipaddress
 from typing import TYPE_CHECKING, Any
+from urllib.parse import quote, urlparse
 
 from argus.core.models import ScanResult, Severity
 
@@ -28,6 +35,28 @@ _COUNT_KEYS = ("critical", "high", "medium", "low")
 
 class PushError(RuntimeError):
     """Uploading a scan to the cloud failed."""
+
+
+def _is_loopback(host: str) -> bool:
+    host = host.strip("[]").lower()
+    if host == "localhost" or host.endswith(".localhost"):
+        return True
+    try:
+        return ipaddress.ip_address(host).is_loopback
+    except ValueError:
+        return False
+
+
+def _check_endpoint(url: str) -> None:
+    """Refuse URLs that would send the bearer token in clear text."""
+    parsed = urlparse(url)
+    if parsed.scheme not in ("http", "https") or not parsed.hostname:
+        raise PushError(f"invalid cloud URL {url!r}; expected https://host")
+    if parsed.scheme == "http" and not _is_loopback(parsed.hostname):
+        raise PushError(
+            f"refusing to send the API token over plain HTTP to {parsed.hostname}; "
+            "use an https:// cloud URL"
+        )
 
 
 def build_ingest_payload(
@@ -86,6 +115,7 @@ def push_result(
 
     import httpx
 
+    _check_endpoint(url)
     endpoint = url.rstrip("/") + _INGEST_PATH
     headers = {"Authorization": f"Bearer {token}", "User-Agent": "argus-push"}
     owns_client = client is None
@@ -99,15 +129,15 @@ def push_result(
             raise PushError(f"could not reach {endpoint}: {exc}") from exc
         if resp.status_code in (401, 403):
             raise PushError(
-                "authentication failed; check the cloud API token "
-                "(--token / ARGUS_CLOUD_TOKEN)."
+                "authentication failed; check the cloud API token (--token / ARGUS_CLOUD_TOKEN)."
             )
         if resp.status_code == 202:
             body = resp.json()
             job_id = body.get("jobId")
             if not job_id:
                 raise PushError("cloud accepted async ingest but returned no jobId")
-            poll_url = url.rstrip("/") + f"/api/ingest/jobs/{job_id}"
+            # The job id comes from the server; encode it so it stays one path segment.
+            poll_url = url.rstrip("/") + f"/api/ingest/jobs/{quote(str(job_id), safe='')}"
             deadline = time.monotonic() + max(timeout, 60.0)
             while time.monotonic() < deadline:
                 poll = client.get(poll_url, headers=headers)
@@ -115,8 +145,7 @@ def push_result(
                     raise PushError("authentication failed while polling ingest job")
                 if poll.status_code >= 300:
                     raise PushError(
-                        f"cloud ingest poll failed (HTTP {poll.status_code}): "
-                        f"{poll.text[:300]}"
+                        f"cloud ingest poll failed (HTTP {poll.status_code}): {poll.text[:300]}"
                     )
                 status_body = poll.json()
                 state = status_body.get("status")
@@ -132,14 +161,15 @@ def push_result(
                 time.sleep(0.5)
             raise PushError("timed out waiting for cloud ingest job to complete")
         if resp.status_code >= 300:
-            raise PushError(
-                f"cloud rejected the scan (HTTP {resp.status_code}): "
-                f"{resp.text[:300]}"
-            )
+            raise PushError(f"cloud rejected the scan (HTTP {resp.status_code}): {resp.text[:300]}")
         try:
             return resp.json()
         except ValueError:
             return {}
+    except PushError:
+        raise
+    except Exception as exc:  # malformed responses, poll network errors, etc.
+        raise PushError(f"cloud push failed: {exc.__class__.__name__}: {exc}") from exc
     finally:
         if owns_client:
             client.close()
@@ -158,6 +188,7 @@ def push_sbom(
     """POST a CycloneDX or SPDX document to ``{url}/api/sbom``."""
     import httpx
 
+    _check_endpoint(url)
     endpoint = url.rstrip("/") + _SBOM_PATH
     headers = {"Authorization": f"Bearer {token}", "User-Agent": "argus-push"}
     body = {"target": target, "format": fmt, "payload": payload}
@@ -170,18 +201,18 @@ def push_sbom(
             raise PushError(f"could not reach {endpoint}: {exc}") from exc
         if resp.status_code in (401, 403):
             raise PushError(
-                "authentication failed; check the cloud API token "
-                "(--token / ARGUS_CLOUD_TOKEN)."
+                "authentication failed; check the cloud API token (--token / ARGUS_CLOUD_TOKEN)."
             )
         if resp.status_code >= 300:
-            raise PushError(
-                f"cloud rejected the SBOM (HTTP {resp.status_code}): "
-                f"{resp.text[:300]}"
-            )
+            raise PushError(f"cloud rejected the SBOM (HTTP {resp.status_code}): {resp.text[:300]}")
         try:
             return resp.json()
         except ValueError:
             return {}
+    except PushError:
+        raise
+    except Exception as exc:
+        raise PushError(f"SBOM upload failed: {exc.__class__.__name__}: {exc}") from exc
     finally:
         if owns_client:
             client.close()

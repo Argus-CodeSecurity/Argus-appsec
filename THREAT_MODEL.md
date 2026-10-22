@@ -8,9 +8,9 @@ vulnerability class. This document states what Argus defends against, how, and
 what residual risk remains. It is kept honest on purpose: it lists the gaps, not
 just the wins.
 
-Scope: the open-source core (`argus-appsec`). The commercial add-on
-(`argus-k8s`) and the hosted SaaS (`argus-cloud`) have their own trust boundaries
-and are covered separately.
+Scope: the open-source core (`argus-appsec`). Separately distributed add-on
+packages and hosted services have their own trust boundaries and are covered by
+their own threat models.
 
 ## Trust boundaries and assets
 
@@ -34,7 +34,8 @@ and are covered separately.
 | Argument injection via a URL beginning with `-` | URL passed after a `--` separator | `targets.py` `_clone` |
 | Protocol downgrade slipping past the check | `GIT_ALLOW_PROTOCOL` pins transports at the git level (defense in depth) | `targets.py` `_clone` |
 | Credential-prompt hang | `GIT_TERMINAL_PROMPT=0`; clone has a 300s timeout | `targets.py` `_clone` |
-| Command injection anywhere git is used | Every git call uses an argument array (`["git", "-C", root, ...]`), never a shell | `remediation/git_ops.py`, `targets.py` |
+| Command injection anywhere git is used | Every git call uses an argument array (`["git", "-C", root, ...]`), never a shell; user- or config-supplied refs are validated (no leading `-`, no control characters) and passed after `--end-of-options` | `core/gitexec.py`, `targets.py` |
+| A scanned repo's `.git/config` launching programs (`core.fsmonitor`, `gpg.program`, `diff.external`, textconv, `core.pager`, hooks) | One runner pins those keys with `-c`, adds `--no-textconv`/`--no-ext-diff`/`--no-show-signature`, ignores the system config, disables transports and prompts, and caps output and run time. Scanners and dependency-diff use its untrusted profile; the fix/review workflow uses a narrower profile that keeps the operator's hooks, signing and credentials | `core/gitexec.py` |
 
 ### 2. Reading files from a hostile repository
 
@@ -55,8 +56,8 @@ and are covered separately.
 
 | Threat | Control | Where |
 | --- | --- | --- |
-| A repo's own `.argus.yml` disabling scanners or redirecting the AI provider to an attacker URL | Remote-repo config is ignored by default; loading it is opt-in via `--trust-remote-config` | `cli/main.py`, `core/config.py` |
-| A repo shipping `.argus/rules/*.yml` to inject scanner regexes (rule injection / ReDoS) | The in-repo convention directory is honored only for trusted targets (`config.trust_project_config`), gated by the same decision as `.argus.yml`; custom-rule patterns are also rejected if they contain a nested-quantifier ReDoS shape | `scanners/custom_rules.py`, `scanners/patterns.py`, `cli/main.py` |
+| A repo's own `.argus.yml` disabling scanners or redirecting the AI provider to an attacker URL | Remote-repo config is ignored by default; loading it is opt-in via `--trust-remote-config` | `cli/commands/scan.py`, `core/config.py` |
+| A repo shipping `.argus/rules/*.yml` to inject scanner regexes (rule injection / ReDoS) | The in-repo convention directory is honored only for trusted targets (`config.trust_project_config`), gated by the same decision as `.argus.yml`; custom-rule patterns are also rejected if they contain a nested-quantifier ReDoS shape | `scanners/custom_rules.py`, `scanners/patterns.py`, `cli/commands/scan.py` |
 
 ### 5. Handling discovered secrets
 
@@ -113,10 +114,6 @@ and are covered separately.
   in CI is still planned so new shipped rules cannot regress.
 - **Prompt injection**: see section 8; hardening the enrichment prompt contract
   is an active review area.
-- **`argus-k8s` and `argus-cloud`**: separate components with their own trust
-  boundaries (a live cluster reader and an internet-facing SaaS). Each needs its
-  own threat model before it is offered; the SaaS in particular must be reviewed
-  for auth, tenant isolation (IDOR), and webhook replay before any deployment.
 
 ## Reporting
 

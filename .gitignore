@@ -25,13 +25,9 @@ argus-report.*
 # Benchmarks: cloned corpora are throwaway; results/ IS tracked (published numbers)
 benchmarks/.corpora/
 
-# Internal working documents (strategy, launch drafts) — never publish
+# Local working documents that are not part of the published docs
 docs/internal/
 docs/*.docx
-
-# Commercial add-on package. Kept OUT of this Apache-2.0 repo on purpose; it
-# lives (and ships) as its own separately-licensed project. Never commit it here.
-argus-k8s/
 
 # Environment / secrets
 .env

@@ -1,14 +1,15 @@
 [build-system]
-requires = ["hatchling>=1.21"]
+requires = ["hatchling>=1.27"]
 build-backend = "hatchling.build"
 
 [project]
 name = "argus-appsec"
-version = "0.8.1"
+dynamic = ["version"]
 description = "An open-source AI Security Engineer: maps your application, finds vulnerabilities, explains them, and proposes verified fixes."
 readme = "README.md"
 requires-python = ">=3.10"
-license = { text = "Apache-2.0" }
+license = "Apache-2.0"
+license-files = ["LICENSE", "NOTICE"]
 authors = [{ name = "Haseeb Farooq", email = "haseebfarooq35@gmail.com" }]
 keywords = [
   "security",
@@ -18,16 +19,29 @@ keywords = [
   "penetration-testing",
   "ai",
   "llm",
+  "llm-security",
+  "prompt-injection",
+  "secrets-detection",
+  "sbom",
+  "supply-chain-security",
   "devsecops",
 ]
 classifiers = [
   "Development Status :: 3 - Alpha",
+  "Environment :: Console",
   "Intended Audience :: Developers",
-  "Topic :: Security",
-  "License :: OSI Approved :: Apache Software License",
+  "Intended Audience :: Information Technology",
+  "Intended Audience :: System Administrators",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Security",
+  "Topic :: Software Development :: Quality Assurance",
+  "Typing :: Typed",
 ]
 
 dependencies = [
@@ -60,7 +74,9 @@ dashboard = [
 ]
 # Build the documentation site (MkDocs Material).
 docs = [
-  "mkdocs-material>=9.5",
+  # MkDocs 2.0 removes the plugin and theme systems Material depends on.
+  "mkdocs>=1.6,<2",
+  "mkdocs-material>=9.5,<10",
 ]
 # Everything for local development and tests
 dev = [
@@ -82,9 +98,11 @@ dev = [
 
 [project.urls]
 Homepage = "https://github.com/Argus-CodeSecurity/Argus-appsec"
-Documentation = "https://github.com/Argus-CodeSecurity/Argus-appsec/tree/main/docs"
+Documentation = "https://argus-codesecurity.github.io/Argus-appsec/"
 Repository = "https://github.com/Argus-CodeSecurity/Argus-appsec"
 Issues = "https://github.com/Argus-CodeSecurity/Argus-appsec/issues"
+Changelog = "https://github.com/Argus-CodeSecurity/Argus-appsec/blob/main/CHANGELOG.md"
+Security = "https://github.com/Argus-CodeSecurity/Argus-appsec/security/policy"
 
 [project.scripts]
 argus = "argus.cli.main:app"
@@ -94,12 +112,26 @@ argus = "argus.cli.main:app"
 [project.entry-points."argus.plugins"]
 builtin = "argus.plugins:register_builtins"
 
+# Single source of truth for the version: argus.__version__.
+[tool.hatch.version]
+path = "src/argus/__init__.py"
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/argus"]
 
+[tool.hatch.build.targets.sdist]
+include = [
+  "src/argus",
+  "tests",
+  "README.md",
+  "CHANGELOG.md",
+  "LICENSE",
+  "NOTICE",
+]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-ra"
+addopts = ["-ra", "--strict-markers", "--strict-config"]
 markers = [
   "osv_network: exercises the OSV client with a mocked transport (never the real network)",
   "exploit_network: exercises the EPSS/KEV client with a mocked transport (never the real network)",
@@ -111,8 +143,7 @@ target-version = "py310"
 src = ["src", "tests"]
 # The example app contains deliberately insecure, non-idiomatic code so the
 # scanners have something to find. Linting it is meaningless, exclude it.
-# argus-k8s is a separate, commercially-licensed package with its own config.
-extend-exclude = ["examples", "argus-k8s"]
+extend-exclude = ["examples"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM"]
@@ -124,10 +155,21 @@ ignore = ["E501"]
 "src/argus/cli/*" = ["B008"]
 # FastAPI's Depends() in parameter defaults is the framework's idiom, like Typer's.
 "src/argus/dashboard/*" = ["B008"]
-"tests/corpus/*" = ["F821"]
-
 [tool.mypy]
 python_version = "3.10"
 warn_unused_ignores = true
 ignore_missing_imports = true
 packages = ["argus"]
+
+[tool.coverage.run]
+branch = true
+source = ["argus"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
+exclude_also = [
+  "if TYPE_CHECKING:",
+  "raise NotImplementedError",
+  '@(abc\.)?abstractmethod',
+]

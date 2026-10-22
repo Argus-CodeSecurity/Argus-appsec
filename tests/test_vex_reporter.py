@@ -31,10 +31,15 @@ def _dep_finding(reach: str | None = None) -> Finding:
     if reach is not None:
         meta["reachability"] = reach
     return Finding(
-        id="d", rule_id="dependencies.OSV-1", scanner="dependencies",
-        title="Vulnerable dependency: flask 2.0.1 (CVE-2024-0001)", description="d",
+        id="d",
+        rule_id="dependencies.OSV-1",
+        scanner="dependencies",
+        title="Vulnerable dependency: flask 2.0.1 (CVE-2024-0001)",
+        description="d",
         location=Location(path="requirements.txt", snippet="flask==2.0.1"),
-        severity=Severity.HIGH, tags=["dependency", "PyPI"], metadata=meta,
+        severity=Severity.HIGH,
+        tags=["dependency", "PyPI"],
+        metadata=meta,
     )
 
 
@@ -65,9 +70,13 @@ def test_unreachable_cve_is_not_affected_with_justification():
 
 def test_non_cve_findings_are_omitted():
     sast = Finding(
-        id="s", rule_id="patterns.python-shell-true", scanner="patterns",
-        title="shell=True", description="d",
-        location=Location(path="a.py", start_line=1), severity=Severity.HIGH,
+        id="s",
+        rule_id="patterns.python-shell-true",
+        scanner="patterns",
+        title="shell=True",
+        description="d",
+        location=Location(path="a.py", start_line=1),
+        severity=Severity.HIGH,
     )
     assert _render([sast])["statements"] == []
 

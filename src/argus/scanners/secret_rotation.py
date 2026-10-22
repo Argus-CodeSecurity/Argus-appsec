@@ -42,8 +42,10 @@ class RotationTracker:
         """Record a live secret; return how many days it has been known live."""
         entry = self.state.get(fingerprint)
         if entry is None:
-            self.state[fingerprint] = {"first_seen": today.isoformat(),
-                                       "last_seen": today.isoformat()}
+            self.state[fingerprint] = {
+                "first_seen": today.isoformat(),
+                "last_seen": today.isoformat(),
+            }
             return 0
         entry["last_seen"] = today.isoformat()
         try:
@@ -62,18 +64,17 @@ class RotationTracker:
 
     def save(self) -> None:
         with contextlib.suppress(OSError):
-            self.path.write_text(json.dumps(self.state, indent=2, sort_keys=True),
-                                 encoding="utf-8")
+            self.path.write_text(json.dumps(self.state, indent=2, sort_keys=True), encoding="utf-8")
 
 
-def track_rotations(findings: list[Finding], state_path: str | Path, *,
-                    today: date | None = None) -> None:
+def track_rotations(
+    findings: list[Finding], state_path: str | Path, *, today: date | None = None
+) -> None:
     """Update rotation state from live-secret findings and annotate stale ones."""
     today = today or date.today()
     tracker = RotationTracker.load(state_path)
     live: dict[str, Finding] = {
-        f.fingerprint(): f for f in findings
-        if f.metadata.get("verification") == secret_verify.LIVE
+        f.fingerprint(): f for f in findings if f.metadata.get("verification") == secret_verify.LIVE
     }
     for fp, f in live.items():
         days = tracker.record_live(fp, today)

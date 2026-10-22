@@ -42,8 +42,7 @@ def risk_band(score: float) -> str:
     return "None"
 
 
-def trend_geometry(scans: list[Any], width: int = 720, height: int = 200,
-                   pad: int = 32) -> dict:
+def trend_geometry(scans: list[Any], width: int = 720, height: int = 200, pad: int = 32) -> dict:
     """Points/paths for a risk-over-time line, plus per-point hover data."""
     plot_w = width - 2 * pad
     plot_h = height - 2 * pad
@@ -52,26 +51,36 @@ def trend_geometry(scans: list[Any], width: int = 720, height: int = 200,
     for i, s in enumerate(scans):
         x = pad + (plot_w * (i / (n - 1)) if n > 1 else plot_w / 2)
         y = pad + plot_h * (1 - min(max(s.risk_score, 0), 100) / 100)
-        dots.append({
-            "x": round(x, 1), "y": round(y, 1),
-            "risk": round(s.risk_score, 1),
-            "when": s.created_at.strftime("%Y-%m-%d %H:%M"),
-            "findings": s.total_findings,
-        })
+        dots.append(
+            {
+                "x": round(x, 1),
+                "y": round(y, 1),
+                "risk": round(s.risk_score, 1),
+                "when": s.created_at.strftime("%Y-%m-%d %H:%M"),
+                "findings": s.total_findings,
+            }
+        )
     polyline = " ".join(f"{d['x']},{d['y']}" for d in dots)
     area = ""
     if dots:
         base = height - pad
-        area = (f"M {dots[0]['x']},{base} "
-                + " ".join(f"L {d['x']},{d['y']}" for d in dots)
-                + f" L {dots[-1]['x']},{base} Z")
+        area = (
+            f"M {dots[0]['x']},{base} "
+            + " ".join(f"L {d['x']},{d['y']}" for d in dots)
+            + f" L {dots[-1]['x']},{base} Z"
+        )
     gridlines = []
     for t in (0, 25, 50, 75, 100):
         y = pad + plot_h * (1 - t / 100)
         gridlines.append({"y": round(y, 1), "label": str(t)})
     return {
-        "width": width, "height": height, "pad": pad,
-        "polyline": polyline, "area": area, "dots": dots, "gridlines": gridlines,
+        "width": width,
+        "height": height,
+        "pad": pad,
+        "polyline": polyline,
+        "area": area,
+        "dots": dots,
+        "gridlines": gridlines,
     }
 
 
@@ -82,8 +91,12 @@ def severity_bar(counts: dict[str, int], total: int) -> list[dict]:
     for label in SEVERITY_ORDER:
         n = counts.get(label, 0)
         if n:
-            segments.append({
-                "label": label, "count": n,
-                "pct": round(100 * n / total, 2), "fill": severity_fill(label),
-            })
+            segments.append(
+                {
+                    "label": label,
+                    "count": n,
+                    "pct": round(100 * n / total, 2),
+                    "fill": severity_fill(label),
+                }
+            )
     return segments

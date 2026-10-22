@@ -47,17 +47,19 @@ def build_cyclonedx(
             continue
         seen.add(key)
         ref = _bom_ref(ecosystem, pkg, ver)
-        components.append({
-            "type": "library",
-            "bom-ref": ref,
-            "name": pkg,
-            "version": ver,
-            "purl": _purl(ecosystem, pkg, ver),
-            "properties": [
-                {"name": "argus:ecosystem", "value": ecosystem},
-                {"name": "argus:manifest", "value": path},
-            ],
-        })
+        components.append(
+            {
+                "type": "library",
+                "bom-ref": ref,
+                "name": pkg,
+                "version": ver,
+                "purl": _purl(ecosystem, pkg, ver),
+                "properties": [
+                    {"name": "argus:ecosystem", "value": ecosystem},
+                    {"name": "argus:manifest", "value": path},
+                ],
+            }
+        )
 
     components.sort(key=lambda c: (c["name"], c["version"]))
     serial = uuid.uuid5(uuid.NAMESPACE_URL, str(project.root))

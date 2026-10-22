@@ -34,8 +34,7 @@ def test_attack_simulation_on_high_severity(vulnerable_project):
 def test_patch_generation_verified(vulnerable_project):
     cfg = Config(generate_patches=True)
     result = ScanEngine(cfg).scan(vulnerable_project)
-    patched = [f for f in result.findings
-               if f.remediation and f.remediation.patch]
+    patched = [f for f in result.findings if f.remediation and f.remediation.patch]
     assert patched, "expected at least one generated patch"
     # yaml.load / md5 / shell=True fixes are deterministic and self-verified.
     assert any(f.remediation.verified for f in patched)

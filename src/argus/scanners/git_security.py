@@ -2,31 +2,30 @@
 
 from __future__ import annotations
 
-import subprocess
 from collections.abc import Iterable
 from pathlib import Path
 
 from argus.core.models import Confidence, Finding, Likelihood, Location, Remediation, Severity
 from argus.core.plugin import Scanner, ScannerContext, scanner
+from argus.scanners._git import run_git
 
 
 def _run_git(root: Path, *args: str) -> str | None:
-    try:
-        return subprocess.check_output(
-            ["git", "-C", str(root), *args],
-            text=True,
-            stderr=subprocess.DEVNULL,
-            timeout=30,
-        )
-    except (subprocess.SubprocessError, FileNotFoundError):
+    # The scanned repo is untrusted: run_git neutralises its .git/config
+    # (fsmonitor, gpg.program, pagers, external diff) before invoking git.
+    res = run_git(root, *args, timeout=30, max_output=5_000_000)
+    if res is None or res.returncode != 0:
         return None
+    return res.stdout
 
 
 @scanner
 class GitSecurityScanner(Scanner):
     name = "git-security"
     category = "git"
-    description = "Analyzes git history for dependency changes, dangerous files, and author anomalies."
+    description = (
+        "Analyzes git history for dependency changes, dangerous files, and author anomalies."
+    )
 
     def applies_to(self, project) -> bool:
         return (project.root / ".git").is_dir()
@@ -53,7 +52,9 @@ class GitSecurityScanner(Scanner):
                     confidence=Confidence.LOW,
                     likelihood=Likelihood.UNLIKELY,
                     why_vulnerable="Sudden contributor changes can precede supply-chain incidents.",
-                    remediation=Remediation(summary="Review recent commits and enforce signed commits."),
+                    remediation=Remediation(
+                        summary="Review recent commits and enforce signed commits."
+                    ),
                     tags=["git", "supply-chain"],
                     metadata={"verification": "detected"},
                 )
@@ -77,7 +78,9 @@ class GitSecurityScanner(Scanner):
                     confidence=Confidence.HIGH,
                     likelihood=Likelihood.POSSIBLE,
                     why_vulnerable="Dependency manifest edits are high-value supply-chain targets.",
-                    remediation=Remediation(summary="Require PR review for dependency manifest changes."),
+                    remediation=Remediation(
+                        summary="Require PR review for dependency manifest changes."
+                    ),
                     tags=["git", "supply-chain"],
                     metadata={"verification": "confirmed"},
                 )
@@ -85,7 +88,8 @@ class GitSecurityScanner(Scanner):
         tracked = _run_git(root, "ls-files")
         if tracked:
             dangerous = [
-                p for p in tracked.splitlines()
+                p
+                for p in tracked.splitlines()
                 if p.endswith((".pem", ".key", ".p12", ".env", "id_rsa"))
             ]
             for path in dangerous[:10]:
@@ -100,7 +104,9 @@ class GitSecurityScanner(Scanner):
                     confidence=Confidence.HIGH,
                     likelihood=Likelihood.LIKELY,
                     why_vulnerable="Tracked secrets persist in history even after deletion.",
-                    remediation=Remediation(summary="Remove from git history and rotate credentials."),
+                    remediation=Remediation(
+                        summary="Remove from git history and rotate credentials."
+                    ),
                     tags=["git", "secrets"],
                     metadata={"verification": "confirmed"},
                 )

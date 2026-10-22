@@ -62,8 +62,8 @@ Examples:
 - Kubernetes `privileged: true`, `runAsNonRoot: false`, `hostNetwork: true`
 
 **Live cluster assessment** (running pods, RBAC, exposed services) is **not** in
-the open-source core. That ships in the commercial `argus-k8s` add-on as
-`argus cluster`.
+the core. Add-on packages can provide it as an extra CLI command through the
+`argus.commands` entry point (see [Writing plugins](plugins.md)).
 
 ## Cloud scanner (`cloud` + `iac`)
 
@@ -79,9 +79,8 @@ Examples:
 - Azure `allow_blob_public_access = true`
 - GCP bucket bindings for `allUsers`
 
-Read-only cloud API connectors (live AWS, Azure, and GCP posture) ship as commercial
-add-ons: `argus cloud-live`, `argus cloud-live-azure`, and `argus cloud-live-gcp`.
-Static IaC scanning stays in the open-source core.
+Live cloud API posture checks (querying AWS, Azure, or GCP accounts) are not part
+of the core, which only reads files in the repository.
 
 ## Tuning in `.argus.yml`
 
@@ -102,8 +101,3 @@ To run only infrastructure scanners in a full scan:
 ```bash
 argus scan . -s cicd,container,cloud,iac
 ```
-
-## Repository layout
-
-If you maintain both the open-source core and commercial add-ons locally, see
-[project-layout.md](project-layout.md) and [repository-split.md](repository-split.md).

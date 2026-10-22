@@ -16,16 +16,18 @@ def _hostile_repo(tmp_path):
     (tmp_path / "requirements.txt").write_bytes(b"\x00\xff\xfe garbage== ===\n-e .\nflask\n")
     (tmp_path / "package-lock.json").write_text('{"packages": {"": {', encoding="utf-8")
     (tmp_path / "package.json").write_text("not json at all {[}", encoding="utf-8")
-    (tmp_path / "yarn.lock").write_bytes(b"\xc3\x28 invalid utf8 \xff version \"1.0\"")
+    (tmp_path / "yarn.lock").write_bytes(b'\xc3\x28 invalid utf8 \xff version "1.0"')
     (tmp_path / "go.mod").write_text("require (\n  broken", encoding="utf-8")
-    (tmp_path / "Cargo.lock").write_text('[[package]]\nname =', encoding="utf-8")
+    (tmp_path / "Cargo.lock").write_text("[[package]]\nname =", encoding="utf-8")
     (tmp_path / "Gemfile.lock").write_text("    (((", encoding="utf-8")
     (tmp_path / "composer.lock").write_text('{"packages":', encoding="utf-8")
     # Malformed IaC.
     (tmp_path / "Dockerfile").write_text("FROM\nRUN\nCMD", encoding="utf-8")
     (tmp_path / "k8s.yaml").write_text("apiVersion: v1\n\t\tbad: : :\n  - - -\n", encoding="utf-8")
     # Broken source: invalid syntax, weird unicode, a huge single line.
-    (tmp_path / "broken.py").write_bytes("def (:\n\tx = '\udce9'\n".encode("utf-8", "surrogatepass"))
+    (tmp_path / "broken.py").write_bytes(
+        "def (:\n\tx = '\udce9'\n".encode("utf-8", "surrogatepass")
+    )
     (tmp_path / "huge.py").write_text("x = '" + "A" * 1_900_000 + "'\n", encoding="utf-8")
     # Null bytes (binary sniff) and an empty file.
     (tmp_path / "blob.dat").write_bytes(b"\x00\x01\x02" * 5000)

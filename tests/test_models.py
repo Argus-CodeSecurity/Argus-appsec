@@ -16,7 +16,11 @@ from argus.core.models import (
 
 def _finding(**kwargs) -> Finding:
     base = dict(
-        id="x:1", rule_id="x.rule", scanner="x", title="t", description="d",
+        id="x:1",
+        rule_id="x.rule",
+        scanner="x",
+        title="t",
+        description="d",
         location=Location(path="a.py", start_line=1),
     )
     base.update(kwargs)
@@ -39,10 +43,12 @@ def test_risk_score_monotonic_in_severity():
 
 
 def test_confidence_and_likelihood_raise_score():
-    a = _finding(severity=Severity.HIGH, confidence=Confidence.LOW,
-                 likelihood=Likelihood.RARE).risk_score()
-    b = _finding(severity=Severity.HIGH, confidence=Confidence.HIGH,
-                 likelihood=Likelihood.ALMOST_CERTAIN).risk_score()
+    a = _finding(
+        severity=Severity.HIGH, confidence=Confidence.LOW, likelihood=Likelihood.RARE
+    ).risk_score()
+    b = _finding(
+        severity=Severity.HIGH, confidence=Confidence.HIGH, likelihood=Likelihood.ALMOST_CERTAIN
+    ).risk_score()
     assert b > a
 
 
@@ -53,9 +59,7 @@ def test_scan_result_sorting_and_counts():
     result.add(_finding(id="med", severity=Severity.MEDIUM))
 
     ordered = result.sorted_findings()
-    assert [f.severity for f in ordered] == [
-        Severity.CRITICAL, Severity.MEDIUM, Severity.LOW
-    ]
+    assert [f.severity for f in ordered] == [Severity.CRITICAL, Severity.MEDIUM, Severity.LOW]
     counts = result.counts_by_severity()
     assert counts["Critical"] == 1 and counts["Low"] == 1
     assert result.highest_severity() is Severity.CRITICAL

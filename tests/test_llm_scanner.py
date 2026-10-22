@@ -60,12 +60,11 @@ def test_insecure_output_handling_suppressed_when_parsed(tmp_path):
         "def run(q):\n"
         "    resp = client.chat.completions.create(model='gpt-4o', messages=q)\n"
         "    answer = resp.choices[0].message.content\n"
-        "    data = json.loads(answer)\n"       # sanitized -> not flagged
+        "    data = json.loads(answer)\n"  # sanitized -> not flagged
         "    return data\n",
         encoding="utf-8",
     )
-    out = [f for f in _scan_llm(tmp_path)
-           if f.rule_id == "llm.insecure-output-handling"]
+    out = [f for f in _scan_llm(tmp_path) if f.rule_id == "llm.insecure-output-handling"]
     assert out == []
 
 

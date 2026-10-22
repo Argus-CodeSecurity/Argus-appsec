@@ -42,7 +42,7 @@ def test_custom_rule_produces_finding(tmp_path):
     (rules_dir / "team.yml").write_text(_RULE_YAML, encoding="utf-8")
     (tmp_path / "app.py").write_text("x = 'BANNED_TOKEN'\n", encoding="utf-8")
 
-    findings = _scan(tmp_path, Config())
+    findings = _scan(tmp_path, Config(trust_project_config=True))
     hits = [f for f in findings if f.rule_id == "patterns.no-eval-marker"]
     assert hits
     assert hits[0].severity.label == "High"
@@ -51,9 +51,18 @@ def test_custom_rule_produces_finding(tmp_path):
 def test_rules_option_path(tmp_path):
     (tmp_path / "myrules.yml").write_text(_RULE_YAML, encoding="utf-8")
     (tmp_path / "app.py").write_text("y = BANNED_TOKEN\n", encoding="utf-8")
-    cfg = Config(scanner_options={"patterns": {"rules": "myrules.yml"}})
+    # A trusted (local) project may point at a rules file inside itself.
+    cfg = Config(scanner_options={"patterns": {"rules": "myrules.yml"}}, trust_project_config=True)
     findings = _scan(tmp_path, cfg)
     assert any(f.rule_id == "patterns.no-eval-marker" for f in findings)
+
+
+def test_rules_option_path_inside_untrusted_tree_is_ignored(tmp_path):
+    (tmp_path / "myrules.yml").write_text(_RULE_YAML, encoding="utf-8")
+    (tmp_path / "app.py").write_text("y = BANNED_TOKEN\n", encoding="utf-8")
+    cfg = Config(scanner_options={"patterns": {"rules": "myrules.yml"}})
+    findings = _scan(tmp_path, cfg)
+    assert not any(f.rule_id == "patterns.no-eval-marker" for f in findings)
 
 
 def test_invalid_rule_is_skipped_not_fatal(tmp_path):
@@ -77,15 +86,14 @@ def test_custom_rules_disable_cache(tmp_path):
     # No custom rules -> normal cacheable behavior.
     plain = tmp_path / "plain"
     plain.mkdir()
-    ctx_plain = ScannerContext(project=Project.from_path(plain), config=Config(),
-                               ai=None)
+    ctx_plain = ScannerContext(project=Project.from_path(plain), config=Config(), ai=None)
     assert scanner.cacheable(ctx_plain) is True
 
     # Custom rules present -> not cacheable (they can change without a file change).
     withrules = tmp_path / "withrules"
     (withrules / ".argus" / "rules").mkdir(parents=True)
-    (withrules / ".argus" / "rules" / "team.yml").write_text(_RULE_YAML,
-                                                             encoding="utf-8")
-    ctx_rules = ScannerContext(project=Project.from_path(withrules), config=Config(),
-                               ai=None)
+    (withrules / ".argus" / "rules" / "team.yml").write_text(_RULE_YAML, encoding="utf-8")
+    ctx_rules = ScannerContext(
+        project=Project.from_path(withrules), config=Config(trust_project_config=True), ai=None
+    )
     assert scanner.cacheable(ctx_rules) is False

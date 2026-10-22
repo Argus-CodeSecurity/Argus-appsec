@@ -36,6 +36,7 @@ def docs_url_for(scanner: str) -> str:
     anchor = _SCANNER_DOC_ANCHOR.get(scanner)
     return f"{_DOCS_BASE}/scanners/" + (f"#{anchor}" if anchor else "")
 
+
 _E = TypeVar("_E", bound="_LabeledIntEnum")
 
 
@@ -48,11 +49,24 @@ class _LabeledIntEnum(IntEnum):
 
     @classmethod
     def parse(cls: type[_E], value: str | int | _E) -> _E:
+        """Parse a name (case-insensitive) or integer value.
+
+        Raises ``ValueError`` (never ``KeyError``) on unknown input so callers
+        can report a bad setting as a usage error instead of a crash.
+        """
         if isinstance(value, cls):
             return value
-        if isinstance(value, int):
-            return cls(value)
-        return cls[str(value).strip().upper().replace(" ", "_")]
+        if isinstance(value, int) and not isinstance(value, bool):
+            try:
+                return cls(value)
+            except ValueError:
+                pass
+        else:
+            key = str(value).strip().upper().replace(" ", "_")
+            if key in cls.__members__:
+                return cls.__members__[key]
+        choices = ", ".join(m.name.lower() for m in cls)
+        raise ValueError(f"invalid {cls.__name__.lower()} {value!r} (choose from: {choices})")
 
     @property
     def label(self) -> str:
@@ -134,12 +148,12 @@ class ExploitScenario(BaseModel):
     demonstration was executed in a sandbox or produced statically.
     """
 
-    discovery: str = ""          # how an attacker finds the weakness
+    discovery: str = ""  # how an attacker finds the weakness
     exploit_walkthrough: str = ""  # step-by-step, safe to read
-    data_at_risk: str = ""       # what could be exposed
-    business_impact: str = ""    # plain-language impact
+    data_at_risk: str = ""  # what could be exposed
+    business_impact: str = ""  # plain-language impact
     fix_blocks_attack: str = ""  # why the proposed fix stops it
-    before_after: str = ""       # before/after comparison
+    before_after: str = ""  # before/after comparison
     sandbox_ok: bool = False
 
 
@@ -152,9 +166,9 @@ class Finding(BaseModel):
     """
 
     # Identity
-    id: str                                  # stable within a scan, e.g. "secrets:aws-key:3"
-    rule_id: str                             # the rule/check that produced it
-    scanner: str                             # scanner plugin name
+    id: str  # stable within a scan, e.g. "secrets:aws-key:3"
+    rule_id: str  # the rule/check that produced it
+    scanner: str  # scanner plugin name
 
     # What & where
     title: str
@@ -167,8 +181,8 @@ class Finding(BaseModel):
     likelihood: Likelihood = Likelihood.POSSIBLE
 
     # Taxonomy
-    cwe: list[str] = Field(default_factory=list)      # e.g. ["CWE-89"]
-    owasp: list[str] = Field(default_factory=list)    # e.g. ["A03:2021-Injection"]
+    cwe: list[str] = Field(default_factory=list)  # e.g. ["CWE-89"]
+    owasp: list[str] = Field(default_factory=list)  # e.g. ["A03:2021-Injection"]
 
     # The reasoning an AI Security Engineer would give (may be filled by an agent)
     why_vulnerable: str = ""
@@ -207,14 +221,14 @@ class Finding(BaseModel):
         return f"{self.rule_id}|{self.location.path}|L{self.location.start_line}"
 
     def risk_score(self) -> float:
-        """A 0–100 score combining severity, confidence, and likelihood.
+        """A 0 to 100 score combining severity, confidence, and likelihood.
 
         Used for ranking and for the aggregate risk number. The weighting favors
         severity while letting confidence and likelihood modulate.
         """
-        sev = self.severity / Severity.CRITICAL          # 0..1
-        conf = (self.confidence + 1) / len(Confidence)   # 0.33..1
-        like = (self.likelihood + 1) / len(Likelihood)   # 0.2..1
+        sev = self.severity / Severity.CRITICAL  # 0..1
+        conf = (self.confidence + 1) / len(Confidence)  # 0.33..1
+        like = (self.likelihood + 1) / len(Likelihood)  # 0.2..1
         return round(100 * sev * (0.6 + 0.25 * conf + 0.15 * like), 1)
 
 
@@ -250,7 +264,7 @@ class ScanResult(BaseModel):
         return counts
 
     def aggregate_risk(self) -> float:
-        """A single 0–100 risk number for the whole target.
+        """A single 0 to 100 risk number for the whole target.
 
         Not a mean, a single critical should dominate a pile of lows. We take a
         softmax-ish blend: the worst finding sets the floor, volume nudges it up.

@@ -27,7 +27,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0     # full history enables diff-aware PR scanning
-      - uses: Argus-CodeSecurity/Argus-appsec@v0.8.1
+      - uses: Argus-CodeSecurity/Argus-appsec@v0.9.0
         with:
           fail-on: high      # block merges on newly introduced High+ findings
 ```
@@ -43,18 +43,21 @@ All inputs are optional; the useful ones:
 |-------|---------|---------|
 | `path` | `.` | Directory to scan |
 | `fail-on` | *(never fail)* | Severity gate: `critical`/`high`/`medium`/`low` |
+| `fail-on-error` | *(fail when `fail-on` is set)* | `true` or `false` to always or never fail when a scanner crashes |
 | `scanners` / `exclude-scanners` | all | Choose scanners |
-| `min-severity` |, | Report floor |
-| `config` |, | Path to an `.argus.yml` |
+| `min-severity` | *(none)* | Report floor |
+| `config` | *(none)* | Path to an `.argus.yml` |
+| `pr-config-from-base` | `true` | On pull requests, read Argus config from the base branch so a PR cannot relax its own gate |
 | `diff-aware` | `true` | Baseline PRs against the base branch |
+| `pr-comment` | `false` | Post findings the PR introduces as an inline review |
 | `upload-sarif` | `true` | Upload to Code Scanning |
-| `argus-version` | latest | Pin the argus-appsec version |
-| `extra-args` |, | Anything else `argus scan` accepts |
+| `argus-version` | *(the action's own version)* | Install a specific argus-appsec version from PyPI instead |
+| `extra-args` | *(none)* | Anything else `argus scan` accepts |
 
 ### Hand-rolled workflow
 
 If you need more control, a ready-to-copy workflow lives at
-[`.github/workflows/argus-scan.yml`](../.github/workflows/argus-scan.yml). It runs
+[`.github/workflows/argus-scan.yml`](https://github.com/Argus-CodeSecurity/Argus-appsec/blob/main/.github/workflows/argus-scan.yml). It runs
 Argus, writes SARIF, and uploads it to GitHub Code Scanning so findings appear as
 PR annotations and in the Security tab.
 
@@ -101,7 +104,7 @@ argus scan . --baseline /tmp/baseline.json --fail-on high --quiet
 Findings are matched by a **content-based fingerprint** (the whitespace-normalized
 offending code, not the line number), so a finding is still recognized as
 pre-existing after unrelated edits shift it up or down the file. The shipped
-[`argus-scan.yml`](../.github/workflows/argus-scan.yml) workflow does this
+[`argus-scan.yml`](https://github.com/Argus-CodeSecurity/Argus-appsec/blob/main/.github/workflows/argus-scan.yml) workflow does this
 automatically on pull requests.
 
 ## Reproducibility
@@ -166,7 +169,7 @@ catching a secret **before it enters git history** takes three lines:
 # .pre-commit-config.yaml
 repos:
   - repo: https://github.com/Argus-CodeSecurity/Argus-appsec
-    rev: v0.7.0
+    rev: v0.9.0
     hooks:
       - id: argus-secrets        # fast, secrets-only, made for every commit
       # - id: argus              # full static scan, heavier; consider pre-push

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from pathlib import Path
 
 from argus.analysis.risk_engine import enrich_contextual_risk
 from argus.analysis.security_graph import build_security_graph
@@ -17,8 +16,13 @@ from argus.profiles import apply_profile
 
 def _finding(scanner: str = "patterns") -> Finding:
     return Finding(
-        id="t:1", rule_id="t", scanner=scanner, title="t", description="d",
-        location=Location(path="a.py", snippet="bad()"), severity=Severity.HIGH,
+        id="t:1",
+        rule_id="t",
+        scanner=scanner,
+        title="t",
+        description="d",
+        location=Location(path="a.py", snippet="bad()"),
+        severity=Severity.HIGH,
     )
 
 
@@ -66,15 +70,15 @@ def test_plugin_allowlist(monkeypatch):
     assert plugin_allowed("other") is False
 
 
-def test_business_logic_on_corpus():
+def test_business_logic_on_corpus(tmp_path):
     from argus.core.config import Config
     from argus.core.engine import ScanEngine
     from argus.core.project import Project
 
-    root = Path(__file__).parent / "corpus"
-    root.mkdir(exist_ok=True)
+    root = tmp_path
     (root / "logic.py").write_text(
-        'price = request.args.get("price")\n', encoding="utf-8",
+        'price = request.args.get("price")\n',
+        encoding="utf-8",
     )
     p = Project.from_path(root)
     cfg = Config.load(project_root=root)

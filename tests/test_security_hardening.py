@@ -27,9 +27,13 @@ def _symlink_or_skip(link: Path, target: Path) -> None:
 def _yaml_load_finding(path: str, line: int) -> Finding:
     # A rule with a known deterministic fix (yaml.load -> yaml.safe_load).
     return Finding(
-        id=f"x:{line}", rule_id="patterns.python-yaml-load", scanner="patterns",
-        title="t", description="d",
-        location=Location(path=path, start_line=line), severity=Severity.HIGH,
+        id=f"x:{line}",
+        rule_id="patterns.python-yaml-load",
+        scanner="patterns",
+        title="t",
+        description="d",
+        location=Location(path=path, start_line=line),
+        severity=Severity.HIGH,
     )
 
 

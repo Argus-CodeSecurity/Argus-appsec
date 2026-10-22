@@ -42,21 +42,25 @@ def build_spdx(
     doc_id = f"SPDXRef-DOCUMENT-{uuid.uuid5(uuid.NAMESPACE_URL, str(project.root))}"
     root_id = "SPDXRef-RootPackage"
 
-    packages: list[dict[str, Any]] = [{
-        "SPDXID": root_id,
-        "name": app_name,
-        "versionInfo": version,
-        "downloadLocation": "NOASSERTION",
-        "filesAnalyzed": False,
-        "supplier": "NOASSERTION",
-        "primaryPackagePurpose": "APPLICATION",
-    }]
+    packages: list[dict[str, Any]] = [
+        {
+            "SPDXID": root_id,
+            "name": app_name,
+            "versionInfo": version,
+            "downloadLocation": "NOASSERTION",
+            "filesAnalyzed": False,
+            "supplier": "NOASSERTION",
+            "primaryPackagePurpose": "APPLICATION",
+        }
+    ]
 
-    relationships: list[dict[str, str]] = [{
-        "spdxElementId": doc_id,
-        "relationshipType": "DESCRIBES",
-        "relatedSpdxElement": root_id,
-    }]
+    relationships: list[dict[str, str]] = [
+        {
+            "spdxElementId": doc_id,
+            "relationshipType": "DESCRIBES",
+            "relatedSpdxElement": root_id,
+        }
+    ]
 
     seen: set[tuple[str, str, str]] = set()
     for ecosystem, path, pkg, ver in collect_packages(project):
@@ -65,25 +69,31 @@ def build_spdx(
             continue
         seen.add(key)
         spdx_id = _spdx_id(ecosystem, pkg, ver)
-        packages.append({
-            "SPDXID": spdx_id,
-            "name": pkg,
-            "versionInfo": ver,
-            "downloadLocation": "NOASSERTION",
-            "filesAnalyzed": False,
-            "supplier": "NOASSERTION",
-            "externalRefs": [{
-                "referenceCategory": "PACKAGE-MANAGER",
-                "referenceType": "purl",
-                "referenceLocator": _purl(ecosystem, pkg, ver),
-            }],
-            "comment": f"ecosystem={ecosystem}; manifest={path}",
-        })
-        relationships.append({
-            "spdxElementId": root_id,
-            "relationshipType": "DEPENDS_ON",
-            "relatedSpdxElement": spdx_id,
-        })
+        packages.append(
+            {
+                "SPDXID": spdx_id,
+                "name": pkg,
+                "versionInfo": ver,
+                "downloadLocation": "NOASSERTION",
+                "filesAnalyzed": False,
+                "supplier": "NOASSERTION",
+                "externalRefs": [
+                    {
+                        "referenceCategory": "PACKAGE-MANAGER",
+                        "referenceType": "purl",
+                        "referenceLocator": _purl(ecosystem, pkg, ver),
+                    }
+                ],
+                "comment": f"ecosystem={ecosystem}; manifest={path}",
+            }
+        )
+        relationships.append(
+            {
+                "spdxElementId": root_id,
+                "relationshipType": "DEPENDS_ON",
+                "relatedSpdxElement": spdx_id,
+            }
+        )
 
     packages.sort(key=lambda p: (p.get("name", ""), p.get("versionInfo", "")))
 

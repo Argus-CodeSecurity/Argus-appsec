@@ -62,11 +62,13 @@ def load_agent_config(path: Path) -> AgentConfig:
         if isinstance(scanners, str):
             scanners = [s.strip() for s in scanners.split(",") if s.strip()]
         cfg_path = entry.get("config")
-        targets.append(AgentTarget(
-            path=str(entry["path"]),
-            scanners=list(scanners),
-            config=Path(cfg_path) if cfg_path else None,
-        ))
+        targets.append(
+            AgentTarget(
+                path=str(entry["path"]),
+                scanners=list(scanners),
+                config=Path(cfg_path) if cfg_path else None,
+            )
+        )
 
     drift = data.get("fail_on_drift")
     integrity = data.get("integrity_paths") or []

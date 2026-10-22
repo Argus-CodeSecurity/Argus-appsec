@@ -27,7 +27,7 @@ policies:
 
   - id: block-supply-chain-critical
     when:
-      scanner: sca
+      scanner: dependencies
       severity: critical
     action: block
 
@@ -48,7 +48,7 @@ policies:
 
   - id: block-reachable-critical-cve
     when:
-      scanner: sca
+      scanner: dependencies
       severity: high
       tag: reachable
     action: block

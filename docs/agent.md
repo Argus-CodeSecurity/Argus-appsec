@@ -19,7 +19,7 @@ argus agent              # run until Ctrl+C
 
 ## Configuration
 
-See [examples/agent.yml](../examples/agent.yml):
+See [examples/agent.yml](https://github.com/Argus-CodeSecurity/Argus-appsec/blob/main/examples/agent.yml):
 
 ```yaml
 interval: 600

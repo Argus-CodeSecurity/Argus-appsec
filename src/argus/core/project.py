@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import fnmatch
 import os
+import stat
 import threading
 from collections.abc import Iterator
 from dataclasses import dataclass, field
@@ -18,22 +19,44 @@ from typing import Any
 
 # Directories that are noise for security analysis. Skipped during file walks.
 DEFAULT_IGNORES: tuple[str, ...] = (
-    ".git", ".hg", ".svn", "node_modules", "vendor", "dist", "build",
-    ".venv", "venv", "env", "__pycache__", ".mypy_cache", ".pytest_cache",
-    ".ruff_cache", ".tox", ".next", ".nuxt", "target", ".gradle", ".idea",
-    ".argus", "coverage", "htmlcov", ".terraform",
+    ".git",
+    ".hg",
+    ".svn",
+    "node_modules",
+    "vendor",
+    "dist",
+    "build",
+    ".venv",
+    "venv",
+    "env",
+    "__pycache__",
+    ".mypy_cache",
+    ".pytest_cache",
+    ".ruff_cache",
+    ".tox",
+    ".next",
+    ".nuxt",
+    "target",
+    ".gradle",
+    ".idea",
+    ".argus",
+    "coverage",
+    "htmlcov",
+    ".terraform",
 )
 
 # Files above this size are treated as assets/blobs and not read as source.
 MAX_TEXT_BYTES = 2_000_000
+# Leading bytes inspected for a NUL to decide whether a file is binary.
+_SNIFF_BYTES = 2048
 
 
 @dataclass
 class FileRef:
     """A single project file. Content is read lazily and cached per instance."""
 
-    path: Path            # absolute path on disk
-    rel_path: str         # POSIX-style path relative to project root
+    path: Path  # absolute path on disk
+    rel_path: str  # POSIX-style path relative to project root
     size: int
     language: str | None = None
 
@@ -43,7 +66,8 @@ class FileRef:
     # threads, so text() must be atomic or a racing reader can observe an
     # in-progress read as empty content (silently missed findings).
     _lock: threading.Lock = field(
-        default_factory=threading.Lock, init=False, repr=False, compare=False)
+        default_factory=threading.Lock, init=False, repr=False, compare=False
+    )
 
     @property
     def name(self) -> str:
@@ -57,10 +81,31 @@ class FileRef:
         if self.size > MAX_TEXT_BYTES:
             return True
         try:
-            chunk = self.path.read_bytes()[:2048]
+            # Only the sniff window is read, not the whole file.
+            with open(self.path, "rb") as fh:
+                chunk = fh.read(_SNIFF_BYTES)
         except OSError:
             return True
         return b"\x00" in chunk
+
+    def _read_text(self) -> str:
+        """Read the file as text with a hard size bound, or "" if binary/too big.
+
+        The size recorded during the walk can be stale (the file may have grown
+        since), so the read itself is capped instead of trusting it.
+        """
+        if self.size > MAX_TEXT_BYTES:
+            return ""
+        try:
+            with open(self.path, "rb") as fh:
+                data = fh.read(MAX_TEXT_BYTES + 1)
+        except OSError:
+            return ""
+        if len(data) > MAX_TEXT_BYTES or b"\x00" in data[:_SNIFF_BYTES]:
+            return ""
+        # Same newline handling as Path.read_text (universal newlines).
+        text = data.decode("utf-8", errors="replace")
+        return text.replace("\r\n", "\n").replace("\r", "\n")
 
     def text(self) -> str:
         """Return file contents as text, or "" if unreadable/binary. Cached.
@@ -77,14 +122,8 @@ class FileRef:
             # were waiting for the lock.
             if self._read_attempted:
                 return self._text or ""
-            if self.is_probably_binary():
-                text = ""
-            else:
-                try:
-                    text = self.path.read_text(encoding="utf-8", errors="replace")
-                except OSError:
-                    text = ""
-            self._text = text          # publish content first...
+            text = self._read_text()
+            self._text = text  # publish content first...
             self._read_attempted = True  # ...then the flag readers gate on.
             return self._text or ""
 
@@ -98,7 +137,7 @@ class Project:
 
     root: Path
     name: str
-    origin: str = "local"           # local | github | gitlab | bitbucket | url
+    origin: str = "local"  # local | github | gitlab | bitbucket | url
     origin_url: str | None = None
 
     # Populated by the repository analyzer.
@@ -110,8 +149,7 @@ class Project:
     extra_ignores: tuple[str, ...] = ()
 
     # Materialized file list, computed on first access. Not part of equality.
-    _files_cache: tuple[FileRef, ...] | None = field(
-        default=None, repr=False, compare=False)
+    _files_cache: tuple[FileRef, ...] | None = field(default=None, repr=False, compare=False)
 
     @classmethod
     def from_path(cls, path: str | os.PathLike[str], **kwargs: Any) -> Project:
@@ -138,8 +176,7 @@ class Project:
             if fnmatch.fnmatch(rel_path, pat) or fnmatch.fnmatch(name, pat):
                 return True
             # `dir/**` should also match the directory prefix `dir/...`.
-            if pat.endswith("/**") and (rel_path == pat[:-3]
-                                        or rel_path.startswith(pat[:-2])):
+            if pat.endswith("/**") and (rel_path == pat[:-3] or rel_path.startswith(pat[:-2])):
                 return True
         return False
 
@@ -157,9 +194,9 @@ class Project:
             # Prune by built-in basename ignores and by exclude-glob (which lets
             # us skip descending into an excluded subtree entirely).
             dirnames[:] = sorted(
-                d for d in dirnames
-                if d not in ignores
-                and not self._excluded(f"{base_rel}/{d}".lstrip("/"))
+                d
+                for d in dirnames
+                if d not in ignores and not self._excluded(f"{base_rel}/{d}".lstrip("/"))
             )
             for filename in sorted(filenames):
                 abs_path = Path(dirpath) / filename
@@ -179,10 +216,14 @@ class Project:
                     if not real.is_relative_to(self.root):
                         continue
                 try:
-                    size = abs_path.stat().st_size
+                    st = abs_path.stat()
                 except OSError:
                     continue
-                yield FileRef(path=abs_path, rel_path=rel, size=size)
+                # Only regular files: opening a FIFO (which a repository can
+                # contain) blocks forever, and device nodes are never source.
+                if not stat.S_ISREG(st.st_mode):
+                    continue
+                yield FileRef(path=abs_path, rel_path=rel, size=st.st_size)
 
     def files(self) -> tuple[FileRef, ...]:
         """All project files, materialized and cached on first access."""
@@ -194,8 +235,7 @@ class Project:
         """Return files whose relative path matches any glob pattern."""
         out: list[FileRef] = []
         for f in self.files():
-            if any(fnmatch.fnmatch(f.rel_path, p) or fnmatch.fnmatch(f.name, p)
-                   for p in patterns):
+            if any(fnmatch.fnmatch(f.rel_path, p) or fnmatch.fnmatch(f.name, p) for p in patterns):
                 out.append(f)
         return out
 
@@ -213,8 +253,7 @@ class Project:
             "origin": self.origin,
             "origin_url": self.origin_url,
             "file_count": len(self.files()),
-            "languages": dict(sorted(self.languages.items(),
-                                     key=lambda kv: kv[1], reverse=True)),
+            "languages": dict(sorted(self.languages.items(), key=lambda kv: kv[1], reverse=True)),
             "frameworks": self.frameworks,
             "architecture": self.architecture,
         }

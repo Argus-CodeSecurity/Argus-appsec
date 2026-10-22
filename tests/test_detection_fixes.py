@@ -38,24 +38,18 @@ def _run_patterns(tmp_path: Path, rel_path: str, content: str):
 
 
 def test_os_system_constant_command_not_flagged(tmp_path):
-    findings = _run_patterns(
-        tmp_path, "a.py",
-        'os.system("df -h")\n'
-        'os.system("find . -name x")\n'
-    )
+    findings = _run_patterns(tmp_path, "a.py", 'os.system("df -h")\nos.system("find . -name x")\n')
     assert not [f for f in findings if f.rule_id == "patterns.python-os-system"]
 
 
 def test_os_system_dynamic_command_still_flagged(tmp_path):
     findings = _run_patterns(
-        tmp_path, "a.py",
-        'os.system("ls " + user)\n'
-        'os.system(f"rm {path}")\n'
-        'os.system("cmd %s" % arg)\n'
+        tmp_path,
+        "a.py",
+        'os.system("ls " + user)\nos.system(f"rm {path}")\nos.system("cmd %s" % arg)\n',
     )
     lines = sorted(
-        f.location.start_line for f in findings
-        if f.rule_id == "patterns.python-os-system"
+        f.location.start_line for f in findings if f.rule_id == "patterns.python-os-system"
     )
     assert lines == [1, 2, 3]
 

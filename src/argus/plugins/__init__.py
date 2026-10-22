@@ -1,8 +1,8 @@
-"""Built-in plugin registration and signing helpers."""
+"""Built-in plugin registration and plugin trust (allowlist) helpers."""
 
 from __future__ import annotations
 
-from argus.plugins.signing import plugin_allowed, verify_plugin_entry
+from argus.plugins.signing import entry_point_allowed, plugin_allowed, verify_plugin_entry
 
 
 def register_builtins() -> None:
@@ -24,4 +24,4 @@ def register_builtins() -> None:
     )
 
 
-__all__ = ["register_builtins", "plugin_allowed", "verify_plugin_entry"]
+__all__ = ["register_builtins", "entry_point_allowed", "plugin_allowed", "verify_plugin_entry"]
