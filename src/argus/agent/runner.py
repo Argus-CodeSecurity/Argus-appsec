@@ -24,18 +24,28 @@ class AgentCycleSummary:
     exit_code: int = 0
 
 
+def target_config(target: AgentTarget) -> Config:
+    """The scan config for a target: agent-declared only, never the target's own.
+
+    A monitored directory is untrusted: anyone who can write to it could
+    otherwise drop an .argus.yml or .argus/rules there to switch scanners
+    off or allowlist their own changes. Only the agent config, and a config
+    file it names explicitly for the target, apply.
+    """
+    cfg = Config.load(path=target.config) if target.config else Config()
+    # Set explicitly rather than relying on the Config default.
+    cfg.trust_project_config = False
+    if target.scanners:
+        cfg.scanners = list(target.scanners)
+    return cfg
+
+
 def _scan_target(target: AgentTarget, host_label: str | None) -> tuple[Callable[[], ScanResult], Callable[[], None]]:
     resolved = resolve(target.path)
     if resolved.project is None:
         raise RuntimeError(f"Agent target is not a scannable path or repo: {target.path}")
 
-    cfg = Config.load(
-        path=target.config,
-        project_root=resolved.project.root if resolved.project.origin == "local" else None,
-    )
-    cfg.trust_project_config = resolved.project.origin == "local"
-    if target.scanners:
-        cfg.scanners = target.scanners
+    cfg = target_config(target)
 
     def scan() -> ScanResult:
         proj = resolved.project
