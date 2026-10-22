@@ -15,6 +15,9 @@ Kept deliberately small, every field maps to something a user actually tunes.
 
 from __future__ import annotations
 
+import os
+import shutil
+import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -250,11 +253,14 @@ def load_project_config(
     explicit_config: str | Path | None = None,
     *,
     trust_remote: bool = False,
+    config_from_ref: str | None = None,
 ) -> Config:
     """Load the configuration for scanning ``project``, with one trust decision.
 
     Every command goes through this so the rules are the same everywhere:
 
+    * With ``config_from_ref`` the config is read from that git ref and the
+      working tree is untrusted (see :func:`load_config_from_ref`).
     * An explicit ``--config`` file is always honored (the user chose it).
     * The project's own ``.argus.yml`` and its in-repo extension points
       (``.argus/rules``, ``.argus/exceptions.yml``, inline ``argus-ignore``
@@ -263,10 +269,115 @@ def load_project_config(
       cloned repository is attacker-controlled: its config could exclude
       every path, drop scanners, or allowlist its own findings.
     """
+    if config_from_ref:
+        if trust_remote:
+            raise ConfigError(
+                "--config-from-ref and --trust-remote-config cannot be combined: "
+                "reading config from a ref means the checked-out tree is untrusted"
+            )
+        return load_config_from_ref(project.root, config_from_ref, explicit_config)
     trusted = project.origin == "local" or trust_remote
     cfg = Config.load(
         path=explicit_config,
         project_root=project.root if trusted else None,
     )
     cfg.trust_project_config = trusted
+    return cfg
+
+
+_GIT_TIMEOUT = 30
+
+
+def _git(root: Path, *args: str) -> subprocess.CompletedProcess[str]:
+    if shutil.which("git") is None:
+        raise ConfigError("--config-from-ref needs git, which was not found on PATH")
+    env = {**os.environ, "GIT_TERMINAL_PROMPT": "0"}
+    try:
+        return subprocess.run(
+            ["git", "-C", str(root), *args],
+            capture_output=True, text=True, timeout=_GIT_TIMEOUT, env=env,
+            encoding="utf-8", errors="replace", check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        raise ConfigError(f"git {args[0]} failed: {exc}") from exc
+
+
+def _validate_ref(ref: str) -> str:
+    ref = ref.strip()
+    # A leading "-" would be parsed by git as an option; ":" would let the
+    # value pick a different path than the config file; whitespace and
+    # control characters are never part of a valid ref.
+    if (not ref or ref.startswith("-") or ":" in ref
+            or any(ch.isspace() or ord(ch) < 32 for ch in ref)):
+        raise ConfigError(f"invalid git ref for --config-from-ref: {ref!r}")
+    return ref
+
+
+def load_config_from_ref(
+    project_root: str | Path,
+    ref: str,
+    explicit_config: str | Path | None = None,
+) -> Config:
+    """Read the config from a git ref, and mark the working tree untrusted.
+
+    Meant for CI on pull requests: the checked-out tree is the contributor's
+    code, so its ``.argus.yml`` must not decide how it is checked. Reading
+    the file from the base branch (``origin/main``) keeps the gate under the
+    maintainers' control. ``explicit_config``, if given, names the file to
+    read at that ref (resolved against the current directory, and it must be
+    inside the repository); otherwise ``.argus.yml`` / ``.argus.yaml`` next to
+    the scanned directory are used, and a ref without either gives defaults.
+
+    The returned config always has ``trust_project_config=False``, so the
+    tree's ``.argus/rules``, ``.argus/exceptions.yml`` and inline
+    ``argus-ignore`` comments are ignored too. Any problem (unknown ref, git
+    missing, named file absent at the ref) is a :class:`ConfigError`.
+    """
+    root = Path(project_root)
+    ref = _validate_ref(ref)
+    proc = _git(root, "rev-parse", "--verify", "--quiet", f"{ref}^{{commit}}")
+    commit = proc.stdout.strip()
+    if proc.returncode != 0 or not commit:
+        raise ConfigError(
+            f"--config-from-ref: cannot resolve {ref!r} to a commit in {root} "
+            "(fetch it first, e.g. `git fetch origin main`)"
+        )
+
+    candidates: list[str]
+    if explicit_config:
+        top = _git(root, "rev-parse", "--show-toplevel")
+        if top.returncode != 0:
+            raise ConfigError(f"--config-from-ref: {root} is not inside a git repository")
+        toplevel = Path(top.stdout.strip()).resolve()
+        wanted = Path(explicit_config).resolve()
+        try:
+            rel = wanted.relative_to(toplevel).as_posix()
+        except ValueError as exc:
+            raise ConfigError(
+                f"--config {explicit_config} is outside the repository, so it "
+                "cannot be read from a git ref"
+            ) from exc
+        candidates = [rel]
+    else:
+        # "./name" is resolved by git relative to the -C directory, so the
+        # lookup matches discovery in the scanned directory.
+        candidates = [f"./{name}" for name in CONFIG_FILENAMES]
+
+    for spec in candidates:
+        if _git(root, "cat-file", "-e", f"{commit}:{spec}").returncode != 0:
+            continue
+        # cat-file blob prints the stored bytes and never runs textconv or
+        # other filters configured in the repository.
+        blob = _git(root, "cat-file", "blob", f"{commit}:{spec}")
+        if blob.returncode != 0:
+            raise ConfigError(
+                f"--config-from-ref: could not read {spec} at {ref}: {blob.stderr.strip()}"
+            )
+        cfg = Config.from_yaml(blob.stdout, source=f"{ref}:{spec.removeprefix('./')}")
+        break
+    else:
+        if explicit_config:
+            raise ConfigError(f"--config: {candidates[0]} does not exist at {ref}")
+        cfg = Config()
+    cfg.trust_project_config = False
     return cfg

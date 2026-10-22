@@ -79,6 +79,15 @@ app = typer.Typer(
 console = Console()
 err_console = Console(stderr=True)
 
+_CONFIG_FROM_REF_HELP = (
+    "Read .argus.yml (or the --config path, which must be inside the repository) "
+    "from this git ref instead of the working tree, and treat the checked-out "
+    "tree as untrusted: its .argus/rules, .argus/exceptions.yml and inline "
+    "argus-ignore comments are not honored. Use it in CI on pull requests with "
+    "the base branch (e.g. origin/main) so a PR cannot change the settings it is "
+    "checked against. The ref must exist locally; an unknown ref is an error."
+)
+
 
 def _version_callback(value: bool) -> None:
     if value:
@@ -195,6 +204,9 @@ def scan(
         help="Load .argus.yml from a cloned remote repo (off by default; a scanned "
              "repo is untrusted and could suppress its own findings).",
     ),
+    config_from_ref: str | None = typer.Option(
+        None, "--config-from-ref", metavar="REF", help=_CONFIG_FROM_REF_HELP,
+    ),
     live_target: str | None = typer.Option(
         None, "--live-target",
         help="Also run safe, read-only runtime posture checks against this URL "
@@ -281,6 +293,7 @@ def scan(
             config=config,
             project=project,
             trust_remote=trust_remote_config,
+            config_from_ref=config_from_ref,
             scanners=scanners,
             profile=profile_name,
             exclude=exclude, ai_provider=ai_provider, ai_model=ai_model, no_ai=no_ai,
@@ -1051,6 +1064,9 @@ def baseline_create(
     target: str = typer.Argument(".", help="Local path or git URL to scan."),
     output: Path = typer.Option(..., "--output", "-o", help="Write baseline JSON here."),
     config: Path | None = typer.Option(None, "--config", "-c"),
+    config_from_ref: str | None = typer.Option(
+        None, "--config-from-ref", metavar="REF", help=_CONFIG_FROM_REF_HELP,
+    ),
     quiet: bool = typer.Option(False, "--quiet", "-q"),
 ) -> None:
     """Scan a target and save the result as a baseline for diff-aware CI gating."""
@@ -1066,7 +1082,8 @@ def baseline_create(
         err_console.print("[red]Error:[/red] baseline create requires a source path or repo.")
         raise typer.Exit(2)
     try:
-        cfg = load_project_config(resolved.project, config)
+        cfg = load_project_config(resolved.project, config,
+                                  config_from_ref=config_from_ref)
         progress = None if quiet else (lambda m: err_console.print(f"[dim]· {escape(m)}[/dim]"))
         result = ScanEngine(cfg, progress=progress).scan(resolved.project)
         output.write_text(result.model_dump_json(indent=2) + "\n", encoding="utf-8")
@@ -1111,6 +1128,9 @@ def policy_check(
     config: Path | None = typer.Option(
         None, "--config", "-c", help="Path to an .argus.yml with policies:."
     ),
+    config_from_ref: str | None = typer.Option(
+        None, "--config-from-ref", metavar="REF", help=_CONFIG_FROM_REF_HELP,
+    ),
     report: Path | None = typer.Option(
         None, "--report", "-r",
         help="Evaluate policies against an existing Argus JSON report instead of scanning.",
@@ -1131,7 +1151,11 @@ def policy_check(
         except (OSError, ValueError) as exc:
             err_console.print(f"[red]Error:[/red] invalid report: {exc}")
             raise typer.Exit(2) from exc
-        cfg = Config.load(path=config)
+        if config_from_ref:
+            from argus.core.config import load_config_from_ref
+            cfg = load_config_from_ref(Path.cwd(), config_from_ref, config)
+        else:
+            cfg = Config.load(path=config)
     else:
         try:
             resolved = resolve(target)
@@ -1142,7 +1166,8 @@ def policy_check(
             err_console.print("[red]Error:[/red] policy check requires a source repository.")
             raise typer.Exit(2)
         try:
-            cfg = load_project_config(resolved.project, config)
+            cfg = load_project_config(resolved.project, config,
+                                      config_from_ref=config_from_ref)
             cfg.ai.enabled = False
             if scanners_opt:
                 cfg.scanners = [s.strip() for s in scanners_opt.split(",") if s.strip()]
@@ -1441,6 +1466,9 @@ def review(
     config: Path | None = typer.Option(
         None, "--config", "-c", help="Path to an .argus.yml config file."
     ),
+    config_from_ref: str | None = typer.Option(
+        None, "--config-from-ref", metavar="REF", help=_CONFIG_FROM_REF_HELP,
+    ),
     min_severity: str | None = typer.Option(
         None, "--min-severity", help="Only review findings at/above this severity."
     ),
@@ -1511,7 +1539,7 @@ def review(
     )
 
     try:
-        cfg = load_project_config(project, config)
+        cfg = load_project_config(project, config, config_from_ref=config_from_ref)
         cfg.ai.enabled = False  # a PR gate should be fast and deterministic
         if scanners_opt:
             cfg.scanners = [s.strip() for s in scanners_opt.split(",") if s.strip()]
@@ -1796,12 +1824,13 @@ def _focused_scan(
         resolved.cleanup()
 
 
-def _build_config(*, config, project, trust_remote=False, scanners, profile=None, exclude,
-                  ai_provider, ai_model, no_ai, attack_sim, patches, min_severity, fail_on,
-                  fail_on_error: bool | None = None,
+def _build_config(*, config, project, trust_remote=False, config_from_ref=None, scanners,
+                  profile=None, exclude, ai_provider, ai_model, no_ai, attack_sim, patches,
+                  min_severity, fail_on, fail_on_error: bool | None = None,
                   reachability=False, symbol_reachability=False, no_cache=False,
                   verify_secrets=False, secrets_history=False, diff_ref: str | None = None) -> Config:
-    cfg = load_project_config(project, config, trust_remote=trust_remote)
+    cfg = load_project_config(project, config, trust_remote=trust_remote,
+                              config_from_ref=config_from_ref)
     if profile:
         from argus.profiles import PROFILES, apply_profile
         key = profile.strip().lower()
