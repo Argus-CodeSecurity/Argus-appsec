@@ -83,7 +83,7 @@ class MarkdownReporter(Reporter):
             f"### {index}. [{label}] {md_text(f.title)}",
             "",
             f"- **Severity:** {f.severity.label} "
-            f"(risk {f.risk_score()}/100) · **Confidence:** {f.confidence.label} · "
+            f"(risk {f.risk_score()}/100), **Confidence:** {f.confidence.label}, "
             f"**Likelihood:** {f.likelihood.label}",
             f"- **Location:** {md_code(f.location.as_ref())}",
             f"- **Scanner/Rule:** {md_code(f.scanner)} / {md_code(f.rule_id)}",

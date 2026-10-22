@@ -36,7 +36,7 @@ def inventory(
         if not quiet:
             c = payload["counts"]
             err_console.print(
-                f"[dim]· {c['files']} files, {c['dependencies']} dependencies, "
+                f"[dim]- {c['files']} files, {c['dependencies']} dependencies, "
                 f"{c['ci_cd_files']} CI/CD, {c['container_files']} container, "
                 f"{c['iac_files']} IaC[/dim]"
             )

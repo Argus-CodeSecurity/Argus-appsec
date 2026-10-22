@@ -56,7 +56,7 @@ def progress_printer(quiet: bool) -> Callable[[str], None] | None:
     """The engine progress callback: dim lines on stderr, or None when quiet."""
     if quiet:
         return None
-    return lambda msg: err_console.print(f"[dim]· {escape(msg)}[/dim]")
+    return lambda msg: err_console.print(f"[dim]- {escape(msg)}[/dim]")
 
 
 def resolve_target(target: str, *, branch: str | None = None) -> ResolvedTarget:
@@ -125,7 +125,7 @@ def apply_baseline(result: ScanResult, baseline: Path, *, quiet: bool) -> None:
     result.findings, suppressed = filter_new(result.findings, known)
     if not quiet:
         err_console.print(
-            f"[dim]· Baseline: {suppressed} known finding(s) suppressed, "
+            f"[dim]- Baseline: {suppressed} known finding(s) suppressed, "
             f"{len(result.findings)} new.[/dim]"
         )
 
@@ -145,13 +145,13 @@ def apply_diff(result: ScanResult, root: Path, ref_spec: str, *, quiet: bool) ->
         return
     if scope.empty:
         if not quiet:
-            err_console.print("[dim]· Diff: no changed files in range.[/dim]")
+            err_console.print("[dim]- Diff: no changed files in range.[/dim]")
         result.findings = []
         return
     result.findings, suppressed = filter_findings(result.findings, scope)
     if not quiet:
         err_console.print(
-            f"[dim]· Diff ({ref_spec}): {suppressed} finding(s) outside changed "
+            f"[dim]- Diff ({ref_spec}): {suppressed} finding(s) outside changed "
             f"lines/files suppressed, {len(result.findings)} in scope.[/dim]"
         )
 

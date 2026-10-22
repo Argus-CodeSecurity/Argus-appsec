@@ -172,7 +172,7 @@ def scan(
     if resolved.web is not None:
         if not quiet:
             err_console.print(
-                "[dim]· Running read-only posture checks (not full DAST). "
+                "[dim]- Running read-only posture checks (not full DAST). "
                 "Only assess systems you are authorized to test.[/dim]"
             )
         result = posture_result(resolved.web.url, quiet=quiet)
@@ -205,7 +205,7 @@ def scan(
     # user explicitly opts in. An explicit --config path is always respected.
     if project.origin != "local" and not trust_remote_config and not quiet:
         err_console.print(
-            "[dim]· Ignoring any .argus.yml inside the remote repo "
+            "[dim]- Ignoring any .argus.yml inside the remote repo "
             "(use --trust-remote-config to honor it).[/dim]"
         )
 
@@ -250,7 +250,7 @@ def scan(
         if live_target:
             if not quiet:
                 err_console.print(
-                    f"[dim]· Posture checks against {escape(live_target)} "
+                    f"[dim]- Posture checks against {escape(live_target)} "
                     "(read-only; authorized use only)[/dim]"
                 )
             result.project_summary["live_target"] = live_target

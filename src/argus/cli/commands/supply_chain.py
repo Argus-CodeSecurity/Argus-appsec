@@ -318,7 +318,7 @@ def supply_chain_cmd(
             except ValueError as exc:
                 if not quiet:
                     err_console.print(
-                        f"[dim]· Dependency changes skipped: {escape(str(exc))}[/dim]"
+                        f"[dim]- Dependency changes skipped: {escape(str(exc))}[/dim]"
                     )
 
         result = ScanEngine(cfg, progress=progress_printer(quiet)).scan(project)

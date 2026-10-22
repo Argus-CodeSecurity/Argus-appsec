@@ -135,7 +135,7 @@ def render_posture_panel(summary: PostureSummary) -> str:
         "",
     ]
     for b in summary.bullets:
-        lines.append(f"  [dim]·[/dim] {b}")
+        lines.append(f"  [dim]-[/dim] {b}")
     if summary.gate_label:
         lines.append("")
         lines.append(

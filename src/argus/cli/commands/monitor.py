@@ -106,7 +106,7 @@ def watch(
             return
         counts = outcome.scan.counts_by_severity()
         err_console.print(
-            f"[dim]· watch {outcome.snapshot_path.name}: "
+            f"[dim]- watch {outcome.snapshot_path.name}: "
             f"{len(outcome.scan.findings)} findings "
             f"({counts.get('critical', 0)} critical)[/dim]"
         )
@@ -177,7 +177,7 @@ def agent(
 
     if not quiet:
         err_console.print(
-            f"[dim]· agent monitoring {len(cfg.targets)} target(s) "
+            f"[dim]- agent monitoring {len(cfg.targets)} target(s) "
             f"every {cfg.interval}s (host: {cfg.host_label})[/dim]"
         )
 
@@ -189,7 +189,7 @@ def agent(
         if quiet:
             return
         err_console.print(
-            f"[dim]· agent cycle: {summary.targets_scanned} targets, "
+            f"[dim]- agent cycle: {summary.targets_scanned} targets, "
             f"{summary.total_findings} findings[/dim]"
         )
 
@@ -219,7 +219,7 @@ def server_scan(
 
     if not quiet:
         err_console.print(
-            "[dim]· Read-only host checks on this machine. "
+            "[dim]- Read-only host checks on this machine. "
             "Only run on systems you are authorized to assess.[/dim]"
         )
     result = assess_host(label=label)

@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Scan · {{ project.name if project }} · Argus Dashboard{% endblock %}
+{% block title %}Scan | {{ project.name if project }} | Argus Dashboard{% endblock %}
 {% block content %}
 
 <nav class="crumbs">
@@ -11,7 +11,7 @@
 <section class="scan-hero">
   <div class="hero-risk">
     <div class="hero-value risk-{{ risk_band(scan.risk_score)|lower }}">{{ scan.risk_score }}</div>
-    <div class="hero-label">Aggregate risk / 100 · {{ risk_band(scan.risk_score) }}</div>
+    <div class="hero-label">Aggregate risk / 100 | {{ risk_band(scan.risk_score) }}</div>
   </div>
   <div class="hero-meta">
     <div class="bar-track" role="img" aria-label="Severity breakdown">
@@ -35,9 +35,9 @@
 {% set langs = scan.project_summary.get('languages', {}) %}
 {% if langs %}
 <p class="muted small facts">
-  {{ scan.total_findings }} findings ·
+  {{ scan.total_findings }} findings |
   {{ langs.keys()|list|join(', ') }}
-  {% if scan.project_summary.get('frameworks') %} · {{ scan.project_summary.frameworks|join(', ') }}{% endif %}
+  {% if scan.project_summary.get('frameworks') %} | {{ scan.project_summary.frameworks|join(', ') }}{% endif %}
 </p>
 {% endif %}
 

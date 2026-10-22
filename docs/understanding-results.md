@@ -45,7 +45,7 @@ After every scan you see a box like this:
 ╭──────────────────────────── Argus scan ────────────────────────────╮
 │ my-app                                                             │
 │ Aggregate risk: 44.9/100   Findings: 26                            │
-│ Critical: 0 · High: 0 · Medium: 26 · Low: 0 · Info: 0            │
+│ Critical: 0 | High: 0 | Medium: 26 | Low: 0 | Info: 0            │
 ╰────────────────────────────────────────────────────────────────────╯
 ```
 
@@ -145,7 +145,7 @@ argus scan . --profile standard --fail-on high
 echo $?   # 0 = pass for today
 ```
 
-Also check the severity line: **Critical: 0 · High: 0**.
+Also check the severity line: **Critical: 0 | High: 0**.
 
 Re-render for different readers:
 
@@ -295,7 +295,7 @@ Use this after every release candidate:
 
 ```
 Aggregate risk: 44.9/100   Findings: 26
-Critical: 0 · High: 0 · Medium: 26
+Critical: 0 | High: 0 | Medium: 26
 Exit: 0
 ```
 
@@ -306,7 +306,7 @@ are hygiene: fix when convenient, not release blockers unless you gate on Medium
 
 ```
 Aggregate risk: 99.7/100   Findings: 47
-Critical: 1 · High: 18
+Critical: 1 | High: 18
 Failing: findings at/above High.
 Exit: 1
 ```

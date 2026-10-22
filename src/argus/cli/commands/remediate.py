@@ -100,7 +100,7 @@ def fix(
             only_rules = auto_apply_rules(cfg)
             if not quiet:
                 err_console.print(
-                    f"[dim]· Auto mode: {len(only_rules)} auto-tier rule(s) eligible "
+                    f"[dim]- Auto mode: {len(only_rules)} auto-tier rule(s) eligible "
                     f"({', '.join(sorted(only_rules)) or 'none'}).[/dim]"
                 )
         branch_name = branch or ("argus/auto-fixes" if auto else "argus/security-fixes")

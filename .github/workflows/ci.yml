@@ -40,7 +40,7 @@ jobs:
         run: mypy src/argus
 
   test:
-    name: Test (${{ matrix.os }} · Python ${{ matrix.python-version }})
+    name: Test (${{ matrix.os }}, Python ${{ matrix.python-version }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false

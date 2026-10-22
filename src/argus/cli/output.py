@@ -119,7 +119,7 @@ def print_table(result: ScanResult) -> None:
     findings = result.sorted_findings()
     counts = result.counts_by_severity()
 
-    summary = " · ".join(f"{label}: {n}" for label, n in counts.items())
+    summary = " | ".join(f"{label}: {n}" for label, n in counts.items())
     console.print(
         Panel(
             f"[bold]{result.project_summary.get('name', result.target)}[/bold]\n"
@@ -204,7 +204,7 @@ def print_fix_outcome(outcome: FixOutcome, *, open_pr: bool, dry_run: bool) -> N
         console.print("[yellow]No deterministic fixes were applicable to these findings.[/yellow]")
 
     for msg in outcome.messages:
-        console.print(f"[dim]· {escape(msg)}[/dim]")
+        console.print(f"[dim]- {escape(msg)}[/dim]")
 
     if outcome.pull_request:
         console.print(
