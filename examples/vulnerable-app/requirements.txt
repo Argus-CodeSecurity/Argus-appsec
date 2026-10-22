@@ -1,4 +1,4 @@
 # Intentionally outdated, vulnerable pins for the dependency scanner demo.
 flask==2.0.1
-requests==2.25.0
+requests==2.33.0
 pyyaml==5.3.1
