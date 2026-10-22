@@ -54,6 +54,12 @@ cache: true
 # Run scanners concurrently. Reports are deterministic either way.
 parallel: true
 
+# Record fixes and suppressions (allowlist entries, exceptions, inline
+# argus-ignore comments, baselines) in the hash-chained .argus/audit.log.
+# Trusted local projects only. ARGUS_AUDIT_LOG=off also turns it off.
+# See docs/audit-log.md.
+audit_log: true
+
 ai:
   # heuristic (offline, default) | anthropic | openai | ollama (local)
   provider: heuristic
@@ -243,13 +249,18 @@ often a pull request from someone outside your team. Its configuration could
 otherwise exclude every path, switch scanners off, or allowlist its own
 findings.
 
-| Situation | `.argus.yml`, `.argus/rules`, `.argus/exceptions.yml`, `argus-ignore` comments |
+| Situation | `.argus.yml`, `.argus/rules`, `.argus/exceptions.yml`, `.argus/context.yml`, `argus-ignore` comments |
 |---|---|
 | Local path (`argus scan .`) | Honoured |
 | Cloned remote (`argus scan https://...`) | Ignored unless `--trust-remote-config` |
-| `--config-from-ref REF` | Config read from that git ref; the checked-out tree is untrusted |
+| `--config-from-ref REF` | `.argus.yml` and `.argus/context.yml` read from that git ref; the checked-out tree is untrusted, so its rules, exceptions and comments are ignored |
 | `--config PATH` | That file is always honoured (you chose it) |
 | `argus agent`, `argus mcp` | The monitored or scanned directory is never trusted |
+
+`.argus/context.yml` declares sanitizers and trusted sources that switch
+checks off, so it follows the same rule as `.argus.yml`; see
+[Project context](context.md#trust-rules). The audit log is written only
+when the project is trusted and local.
 
 For pull requests, use `--config-from-ref origin/<base-branch>` so the gate uses
 the configuration already merged on the base branch. The GitHub Action does
