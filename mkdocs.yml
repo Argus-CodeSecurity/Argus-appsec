@@ -62,6 +62,8 @@ nav:
       - Scanners & coverage: scanners.md
       - Configuration: configuration.md
       - Triage & baselines: triage.md
+      - Project context: context.md
+      - Audit log: audit-log.md
   - Using in your pipeline:
       - CI/CD integration: ci-cd.md
       - Importing SARIF: importing.md
