@@ -48,7 +48,7 @@ ai:
   model: ""             # provider-specific; empty uses the provider default
   enabled: true         # false disables all AI enrichment
   temperature: 0.0
-  max_tokens: 1500
+  max_tokens: 4096
 
 # Per-scanner options, keyed by scanner name.
 scanner_options:

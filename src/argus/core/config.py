@@ -106,7 +106,7 @@ class AIConfig:
     model: str | None = None          # provider-specific; None uses the provider default
     enabled: bool = True              # if False, findings are not AI-enriched
     temperature: float = 0.0
-    max_tokens: int = 1500
+    max_tokens: int = 4096
     # With a real model, only this many findings (highest risk first) are sent
     # to it; the rest get offline heuristic reasoning. Bounds cost and runtime
     # (up to three model calls per finding). Not applied to the heuristic
@@ -146,6 +146,10 @@ class Config:
     # decision that gates the in-repo .argus.yml (local targets are trusted,
     # cloned remotes only with --trust-remote-config).
     trust_project_config: bool = False
+    # Live target for dynamic checks, set only from operator input
+    # (--live-target). Config files never populate it, so a scanned repository
+    # cannot point the scanner at an internal address.
+    dast_url: str | None = None
 
     ai: AIConfig = field(default_factory=AIConfig)
 

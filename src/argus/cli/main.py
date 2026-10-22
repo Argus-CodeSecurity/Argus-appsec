@@ -308,7 +308,7 @@ def scan(
         )
 
         if live_target:
-            cfg.scanner_options.setdefault("dast", {})["url"] = live_target
+            cfg.dast_url = live_target
 
         progress = None if quiet else (lambda msg: err_console.print(f"[dim]· {escape(msg)}[/dim]"))
         engine = ScanEngine(cfg, progress=progress)
@@ -1020,6 +1020,11 @@ def watch(
             fail_on_drift=drift_floor,
             push_fn=maybe_push if push else None,
             on_cycle=on_cycle,
+            # The loop keeps running after a failed cycle; say so rather than
+            # going quiet, so a broken scan or push is visible to the operator.
+            on_error=lambda exc: err_console.print(
+                f"[red]watch cycle failed, retrying next interval:[/red] {escape(str(exc))}"
+            ),
         )
     except PushError as exc:
         err_console.print(f"[red]Push failed:[/red] {exc}")
@@ -1069,6 +1074,10 @@ def agent(
         )
 
     def on_cycle(summary) -> None:
+        # Step failures are always shown: they mean part of the host went
+        # unmonitored this cycle.
+        for error in summary.errors:
+            err_console.print(f"[red]agent step failed:[/red] {escape(error)}")
         if quiet:
             return
         err_console.print(
@@ -1282,6 +1291,11 @@ def fix(
         None, "--min-severity", help="Only consider findings at/above this severity."
     ),
     quiet: bool = typer.Option(False, "--quiet", "-q", help="Suppress progress output."),
+    no_verify: bool = typer.Option(
+        False, "--no-verify",
+        help="Skip the repository's git commit hooks when committing fixes "
+             "(hooks run by default).",
+    ),
 ) -> None:
     """Scan a repo, apply Argus's deterministic fixes on a branch, and open a PR.
 
@@ -1330,6 +1344,7 @@ def fix(
             branch=branch_name, base=base, open_pr=open_pr or annotate_pr,
             include_unverified=include_unverified, dry_run=dry_run,
             force_branch=force_branch, annotate=annotate_pr, only_rules=only_rules,
+            no_verify=no_verify,
         )
         outcome = run_fix_workflow(project, result.findings, options)
         _print_fix_outcome(outcome, open_pr=open_pr or annotate_pr, dry_run=dry_run)
@@ -1683,14 +1698,27 @@ def dashboard(
     Requires the dashboard extra: pip install "argus-appsec[dashboard]".
     """
     try:
-        from argus.dashboard.app import serve
+        from argus.dashboard.app import DashboardConfigError, configure, serve
     except ImportError as exc:
         err_console.print(
             "[red]The dashboard needs extra dependencies.[/red] Install them with:\n"
             '  pip install "argus-appsec[dashboard]"'
         )
         raise typer.Exit(1) from exc
+    # Validate the bind before announcing a URL: a non-loopback host without a
+    # token is refused, and the user should see why rather than a dead link.
+    try:
+        settings = configure(host)
+    except DashboardConfigError as exc:
+        err_console.print(f"[red]Error:[/red] {escape(str(exc))}")
+        raise typer.Exit(2) from exc
     console.print(f"Argus dashboard on [bold]http://{host}:{port}[/bold]  (Ctrl+C to stop)")
+    if settings.token:
+        console.print(
+            "Token authentication is on. Open the dashboard with "
+            f"[bold]http://{host}:{port}/?token=<ARGUS_DASHBOARD_TOKEN>[/bold] "
+            "or send it as a bearer token."
+        )
     serve(host=host, port=port)
 
 
@@ -2167,7 +2195,7 @@ ai:
   model: ""
   enabled: true
   temperature: 0.0
-  max_tokens: 1500
+  max_tokens: 4096
 
 # Per-scanner options.
 scanner_options:

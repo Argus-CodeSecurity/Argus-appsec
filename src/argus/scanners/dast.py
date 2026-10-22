@@ -1,8 +1,9 @@
 """Authorized DAST-lite: safe dynamic checks (spec §22).
 
 The target URL must come from the operator: ``--live-target`` (which the CLI
-places in ``scanner_options.dast.url``), an explicit config file outside the
-scanned project, or the ``ARGUS_DAST_URL`` environment variable. A URL declared
+places in ``Config.dast_url``, a field config files cannot set), an explicit
+config file outside the scanned project, or the ``ARGUS_DAST_URL`` environment
+variable. A URL declared
 in the scanned project's own ``.argus.yml`` is ignored: in CI that file comes
 from whoever opened the pull request, and honoring it would let a fork point
 the runner at cloud metadata or other internal services.
@@ -68,6 +69,8 @@ def operator_target(ctx: ScannerContext) -> str | None:
     env = os.environ.get(ENV_URL, "").strip()
     if env:
         return env
+    if ctx.config.dast_url:
+        return ctx.config.dast_url.strip()
     url = ctx.config.options_for("dast").get("url")
     if not url:
         return None

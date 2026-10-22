@@ -55,7 +55,7 @@ class AIProvider(abc.ABC):
     default_model: ClassVar[str] = ""
 
     def __init__(self, model: str | None = None, *, temperature: float = 0.0,
-                 max_tokens: int = 1500) -> None:
+                 max_tokens: int = 4096) -> None:
         # Precedence: explicit (config `ai.model` / --ai-model), then the
         # ARGUS_AI_MODEL environment variable, then the provider default.
         self.model = model or os.environ.get("ARGUS_AI_MODEL") or self.default_model
