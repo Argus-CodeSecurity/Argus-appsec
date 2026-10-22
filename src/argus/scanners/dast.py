@@ -1,27 +1,84 @@
-"""Authorized DAST-lite: safe dynamic checks (spec §22)."""
+"""Authorized DAST-lite: safe dynamic checks (spec §22).
+
+The target URL must come from the operator: ``--live-target`` (which the CLI
+places in ``scanner_options.dast.url``), an explicit config file outside the
+scanned project, or the ``ARGUS_DAST_URL`` environment variable. A URL declared
+in the scanned project's own ``.argus.yml`` is ignored: in CI that file comes
+from whoever opened the pull request, and honoring it would let a fork point
+the runner at cloud metadata or other internal services.
+"""
 
 from __future__ import annotations
 
+import logging
+import os
 import re
 from collections.abc import Iterable
+from pathlib import Path
 from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
 
-import httpx
+import yaml
 
+from argus.core.config import CONFIG_FILENAMES
 from argus.core.models import Confidence, Finding, Likelihood, Location, Remediation, Severity
 from argus.core.plugin import Scanner, ScannerContext, scanner
-from argus.dynamic.posture import probe
+from argus.dynamic.posture import FetchResult, guarded_get, probe
+
+log = logging.getLogger("argus.scanners.dast")
 
 _PROBE = "argus-dast-probe-7x3k"
 _REFLECTED = re.compile(re.escape(_PROBE))
+_UA = {"User-Agent": "Argus-DAST/1.0 (authorized)"}
+_MAX_BODY = 1_000_000
+ENV_URL = "ARGUS_DAST_URL"
 
 
-def _safe_get(url: str, timeout: float = 8.0) -> httpx.Response | None:
-    try:
-        with httpx.Client(timeout=timeout, follow_redirects=True, verify=True) as client:
-            return client.get(url, headers={"User-Agent": "Argus-DAST/1.0 (authorized)"})
-    except httpx.HTTPError:
+def _safe_get(url: str, timeout: float = 8.0) -> FetchResult | None:
+    # Redirects are walked with SSRF checks, the peer address is verified after
+    # connect, and the body is capped; see argus.dynamic.posture.GuardedSession.
+    return guarded_get(url, timeout=timeout, max_bytes=_MAX_BODY, headers=_UA)
+
+
+def _project_declared_urls(root: Path) -> set[str]:
+    """DAST URLs declared in the scanned project's own config files."""
+    urls: set[str] = set()
+    for name in CONFIG_FILENAMES:
+        path = root / name
+        try:
+            if not path.is_file():
+                continue
+            data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+        except (OSError, yaml.YAMLError, UnicodeDecodeError):
+            continue
+        opts = data.get("scanner_options") if isinstance(data, dict) else None
+        dast = opts.get("dast") if isinstance(opts, dict) else None
+        url = dast.get("url") if isinstance(dast, dict) else None
+        if url:
+            urls.add(str(url).strip())
+    return urls
+
+
+def operator_target(ctx: ScannerContext) -> str | None:
+    """The DAST URL the operator asked for, or None.
+
+    ``ARGUS_DAST_URL`` wins. Otherwise ``scanner_options.dast.url`` is used
+    unless the same value is declared in the scanned project's config, which
+    means it came from the repository rather than from the operator.
+    """
+    env = os.environ.get(ENV_URL, "").strip()
+    if env:
+        return env
+    url = ctx.config.options_for("dast").get("url")
+    if not url:
         return None
+    url = str(url).strip()
+    if url in _project_declared_urls(ctx.project.root):
+        log.warning(
+            "Ignoring the DAST URL from the scanned project's .argus.yml; "
+            "pass --live-target or set %s to choose a target.", ENV_URL,
+        )
+        return None
+    return url
 
 
 @scanner
@@ -30,15 +87,14 @@ class DastScanner(Scanner):
     category = "dynamic"
     description = (
         "Authorized dynamic checks: posture, reflected input, and safe header tests. "
-        "Configure with scanner_options.dast.url or --live-target."
+        "Set the target with --live-target or ARGUS_DAST_URL."
     )
 
     def applies_to(self, project) -> bool:
         return True
 
     def scan(self, ctx: ScannerContext) -> Iterable[Finding]:
-        opts = ctx.config.options_for("dast")
-        url = opts.get("url")
+        url = operator_target(ctx)
         if not url:
             return
 
