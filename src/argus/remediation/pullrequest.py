@@ -15,10 +15,11 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from argus.audit import AUDIT_PATH
 from argus.core.models import Finding
 from argus.core.project import Project
 from argus.remediation import git_ops
-from argus.remediation.applier import APPLIED_KEY, ApplyReport, apply_fixes
+from argus.remediation.applier import APPLIED_KEY, ApplyReport, apply_fixes, record_fix_events
 from argus.remediation.hosting import (
     HostingError,
     PullRequest,
@@ -96,8 +97,10 @@ def run_fix_workflow(project: Project, findings: list[Finding], options: FixOpti
     # Safety: refuse to operate on a dirty working tree. `argus fix` creates a
     # branch and commits; on a dirty tree that would sweep the developer's own
     # uncommitted work into the fix commit (and, with --open-pr, into a public
-    # pull request). Require a clean tree so the fixes land isolated.
-    if git_ops.has_uncommitted_changes(root):
+    # pull request). Require a clean tree so the fixes land isolated. The audit
+    # log is the one exception: the scan that produced these findings may have
+    # just appended to it, and it is committed together with the fixes.
+    if _has_changes_besides_audit_log(root):
         return FixOutcome(
             applied=ApplyReport(),
             error=(
@@ -137,6 +140,7 @@ def run_fix_workflow(project: Project, findings: list[Finding], options: FixOpti
     if original == "HEAD":
         original = head_sha or base
     existed = git_ops.branch_exists(root, options.branch)
+    audit_snapshot = _snapshot_audit_log(root)
 
     # Create (or, with --force-branch, reset) the working branch at base.
     try:
@@ -175,8 +179,16 @@ def run_fix_workflow(project: Project, findings: list[Finding], options: FixOpti
             return outcome
 
         # Commit. Stage only the files Argus rewrote, never `git add -A`, so
-        # nothing outside the fix set can be swept into the commit.
-        git_ops.stage_paths(root, report.changed_files)
+        # nothing outside the fix set can be swept into the commit. The audit
+        # log goes in the same commit, so the record of each fix travels with
+        # it, unless the project ignores .argus/ in git.
+        to_stage = list(report.changed_files)
+        audit_state = _audit_log_state(root)
+        if audit_state == "committable":
+            to_stage.append(AUDIT_PATH)
+        elif audit_state == "ignored":
+            outcome.note(f"{AUDIT_PATH} is ignored by git, so it was not committed.")
+        git_ops.stage_paths(root, to_stage)
         message = _commit_message(report)
         outcome.commit_sha = git_ops.commit(root, message, no_verify=options.no_verify)
         outcome.committed = True
@@ -190,7 +202,14 @@ def run_fix_workflow(project: Project, findings: list[Finding], options: FixOpti
             if finding.metadata.get("verification") == "fixed":
                 finding.metadata.pop("verification")
         _rollback(root, original, options.branch, delete=not existed, outcome=outcome, discard=True)
+        # The fixes never landed, so neither do their fix.applied records: put
+        # the log back exactly as it was before this run (reset --hard does
+        # not touch an untracked log, and discards an uncommitted one).
+        _restore_audit_log(root, audit_snapshot)
         return outcome
+
+    if outcome.applied.audit_warning:
+        outcome.note(f"Audit log: {outcome.applied.audit_warning}")
 
     if not options.open_pr:
         outcome.note(
@@ -235,6 +254,18 @@ def _push_and_open_pr(
         )
         outcome.pull_request = pr
         outcome.note(f"Opened pull request: {pr.url}")
+        # Appended after the push, so this record is in the working tree of
+        # the fix branch, not in the pull request itself.
+        record_fix_events(
+            root,
+            "fix.pr_opened",
+            report.fixes,
+            branch=options.branch,
+            base=base,
+            commit=outcome.commit_sha,
+            pr_url=redact_credentials(pr.url or ""),
+            pr_number=pr.number,
+        )
     except HostingError as exc:
         outcome.error = str(exc)
         return
@@ -251,6 +282,69 @@ def _push_and_open_pr(
             outcome.note(f"Posted {len(comments)} inline annotation(s) on the pull request.")
         except HostingError as exc:  # annotation failure must not fail the whole run
             outcome.note(f"Could not post inline annotations: {exc}")
+
+
+def _has_changes_besides_audit_log(root: Path) -> bool:
+    """Like ``git_ops.has_uncommitted_changes``, ignoring ``.argus/audit.log``."""
+    # ":/" is the whole working tree (not just root, which may be a
+    # subdirectory); the exclude pathspec is relative to root.
+    # Untracked files are listed one by one so that a new, untracked log is
+    # excluded too (by default git would report the whole ".argus/" folder).
+    proc = git_ops._run(
+        root,
+        "status",
+        "--porcelain",
+        "--untracked-files=all",
+        "--",
+        ":/",
+        f":(exclude){AUDIT_PATH}",
+        check=False,
+    )
+    if proc.returncode != 0:  # be conservative: an unknown state counts as dirty
+        return git_ops.has_uncommitted_changes(root)
+    return bool(proc.stdout.strip())
+
+
+@dataclass
+class _AuditSnapshot:
+    folder_existed: bool
+    content: bytes | None  # None: the log did not exist
+
+
+def _snapshot_audit_log(root: Path) -> _AuditSnapshot:
+    log = root / AUDIT_PATH
+    try:
+        content = log.read_bytes() if log.is_file() and not log.is_symlink() else None
+    except OSError:
+        content = None
+    return _AuditSnapshot(folder_existed=log.parent.is_dir(), content=content)
+
+
+def _restore_audit_log(root: Path, snapshot: _AuditSnapshot) -> None:
+    """Undo this run's appends to the audit log after a failed fix (best effort)."""
+    log = root / AUDIT_PATH
+    try:
+        if log.is_symlink():
+            return
+        if snapshot.content is None:
+            log.unlink(missing_ok=True)
+            if not snapshot.folder_existed and log.parent.is_dir():
+                log.parent.rmdir()  # only succeeds if this run created it empty
+        elif not log.is_file() or log.read_bytes() != snapshot.content:
+            log.write_bytes(snapshot.content)
+    except OSError:
+        pass
+
+
+def _audit_log_state(root: Path) -> str:
+    """``absent``, ``ignored`` (by .gitignore) or ``committable``."""
+    if not (root / AUDIT_PATH).is_file():
+        return "absent"
+    proc = git_ops._run(root, "check-ignore", "-q", "--", AUDIT_PATH, check=False)
+    # check-ignore exits 1 when the path is not ignored (0: ignored, 128:
+    # error). Only a clear "not ignored" stages it: a failed `git add` would
+    # roll the whole fix back.
+    return "committable" if proc.returncode == 1 else "ignored"
 
 
 def _rollback(

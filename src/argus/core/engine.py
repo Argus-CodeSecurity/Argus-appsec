@@ -8,9 +8,17 @@ Pipeline:
    patch generation) according to config.
 4. **Assemble**, filter by severity, sort, and package into a ``ScanResult``.
 
-The engine returns a ``ScanResult`` and never modifies the target; its only
-write is to Argus's own cache directory (disable with ``--no-cache``).
-Reporting and PR creation are separate steps.
+The engine returns a ``ScanResult`` and never modifies scanned source. It
+writes to Argus's own cache directory (disable with ``--no-cache``) and, for a
+trusted local project where a suppression hid or accepted a finding, appends
+those events once each to ``.argus/audit.log`` (disable with
+``audit_log: false`` or ``ARGUS_AUDIT_LOG=off``). Reporting and PR creation
+are separate steps.
+
+Project context (``.argus/context.yml``) reaches the scanners through
+``config.context``; the AST taint tiers use its sanitizers and trusted
+sources, and the engine applies its path settings after de-duplication. See
+:mod:`argus.context`.
 
 Performance: scanners run concurrently (they are independent by design), and
 file-local scanners cache findings per file content hash so warm scans only
@@ -23,11 +31,12 @@ from __future__ import annotations
 
 import dataclasses
 import fnmatch
+import logging
 import re
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from datetime import date, datetime, timezone
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from argus import __version__
 from argus.agents import (
@@ -45,9 +54,19 @@ from argus.core.project import Project
 
 if TYPE_CHECKING:
     from argus.ai.base import AIProvider
+    from argus.audit import AuditEvent
+    from argus.context import ProjectContext
 
 # A callback the CLI uses to render progress. No-op by default.
 ProgressFn = Callable[[str], None]
+
+log = logging.getLogger("argus.engine")
+
+# Scanners that consume the project context's sanitizers and trusted sources,
+# and the context language each one reads. Their scan-cache key includes that
+# part of the context, so editing context.yml re-analyzes the affected files.
+_CONTEXT_LANGUAGE = {"ast-python": "python", "ast-js": "javascript"}
+_CONTEXT_CLEARED_KEY = "context_cleared"
 
 
 class ScanEngine:
@@ -79,7 +98,13 @@ class ScanEngine:
         scanners, failed, select_errors = self._select_scanners(project)
         result.scanners_run = [s.name for s in scanners]
         result.errors.extend(select_errors)
-        scan_ctx = ScannerContext(project=project, config=self.config, ai=ai)
+        context = self._resolve_context(project)
+        scan_config = self.config
+        if context is not self.config.context:
+            # The engine's own view of the config; the caller's object is not
+            # changed (the same reason the Project is copied).
+            scan_config = dataclasses.replace(self.config, context=context)
+        scan_ctx = ScannerContext(project=project, config=scan_config, ai=ai)
         cache = self._open_cache(project)
         project.files()  # materialize the file walk once before threads share it
 
@@ -114,6 +139,43 @@ class ScanEngine:
             result.scanners_run = [n for n in result.scanners_run if n not in failed]
         if cache is not None:
             cache.save()
+        return self._finish(result, project, ai, context)
+
+    def postprocess(
+        self, result: ScanResult, project: Project, *, ai: AIProvider | None = None
+    ) -> ScanResult:
+        """Run the post-scan pipeline on findings that came from elsewhere.
+
+        For findings produced outside :meth:`scan` (for example imported from
+        another tool's SARIF), apply exactly what a scan applies after its
+        scanners ran, in the same order: inline ``argus-ignore`` comments and
+        exceptions (trusted projects only), the allowlist, AST preference and
+        de-duplication, project context (``internal_paths``, ``exposure``,
+        ``data_classification``), attack chains, the ``min_severity`` filter,
+        enrichment, risk scoring, and the audit log's suppression events.
+        ``result.findings`` is replaced and the same ``result`` is returned.
+        ``ai`` defaults to the configured provider when enrichment is on.
+        """
+        if ai is None:
+            ai = build_provider(self.config.ai)
+        return self._finish(result, project, ai, self._resolve_context(project))
+
+    def _finish(
+        self,
+        result: ScanResult,
+        project: Project,
+        ai: AIProvider,
+        context: ProjectContext | None,
+    ) -> ScanResult:
+        """Everything after the scanners ran; shared by scan() and postprocess()."""
+        audit_events: list[AuditEvent] = []
+
+        # Flows a context sanitizer or trusted source cleared come back from the
+        # taint tiers as placeholders; they leave the findings here and are
+        # listed in the summary so the effect of context.yml stays reviewable.
+        cleared = [f for f in result.findings if _CONTEXT_CLEARED_KEY in f.metadata]
+        if cleared:
+            result.findings = [f for f in result.findings if _CONTEXT_CLEARED_KEY not in f.metadata]
 
         # 3. Prefer AST over regex where the AST tier is authoritative, de-duplicate
         # across scanners, filter, then enrich. Filtering first means agents (and any
@@ -124,10 +186,24 @@ class ScanEngine:
         # otherwise a hostile repository could suppress its own findings.
         trusted = self.config.trust_project_config
         if trusted:
-            result.findings = self._apply_inline_suppressions(result.findings, project)
-        result.findings = self._apply_allowlist(result.findings, self.config)
+            result.findings = self._apply_inline_suppressions(
+                result.findings, project, events=audit_events
+            )
+        result.findings = self._apply_allowlist(result.findings, self.config, events=audit_events)
         result.findings = self._prefer_ast(result.findings, result.scanners_run)
         result.findings = self._dedupe(result.findings)
+        # Path-based context (internal paths, exposure, data classification)
+        # adjusts severity/likelihood and records why on each finding.
+        from argus.context import apply_context
+
+        context_counts = apply_context(result.findings, context)
+        if context is not None and (not context.is_empty() or cleared):
+            result.project_summary["context"] = {
+                "source": context.source or ".argus/context.yml",
+                "digest": context.digest(),
+                **context_counts,
+                "cleared": [f.metadata[_CONTEXT_CLEARED_KEY] for f in cleared],
+            }
         # Correlate the surviving findings into higher-impact attack chains, then
         # apply the severity filter to findings and chains together.
         from argus.analysis.attack_chains import find_chains
@@ -149,14 +225,18 @@ class ScanEngine:
         result.project_summary["security_graph"] = build_security_graph(result)
         if trusted:
             excs = load_exceptions(default_exceptions_path(project.root))
+            before = list(result.findings)
             result.findings, suppressed = apply_exceptions(result.findings, excs)
             if suppressed:
                 result.project_summary["exceptions_applied"] = suppressed
+            audit_events.extend(self._exception_events(excs, before))
         result.project_summary["metrics"] = ScanMetrics(
             scanners_run=result.scanners_run,
             findings_total=len(result.findings),
             duration_ms=timer.elapsed_ms(),
         ).to_dict()
+
+        self._write_audit(project, audit_events, result)
 
         # 4. Assemble
         result.findings = result.sorted_findings()
@@ -193,7 +273,14 @@ class ScanEngine:
         """
         from argus.core.cache import file_key, scanner_key
 
-        skey = scanner_key(scanner.name, self.config.options_for(scanner.name))
+        options = dict(self.config.options_for(scanner.name))
+        language = _CONTEXT_LANGUAGE.get(scanner.name)
+        context = getattr(ctx.config, "context", None)
+        if language and context is not None:
+            digest = context.language_digest(language)
+            if digest:
+                options["__context__"] = digest
+        skey = scanner_key(scanner.name, options)
         files = ctx.project.files()
         keys = {f.rel_path: file_key(f.rel_path, f.text()) for f in files}
 
@@ -346,7 +433,91 @@ class ScanEngine:
                 patcher.process(finding, ctx)
 
     def _filter(self, findings: list[Finding]) -> list[Finding]:
-        return [f for f in findings if f.severity >= self.config.min_severity]
+        """Apply ``min_severity``, judged on the severity before any context downgrade.
+
+        A finding the context file lowered (``internal_paths``) is never hidden
+        by that: it stays in the report at its lowered severity.
+        """
+        from argus.context.apply import original_severity
+
+        floor = self.config.min_severity
+        return [f for f in findings if max(f.severity, original_severity(f)) >= floor]
+
+    # --- project context and audit ------------------------------------------
+    def _resolve_context(self, project: Project) -> ProjectContext | None:
+        """The project context for this scan.
+
+        ``load_project_config`` sets ``config.context`` under the trust rule
+        (trusted tree, or the ``--config-from-ref`` ref). A config built some
+        other way carries None; the context file is then read from the tree
+        only when the project config is trusted, like ``.argus/exceptions.yml``.
+        """
+        if self.config.context is not None:
+            return self.config.context
+        if not self.config.trust_project_config:
+            return None
+        from argus.context import load_context
+
+        return load_context(project.root)
+
+    def _audit_allowed(self, project: Project) -> bool:
+        from argus.audit import audit_enabled
+
+        return (
+            audit_enabled(self.config)
+            and self.config.trust_project_config
+            and project.origin == "local"
+        )
+
+    def _write_audit(self, project: Project, events: list[AuditEvent], result: ScanResult) -> None:
+        """Append suppression events; trouble is a warning, never a failed scan."""
+        if not events or not self._audit_allowed(project):
+            return
+        from argus.audit import AUDIT_PATH, append_events
+
+        outcome = append_events(project.root, events)
+        summary: dict[str, Any] = {
+            "path": AUDIT_PATH,
+            "recorded": outcome.written,
+            "already_recorded": outcome.duplicates,
+        }
+        if outcome.warning:
+            summary["warning"] = outcome.warning
+            log.warning("%s", outcome.warning)
+            self._progress(f"Warning: {outcome.warning}")
+        result.project_summary["audit"] = summary
+
+    @staticmethod
+    def _exception_events(excs: list, before: list[Finding]) -> list[AuditEvent]:
+        """Audit events for ``.argus/exceptions.yml``: each entry, and each match."""
+        from argus.audit import suppression_added, suppression_matched
+
+        events: list[AuditEvent] = []
+        for ex in excs:
+            events.append(
+                suppression_added(
+                    "exception",
+                    f"fingerprint {ex.fingerprint}",
+                    ex.reason,
+                    status=ex.status,
+                    owner=ex.owner,
+                    expires_at=str(ex.expires_at) if ex.expires_at else None,
+                )
+            )
+        for f in before:
+            meta = f.metadata.get("exception")
+            if not isinstance(meta, dict):
+                continue
+            events.append(
+                suppression_matched(
+                    "exception",
+                    f,
+                    str(meta.get("reason", "")),
+                    status=meta.get("status"),
+                    owner=meta.get("owner"),
+                )
+            )
+        return events
 
     # Inline suppression comment, e.g.
     #   subprocess.run(cmd, shell=True)  # argus-ignore: python-shell-true reason="trusted"
@@ -371,8 +542,18 @@ class ScanEngine:
         )
 
     @classmethod
-    def _apply_inline_suppressions(cls, findings: list[Finding], project: Project) -> list[Finding]:
-        """Drop findings whose source line carries a matching argus-ignore comment."""
+    def _apply_inline_suppressions(
+        cls,
+        findings: list[Finding],
+        project: Project,
+        *,
+        events: list[AuditEvent] | None = None,
+    ) -> list[Finding]:
+        """Drop findings whose source line carries a matching argus-ignore comment.
+
+        When ``events`` is given, each suppression is added to it as audit
+        events (the comment, and the finding it hid).
+        """
         needed = {f.location.path for f in findings if f.location.start_line is not None}
         lines_by_path: dict[str, list[str]] = {
             fref.rel_path: fref.lines() for fref in project.files() if fref.rel_path in needed
@@ -403,16 +584,44 @@ class ScanEngine:
                 kept.append(finding)
                 continue
             # otherwise: suppressed, drop it
+            if events is not None:
+                from argus.audit import suppression_added, suppression_matched
+
+                reason = m.group("reason")
+                path = finding.location.path
+                events.append(
+                    suppression_added(
+                        "inline",
+                        f"argus-ignore{':' + rule if rule else ''} in {path}",
+                        reason,
+                        rule=rule,
+                        path=path,
+                        until=until,
+                    )
+                )
+                events.append(
+                    suppression_matched(
+                        "inline", finding, reason, selector=rule or "*", until=until
+                    )
+                )
         return kept
 
     @classmethod
-    def _apply_allowlist(cls, findings: list[Finding], config: Config) -> list[Finding]:
+    def _apply_allowlist(
+        cls,
+        findings: list[Finding],
+        config: Config,
+        *,
+        events: list[AuditEvent] | None = None,
+    ) -> list[Finding]:
         """Drop findings matched by a committed allowlist entry (config ``allow:``).
 
         Each entry is {rule?, path?, reason (required), until? (YYYY-MM-DD)}. A
         `reason` is required so acceptance is documented; an entry with neither a
         rule nor a path is rejected (it would suppress everything); an expired
-        `until` no longer suppresses, so the finding resurfaces.
+        `until` no longer suppresses, so the finding resurfaces. When
+        ``events`` is given, each active entry and each finding it hides are
+        added to it as audit events.
         """
         entries = getattr(config, "allow", None)
         if not entries:
@@ -432,7 +641,34 @@ class ScanEngine:
             active.append(e)
         if not active:
             return findings
-        return [f for f in findings if not any(cls._allow_matches(f, e) for e in active)]
+        if events is None:
+            return [f for f in findings if not any(cls._allow_matches(f, e) for e in active)]
+        from argus.audit import suppression_added, suppression_matched
+
+        def selector(entry: dict) -> str:
+            parts = [f"{k}={entry[k]}" for k in ("rule", "path", "until") if entry.get(k)]
+            return "allow " + " ".join(parts)
+
+        for e in active:
+            events.append(
+                suppression_added(
+                    "allowlist",
+                    selector(e),
+                    str(e["reason"]),
+                    rule=str(e["rule"]) if e.get("rule") else None,
+                    path=str(e["path"]) if e.get("path") else None,
+                )
+            )
+        kept: list[Finding] = []
+        for f in findings:
+            match = next((e for e in active if cls._allow_matches(f, e)), None)
+            if match is None:
+                kept.append(f)
+                continue
+            events.append(
+                suppression_matched("allowlist", f, str(match["reason"]), selector=selector(match))
+            )
+        return kept
 
     @classmethod
     def _allow_matches(cls, finding: Finding, entry: dict) -> bool:

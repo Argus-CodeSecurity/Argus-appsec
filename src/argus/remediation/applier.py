@@ -44,6 +44,9 @@ class AppliedFix:
     after: str
     finding_id: str
     verified: bool
+    # The finding's fingerprint, taken before the fix (it is keyed on the
+    # offending code); used by the audit log.
+    fingerprint: str = ""
 
     def unified_diff(self) -> str:
         return "".join(
@@ -63,6 +66,10 @@ class ApplyReport:
     changed_files: list[str] = field(default_factory=list)
     skipped: list[str] = field(default_factory=list)  # human-readable reasons
     dry_run: bool = False
+    # Records appended to .argus/audit.log for these fixes, and any warning
+    # (an unwritable log never fails a fix).
+    audit_records: int = 0
+    audit_warning: str | None = None
 
     @property
     def any_changes(self) -> bool:
@@ -80,12 +87,17 @@ def apply_fixes(
     include_unverified: bool = False,
     dry_run: bool = False,
     only_rules: set[str] | None = None,
+    audit: bool = True,
 ) -> ApplyReport:
     """Apply deterministic fixes for the given findings to the project's files.
 
     When ``only_rules`` is given, only findings whose ``rule_id`` is in that set
     are fixed (used by ``argus fix --auto`` to apply just the auto-tier rules);
     others are left untouched.
+
+    Each fix written to disk is recorded as a ``fix.applied`` event in
+    ``.argus/audit.log`` unless ``audit`` is False or the log is switched off
+    (``ARGUS_AUDIT_LOG=off``). Dry runs record nothing.
     """
     report = ApplyReport(dry_run=dry_run)
 
@@ -170,6 +182,7 @@ def apply_fixes(
                     after=fixed,
                     finding_id=finding.id,
                     verified=verified,
+                    fingerprint=finding.fingerprint(),
                 )
             )
             fixed_findings.append(finding)
@@ -200,7 +213,44 @@ def apply_fixes(
                 finding.metadata[APPLIED_KEY] = True
                 finding.metadata["verification"] = "fixed"
 
+    if audit and not dry_run and report.fixes:
+        record_fix_events(project.root, "fix.applied", report.fixes, report)
     return report
+
+
+def record_fix_events(
+    root: Path,
+    action: str,
+    fixes: list[AppliedFix],
+    report: ApplyReport | None = None,
+    **details: object,
+) -> None:
+    """Append one audit record per fix. Never raises; a problem becomes a warning.
+
+    Only the rule, location, fingerprint and verification state are recorded,
+    never the changed source lines, which may contain the very secret a fix
+    removed.
+    """
+    from argus.audit import AuditEvent, append_events, audit_enabled
+
+    if not audit_enabled():
+        return
+    events = [
+        AuditEvent(
+            action=action,
+            fingerprint=fix.fingerprint or None,
+            rule=fix.rule_id,
+            path=fix.path,
+            reason=("verified" if fix.verified else "unverified") + " deterministic fix",
+            details={"line": fix.line, "verified": fix.verified, **details},
+        )
+        for fix in fixes
+    ]
+    outcome = append_events(root, events)
+    if report is not None:
+        report.audit_records += outcome.written
+        if outcome.warning:
+            report.audit_warning = outcome.warning
 
 
 def _syntax_error(rel_path: str, text: str) -> str | None:

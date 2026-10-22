@@ -185,4 +185,5 @@ def test_fix_workflow_stages_only_changed_files(tmp_path: Path):
         capture_output=True,
         text=True,
     ).stdout.split()
-    assert committed == ["a.py"]  # unrelated.py is never swept in
+    # unrelated.py is never swept in; the audit log of the fix is committed with it
+    assert [p for p in committed if p != ".argus/audit.log"] == ["a.py"]

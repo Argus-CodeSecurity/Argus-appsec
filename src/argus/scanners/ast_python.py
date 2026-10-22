@@ -25,7 +25,7 @@ import re
 from collections.abc import Iterable
 from dataclasses import dataclass, field
 from functools import lru_cache
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from argus.core.models import (
     Confidence,
@@ -36,6 +36,9 @@ from argus.core.models import (
     Severity,
 )
 from argus.core.plugin import Scanner, ScannerContext, scanner
+
+if TYPE_CHECKING:
+    from argus.context import LanguageContext
 
 log = logging.getLogger("argus.scanners.ast")
 
@@ -119,6 +122,72 @@ def _load_parser():
 
 def is_available() -> bool:
     return _load_parser() is not None
+
+
+#: Finding.metadata key on a placeholder finding for a flow that the project
+#: context (a declared sanitizer or trusted source) cleared. The engine removes
+#: these from the findings and lists them in the scan summary, so what the
+#: context file suppressed stays reviewable.
+CONTEXT_CLEARED_KEY = "context_cleared"
+
+
+def language_context(ctx: ScannerContext, language: str) -> LanguageContext | None:
+    """The trusted project context for ``language``, if the config carries one."""
+    project_context = getattr(ctx.config, "context", None)
+    if project_context is None:
+        return None
+    lc: LanguageContext | None = project_context.for_language(language)
+    return lc
+
+
+def marker(name: str, cwe: str) -> str:
+    """Scope-set entry meaning "``name`` is sanitized for ``cwe``".
+
+    The NUL byte cannot occur in an identifier, so markers never collide with
+    the variable names stored in the same set.
+    """
+    return f"{name}\0{cwe}"
+
+
+def run_with_context(
+    make: Any,
+    root: Any,
+    text: str,
+    context: LanguageContext | None,
+    *,
+    scanner_name: str,
+    source: str,
+) -> list[Finding]:
+    """Run an analyzer with ``context`` and report what the context cleared.
+
+    ``make(context)`` builds a fresh analyzer. Without a context (or when no
+    configured name occurs in the file) this is a single plain run. Otherwise
+    the file is analyzed twice, without and with the context, and each finding
+    that only the plain run produced comes back as an INFO placeholder carrying
+    :data:`CONTEXT_CLEARED_KEY`, naming the context entries seen in the file.
+    """
+    if context is None or not context.relevant(text):
+        return list(make(None).run(root))
+    with_ctx = list(make(context).run(root))
+    kept = {(f.rule_id, f.location.start_line) for f in with_ctx}
+    names = context.matched_names(text)
+    for f in make(None).run(root):
+        if (f.rule_id, f.location.start_line) in kept:
+            continue
+        f.severity = Severity.INFO
+        f.tags.append("context-cleared")
+        f.metadata[CONTEXT_CLEARED_KEY] = {
+            "source": source,
+            "scanner": scanner_name,
+            "rule": f.rule_id,
+            "path": f.location.path,
+            "line": f.location.start_line,
+            "why": "a sanitizer or trusted source declared in the project context "
+            "removes the taint on this flow",
+            "entries": names,
+        }
+        with_ctx.append(f)
+    return with_ctx
 
 
 # Untrusted-input sources: an expression mentioning one of these is tainted.
@@ -240,6 +309,8 @@ class ASTPythonScanner(Scanner):
         parser = _load_parser()
         if parser is None:
             return
+        context = language_context(ctx, "python")
+        source = getattr(getattr(ctx.config, "context", None), "source", "") or ""
         for f in ctx.project.files():
             if f.language != "Python" or f.is_probably_binary():
                 continue
@@ -248,10 +319,19 @@ class ASTPythonScanner(Scanner):
                 continue
             # One hostile or unparseable file must never sink the whole scanner:
             # analyze each file in isolation and note the ones that fail.
+            in_test = _is_test_file(f.rel_path)
             try:
                 tree = parser.parse(src)
-                analyzer = _Analyzer(src, f.rel_path, _is_test_file(f.rel_path))
-                findings = list(analyzer.run(tree.root_node))
+                findings = run_with_context(
+                    lambda c, src=src, path=f.rel_path, in_test=in_test: _Analyzer(
+                        src, path, in_test, context=c
+                    ),
+                    tree.root_node,
+                    f.text(),
+                    context,
+                    scanner_name=self.name,
+                    source=source,
+                )
             except Exception as exc:
                 yield analysis_skipped_finding(self.name, f.rel_path, exc)
                 continue
@@ -261,12 +341,23 @@ class ASTPythonScanner(Scanner):
 class _Analyzer:
     """Intra-file, per-function-scope taint walk over a Python AST."""
 
-    def __init__(self, src: bytes, path: str, in_test: bool) -> None:
+    def __init__(
+        self,
+        src: bytes,
+        path: str,
+        in_test: bool,
+        *,
+        context: LanguageContext | None = None,
+    ) -> None:
         self._src = src
         self._path = path
         self._in_test = in_test
         self._seen: set[tuple[str, int]] = set()  # (sink_id, line) de-dup within file
         self._lines: list[str] | None = None
+        # Project context (trusted config only): extra sanitizers, some valid
+        # only for particular CWEs, and sources that are not attacker-controlled.
+        self._ctx = context
+        self._ctx_cwes: tuple[str, ...] = tuple(sorted(context.cwes)) if context else ()
 
     def run(self, root) -> Iterable[Finding]:
         yield from self._walk(root, set())
@@ -324,18 +415,43 @@ class _Analyzer:
             return
         names = self._target_names(left)
         if self._tainted(right, tainted):
-            tainted.update(names)
+            # CWEs for which the new value is clean (a CWE-specific sanitizer
+            # from the project context), computed before the scope changes.
+            clean_for = {
+                c for c in self._ctx_cwes if not self._tainted(right, tainted, frozenset((c,)))
+            }
+            for name in names:
+                keep = clean_for
+                if augmented and name in tainted:
+                    # x += y: x stays partially sanitized only where both were.
+                    keep = {c for c in clean_for if marker(name, c) in tainted}
+                tainted.difference_update(marker(name, c) for c in self._ctx_cwes)
+                tainted.add(name)
+                tainted.update(marker(name, c) for c in keep)
         elif not augmented:
             tainted.difference_update(names)  # reassigned to a clean value
+            for name in names:
+                tainted.difference_update(marker(name, c) for c in self._ctx_cwes)
 
-    def _tainted(self, node, tainted: set[str]) -> bool:
-        if node.type == "call" and self._is_sanitizer(node):
+    def _ident_tainted(self, name: str, tainted: set[str], cwes: frozenset[str] | None) -> bool:
+        if name not in tainted:
+            return False
+        return not (cwes and any(marker(name, c) in tainted for c in cwes))
+
+    def _source(self, text: str) -> bool:
+        if self._ctx is not None:
+            text = self._ctx.mask_trusted(text)
+        return bool(_SOURCE_RE.search(text))
+
+    def _tainted(self, node, tainted: set[str], cwes: frozenset[str] | None = None) -> bool:
+        """Whether ``node`` carries taint into a sink of ``cwes`` (None: any sink)."""
+        if node.type == "call" and self._is_sanitizer(node, cwes):
             return False
         text = self._text(node)
-        if _SOURCE_RE.search(text):
+        if self._source(text):
             return True
         if node.type == "identifier":
-            return text in tainted
+            return self._ident_tainted(text, tainted, cwes)
         # The source pattern was just checked against the whole subtree's text,
         # and a descendant's text is a token-aligned slice of it, so below this
         # point only tainted identifiers can still match. Checking just those
@@ -344,9 +460,9 @@ class _Analyzer:
         stack = list(node.children)
         while stack:
             child = stack.pop()
-            if child.type == "call" and self._is_sanitizer(child):
+            if child.type == "call" and self._is_sanitizer(child, cwes):
                 continue
-            if child.type == "identifier" and self._text(child) in tainted:
+            if child.type == "identifier" and self._ident_tainted(self._text(child), tainted, cwes):
                 return True
             stack.extend(child.children)
         return False
@@ -367,7 +483,8 @@ class _Analyzer:
         # A tainted value in a later argument is a bound parameter, i.e. the safe,
         # parameterized form `execute("... %s", (uid,))`, and must NOT be flagged.
         to_check = named[:1] if sink.id == "ast-sql-injection" else named
-        if not any(self._tainted(a, tainted) for a in to_check):
+        cwes = frozenset(sink.cwe)
+        if not any(self._tainted(a, tainted, cwes) for a in to_check):
             return None
         line = call.start_point[0] + 1
         key = (sink.id, line)
@@ -377,12 +494,14 @@ class _Analyzer:
         return self._finding(sink, line, call)
 
     # --- helpers ------------------------------------------------------------
-    def _is_sanitizer(self, call) -> bool:
+    def _is_sanitizer(self, call, cwes: frozenset[str] | None = None) -> bool:
         fn = call.child_by_field_name("function")
         if fn is None:
             return False
-        last = self._text(fn).rsplit(".", 1)[-1]
-        return last in _SANITIZERS
+        fn_text = self._text(fn)
+        if fn_text.rsplit(".", 1)[-1] in _SANITIZERS:
+            return True
+        return self._ctx is not None and self._ctx.clears(fn_text, cwes)
 
     def _target_names(self, left) -> set[str]:
         """Identifier names assigned by an LHS (handles simple and tuple targets)."""

@@ -17,6 +17,7 @@ from typer.core import TyperGroup
 from argus import __version__
 from argus.cli._console import console, err_console
 from argus.cli.commands import imports, register_commands
+from argus.cli.commands.audit import audit_app
 from argus.cli.plugins import load_plugin_commands
 from argus.core.config import ConfigError
 from argus.plugins import register_builtins
@@ -80,4 +81,5 @@ def _root(
 
 register_commands(app)
 app.command(name="import")(imports.import_cmd)
+app.add_typer(audit_app, name="audit")
 load_plugin_commands(app)

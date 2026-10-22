@@ -26,7 +26,7 @@ import re
 from collections.abc import Iterable
 from dataclasses import dataclass, field
 from functools import lru_cache
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from argus.core.models import (
     Confidence,
@@ -37,8 +37,17 @@ from argus.core.models import (
     Severity,
 )
 from argus.core.plugin import Scanner, ScannerContext, scanner
-from argus.scanners.ast_python import analysis_skipped_finding, make_parser
+from argus.scanners.ast_python import (
+    analysis_skipped_finding,
+    language_context,
+    make_parser,
+    marker,
+    run_with_context,
+)
 from argus.scanners.patterns import _is_test_file  # shared test-path helper
+
+if TYPE_CHECKING:
+    from argus.context import LanguageContext
 
 # File extension -> tree-sitter language module + factory attribute.
 _LANGS = {
@@ -207,6 +216,7 @@ CALL_SINKS: list[Sink] = [
 
 # XSS via assignment to a DOM HTML property (el.innerHTML = tainted).
 _HTML_SINK_PROPS = {"innerHTML", "outerHTML"}
+_XSS_CWES = frozenset(("CWE-79",))
 
 
 @scanner
@@ -231,6 +241,8 @@ class ASTJsScanner(Scanner):
         parsers = _load_parsers()
         if not parsers:
             return
+        context = language_context(ctx, "javascript")
+        source = getattr(getattr(ctx.config, "context", None), "source", "") or ""
         for f in ctx.project.files():
             lang = _lang_for(f.suffix)
             if lang is None or lang not in parsers or f.is_probably_binary():
@@ -240,10 +252,19 @@ class ASTJsScanner(Scanner):
                 continue
             # Per-file isolation: one hostile file is skipped and noted, it does
             # not take the findings for every other file down with it.
+            in_test = _is_test_file(f.rel_path)
             try:
                 tree = parsers[lang].parse(src)
-                analyzer = _JsAnalyzer(src, f.rel_path, _is_test_file(f.rel_path))
-                findings = list(analyzer.run(tree.root_node))
+                findings = run_with_context(
+                    lambda c, src=src, path=f.rel_path, in_test=in_test: _JsAnalyzer(
+                        src, path, in_test, context=c
+                    ),
+                    tree.root_node,
+                    f.text(),
+                    context,
+                    scanner_name=self.name,
+                    source=source,
+                )
             except Exception as exc:
                 yield analysis_skipped_finding(self.name, f.rel_path, exc)
                 continue
@@ -261,12 +282,22 @@ _FUNCTION_NODES = {
 
 
 class _JsAnalyzer:
-    def __init__(self, src: bytes, path: str, in_test: bool) -> None:
+    def __init__(
+        self,
+        src: bytes,
+        path: str,
+        in_test: bool,
+        *,
+        context: LanguageContext | None = None,
+    ) -> None:
         self._src = src
         self._path = path
         self._in_test = in_test
         self._seen: set[tuple[str, int]] = set()
         self._lines: list[str] | None = None
+        # Project context (trusted config only); see ast_python._Analyzer.
+        self._ctx = context
+        self._ctx_cwes: tuple[str, ...] = tuple(sorted(context.cwes)) if context else ()
 
     def run(self, root) -> Iterable[Finding]:
         yield from self._walk(root, set())
@@ -310,11 +341,7 @@ class _JsAnalyzer:
         value = node.child_by_field_name("value")
         if name is None or value is None or name.type != "identifier":
             return
-        ident = self._text(name)
-        if self._tainted(value, tainted):
-            tainted.add(ident)
-        else:
-            tainted.discard(ident)
+        self._assign(self._text(name), value, tainted)
 
     def _handle_assignment(self, node, tainted: set[str]) -> Finding | None:
         left = node.child_by_field_name("left")
@@ -327,35 +354,56 @@ class _JsAnalyzer:
             if (
                 prop is not None
                 and self._text(prop) in _HTML_SINK_PROPS
-                and self._tainted(right, tainted)
+                and self._tainted(right, tainted, _XSS_CWES)
             ):
                 return self._html_assignment_finding(node)
         # Taint update for a plain identifier target.
         if left.type == "identifier":
-            ident = self._text(left)
-            if self._tainted(right, tainted):
-                tainted.add(ident)
-            else:
-                tainted.discard(ident)
+            self._assign(self._text(left), right, tainted)
         return None
 
-    def _tainted(self, node, tainted: set[str]) -> bool:
-        if node.type == "call_expression" and self._is_sanitizer(node):
+    def _assign(self, ident: str, value, tainted: set[str]) -> None:
+        """Update ``ident``'s taint (and per-CWE sanitized markers) from ``value``."""
+        if self._tainted(value, tainted):
+            # Computed before the scope changes: `x = x + y` reads x's markers.
+            clean_for = [
+                c for c in self._ctx_cwes if not self._tainted(value, tainted, frozenset((c,)))
+            ]
+            tainted.difference_update(marker(ident, c) for c in self._ctx_cwes)
+            tainted.add(ident)
+            tainted.update(marker(ident, c) for c in clean_for)
+        else:
+            tainted.discard(ident)
+            tainted.difference_update(marker(ident, c) for c in self._ctx_cwes)
+
+    def _ident_tainted(self, name: str, tainted: set[str], cwes: frozenset[str] | None) -> bool:
+        if name not in tainted:
+            return False
+        return not (cwes and any(marker(name, c) in tainted for c in cwes))
+
+    def _source(self, text: str) -> bool:
+        if self._ctx is not None:
+            text = self._ctx.mask_trusted(text)
+        return bool(_SOURCE_RE.search(text))
+
+    def _tainted(self, node, tainted: set[str], cwes: frozenset[str] | None = None) -> bool:
+        """Whether ``node`` carries taint into a sink of ``cwes`` (None: any sink)."""
+        if node.type == "call_expression" and self._is_sanitizer(node, cwes):
             return False
         text = self._text(node)
-        if _SOURCE_RE.search(text):
+        if self._source(text):
             return True
         if node.type == "identifier":
-            return text in tainted
+            return self._ident_tainted(text, tainted, cwes)
         # Below the root only tainted identifiers can still match (a
         # descendant's text is a token-aligned slice of the text just checked),
         # so walk for those alone; see ast_python._Analyzer._tainted.
         stack = list(node.children)
         while stack:
             child = stack.pop()
-            if child.type == "call_expression" and self._is_sanitizer(child):
+            if child.type == "call_expression" and self._is_sanitizer(child, cwes):
                 continue
-            if child.type == "identifier" and self._text(child) in tainted:
+            if child.type == "identifier" and self._ident_tainted(self._text(child), tainted, cwes):
                 return True
             stack.extend(child.children)
         return False
@@ -387,7 +435,8 @@ class _JsAnalyzer:
             payload = payload[:1]
         elif sink.args == "rest":
             payload = payload[1:]
-        if not any(self._tainted(a, tainted) for a in payload):
+        cwes = frozenset(sink.cwe)
+        if not any(self._tainted(a, tainted, cwes) for a in payload):
             return None
         return self._finding(sink, call.start_point[0] + 1, call)
 
@@ -411,12 +460,14 @@ class _JsAnalyzer:
         return self._finding(sink, line, node)
 
     # --- helpers ------------------------------------------------------------
-    def _is_sanitizer(self, call) -> bool:
+    def _is_sanitizer(self, call, cwes: frozenset[str] | None = None) -> bool:
         fn = call.child_by_field_name("function")
         if fn is None:
             return False
-        last = self._text(fn).rsplit(".", 1)[-1]
-        return last in _SANITIZERS
+        fn_text = self._text(fn)
+        if fn_text.rsplit(".", 1)[-1] in _SANITIZERS:
+            return True
+        return self._ctx is not None and self._ctx.clears(fn_text, cwes)
 
     def _text(self, node) -> str:
         return self._src[node.start_byte : node.end_byte].decode("utf-8", "ignore")

@@ -25,6 +25,7 @@ from argus.core import gitexec
 from argus.core.models import Severity
 
 if TYPE_CHECKING:
+    from argus.context import ProjectContext
     from argus.core.project import Project
 
 CONFIG_FILENAMES = (".argus.yml", ".argus.yaml")
@@ -166,6 +167,18 @@ class Config:
     # auto set, so a team promotes rules to automatic one at a time.
     autofix: dict[str, Any] = field(default_factory=dict)
 
+    # Project context from .argus/context.yml (sanitizers, trusted sources,
+    # internal paths, exposure, data classification). Never read from
+    # .argus.yml: load_project_config() sets it under the same trust rule as
+    # the rest of the in-repo config. None means "not loaded"; the engine then
+    # loads it itself only when trust_project_config is True.
+    context: ProjectContext | None = None
+
+    # Append fix and suppression events to .argus/audit.log (trusted local
+    # projects only; the ARGUS_AUDIT_LOG=off environment variable also
+    # disables it). See docs/audit-log.md.
+    audit_log: bool = True
+
     @classmethod
     def load(cls, path: str | Path | None = None, project_root: str | Path | None = None) -> Config:
         """Load config from an explicit path or by discovery in the project root."""
@@ -225,6 +238,7 @@ class Config:
         cfg.generate_patches = _bool(data, "generate_patches", cfg.generate_patches)
         cfg.cache = _bool(data, "cache", cfg.cache)
         cfg.parallel = _bool(data, "parallel", cfg.parallel)
+        cfg.audit_log = _bool(data, "audit_log", cfg.audit_log)
         if data.get("fail_on_error") is not None:
             cfg.fail_on_error = _bool(data, "fail_on_error", False)
 
@@ -293,12 +307,19 @@ def load_project_config(
       working tree is untrusted (see :func:`load_config_from_ref`).
     * An explicit ``--config`` file is always honored (the user chose it).
     * The project's own ``.argus.yml`` and its in-repo extension points
-      (``.argus/rules``, ``.argus/exceptions.yml``, inline ``argus-ignore``
-      comments) are trusted only for local targets, or for a cloned remote
-      when the user passes ``trust_remote`` (``--trust-remote-config``). A
-      cloned repository is attacker-controlled: its config could exclude
-      every path, drop scanners, or allowlist its own findings.
+      (``.argus/rules``, ``.argus/exceptions.yml``, ``.argus/context.yml``,
+      inline ``argus-ignore`` comments) are trusted only for local targets,
+      or for a cloned remote when the user passes ``trust_remote``
+      (``--trust-remote-config``). A cloned repository is
+      attacker-controlled: its config could exclude every path, drop
+      scanners, allowlist its own findings, or declare its own sinks
+      sanitized.
+
+    The returned config always carries a ``context``: the project's when
+    trusted, the one at ``config_from_ref`` in that mode, otherwise empty.
     """
+    from argus.context import ProjectContext, load_context
+
     if config_from_ref:
         if trust_remote:
             raise ConfigError(
@@ -312,6 +333,7 @@ def load_project_config(
         project_root=project.root if trusted else None,
     )
     cfg.trust_project_config = trusted
+    cfg.context = load_context(project.root) if trusted else ProjectContext()
     return cfg
 
 
@@ -376,8 +398,11 @@ def load_config_from_ref(
 
     The returned config always has ``trust_project_config=False``, so the
     tree's ``.argus/rules``, ``.argus/exceptions.yml`` and inline
-    ``argus-ignore`` comments are ignored too. Any problem (unknown ref, git
-    missing, named file absent at the ref) is a :class:`ConfigError`.
+    ``argus-ignore`` comments are ignored too. The project context
+    (``.argus/context.yml``) is read from the same ref, next to the scanned
+    directory, so the base branch decides which sanitizers are trusted, never
+    the pull request. Any problem (unknown ref, git missing, named file
+    absent at the ref, invalid context file) is a :class:`ConfigError`.
     """
     root = Path(project_root)
     ref = _validate_ref(ref)
@@ -426,4 +451,22 @@ def load_config_from_ref(
             raise ConfigError(f"--config: {candidates[0]} does not exist at {ref}")
         cfg = Config()
     cfg.trust_project_config = False
+    cfg.context = _context_from_ref(root, commit, ref)
     return cfg
+
+
+def _context_from_ref(root: Path, commit: str, ref: str) -> ProjectContext:
+    """The ``.argus/context.yml`` stored at ``commit``, or an empty context."""
+    from argus.context import ProjectContext, parse_context
+    from argus.context.schema import context_ref_paths
+
+    for spec in context_ref_paths():
+        if _git(root, "cat-file", "-e", f"{commit}:{spec}").returncode != 0:
+            continue
+        blob = _git(root, "cat-file", "blob", f"{commit}:{spec}")
+        if blob.returncode != 0:
+            raise ConfigError(
+                f"--config-from-ref: could not read {spec} at {ref}: {blob.stderr.strip()}"
+            )
+        return parse_context(blob.stdout, source=f"{ref}:{spec.removeprefix('./')}")
+    return ProjectContext()
