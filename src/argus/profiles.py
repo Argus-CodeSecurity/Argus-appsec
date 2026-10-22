@@ -11,6 +11,11 @@ class ScanProfile:
     scanners: list[str]
     description: str
     fail_on_error: bool = False
+    # Whether the per-file findings cache may be used. Off for CI: hosted
+    # runners start empty (nothing to reuse), and on a shared self-hosted runner
+    # an earlier job, possibly running a contributor's code, could have written
+    # cache entries that mark a file as clean.
+    cache: bool = True
 
 
 # Empty scanners list means "all applicable" in ScanEngine.
@@ -45,6 +50,7 @@ PROFILES: dict[str, ScanProfile] = {
         ["secrets", "patterns", "dependencies", "cicd", "iac"],
         "Pull-request gate: new risk in code, deps, and pipeline config.",
         fail_on_error=True,
+        cache=False,
     ),
     "production": ScanProfile(
         "production",

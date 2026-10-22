@@ -1936,6 +1936,8 @@ def _build_config(*, config, project, trust_remote=False, config_from_ref=None, 
         prof = PROFILES.get(key)
         if prof and prof.fail_on_error:
             cfg.fail_on_error = True
+        if prof and not prof.cache:
+            cfg.cache = False
     if reachability or symbol_reachability:
         dep = cfg.scanner_options.setdefault("dependencies", {})
         dep["reachability"] = True
