@@ -112,3 +112,33 @@ def test_cli_keeps_all_findings_when_diff_fails(tmp_path):
                         findings=[_finding("app.py", 1), _finding("lib.py", 3)])
     _apply_diff(result, root, "origin/missing...HEAD", quiet=True)
     assert len(result.findings) == 2
+
+
+def test_non_utf8_content_in_diff_does_not_crash(tmp_path):
+    root = _repo(tmp_path)
+    (root / "latin.py").write_bytes(b"a = 1\n")
+    _git(root, "add", "-A")
+    _git(root, "commit", "-q", "-m", "init")
+    (root / "latin.py").write_bytes(b"a = 1\nb = '\xe9\xff'\n")
+    _git(root, "add", "-A")
+    _git(root, "commit", "-q", "-m", "latin-1")
+    scope = resolve_diff(root, "HEAD~1")
+    assert scope.changed_lines == {"latin.py": {2}}
+
+
+def test_refs_that_look_like_options_are_rejected(tmp_path):
+    root = _repo(tmp_path)
+    _commit(root, {"app.py": "a = 1\n"}, "init")
+    assert git_ops.rev_parse(root, "--all") is None
+    assert git_ops.show_file(root, "--output=pwned", "app.py") is None
+    assert not (root / "pwned").exists()
+    assert git_ops.show_file(root, "HEAD", "app.py") == "a = 1\n"
+
+
+def test_git_timeout_raises_git_error(tmp_path, monkeypatch):
+    def hang(*args, **kwargs):
+        raise subprocess.TimeoutExpired(cmd="git", timeout=1)
+
+    monkeypatch.setattr(git_ops.subprocess, "run", hang)
+    with pytest.raises(git_ops.GitError, match="timed out"):
+        git_ops.diff(tmp_path, "HEAD")

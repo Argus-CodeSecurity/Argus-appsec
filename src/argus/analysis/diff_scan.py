@@ -77,9 +77,7 @@ def resolve_diff(root: Path, ref_spec: str, *, head: str = "HEAD") -> DiffScope:
                 f"(e.g. `git fetch origin {ref}` or checkout with fetch-depth: 0)."
             )
     try:
-        text = git_ops.diff(
-            root, "--relative", "--unified=0", "--no-color", "--no-ext-diff", spec,
-        )
+        text = git_ops.diff(root, "--relative", "--unified=0", "--no-color", spec)
     except git_ops.GitError as exc:
         raise DiffError(str(exc)) from exc
     changed_lines = parse_changed_lines(text)

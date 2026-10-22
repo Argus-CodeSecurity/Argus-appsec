@@ -99,9 +99,11 @@ def changed_lines(root: str | Path, base: str, head: str = "HEAD") -> dict[str, 
     map if git or the refs are unavailable (caller then falls back to a
     summary-only review, which still lists every finding).
     """
+    root = Path(root)
+    if not (git_ops.verify_commit(root, base) and git_ops.verify_commit(root, head)):
+        return {}
     try:
-        text = git_ops.diff(Path(root), "--unified=0", "--no-color", "--no-ext-diff",
-                            f"{base}...{head}")
+        text = git_ops.diff(root, "--unified=0", "--no-color", f"{base}...{head}")
     except git_ops.GitError:
         return {}
     return parse_changed_lines(text)
