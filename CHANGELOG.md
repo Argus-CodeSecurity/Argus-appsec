@@ -7,6 +7,14 @@ include breaking changes, noted explicitly).
 
 ## [Unreleased]
 
+### Fixed
+- The curl-pipe-shell rule no longer fires on text that only names the
+  pattern (for example "avoid `curl | bash`" in documentation or a rule's own
+  explanation); a real download-and-execute always has an argument between
+  the command and the pipe.
+- The scan cache now includes a fingerprint of the installed Argus code, so
+  changing a rule in a source checkout no longer returns stale cached findings.
+
 ## [0.9.0] - 2026-10-22
 
 This release is a security hardening release. Argus runs on untrusted code (pull
