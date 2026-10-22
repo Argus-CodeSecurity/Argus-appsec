@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import os
+import stat
 from datetime import datetime, timedelta, timezone
 
 import pytest
@@ -54,3 +56,10 @@ def test_enforce_retention_keeps_newest_and_drops_empty_projects():
         assert store.enforce_retention(s, 2) == 0
         kept = {sc.id for sc in scans}
         assert {f.scan_id for f in s.exec(select(db.Finding)).all()} <= kept
+
+
+@pytest.mark.skipif(os.name == "nt", reason="POSIX permissions")
+def test_db_file_is_private(tmp_path):
+    path = tmp_path / "dash.db"
+    db._restrict_db_file(str(path))
+    assert stat.S_IMODE(path.stat().st_mode) == 0o600
