@@ -3,17 +3,56 @@
 from __future__ import annotations
 
 import json
+import re
 import subprocess
 from collections.abc import Iterable
 
 from argus.core.models import Confidence, Finding, Likelihood, Location, Remediation, Severity
 from argus.core.plugin import Scanner, ScannerContext, scanner
 
+# Image references read from Dockerfiles in the scanned repository (or given in
+# options). Must start with an alphanumeric character, so a value can never be
+# read by the docker CLI as an option.
+_IMAGE_REF = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._/:@-]{0,254}$")
+_MAX_IMAGES = 10
+
+
+def _from_refs(text: str) -> list[str]:
+    """Base image references named by the FROM lines of a Dockerfile.
+
+    Skips flags such as ``--platform=...``, ``scratch``, earlier build stages
+    (``FROM builder``) and references built from ARG values (``$BASE``), which
+    are not images that can be inspected as written.
+    """
+    refs: list[str] = []
+    stages: set[str] = set()
+    for line in text.splitlines():
+        parts = line.strip().split()
+        if len(parts) < 2 or parts[0].upper() != "FROM":
+            continue
+        args = [p for p in parts[1:] if not p.startswith("--")]
+        if not args:
+            continue
+        ref = args[0].strip("\"'")
+        if len(args) >= 3 and args[1].upper() == "AS":
+            stages.add(args[2].lower())
+        if ref.lower() == "scratch" or ref.lower() in stages or "$" in ref:
+            continue
+        refs.append(ref)
+    return refs
+
+
+def _is_dockerfile(name: str) -> bool:
+    return (name in ("Dockerfile", "Containerfile") or name.startswith("Dockerfile.")
+            or name.endswith(".Dockerfile"))
+
 
 def _inspect_image(ref: str) -> dict | None:
+    if not _IMAGE_REF.match(ref):
+        return None
     try:
         out = subprocess.check_output(
-            ["docker", "inspect", ref],
+            ["docker", "inspect", "--", ref],
             text=True,
             stderr=subprocess.DEVNULL,
             timeout=60,
@@ -34,22 +73,21 @@ class ContainerImageScanner(Scanner):
         return True
 
     def scan(self, ctx: ScannerContext) -> Iterable[Finding]:
-        refs = ctx.config.options_for("container-image").get("images") or []
-        if isinstance(refs, str):
-            refs = [r.strip() for r in refs.split(",") if r.strip()]
+        option = ctx.config.options_for("container-image").get("images") or []
+        if isinstance(option, str):
+            refs = [r.strip() for r in option.split(",") if r.strip()]
+        else:
+            refs = [str(r).strip() for r in option]  # copy: never mutate config
         if not refs:
+            # Every Dockerfile, not just the first one found.
             for f in ctx.project.files():
-                if f.name == "Dockerfile":
-                    for line in f.text().splitlines():
-                        if line.strip().upper().startswith("FROM "):
-                            parts = line.strip().split()
-                            if len(parts) >= 2:
-                                refs.append(parts[1].strip("\"'"))
-                    break
+                if _is_dockerfile(f.name):
+                    refs.extend(_from_refs(f.text()))
+        refs = [r for r in dict.fromkeys(refs) if _IMAGE_REF.match(r)]
         if not refs:
             return
 
-        for ref in refs[:5]:
+        for ref in refs[:_MAX_IMAGES]:
             info = _inspect_image(ref)
             if not info:
                 continue
