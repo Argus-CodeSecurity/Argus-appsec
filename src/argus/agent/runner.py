@@ -67,7 +67,9 @@ def target_config(target: AgentTarget) -> Config:
     return cfg
 
 
-def _scan_target(target: AgentTarget, host_label: str | None) -> tuple[Callable[[], ScanResult], Callable[[], None]]:
+def _scan_target(
+    target: AgentTarget, host_label: str | None
+) -> tuple[Callable[[], ScanResult], Callable[[], None]]:
     resolved = resolve(target.path)
     if resolved.project is None:
         resolved.cleanup()
@@ -102,26 +104,28 @@ def step_failure_result(step: str, exc: BaseException, host_label: str | None) -
         finished_at=now,
         scanners_run=["agent"],
         errors=[message],
-        findings=[Finding(
-            id=f"agent:step-failed:{step}",
-            rule_id="agent.step-failed",
-            scanner="agent",
-            title=f"Argus agent could not complete: {step}",
-            description=f"The agent step '{step}' failed: {message}",
-            location=Location(path=step, snippet=message[:200]),
-            severity=Severity.MEDIUM,
-            confidence=Confidence.HIGH,
-            likelihood=Likelihood.POSSIBLE,
-            why_vulnerable=(
-                "While this step fails, changes to what it monitors go unnoticed. "
-                "Repeated failures can also mean someone is interfering with monitoring."
-            ),
-            remediation=Remediation(
-                summary="Check the agent logs on the host and fix the failing step."
-            ),
-            tags=["agent", "monitoring"],
-            metadata={"verification": "detected"},
-        )],
+        findings=[
+            Finding(
+                id=f"agent:step-failed:{step}",
+                rule_id="agent.step-failed",
+                scanner="agent",
+                title=f"Argus agent could not complete: {step}",
+                description=f"The agent step '{step}' failed: {message}",
+                location=Location(path=step, snippet=message[:200]),
+                severity=Severity.MEDIUM,
+                confidence=Confidence.HIGH,
+                likelihood=Likelihood.POSSIBLE,
+                why_vulnerable=(
+                    "While this step fails, changes to what it monitors go unnoticed. "
+                    "Repeated failures can also mean someone is interfering with monitoring."
+                ),
+                remediation=Remediation(
+                    summary="Check the agent logs on the host and fix the failing step."
+                ),
+                tags=["agent", "monitoring"],
+                metadata={"verification": "detected"},
+            )
+        ],
     )
 
 
@@ -158,8 +162,12 @@ def run_agent_cycle(
         except Exception as push_exc:
             log.error("could not report the failure of %s: %s", step, push_exc)
 
-    def _run(step: str, state_key: str, scan_fn: Callable[[], ScanResult],
-             commit_fn: Callable[[], None] | None = None) -> WatchCycleResult | None:
+    def _run(
+        step: str,
+        state_key: str,
+        scan_fn: Callable[[], ScanResult],
+        commit_fn: Callable[[], None] | None = None,
+    ) -> WatchCycleResult | None:
         nonlocal worst
         try:
             outcome = run_watch_cycle(
@@ -186,7 +194,9 @@ def run_agent_cycle(
 
         def fim_scan() -> ScanResult:
             result, state = assess_integrity(
-                config.integrity_paths, state_file, host_label=config.host_label,
+                config.integrity_paths,
+                state_file,
+                host_label=config.host_label,
             )
             pending["state"] = state
             return result

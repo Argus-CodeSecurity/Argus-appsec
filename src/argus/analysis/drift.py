@@ -91,13 +91,15 @@ def compare_scans(before: ScanResult, after: ScanResult) -> ScanDriftReport:
         else:
             old = before_map[fp]
             if old.severity != f.severity:
-                report.severity_changed.append({
-                    "fingerprint": f.fingerprint(),
-                    "rule_id": f.rule_id,
-                    "location": f.location.as_ref(),
-                    "before_severity": old.severity.label,
-                    "after_severity": f.severity.label,
-                })
+                report.severity_changed.append(
+                    {
+                        "fingerprint": f.fingerprint(),
+                        "rule_id": f.rule_id,
+                        "location": f.location.as_ref(),
+                        "before_severity": old.severity.label,
+                        "after_severity": f.severity.label,
+                    }
+                )
     for fp, f in before_map.items():
         if fp not in after_map:
             report.removed.append(_finding_drift(f))
@@ -117,13 +119,15 @@ def compare_inventories(before: dict[str, Any], after: dict[str, Any]) -> dict[s
         if k not in b_deps:
             dep_added.append(d)
         elif b_deps[k].get("version") != d.get("version"):
-            dep_changed.append({
-                "ecosystem": d.get("ecosystem"),
-                "name": d.get("name"),
-                "before_version": b_deps[k].get("version"),
-                "after_version": d.get("version"),
-                "manifest": d.get("manifest"),
-            })
+            dep_changed.append(
+                {
+                    "ecosystem": d.get("ecosystem"),
+                    "name": d.get("name"),
+                    "before_version": b_deps[k].get("version"),
+                    "after_version": d.get("version"),
+                    "manifest": d.get("manifest"),
+                }
+            )
     for k, d in b_deps.items():
         if k not in a_deps:
             dep_removed.append(d)

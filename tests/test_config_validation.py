@@ -27,27 +27,31 @@ def test_non_string_list_items_are_rejected() -> None:
 
 
 def test_valid_lists_load() -> None:
-    cfg = Config.from_dict({"scanners": ["secrets", "patterns"],
-                            "exclude_paths": ["dist/*"], "exclude_scanners": None})
+    cfg = Config.from_dict(
+        {"scanners": ["secrets", "patterns"], "exclude_paths": ["dist/*"], "exclude_scanners": None}
+    )
     assert cfg.scanners == ["secrets", "patterns"]
     assert cfg.exclude_paths == ["dist/*"]
     assert cfg.exclude_scanners == []
 
 
-@pytest.mark.parametrize("data", [
-    {"cache": "false"},
-    {"fail_on_error": "yes"},
-    {"scanner_options": ["secrets"]},
-    {"scanner_options": {"secrets": "on"}},
-    {"allow": {"rule": "x"}},
-    {"allow": ["x"]},
-    {"policies": "block-all"},
-    {"ai": "anthropic"},
-    {"ai": {"enabled": "no"}},
-    {"ai": {"max_tokens": "lots"}},
-    {"fail_on": "hgih"},
-    {"min_severity": "everything"},
-])
+@pytest.mark.parametrize(
+    "data",
+    [
+        {"cache": "false"},
+        {"fail_on_error": "yes"},
+        {"scanner_options": ["secrets"]},
+        {"scanner_options": {"secrets": "on"}},
+        {"allow": {"rule": "x"}},
+        {"allow": ["x"]},
+        {"policies": "block-all"},
+        {"ai": "anthropic"},
+        {"ai": {"enabled": "no"}},
+        {"ai": {"max_tokens": "lots"}},
+        {"fail_on": "hgih"},
+        {"min_severity": "everything"},
+    ],
+)
 def test_wrong_types_are_config_errors(data: dict) -> None:
     with pytest.raises(ConfigError):
         Config.from_dict(data)

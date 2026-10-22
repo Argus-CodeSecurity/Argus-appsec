@@ -132,15 +132,23 @@ _SOURCE_RE = re.compile(
 # Function-name last components that neutralize taint (numeric coercion, quoting,
 # path basename, HTML escaping). Keyed on the final identifier of the call target.
 _SANITIZERS = {
-    "int", "float", "bool", "secure_filename", "basename", "quote", "escape",
-    "safe_join", "quote_plus", "shlex",
+    "int",
+    "float",
+    "bool",
+    "secure_filename",
+    "basename",
+    "quote",
+    "escape",
+    "safe_join",
+    "quote_plus",
+    "shlex",
 }
 
 
 @dataclass
 class Sink:
     id: str
-    fn: re.Pattern[str]     # matches the call's function text (e.g. "cursor.execute")
+    fn: re.Pattern[str]  # matches the call's function text (e.g. "cursor.execute")
     cwe: list[str]
     owasp: list[str]
     title: str
@@ -156,46 +164,53 @@ SINKS: list[Sink] = [
     Sink(
         id="ast-sql-injection",
         fn=re.compile(r"(^|\.)(execute|executemany|executescript)$"),
-        cwe=["CWE-89"], owasp=["A03:2021-Injection"], severity=Severity.HIGH,
+        cwe=["CWE-89"],
+        owasp=["A03:2021-Injection"],
+        severity=Severity.HIGH,
         title="SQL injection (tainted value reaches a database query)",
         why="A value derived from untrusted input flows into a database query "
-            "without parameterization, so input can change the query's structure.",
+        "without parameterization, so input can change the query's structure.",
         attack="Supply `' OR '1'='1` (or a UNION/stacked query) in the tainted "
-               "parameter to read or modify unintended rows.",
-        impact="Unauthorized data access or modification, up to full database "
-               "compromise.",
+        "parameter to read or modify unintended rows.",
+        impact="Unauthorized data access or modification, up to full database compromise.",
         fix="Use parameterized queries / bound parameters and never build SQL from "
-            "input, even across intermediate variables.",
+        "input, even across intermediate variables.",
     ),
     Sink(
         id="ast-command-injection",
         fn=re.compile(r"(^|\.)system$|(^|\.)popen$|^subprocess\.\w+$"),
-        cwe=["CWE-78"], owasp=["A03:2021-Injection"], severity=Severity.HIGH,
+        cwe=["CWE-78"],
+        owasp=["A03:2021-Injection"],
+        severity=Severity.HIGH,
         title="OS command injection (tainted value reaches a shell command)",
         why="A value derived from untrusted input flows into a command executed by "
-            "the OS/shell, so shell metacharacters can inject additional commands.",
+        "the OS/shell, so shell metacharacters can inject additional commands.",
         attack="Inject `; rm -rf` or `$(...)` through the tainted parameter to run "
-               "arbitrary commands.",
+        "arbitrary commands.",
         impact="Remote code execution on the host.",
         fix="Pass arguments as a list without a shell, and validate/quote input.",
     ),
     Sink(
         id="ast-path-traversal",
         fn=re.compile(r"(^|\.)open$|send_file$|send_from_directory$"),
-        cwe=["CWE-22"], owasp=["A01:2021-Broken Access Control"], severity=Severity.MEDIUM,
+        cwe=["CWE-22"],
+        owasp=["A01:2021-Broken Access Control"],
+        severity=Severity.MEDIUM,
         title="Path traversal (tainted value reaches a file operation)",
         why="A filesystem path derived from untrusted input reaches a file operation "
-            "without normalization, so `../` can escape the intended directory.",
+        "without normalization, so `../` can escape the intended directory.",
         attack="Request a path such as `../../etc/passwd` to read or write files "
-               "outside the intended location.",
+        "outside the intended location.",
         impact="Disclosure of sensitive files, or writing outside the intended area.",
         fix="Resolve the path and confirm it stays within an allowed base directory "
-            "(e.g. os.path.realpath + prefix check, or secure_filename).",
+        "(e.g. os.path.realpath + prefix check, or secure_filename).",
     ),
     Sink(
         id="ast-code-injection",
         fn=re.compile(r"^(eval|exec)$"),
-        cwe=["CWE-95"], owasp=["A03:2021-Injection"], severity=Severity.HIGH,
+        cwe=["CWE-95"],
+        owasp=["A03:2021-Injection"],
+        severity=Severity.HIGH,
         title="Code injection (tainted value reaches eval/exec)",
         why="Untrusted input flows into eval/exec, which executes it as code.",
         attack="Provide a Python expression/statement in the tainted value.",
@@ -213,8 +228,10 @@ class ASTPythonScanner(Scanner):
     name = "ast-python"
     category = "sast"
     file_local = True
-    description = ("Data-flow (taint) analysis for Python via tree-sitter; catches "
-                   "multi-hop injection the regex tier misses. Needs the [ast] extra.")
+    description = (
+        "Data-flow (taint) analysis for Python via tree-sitter; catches "
+        "multi-hop injection the regex tier misses. Needs the [ast] extra."
+    )
 
     def applies_to(self, project) -> bool:
         return is_available() and bool(project.files_matching("*.py"))
@@ -264,8 +281,10 @@ class _Analyzer:
         saved = self._seen
         self._seen = set()
         try:
-            found = [(f.rule_id.split(".", 1)[-1], f.location.start_line or 0)
-                     for f in self._walk(body, set(seed_names))]
+            found = [
+                (f.rule_id.split(".", 1)[-1], f.location.start_line or 0)
+                for f in self._walk(body, set(seed_names))
+            ]
         finally:
             self._seen = saved
         return found
@@ -283,7 +302,7 @@ class _Analyzer:
             if t == "function_definition":
                 body = node.child_by_field_name("body")
                 if body is not None:
-                    stack.append((body, set()))   # fresh scope per function
+                    stack.append((body, set()))  # fresh scope per function
                 continue
             if t in ("assignment", "augmented_assignment"):
                 self._apply_assignment(node, scope, augmented=(t == "augmented_assignment"))
@@ -378,7 +397,7 @@ class _Analyzer:
         return names
 
     def _text(self, node) -> str:
-        return self._src[node.start_byte:node.end_byte].decode("utf-8", "ignore")
+        return self._src[node.start_byte : node.end_byte].decode("utf-8", "ignore")
 
     def _line_text(self, line: int) -> str:
         if self._lines is None:  # split once per file, not once per finding
@@ -402,18 +421,22 @@ class _Analyzer:
             scanner=ASTPythonScanner.name,
             title=sink.title,
             description=sink.why,
-            location=Location(path=self._path, start_line=line,
-                              snippet=self._line_text(line)[:240]),
-            severity=severity, confidence=confidence, likelihood=Likelihood.LIKELY,
-            cwe=sink.cwe, owasp=sink.owasp,
+            location=Location(
+                path=self._path, start_line=line, snippet=self._line_text(line)[:240]
+            ),
+            severity=severity,
+            confidence=confidence,
+            likelihood=Likelihood.LIKELY,
+            cwe=sink.cwe,
+            owasp=sink.owasp,
             why_vulnerable=sink.why,
             attacker_perspective=sink.attack,
             business_impact=sink.impact,
             remediation=Remediation(
-                summary=sink.fix, guidance=sink.fix,
-                references=sink.references or [
-                    f"https://cwe.mitre.org/data/definitions/{sink.cwe[0].split('-')[1]}.html"
-                ],
+                summary=sink.fix,
+                guidance=sink.fix,
+                references=sink.references
+                or [f"https://cwe.mitre.org/data/definitions/{sink.cwe[0].split('-')[1]}.html"],
             ),
             tags=tags,
             metadata={"analysis": "taint-dataflow"},

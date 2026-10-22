@@ -45,8 +45,7 @@ from argus.scanners.patterns import Rule
 
 log = logging.getLogger("argus.scanners.custom_rules")
 
-_CONFIDENCE = {"low": Confidence.LOW, "medium": Confidence.MEDIUM,
-               "high": Confidence.HIGH}
+_CONFIDENCE = {"low": Confidence.LOW, "medium": Confidence.MEDIUM, "high": Confidence.HIGH}
 
 # Defense-in-depth ReDoS lint. Custom rules can come from an untrusted
 # repository, and Python's ``re`` cannot be interrupted mid-match, so a
@@ -77,9 +76,14 @@ _UNIVERSE = frozenset(range(257))
 
 
 def _category_chars(category: str) -> frozenset[int]:
-    probe = {"CATEGORY_DIGIT": r"\d", "CATEGORY_NOT_DIGIT": r"\D",
-             "CATEGORY_SPACE": r"\s", "CATEGORY_NOT_SPACE": r"\S",
-             "CATEGORY_WORD": r"\w", "CATEGORY_NOT_WORD": r"\W"}.get(category)
+    probe = {
+        "CATEGORY_DIGIT": r"\d",
+        "CATEGORY_NOT_DIGIT": r"\D",
+        "CATEGORY_SPACE": r"\s",
+        "CATEGORY_NOT_SPACE": r"\S",
+        "CATEGORY_WORD": r"\w",
+        "CATEGORY_NOT_WORD": r"\W",
+    }.get(category)
     if probe is None:
         return _UNIVERSE
     rx = re.compile(probe)
@@ -213,9 +217,13 @@ def _coerce_rule(raw: dict, source: str) -> Rule | None:
         raw_pattern = str(raw["pattern"])
         raw_suppress = str(raw["suppress"]) if raw.get("suppress") else None
         if _is_catastrophic(raw_pattern) or (
-                raw_suppress is not None and _is_catastrophic(raw_suppress)):
-            log.warning("skipping custom rule in %s: pattern rejected as a possible "
-                        "ReDoS (nested or overlapping repetition)", source)
+            raw_suppress is not None and _is_catastrophic(raw_suppress)
+        ):
+            log.warning(
+                "skipping custom rule in %s: pattern rejected as a possible "
+                "ReDoS (nested or overlapping repetition)",
+                source,
+            )
             return None
         if not rid:
             log.warning("skipping custom rule in %s: empty id", source)
@@ -235,8 +243,9 @@ def _coerce_rule(raw: dict, source: str) -> Rule | None:
             impact=str(raw.get("impact", "")),
             fix=str(raw.get("fix", "")),
             languages=set(_str_list(raw.get("languages"))),
-            confidence=_CONFIDENCE.get(str(raw.get("confidence", "medium")).lower(),
-                                       Confidence.MEDIUM),
+            confidence=_CONFIDENCE.get(
+                str(raw.get("confidence", "medium")).lower(), Confidence.MEDIUM
+            ),
             references=_str_list(raw.get("references")),
             suppress=re.compile(raw_suppress) if raw_suppress is not None else None,
         )
@@ -282,8 +291,7 @@ def _inside(path: Path, root: Path) -> bool:
         return True  # cannot tell: treat as inside, i.e. untrusted
 
 
-def _resolve_paths(project_root: Path, option,
-                   include_convention_dir: bool = True) -> list[Path]:
+def _resolve_paths(project_root: Path, option, include_convention_dir: bool = True) -> list[Path]:
     """Collect rule-file paths from the config option and the convention dir.
 
     ``include_convention_dir`` is False for untrusted targets (a cloned remote
@@ -311,8 +319,9 @@ def _resolve_paths(project_root: Path, option,
             # tree is untrusted, a rules file found inside it was written by the
             # repository, not by whoever configured the scan: ignore it.
             if not include_convention_dir and _inside(match, root):
-                log.warning("ignoring custom rules file %s: it is inside the "
-                            "untrusted scan target", match)
+                log.warning(
+                    "ignoring custom rules file %s: it is inside the untrusted scan target", match
+                )
                 continue
             paths.append(match)
     # Convention directory (deterministic order), only for trusted targets.
@@ -331,8 +340,9 @@ def _resolve_paths(project_root: Path, option,
     return unique
 
 
-def load_custom_rules(project_root: Path, option=None,
-                      include_convention_dir: bool = True) -> list[Rule]:
+def load_custom_rules(
+    project_root: Path, option=None, include_convention_dir: bool = True
+) -> list[Rule]:
     """Load and validate all custom rules for a project. Never raises."""
     rules: list[Rule] = []
     for path in _resolve_paths(project_root, option, include_convention_dir):
@@ -342,8 +352,7 @@ def load_custom_rules(project_root: Path, option=None,
     return rules
 
 
-def config_signature(project_root: Path, option=None,
-                     include_convention_dir: bool = True) -> str:
+def config_signature(project_root: Path, option=None, include_convention_dir: bool = True) -> str:
     """A stable signature of the active custom-rule files (path + mtime + size).
 
     Folded into the scanner cache key so editing a rules file invalidates cached

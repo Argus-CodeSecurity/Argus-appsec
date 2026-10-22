@@ -97,43 +97,52 @@ def _file_local_chains(findings: list[Finding]) -> list[Chain]:
         # tool, or (when the taint tier deduped the LLM rule into its own) any
         # code/command-execution finding in the same component.
         exec_links = [
-            f for f in fs
+            f
+            for f in fs
             if not f.rule_id.endswith("prompt-injection")
-            and ("insecure-output" in f.rule_id or "agent-shell" in f.rule_id
-                 or "unrestricted-tool" in f.rule_id or {"CWE-78", "CWE-95"} & set(f.cwe))
+            and (
+                "insecure-output" in f.rule_id
+                or "agent-shell" in f.rule_id
+                or "unrestricted-tool" in f.rule_id
+                or {"CWE-78", "CWE-95"} & set(f.cwe)
+            )
         ]
         if prompt_injection and exec_links:
-            chains.append(Chain(
-                id="llm-injection-to-execution",
-                title="Attack chain: prompt injection reaches code/command execution",
-                severity=Severity.CRITICAL,
-                narrative=(
-                    "This component both accepts untrusted input into a prompt (LLM01) "
-                    "and routes model output into a dangerous sink or an "
-                    "execution-capable tool (LLM02/LLM08). An attacker who controls the "
-                    "input can steer the model to emit a payload that then executes, "
-                    "turning prompt injection into remote code or command execution."
-                ),
-                members=prompt_injection[:1] + exec_links[:1],
-            ))
+            chains.append(
+                Chain(
+                    id="llm-injection-to-execution",
+                    title="Attack chain: prompt injection reaches code/command execution",
+                    severity=Severity.CRITICAL,
+                    narrative=(
+                        "This component both accepts untrusted input into a prompt (LLM01) "
+                        "and routes model output into a dangerous sink or an "
+                        "execution-capable tool (LLM02/LLM08). An attacker who controls the "
+                        "input can steer the model to emit a payload that then executes, "
+                        "turning prompt injection into remote code or command execution."
+                    ),
+                    members=prompt_injection[:1] + exec_links[:1],
+                )
+            )
 
         # Injection foothold sitting beside a hardcoded credential.
         secrets = [f for f in fs if f.scanner == "secrets" and "history" not in f.rule_id]
         injections = [f for f in fs if _INJECTION_CWES & set(f.cwe)]
         if secrets and injections:
-            chains.append(Chain(
-                id="secret-plus-injection",
-                title="Attack chain: injection foothold beside an exposed credential",
-                severity=Severity.HIGH,
-                narrative=(
-                    "This component contains both a hardcoded credential and an "
-                    "injection vulnerability. An attacker exploiting the injection gains "
-                    "code or query execution in the very component that holds the "
-                    "secret, so a single foothold yields both execution and a credential "
-                    "for lateral movement."
-                ),
-                members=secrets[:1] + injections[:1],
-            ))
+            chains.append(
+                Chain(
+                    id="secret-plus-injection",
+                    title="Attack chain: injection foothold beside an exposed credential",
+                    severity=Severity.HIGH,
+                    narrative=(
+                        "This component contains both a hardcoded credential and an "
+                        "injection vulnerability. An attacker exploiting the injection gains "
+                        "code or query execution in the very component that holds the "
+                        "secret, so a single foothold yields both execution and a credential "
+                        "for lateral movement."
+                    ),
+                    members=secrets[:1] + injections[:1],
+                )
+            )
     return chains
 
 
@@ -141,9 +150,13 @@ _SSRF_CWE = {"CWE-918"}
 # Secret rules whose value is itself a cloud credential. Matching the snippet
 # for "AKIA" never worked: the secrets scanner redacts the value to its first
 # three characters before it reaches the snippet.
-_CLOUD_SECRET_RULES = frozenset({
-    "aws-access-key-id", "aws-secret-access-key", "google-api-key",
-})
+_CLOUD_SECRET_RULES = frozenset(
+    {
+        "aws-access-key-id",
+        "aws-secret-access-key",
+        "google-api-key",
+    }
+)
 # For generic rules (high-entropy assignments) the variable name, which is not
 # redacted, still says what the value is for.
 _CLOUD_KEY_HINT = re.compile(r"(AWS_|aws_secret|gcp|azure|metadata\.google)", re.I)
@@ -164,70 +177,69 @@ def _cross_file_chains(findings: list[Finding]) -> list[Chain]:
     ssrf = [f for f in findings if _SSRF_CWE & set(f.cwe)]
     cloud_secrets = [f for f in findings if _is_cloud_secret(f)]
     if ssrf and cloud_secrets:
-        chains.append(Chain(
-            id="ssrf-to-cloud-credentials",
-            title="Attack chain: SSRF toward cloud credential exposure",
-            severity=Severity.CRITICAL,
-            narrative=(
-                "The project contains SSRF (server-side request forgery) and exposed "
-                "cloud credentials. SSRF can reach instance metadata endpoints "
-                "(169.254.169.254) to steal IAM tokens, compounding secret exposure."
-            ),
-            members=ssrf[:1] + cloud_secrets[:1],
-        ))
+        chains.append(
+            Chain(
+                id="ssrf-to-cloud-credentials",
+                title="Attack chain: SSRF toward cloud credential exposure",
+                severity=Severity.CRITICAL,
+                narrative=(
+                    "The project contains SSRF (server-side request forgery) and exposed "
+                    "cloud credentials. SSRF can reach instance metadata endpoints "
+                    "(169.254.169.254) to steal IAM tokens, compounding secret exposure."
+                ),
+                members=ssrf[:1] + cloud_secrets[:1],
+            )
+        )
 
-    kev_deps = [
-        f for f in findings
-        if f.scanner == "dependencies" and f.metadata.get("kev")
-    ]
-    reachable = [
-        f for f in kev_deps
-        if f.metadata.get("reachability") == "imported"
-    ]
+    kev_deps = [f for f in findings if f.scanner == "dependencies" and f.metadata.get("kev")]
+    reachable = [f for f in kev_deps if f.metadata.get("reachability") == "imported"]
     if kev_deps and reachable:
-        chains.append(Chain(
-            id="kev-reachable-dependency",
-            title="Attack chain: KEV-listed CVE in a reachable dependency",
-            severity=Severity.CRITICAL,
-            narrative=(
-                "A dependency with a CVE on CISA's Known Exploited Vulnerabilities "
-                "catalog is imported by first-party code. This combines confirmed "
-                "in-the-wild exploitation with likely application reachability."
-            ),
-            members=reachable[:1],
-        ))
+        chains.append(
+            Chain(
+                id="kev-reachable-dependency",
+                title="Attack chain: KEV-listed CVE in a reachable dependency",
+                severity=Severity.CRITICAL,
+                narrative=(
+                    "A dependency with a CVE on CISA's Known Exploited Vulnerabilities "
+                    "catalog is imported by first-party code. This combines confirmed "
+                    "in-the-wild exploitation with likely application reachability."
+                ),
+                members=reachable[:1],
+            )
+        )
 
     malicious = [f for f in findings if f.rule_id == "supply-chain.known-malicious"]
     dep_diff = [f for f in findings if f.scanner == "dependency-diff"]
     if malicious and dep_diff:
-        chains.append(Chain(
-            id="malicious-dependency-in-diff",
-            title="Attack chain: malicious package introduced in dependency change",
-            severity=Severity.CRITICAL,
-            narrative=(
-                "A dependency change in this revision introduces a package flagged "
-                "as malicious. This is a direct supply-chain compromise in the "
-                "merge path."
-            ),
-            members=dep_diff[:1] + malicious[:1],
-        ))
+        chains.append(
+            Chain(
+                id="malicious-dependency-in-diff",
+                title="Attack chain: malicious package introduced in dependency change",
+                severity=Severity.CRITICAL,
+                narrative=(
+                    "A dependency change in this revision introduces a package flagged "
+                    "as malicious. This is a direct supply-chain compromise in the "
+                    "merge path."
+                ),
+                members=dep_diff[:1] + malicious[:1],
+            )
+        )
 
-    public_iac = [
-        f for f in findings
-        if f.scanner == "iac" and "public" in f.rule_id.lower()
-    ]
+    public_iac = [f for f in findings if f.scanner == "iac" and "public" in f.rule_id.lower()]
     missing_auth = [f for f in findings if f.rule_id == "authz.missing-authentication"]
     if public_iac and missing_auth:
-        chains.append(Chain(
-            id="exposed-service-unauthenticated",
-            title="Attack chain: exposed infrastructure with unauthenticated API",
-            severity=Severity.CRITICAL,
-            narrative=(
-                "Infrastructure misconfiguration exposes a service publicly while "
-                "application routes lack authentication, allowing direct "
-                "internet-to-privileged-function access."
-            ),
-            members=public_iac[:1] + missing_auth[:1],
-        ))
+        chains.append(
+            Chain(
+                id="exposed-service-unauthenticated",
+                title="Attack chain: exposed infrastructure with unauthenticated API",
+                severity=Severity.CRITICAL,
+                narrative=(
+                    "Infrastructure misconfiguration exposes a service publicly while "
+                    "application routes lack authentication, allowing direct "
+                    "internet-to-privileged-function access."
+                ),
+                members=public_iac[:1] + missing_auth[:1],
+            )
+        )
 
     return chains

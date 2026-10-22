@@ -106,8 +106,10 @@ def resolve_scan_path(path: str) -> Path:
     roots = allowed_roots()
     if not any(resolved == root or resolved.is_relative_to(root) for root in roots):
         shown = ", ".join(str(r) for r in roots)
-        raise ValueError(f"path {path!r} is outside the allowed roots ({shown}); "
-                         f"set {ROOTS_ENV} to allow other directories")
+        raise ValueError(
+            f"path {path!r} is outside the allowed roots ({shown}); "
+            f"set {ROOTS_ENV} to allow other directories"
+        )
     if not resolved.exists():
         raise ValueError(f"path {path!r} does not exist")
     return resolved
@@ -164,7 +166,8 @@ def _run_scan(arguments: dict[str, Any]) -> dict[str, Any]:
     # in-repo extension points such as .argus/rules are not honoured.
     cfg.trust_project_config = False
     result = _run_with_timeout(
-        lambda: ScanEngine(cfg).scan(Project.from_path(target)), _scan_timeout(),
+        lambda: ScanEngine(cfg).scan(Project.from_path(target)),
+        _scan_timeout(),
     )
 
     findings = result.sorted_findings()
@@ -203,11 +206,14 @@ def handle_request(req: dict[str, Any]) -> dict[str, Any] | None:
 
     if method == "initialize":
         params = req.get("params") or {}
-        return _ok(req_id, {
-            "protocolVersion": params.get("protocolVersion", PROTOCOL_VERSION),
-            "capabilities": {"tools": {}},
-            "serverInfo": SERVER_INFO,
-        })
+        return _ok(
+            req_id,
+            {
+                "protocolVersion": params.get("protocolVersion", PROTOCOL_VERSION),
+                "capabilities": {"tools": {}},
+                "serverInfo": SERVER_INFO,
+            },
+        )
 
     if method == "tools/list":
         return _ok(req_id, {"tools": TOOLS})

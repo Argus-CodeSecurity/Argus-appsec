@@ -15,13 +15,13 @@ from argus.remediation.pullrequest import FixOptions, run_fix_workflow
 
 pytestmark = pytest.mark.skipif(not git_ops.git_available(), reason="git not installed")
 
-ID = ("-c", "user.name=Setup", "-c", "user.email=setup@example.com",
-      "-c", "commit.gpgsign=false")
+ID = ("-c", "user.name=Setup", "-c", "user.email=setup@example.com", "-c", "commit.gpgsign=false")
 
 
 def _git(root: Path, *args: str) -> str:
-    return subprocess.run(["git", "-C", str(root), *args], check=True,
-                          capture_output=True, text=True).stdout.strip()
+    return subprocess.run(
+        ["git", "-C", str(root), *args], check=True, capture_output=True, text=True
+    ).stdout.strip()
 
 
 @pytest.fixture
@@ -31,8 +31,7 @@ def isolated_git(tmp_path, monkeypatch):
     empty.write_text("", encoding="utf-8")
     monkeypatch.setenv("GIT_CONFIG_GLOBAL", str(empty))
     monkeypatch.setenv("GIT_CONFIG_NOSYSTEM", "1")
-    for var in ("GIT_AUTHOR_NAME", "GIT_AUTHOR_EMAIL",
-                "GIT_COMMITTER_NAME", "GIT_COMMITTER_EMAIL"):
+    for var in ("GIT_AUTHOR_NAME", "GIT_AUTHOR_EMAIL", "GIT_COMMITTER_NAME", "GIT_COMMITTER_EMAIL"):
         monkeypatch.delenv(var, raising=False)
 
 
@@ -49,9 +48,14 @@ def _repo(tmp_path: Path) -> Path:
 
 def _finding() -> Finding:
     return Finding(
-        id="f1", rule_id="patterns.python-yaml-load", scanner="patterns",
-        title="yaml.load", description="",
-        location=Location(path="a.py", start_line=2), severity=Severity.HIGH)
+        id="f1",
+        rule_id="patterns.python-yaml-load",
+        scanner="patterns",
+        title="yaml.load",
+        description="",
+        location=Location(path="a.py", start_line=2),
+        severity=Severity.HIGH,
+    )
 
 
 def test_refuses_when_head_is_not_base(tmp_path, isolated_git):
@@ -60,8 +64,7 @@ def test_refuses_when_head_is_not_base(tmp_path, isolated_git):
     (root / "b.py").write_text("y = 1\n", encoding="utf-8")
     _git(root, *ID, "add", "-A")
     _git(root, *ID, "commit", "-qm", "feature work")
-    outcome = run_fix_workflow(Project.from_path(root), [_finding()],
-                               FixOptions(base="main"))
+    outcome = run_fix_workflow(Project.from_path(root), [_finding()], FixOptions(base="main"))
     assert outcome.error and "--base feature" in outcome.error
     assert not outcome.committed
     assert _git(root, "rev-parse", "--abbrev-ref", "HEAD") == "feature"
@@ -74,8 +77,7 @@ def test_force_branch_resets_stale_branch_to_base(tmp_path, isolated_git):
     _git(root, *ID, "add", "-A")
     _git(root, *ID, "commit", "-qm", "stale")
     _git(root, "checkout", "-q", "main")
-    outcome = run_fix_workflow(Project.from_path(root), [_finding()],
-                               FixOptions(force_branch=True))
+    outcome = run_fix_workflow(Project.from_path(root), [_finding()], FixOptions(force_branch=True))
     assert outcome.committed, outcome.error
     assert _git(root, "rev-parse", "HEAD~1") == _git(root, "rev-parse", "main")
     assert not (root / "stale.py").exists()
@@ -124,8 +126,7 @@ def test_commit_hooks_run_unless_opted_out(tmp_path, isolated_git):
     assert outcome.error and "blocked by hook" in outcome.error
     assert _git(root, "status", "--porcelain") == ""
 
-    outcome = run_fix_workflow(Project.from_path(root), [_finding()],
-                               FixOptions(no_verify=True))
+    outcome = run_fix_workflow(Project.from_path(root), [_finding()], FixOptions(no_verify=True))
     assert outcome.committed, outcome.error
 
 

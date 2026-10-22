@@ -43,7 +43,9 @@ class BehaviorFingerprint:
         return tags
 
 
-def npm_fingerprint(name: str, version: str, *, timeout: float = 10.0) -> BehaviorFingerprint | None:
+def npm_fingerprint(
+    name: str, version: str, *, timeout: float = 10.0
+) -> BehaviorFingerprint | None:
     """Fetch npm registry metadata for one exact version (read-only)."""
     url = f"{_REGISTRY}/{name}/{version}"
     try:
@@ -59,8 +61,7 @@ def npm_fingerprint(name: str, version: str, *, timeout: float = 10.0) -> Behavi
     return fingerprint_from_manifest(name, version, data)
 
 
-def fingerprint_from_manifest(name: str, version: str,
-                              data: object) -> BehaviorFingerprint | None:
+def fingerprint_from_manifest(name: str, version: str, data: object) -> BehaviorFingerprint | None:
     """Build a fingerprint from one version's registry manifest (any source).
 
     Shared by the host registry fetch and the sandboxed ``npm view``; the data is
@@ -71,10 +72,7 @@ def fingerprint_from_manifest(name: str, version: str,
     scripts = data.get("scripts")
     if not isinstance(scripts, dict):
         scripts = {}
-    install_hooks = [
-        h for h in LIFECYCLE_HOOKS
-        if isinstance(scripts.get(h), str)
-    ]
+    install_hooks = [h for h in LIFECYCLE_HOOKS if isinstance(scripts.get(h), str)]
     script_bodies = " ".join(str(scripts.get(h, "")) for h in install_hooks)
     bins_raw = data.get("bin") or {}
     bins = sorted(bins_raw.keys()) if isinstance(bins_raw, dict) else []
@@ -109,9 +107,7 @@ def compare_fingerprints(
     if "install-script" in added:
         hooks = ", ".join(new.install_scripts) or "install"
         anomalies.append(f"install lifecycle script(s) added: {hooks}")
-    if "suspicious-script" in added or (
-        new.suspicious_script and not old.suspicious_script
-    ):
+    if "suspicious-script" in added or (new.suspicious_script and not old.suspicious_script):
         anomalies.append("suspicious patterns in install scripts (network/shell/env access)")
     if "executable-bin" in added:
         anomalies.append(f"new executable bin entries: {', '.join(new.bins)}")

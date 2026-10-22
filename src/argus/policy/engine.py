@@ -88,9 +88,7 @@ def _validate(entry: Any, index: int, seen: set[str]) -> dict[str, Any]:
 
     action = entry.get("action")
     if not isinstance(action, str) or action.strip().lower() not in ACTIONS:
-        raise PolicyError(
-            f"{where}: action must be one of {', '.join(ACTIONS)}, got {action!r}"
-        )
+        raise PolicyError(f"{where}: action must be one of {', '.join(ACTIONS)}, got {action!r}")
 
     when = entry.get("when")
     if not isinstance(when, dict) or not when:
@@ -98,8 +96,7 @@ def _validate(entry: Any, index: int, seen: set[str]) -> dict[str, Any]:
     for key, value in when.items():
         if key not in WHEN_KEYS:
             raise PolicyError(
-                f"{where}: unknown condition {key!r} "
-                f"(supported: {', '.join(WHEN_KEYS)})"
+                f"{where}: unknown condition {key!r} (supported: {', '.join(WHEN_KEYS)})"
             )
         if value is None or isinstance(value, (dict, list, bool)) or not str(value).strip():
             raise PolicyError(f"{where}: condition {key!r} needs a single value")
@@ -137,8 +134,11 @@ def _matches(finding: Finding, when: dict[str, Any]) -> bool:
                 return False
         elif key == "rule":
             target = str(expected)
-            if not (finding.rule_id == target or finding.rule_id.endswith("." + target)
-                    or finding.rule_id.split(".")[-1] == target):
+            if not (
+                finding.rule_id == target
+                or finding.rule_id.endswith("." + target)
+                or finding.rule_id.split(".")[-1] == target
+            ):
                 return False
         elif key == "tag":
             if str(expected) not in finding.tags:
@@ -162,11 +162,13 @@ def evaluate(result: ScanResult, policies: list[dict[str, Any]]) -> PolicyResult
         action = policy["action"]
         for finding in result.findings:
             if _matches(finding, policy["when"]):
-                violations.append(PolicyViolation(
-                    policy_id=pid,
-                    action=action,
-                    finding=finding,
-                    reason=f"Policy '{pid}' matched {finding.rule_id} "
-                           f"({finding.location.as_ref()})",
-                ))
+                violations.append(
+                    PolicyViolation(
+                        policy_id=pid,
+                        action=action,
+                        finding=finding,
+                        reason=f"Policy '{pid}' matched {finding.rule_id} "
+                        f"({finding.location.as_ref()})",
+                    )
+                )
     return PolicyResult(violations=violations)

@@ -35,7 +35,8 @@ log = logging.getLogger("argus.scanners.secrets")
 _SIGNATURES: dict[str, re.Pattern[str]] = {
     "aws-access-key-id": re.compile(r"\bAKIA[0-9A-Z]{16}\b"),
     "aws-secret-access-key": re.compile(
-        r"(?i)aws.{0,20}?(secret|sk).{0,20}?['\"](?P<val>[0-9a-zA-Z/+]{40})['\"]"),
+        r"(?i)aws.{0,20}?(secret|sk).{0,20}?['\"](?P<val>[0-9a-zA-Z/+]{40})['\"]"
+    ),
     "github-token": re.compile(r"\bgh[pousr]_[0-9A-Za-z]{36,}\b"),
     "gitlab-token": re.compile(r"\bglpat-[0-9A-Za-z_\-]{20,}\b"),
     "slack-token": re.compile(r"\bxox[baprs]-[0-9A-Za-z\-]{10,}\b"),
@@ -60,7 +61,8 @@ _ASSIGNMENT = re.compile(
 )
 _SECRET_KEY_NAME = re.compile(
     r"(?i)secret|token|passw(?:or)?d|api[_\-]?key|access[_\-]?key|"
-    r"private[_\-]?key|client[_\-]?secret|auth")
+    r"private[_\-]?key|client[_\-]?secret|auth"
+)
 
 
 def _secret_assignments(line: str) -> Iterator[re.Match[str]]:
@@ -126,14 +128,16 @@ def redact_line(line: str) -> str:
 # Values that look like placeholders, not real secrets.
 _PLACEHOLDER = re.compile(
     r"(?i)^(x{3,}|\*{3,}|<[^>]+>|\$\{[^}]+\}|change[_\- ]?me|your[_\-]|example|"
-    r"placeholder|dummy|sample|test|todo|none|null|redacted|\.{3})")
+    r"placeholder|dummy|sample|test|todo|none|null|redacted|\.{3})"
+)
 
 # Files where secrets are expected to be templates or fixtures, so downgrade
 # confidence. Anchored with (^|/) so a top-level tests/ or fixtures/ dir matches,
 # not just nested ones (a real repo often has tests/certs/*.key test material).
 _EXAMPLE_FILE = re.compile(
     r"(?i)(\.example$|\.sample$|\.template$|(^|/)tests?/|(^|/)fixtures?/|"
-    r"(^|/)testdata/|\.md$)")
+    r"(^|/)testdata/|\.md$)"
+)
 
 
 def _shannon_entropy(s: str) -> float:
@@ -154,8 +158,22 @@ class SecretsScanner(Scanner):
     description = "Detects committed credentials via signatures and entropy analysis."
 
     # Only scan plausible text/source/config files.
-    _SKIP_SUFFIXES = {".png", ".jpg", ".jpeg", ".gif", ".pdf", ".zip", ".gz",
-                      ".jar", ".class", ".woff", ".woff2", ".ttf", ".ico", ".lock"}
+    _SKIP_SUFFIXES = {
+        ".png",
+        ".jpg",
+        ".jpeg",
+        ".gif",
+        ".pdf",
+        ".zip",
+        ".gz",
+        ".jar",
+        ".class",
+        ".woff",
+        ".woff2",
+        ".ttf",
+        ".ico",
+        ".lock",
+    }
 
     def cacheable(self, ctx: ScannerContext) -> bool:
         # Live verification makes network calls whose result depends on the
@@ -198,7 +216,10 @@ class SecretsScanner(Scanner):
                         seen.add(key)
                         counter += 1
                         finding = self._make_finding(
-                            rule_id=rule, index=counter, path=f.rel_path, lineno=lineno,
+                            rule_id=rule,
+                            index=counter,
+                            path=f.rel_path,
+                            lineno=lineno,
                             line=line,
                             severity=Severity.LOW if is_example else Severity.CRITICAL,
                             confidence=Confidence.LOW if is_example else Confidence.HIGH,
@@ -221,8 +242,11 @@ class SecretsScanner(Scanner):
                     if _shannon_entropy(val) >= entropy_threshold:
                         counter += 1
                         yield self._make_finding(
-                            rule_id="high-entropy-string", index=counter,
-                            path=f.rel_path, lineno=lineno, line=line,
+                            rule_id="high-entropy-string",
+                            index=counter,
+                            path=f.rel_path,
+                            lineno=lineno,
+                            line=line,
                             severity=Severity.LOW if is_example else Severity.HIGH,
                             confidence=Confidence.LOW if is_example else Confidence.MEDIUM,
                             title=f"Possible hardcoded secret in '{am.group('key')}'",
@@ -235,8 +259,10 @@ class SecretsScanner(Scanner):
             try:
                 history = list(self._scan_history(ctx.project.root))
             except Exception as exc:
-                log.warning("secrets: git history scan failed (%s); reporting "
-                            "working-tree findings only", type(exc).__name__)
+                log.warning(
+                    "secrets: git history scan failed (%s); reporting working-tree findings only",
+                    type(exc).__name__,
+                )
                 history = [self._history_failed_finding(exc)]
             yield from history
 
@@ -270,7 +296,7 @@ class SecretsScanner(Scanner):
             likelihood=Likelihood.UNLIKELY,
             remediation=Remediation(
                 summary="Run a full history scan locally (e.g. gitleaks or "
-                        "trufflehog) if older commits may hold credentials.",
+                "trufflehog) if older commits may hold credentials.",
             ),
             tags=["secret", "history", "analysis-gap"],
         )
@@ -297,8 +323,11 @@ class SecretsScanner(Scanner):
         )
 
     def _history_finding(self, hs, index: int, truncated: bool) -> Finding:
-        note = (" (history scan was truncated at the size cap; some older commits "
-                "were not read)") if truncated else ""
+        note = (
+            (" (history scan was truncated at the size cap; some older commits were not read)")
+            if truncated
+            else ""
+        )
         # Key the id on the fingerprint of the full matched value: the redacted
         # form is the same for, say, every AWS key id ("AKI..."), and an index
         # shifts whenever history changes, so neither identifies the secret.
@@ -335,9 +364,18 @@ class SecretsScanner(Scanner):
             tags=["secret", "history", hs.rule],
         )
 
-    def _make_finding(self, *, rule_id: str, index: int, path: str, lineno: int,
-                      line: str, severity: Severity,
-                      confidence: Confidence, title: str) -> Finding:
+    def _make_finding(
+        self,
+        *,
+        rule_id: str,
+        index: int,
+        path: str,
+        lineno: int,
+        line: str,
+        severity: Severity,
+        confidence: Confidence,
+        title: str,
+    ) -> Finding:
         # Mask every secret on the line, not only the one this finding is about:
         # a second token or an AWS secret next to its key id would otherwise
         # stay in clear in the snippet.

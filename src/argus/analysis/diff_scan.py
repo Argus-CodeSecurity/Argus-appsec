@@ -17,13 +17,30 @@ from argus.remediation import git_ops
 from argus.remediation.pr_review import parse_changed_lines
 
 # Manifests whose changes can introduce supply-chain risk without a line number.
-DEPENDENCY_MANIFESTS = frozenset({
-    "requirements.txt", "pyproject.toml", "Pipfile", "Pipfile.lock", "poetry.lock",
-    "package.json", "package-lock.json", "yarn.lock", "pnpm-lock.yaml",
-    "go.mod", "go.sum", "Cargo.toml", "Cargo.lock",
-    "Gemfile", "Gemfile.lock", "composer.json", "composer.lock",
-    "pom.xml", "build.gradle", "build.gradle.kts",
-})
+DEPENDENCY_MANIFESTS = frozenset(
+    {
+        "requirements.txt",
+        "pyproject.toml",
+        "Pipfile",
+        "Pipfile.lock",
+        "poetry.lock",
+        "package.json",
+        "package-lock.json",
+        "yarn.lock",
+        "pnpm-lock.yaml",
+        "go.mod",
+        "go.sum",
+        "Cargo.toml",
+        "Cargo.lock",
+        "Gemfile",
+        "Gemfile.lock",
+        "composer.json",
+        "composer.lock",
+        "pom.xml",
+        "build.gradle",
+        "build.gradle.kts",
+    }
+)
 
 
 @dataclass

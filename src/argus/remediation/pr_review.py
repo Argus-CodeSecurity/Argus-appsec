@@ -24,8 +24,7 @@ from argus.reporting.md_escape import md_code, md_text
 # `@@ -old,+new @@` hunk header; we only need the new-side start and length.
 _HUNK = re.compile(r"^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@")
 
-_C_ESCAPES = {"a": 7, "b": 8, "t": 9, "n": 10, "v": 11, "f": 12, "r": 13,
-              '"': 34, "\\": 92}
+_C_ESCAPES = {"a": 7, "b": 8, "t": 9, "n": 10, "v": 11, "f": 12, "r": 13, '"': 34, "\\": 92}
 
 
 def _unquote_path(path: str) -> str:
@@ -43,7 +42,7 @@ def _unquote_path(path: str) -> str:
         ch = body[i]
         if ch == "\\" and i + 1 < len(body):
             nxt = body[i + 1]
-            octal = body[i + 1:i + 4]
+            octal = body[i + 1 : i + 4]
             if len(octal) == 3 and all(c in "01234567" for c in octal):
                 out.append(int(octal, 8))
                 i += 4
@@ -169,23 +168,24 @@ def review_summary(total: int, inline_count: int, leftover: list[Finding]) -> st
     """
     if total == 0:
         return "### Argus: no new findings in this pull request."
-    header = (
-        f"### Argus found {total} new finding"
-        f"{'s' if total != 1 else ''} in this pull request"
-    )
+    header = f"### Argus found {total} new finding{'s' if total != 1 else ''} in this pull request"
     lines = [header, ""]
     if inline_count:
         lines.append(
             f"{inline_count} shown inline on the changed lines below."
             + (" Others are listed here:" if leftover else "")
         )
-    footer = ["", "_Only findings introduced by this PR are shown "
-              "(diff-aware). Nothing was modified._"]
+    footer = [
+        "",
+        "_Only findings introduced by this PR are shown (diff-aware). Nothing was modified._",
+    ]
     budget = MAX_BODY_CHARS - len("\n".join(lines + footer)) - 100
     shown = 0
     for f in leftover[:MAX_SUMMARY_ENTRIES]:
-        entry = (f"- **{f.severity.label}** {md_code(f.rule_id)} "
-                 f"- {md_text(f.title)} ({md_code(f.location.as_ref())})")
+        entry = (
+            f"- **{f.severity.label}** {md_code(f.rule_id)} "
+            f"- {md_text(f.title)} ({md_code(f.location.as_ref())})"
+        )
         if len(entry) + 1 > budget:
             break
         lines.append(entry)
@@ -227,7 +227,9 @@ def post_findings_review(
     inline, leftover = split_comments(findings, changed, path_prefix)
     summary = review_summary(len(findings), len(inline), leftover)
     outcome = ReviewOutcome(
-        total=len(findings), inline=len(inline), leftover=len(leftover),
+        total=len(findings),
+        inline=len(inline),
+        leftover=len(leftover),
         summary=summary,
     )
     if dry_run:

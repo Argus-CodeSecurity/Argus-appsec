@@ -12,13 +12,19 @@ from argus.reporting.sarif import SARIFReporter
 
 
 def _result(*findings: Finding) -> ScanResult:
-    return ScanResult(target="t", started_at=datetime.now(timezone.utc),
-                      findings=list(findings))
+    return ScanResult(target="t", started_at=datetime.now(timezone.utc), findings=list(findings))
 
 
 def _finding(path: str, title: str = "t", line: int | None = 1) -> Finding:
-    return Finding(id="x", rule_id="r", scanner="s", title=title, description=title,
-                   location=Location(path=path, start_line=line), severity=Severity.HIGH)
+    return Finding(
+        id="x",
+        rule_id="r",
+        scanner="s",
+        title=title,
+        description=title,
+        location=Location(path=path, start_line=line),
+        severity=Severity.HIGH,
+    )
 
 
 def test_junit_strips_characters_xml_cannot_hold():

@@ -36,8 +36,9 @@ class EnrichmentAgent(Agent):
             return finding
 
         # Heuristic path: only fill fields the scanner left empty.
-        has_reasoning = all([finding.why_vulnerable, finding.attacker_perspective,
-                             finding.business_impact])
+        has_reasoning = all(
+            [finding.why_vulnerable, finding.attacker_perspective, finding.business_impact]
+        )
         if not has_reasoning:
             self._enrich_heuristic(finding)
         return finding
@@ -47,18 +48,19 @@ class EnrichmentAgent(Agent):
             notes = HeuristicProvider.notes_for_cwe(cwe)
             if notes:
                 finding.why_vulnerable = finding.why_vulnerable or notes["why"]
-                finding.attacker_perspective = (
-                    finding.attacker_perspective or notes["attack"])
+                finding.attacker_perspective = finding.attacker_perspective or notes["attack"]
                 finding.business_impact = finding.business_impact or notes["impact"]
                 return
         # Generic fallback when no CWE template matches.
         finding.why_vulnerable = finding.why_vulnerable or finding.description
         finding.attacker_perspective = finding.attacker_perspective or (
             "An attacker who reaches this code path can supply crafted input to "
-            "trigger the weakness described above.")
+            "trigger the weakness described above."
+        )
         finding.business_impact = finding.business_impact or (
             "Potential loss of confidentiality, integrity, or availability "
-            "depending on the data and privileges involved.")
+            "depending on the data and privileges involved."
+        )
 
     def _enrich_with_model(self, finding: Finding, ctx: AgentContext) -> None:
         prompt = self._build_prompt(finding, ctx)
@@ -101,6 +103,5 @@ class EnrichmentAgent(Agent):
     @staticmethod
     def _parse_sections(text: str) -> dict[str, str]:
         out = {"why": "", "attack": "", "impact": ""}
-        out.update(parse_sections(text, {"WHY": "why", "ATTACK": "attack",
-                                         "IMPACT": "impact"}))
+        out.update(parse_sections(text, {"WHY": "why", "ATTACK": "attack", "IMPACT": "impact"}))
         return out

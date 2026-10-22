@@ -39,8 +39,12 @@ def _commit(root: Path, files: dict[str, str], msg: str) -> None:
 
 def _finding(path: str, line: int) -> Finding:
     return Finding(
-        id=f"r:{path}:{line}", rule_id="r", scanner="patterns", title="t",
-        description="", location=Location(path=path, start_line=line),
+        id=f"r:{path}:{line}",
+        rule_id="r",
+        scanner="patterns",
+        title="t",
+        description="",
+        location=Location(path=path, start_line=line),
         severity=Severity.HIGH,
     )
 
@@ -89,11 +93,7 @@ def test_unquote_git_c_style_path():
 
 def test_parse_ignores_unicode_line_separators_in_content():
     # A content line holding U+2028 must not be split into a fake hunk header.
-    diff = (
-        "+++ b/a.py\n"
-        "@@ -0,0 +1 @@\n"
-        "+x = ' @@ -1 +500,3 @@'\n"
-    )
+    diff = "+++ b/a.py\n@@ -0,0 +1 @@\n+x = ' @@ -1 +500,3 @@'\n"
     assert parse_changed_lines(diff) == {"a.py": {1}}
 
 
@@ -108,8 +108,11 @@ def test_cli_keeps_all_findings_when_diff_fails(tmp_path):
 
     root = _repo(tmp_path)
     _commit(root, {"app.py": "a = 1\n"}, "init")
-    result = ScanResult(target=str(root), started_at=datetime.now(timezone.utc),
-                        findings=[_finding("app.py", 1), _finding("lib.py", 3)])
+    result = ScanResult(
+        target=str(root),
+        started_at=datetime.now(timezone.utc),
+        findings=[_finding("app.py", 1), _finding("lib.py", 3)],
+    )
     apply_diff(result, root, "origin/missing...HEAD", quiet=True)
     assert len(result.findings) == 2
 

@@ -94,14 +94,17 @@ def test_openai_client_has_timeout_and_retries(monkeypatch):
     assert seen["timeout"] == 60.0 and seen["max_retries"] == 2
 
 
-@pytest.mark.parametrize(("host", "remote"), [
-    (None, False),
-    ("http://127.0.0.1:11434", False),
-    ("0.0.0.0:11434", False),
-    ("http://[::1]:11434", False),
-    ("http://gpu-box.internal:11434", True),
-    ("https://10.1.2.3", True),
-])
+@pytest.mark.parametrize(
+    ("host", "remote"),
+    [
+        (None, False),
+        ("http://127.0.0.1:11434", False),
+        ("0.0.0.0:11434", False),
+        ("http://[::1]:11434", False),
+        ("http://gpu-box.internal:11434", True),
+        ("https://10.1.2.3", True),
+    ],
+)
 def test_ollama_locality_follows_ollama_host(monkeypatch, host, remote):
     if host is None:
         monkeypatch.delenv("OLLAMA_HOST", raising=False)
@@ -119,8 +122,9 @@ def test_ollama_retries_transport_errors(monkeypatch):
         assert kwargs["timeout"] == 120.0
         if calls["n"] < 3:
             raise httpx.ConnectError("down")
-        return httpx.Response(200, json={"message": {"content": " hi "}},
-                              request=httpx.Request("POST", url))
+        return httpx.Response(
+            200, json={"message": {"content": " hi "}}, request=httpx.Request("POST", url)
+        )
 
     monkeypatch.delenv("ARGUS_AI_TIMEOUT", raising=False)
     monkeypatch.delenv("ARGUS_AI_MAX_RETRIES", raising=False)

@@ -91,9 +91,19 @@ def _clickjacking_missing(headers) -> bool:
     return "frame-ancestors" not in csp
 
 
-def _finding(rule: str, url: str, title: str, severity: Severity, why: str,
-             fix: str, *, cwe, owasp, confidence=Confidence.HIGH,
-             snippet: str | None = None) -> Finding:
+def _finding(
+    rule: str,
+    url: str,
+    title: str,
+    severity: Severity,
+    why: str,
+    fix: str,
+    *,
+    cwe,
+    owasp,
+    confidence=Confidence.HIGH,
+    snippet: str | None = None,
+) -> Finding:
     return Finding(
         id=f"posture:{rule}:{urlparse(url).netloc}:{urlparse(url).path or '/'}",
         rule_id=f"posture.{rule}",
@@ -101,13 +111,16 @@ def _finding(rule: str, url: str, title: str, severity: Severity, why: str,
         title=title,
         description=why,
         location=Location(path=url, snippet=snippet),
-        severity=severity, confidence=confidence, likelihood=Likelihood.POSSIBLE,
-        cwe=cwe, owasp=owasp,
+        severity=severity,
+        confidence=confidence,
+        likelihood=Likelihood.POSSIBLE,
+        cwe=cwe,
+        owasp=owasp,
         why_vulnerable=why,
         attacker_perspective="Observable directly in the HTTP response by anyone "
-                             "who can reach the URL.",
+        "who can reach the URL.",
         business_impact="Weakens the app's runtime security posture; exact impact "
-                        "depends on the specific misconfiguration.",
+        "depends on the specific misconfiguration.",
         remediation=Remediation(summary=fix, guidance=fix),
         tags=["dynamic", "posture"],
     )
@@ -179,9 +192,7 @@ def _assert_redirect_safe(origin_url: str, next_url: str) -> None:
     if next_host == origin_host:
         return
     if not _hostname_is_public(next_host):
-        raise ValueError(
-            f"refusing redirect from {origin_host!r} to non-public host {next_host!r}"
-        )
+        raise ValueError(f"refusing redirect from {origin_host!r} to non-public host {next_host!r}")
 
 
 @dataclass
@@ -232,9 +243,7 @@ def _verify_peer_public(resp: Any, url: str) -> None:
     except ValueError as exc:
         raise ValueError(f"unexpected peer address {addr[0]!r} for {url}") from exc
     if not public:
-        raise ValueError(
-            f"refusing response from non-public address {addr[0]} for {url}"
-        )
+        raise ValueError(f"refusing response from non-public address {addr[0]} for {url}")
 
 
 @dataclass
@@ -265,8 +274,9 @@ class GuardedSession:
         self._owns_client = self.client is None
         if self.client is None:
             # follow_redirects=False: hops are walked (and checked) in get().
-            self.client = httpx.Client(follow_redirects=False, timeout=self.timeout,
-                                       headers=self.headers)
+            self.client = httpx.Client(
+                follow_redirects=False, timeout=self.timeout, headers=self.headers
+            )
 
     def __enter__(self) -> GuardedSession:
         return self
@@ -324,13 +334,18 @@ class GuardedSession:
         raise ValueError(f"too many redirects while probing {url}")
 
 
-def guarded_get(url: str, *, timeout: float = _TIMEOUT,
-                max_bytes: int = MAX_BODY_BYTES,
-                headers: dict[str, str] | None = None) -> FetchResult | None:
+def guarded_get(
+    url: str,
+    *,
+    timeout: float = _TIMEOUT,
+    max_bytes: int = MAX_BODY_BYTES,
+    headers: dict[str, str] | None = None,
+) -> FetchResult | None:
     """One guarded GET (redirect checks, peer check, size cap). None on failure."""
     try:
-        with GuardedSession(url, timeout=timeout, max_bytes=max_bytes,
-                            headers=dict(headers or _UA)) as session:
+        with GuardedSession(
+            url, timeout=timeout, max_bytes=max_bytes, headers=dict(headers or _UA)
+        ) as session:
             return session.get(url)
     except Exception as exc:  # network, TLS, guard refusals, budget
         log.debug("guarded GET of %s failed: %s", url, exc)
@@ -364,11 +379,19 @@ def probe(url: str, *, check_paths: bool = True) -> list[Finding]:
                 findings.extend(_check_sensitive_paths(session, resp.url))
     except Exception as exc:
         log.warning("live-target probe of %s failed: %s", url, exc)
-        return [_finding(
-            "unreachable", url, "Live target could not be probed", Severity.INFO,
-            f"Argus could not complete posture checks against {url}: {exc}.",
-            "Confirm the URL is reachable from this host and try again.",
-            cwe=[], owasp=[], confidence=Confidence.LOW)]
+        return [
+            _finding(
+                "unreachable",
+                url,
+                "Live target could not be probed",
+                Severity.INFO,
+                f"Argus could not complete posture checks against {url}: {exc}.",
+                "Confirm the URL is reachable from this host and try again.",
+                cwe=[],
+                owasp=[],
+                confidence=Confidence.LOW,
+            )
+        ]
     return findings
 
 
@@ -376,12 +399,19 @@ def _check_transport(url: str, resp: FetchResult) -> list[Finding]:
     out: list[Finding] = []
     final = resp.url
     if urlparse(url).scheme == "http" and urlparse(final).scheme != "https":
-        out.append(_finding(
-            "no-https", url, "Site served over plaintext HTTP", Severity.HIGH,
-            "The URL is served over HTTP and does not redirect to HTTPS, so all "
-            "traffic, including credentials and session cookies, is unencrypted.",
-            "Serve the site over HTTPS and redirect all HTTP requests to it.",
-            cwe=["CWE-319"], owasp=["A02:2021-Cryptographic Failures"]))
+        out.append(
+            _finding(
+                "no-https",
+                url,
+                "Site served over plaintext HTTP",
+                Severity.HIGH,
+                "The URL is served over HTTP and does not redirect to HTTPS, so all "
+                "traffic, including credentials and session cookies, is unencrypted.",
+                "Serve the site over HTTPS and redirect all HTTP requests to it.",
+                cwe=["CWE-319"],
+                owasp=["A02:2021-Cryptographic Failures"],
+            )
+        )
     return out
 
 
@@ -393,27 +423,44 @@ def _check_headers(url: str, resp) -> list[Finding]:
         if name == "strict-transport-security" and not is_https:
             continue  # HSTS is only meaningful over HTTPS
         if name not in headers:
-            out.append(_finding(
-                f"missing-{name}", url,
-                f"Missing security header: {name}", severity, why, fix,
-                cwe=["CWE-693"], owasp=["A05:2021-Security Misconfiguration"]))
+            out.append(
+                _finding(
+                    f"missing-{name}",
+                    url,
+                    f"Missing security header: {name}",
+                    severity,
+                    why,
+                    fix,
+                    cwe=["CWE-693"],
+                    owasp=["A05:2021-Security Misconfiguration"],
+                )
+            )
     if _clickjacking_missing(headers):
-        out.append(_finding(
-            "missing-frame-options", url,
-            "No clickjacking protection (X-Frame-Options / frame-ancestors)",
-            Severity.MEDIUM,
-            "Neither X-Frame-Options nor a CSP frame-ancestors directive is set, so "
-            "the page can be framed by any site and used for clickjacking.",
-            "Send `X-Frame-Options: DENY` or a CSP `frame-ancestors 'none'`.",
-            cwe=["CWE-1021"], owasp=["A05:2021-Security Misconfiguration"]))
+        out.append(
+            _finding(
+                "missing-frame-options",
+                url,
+                "No clickjacking protection (X-Frame-Options / frame-ancestors)",
+                Severity.MEDIUM,
+                "Neither X-Frame-Options nor a CSP frame-ancestors directive is set, so "
+                "the page can be framed by any site and used for clickjacking.",
+                "Send `X-Frame-Options: DENY` or a CSP `frame-ancestors 'none'`.",
+                cwe=["CWE-1021"],
+                owasp=["A05:2021-Security Misconfiguration"],
+            )
+        )
     return out
 
 
 def _check_cookies(url: str, resp) -> list[Finding]:
     out: list[Finding] = []
-    raw_cookies = resp.headers.get_list("set-cookie") if hasattr(
-        resp.headers, "get_list") else resp.headers.get_all("set-cookie") \
-        if hasattr(resp.headers, "get_all") else []
+    raw_cookies = (
+        resp.headers.get_list("set-cookie")
+        if hasattr(resp.headers, "get_list")
+        else resp.headers.get_all("set-cookie")
+        if hasattr(resp.headers, "get_all")
+        else []
+    )
     for raw in raw_cookies:
         low = raw.lower()
         name = raw.split("=", 1)[0].strip()
@@ -425,17 +472,23 @@ def _check_cookies(url: str, resp) -> list[Finding]:
         if "samesite" not in low:
             missing.append("SameSite")
         if missing:
-            out.append(_finding(
-                f"cookie-flags-{name}", url,
-                f"Cookie '{name}' missing flags: {', '.join(missing)}",
-                Severity.MEDIUM if ("Secure" in missing or "HttpOnly" in missing)
-                else Severity.LOW,
-                f"The Set-Cookie for '{name}' is missing {', '.join(missing)}. "
-                "Without HttpOnly it is readable by JavaScript (XSS theft); without "
-                "Secure it is sent over HTTP; without SameSite it is exposed to CSRF.",
-                "Set Secure, HttpOnly, and SameSite=Lax/Strict on session cookies.",
-                cwe=["CWE-1004", "CWE-614"],
-                owasp=["A05:2021-Security Misconfiguration"], snippet=name))
+            out.append(
+                _finding(
+                    f"cookie-flags-{name}",
+                    url,
+                    f"Cookie '{name}' missing flags: {', '.join(missing)}",
+                    Severity.MEDIUM
+                    if ("Secure" in missing or "HttpOnly" in missing)
+                    else Severity.LOW,
+                    f"The Set-Cookie for '{name}' is missing {', '.join(missing)}. "
+                    "Without HttpOnly it is readable by JavaScript (XSS theft); without "
+                    "Secure it is sent over HTTP; without SameSite it is exposed to CSRF.",
+                    "Set Secure, HttpOnly, and SameSite=Lax/Strict on session cookies.",
+                    cwe=["CWE-1004", "CWE-614"],
+                    owasp=["A05:2021-Security Misconfiguration"],
+                    snippet=name,
+                )
+            )
     return out
 
 
@@ -445,14 +498,21 @@ def _check_version_disclosure(url: str, resp) -> list[Finding]:
     for h in ("server", "x-powered-by"):
         val = headers.get(h, "")
         if val and any(c.isdigit() for c in val):
-            out.append(_finding(
-                f"version-disclosure-{h}", url,
-                f"Version disclosure via {h} header", Severity.LOW,
-                f"The {h} header advertises `{val}`, telling an attacker exactly "
-                "which software and version to target with known exploits.",
-                f"Remove or genericize the {h} header.",
-                cwe=["CWE-200"], owasp=["A05:2021-Security Misconfiguration"],
-                confidence=Confidence.MEDIUM, snippet=f"{h}: {val}"))
+            out.append(
+                _finding(
+                    f"version-disclosure-{h}",
+                    url,
+                    f"Version disclosure via {h} header",
+                    Severity.LOW,
+                    f"The {h} header advertises `{val}`, telling an attacker exactly "
+                    "which software and version to target with known exploits.",
+                    f"Remove or genericize the {h} header.",
+                    cwe=["CWE-200"],
+                    owasp=["A05:2021-Security Misconfiguration"],
+                    confidence=Confidence.MEDIUM,
+                    snippet=f"{h}: {val}",
+                )
+            )
     return out
 
 
@@ -469,12 +529,19 @@ def _check_sensitive_paths(session: GuardedSession, base_url: str) -> list[Findi
         # return a 200 SPA shell for unknown paths, so require it not be HTML.
         ctype = r.headers.get("content-type", "").lower()
         if r.status_code == 200 and "text/html" not in ctype and r.content:
-            out.append(_finding(
-                "exposed-path", target, f"{title} at /{path}", Severity.HIGH,
-                f"{target} is publicly accessible and returned {r.status_code}. "
-                "Sensitive files exposed at well-known paths leak secrets, source, "
-                "or internal state.",
-                f"Block public access to /{path} at the web server or app layer.",
-                cwe=["CWE-538"], owasp=["A05:2021-Security Misconfiguration"],
-                snippet=f"HTTP {r.status_code} {ctype}"))
+            out.append(
+                _finding(
+                    "exposed-path",
+                    target,
+                    f"{title} at /{path}",
+                    Severity.HIGH,
+                    f"{target} is publicly accessible and returned {r.status_code}. "
+                    "Sensitive files exposed at well-known paths leak secrets, source, "
+                    "or internal state.",
+                    f"Block public access to /{path} at the web server or app layer.",
+                    cwe=["CWE-538"],
+                    owasp=["A05:2021-Security Misconfiguration"],
+                    snippet=f"HTTP {r.status_code} {ctype}",
+                )
+            )
     return out

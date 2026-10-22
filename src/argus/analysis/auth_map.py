@@ -31,7 +31,8 @@ _JS_AUTH = re.compile(
 )
 _ROLE = re.compile(r"(?:roles?|permissions?)\s*=\s*\[([^\]]+)\]", re.I)
 _SENSITIVE = re.compile(
-    r"/(?:admin|internal|users?|accounts?|billing|secrets?|tokens?)(?:/|$)", re.I,
+    r"/(?:admin|internal|users?|accounts?|billing|secrets?|tokens?)(?:/|$)",
+    re.I,
 )
 _PY_DEF = re.compile(r"^(?:async\s+)?def\b")
 
@@ -139,7 +140,8 @@ def build_auth_map(project: Project) -> list[EndpointEntry]:
             continue
         lines = f.text().splitlines()
         routes = [
-            (i, parsed) for i, line in enumerate(lines)
+            (i, parsed)
+            for i, line in enumerate(lines)
             if (parsed := _method_and_path(line, suffix)) is not None
         ]
         for n, (i, (method, path)) in enumerate(routes):
@@ -152,14 +154,16 @@ def build_auth_map(project: Project) -> list[EndpointEntry]:
                 has_auth = bool(_JS_AUTH.search(window))
             role_m = _ROLE.search(window)
             authz = role_m.group(1).strip() if role_m else ("present" if has_auth else "none")
-            entries.append(EndpointEntry(
-                path=path,
-                method=method,
-                file=f.rel_path,
-                line=i + 1,
-                authentication="required" if has_auth else "missing",
-                authorization=authz,
-                risk=_risk(path, has_auth),
-            ))
+            entries.append(
+                EndpointEntry(
+                    path=path,
+                    method=method,
+                    file=f.rel_path,
+                    line=i + 1,
+                    authentication="required" if has_auth else "missing",
+                    authorization=authz,
+                    risk=_risk(path, has_auth),
+                )
+            )
     entries.sort(key=lambda e: (_RISK_RANK.get(e.risk, 99), e.file, e.line))
     return entries

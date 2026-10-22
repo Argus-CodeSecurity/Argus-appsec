@@ -91,10 +91,7 @@ class ProvenanceScanner(Scanner):
     description = "Reads SLSA/in-toto provenance files and flags integrity gaps."
 
     def applies_to(self, project) -> bool:
-        return any(
-            _ATTESTATION_NAMES.search(f.rel_path)
-            for f in project.files()
-        )
+        return any(_ATTESTATION_NAMES.search(f.rel_path) for f in project.files())
 
     def scan(self, ctx: ScannerContext) -> Iterable[Finding]:
         counter = 0

@@ -74,7 +74,7 @@ class _FileParse:
         self.root = root
 
     def text(self, node) -> str:
-        return self.src[node.start_byte:node.end_byte].decode("utf-8", "ignore")
+        return self.src[node.start_byte : node.end_byte].decode("utf-8", "ignore")
 
 
 @scanner
@@ -84,9 +84,11 @@ class ASTPythonInterprocScanner(Scanner):
     # Cross-file: a call site's verdict depends on another file, so per-file
     # caching would be unsound. Left non-file_local on purpose.
     file_local = False
-    description = ("Cross-file/inter-procedural taint for Python (depth-1): "
-                   "untrusted input passed into a function whose parameter reaches "
-                   "a sink. Needs the [ast] extra.")
+    description = (
+        "Cross-file/inter-procedural taint for Python (depth-1): "
+        "untrusted input passed into a function whose parameter reaches "
+        "a sink. Needs the [ast] extra."
+    )
 
     def applies_to(self, project) -> bool:
         return is_available() and len(project.files_matching("*.py")) > 0
@@ -159,8 +161,7 @@ class ASTPythonInterprocScanner(Scanner):
                 sinks = analyzer.seeded_sinks(body, {pname})
                 if sinks:
                     sink_id, sink_line = sinks[0]
-                    yield _DangerousParam(func_name, index, pname, sink_id,
-                                          sink_line, fp.path)
+                    yield _DangerousParam(func_name, index, pname, sink_id, sink_line, fp.path)
 
     @staticmethod
     def _iter_nodes(root, node_type: str):
@@ -187,13 +188,11 @@ class ASTPythonInterprocScanner(Scanner):
             t = child.type
             if t == "identifier":
                 out.append((idx, fp.text(child)))
-            elif t in ("typed_parameter", "typed_default_parameter",
-                       "default_parameter"):
+            elif t in ("typed_parameter", "typed_default_parameter", "default_parameter"):
                 nm = child.child_by_field_name("name")
                 # typed_parameter has no "name" field; its first identifier is it.
                 if nm is None:
-                    nm = next((c for c in child.children
-                               if c.type == "identifier"), None)
+                    nm = next((c for c in child.children if c.type == "identifier"), None)
                 out.append((idx, fp.text(nm) if nm is not None else None))
             elif t in ("list_splat_pattern", "dictionary_splat_pattern"):
                 out.append((idx, None))
@@ -248,8 +247,7 @@ class ASTPythonInterprocScanner(Scanner):
         return positional, keyword
 
     # --- finding ------------------------------------------------------------
-    def _finding(self, fp: _FileParse, call, line: int,
-                 summary: _DangerousParam) -> Finding:
+    def _finding(self, fp: _FileParse, call, line: int, summary: _DangerousParam) -> Finding:
         sink = _SINK_BY_ID.get(summary.sink_id)
         title = sink.title if sink else "Tainted input reaches a dangerous sink"
         cwe = sink.cwe if sink else []
@@ -263,9 +261,11 @@ class ASTPythonInterprocScanner(Scanner):
             confidence = Confidence.LOW
             tags.append("test-context")
         snippet = fp.text(call).replace("\n", " ")[:240]
-        where = (f"{summary.def_path}:{summary.sink_line}"
-                 if summary.def_path != fp.path
-                 else f"line {summary.sink_line}")
+        where = (
+            f"{summary.def_path}:{summary.sink_line}"
+            if summary.def_path != fp.path
+            else f"line {summary.sink_line}"
+        )
         return Finding(
             id=f"{self.name}:{summary.sink_id}:{fp.path}:{line}",
             rule_id=f"{self.name}.{summary.sink_id}",
@@ -276,17 +276,22 @@ class ASTPythonInterprocScanner(Scanner):
                 f"`{summary.func_name}()`, whose body reaches a sink at {where}."
             ),
             location=Location(path=fp.path, start_line=line, snippet=snippet),
-            severity=severity, confidence=confidence, likelihood=Likelihood.LIKELY,
-            cwe=cwe, owasp=owasp,
+            severity=severity,
+            confidence=confidence,
+            likelihood=Likelihood.LIKELY,
+            cwe=cwe,
+            owasp=owasp,
             why_vulnerable=(
                 f"A value from an untrusted source flows into `{summary.func_name}()` "
                 f"via parameter `{summary.name}` and reaches a sink at {where}, one "
                 "call hop away, so the intra-file scanners do not see it."
             ),
-            attacker_perspective=(sink.attack if sink else
-                                  "Control the untrusted input to reach the sink."),
-            business_impact=(sink.impact if sink else
-                             "Depends on the sink; see the referenced weakness."),
+            attacker_perspective=(
+                sink.attack if sink else "Control the untrusted input to reach the sink."
+            ),
+            business_impact=(
+                sink.impact if sink else "Depends on the sink; see the referenced weakness."
+            ),
             remediation=Remediation(
                 summary=(sink.fix if sink else "Validate input before the sink."),
                 guidance=(
@@ -297,6 +302,9 @@ class ASTPythonInterprocScanner(Scanner):
                 ),
             ),
             tags=tags,
-            metadata={"analysis": "taint-dataflow-interprocedural",
-                      "sink_location": where, "callee": summary.func_name},
+            metadata={
+                "analysis": "taint-dataflow-interprocedural",
+                "sink_location": where,
+                "callee": summary.func_name,
+            },
         )

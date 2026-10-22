@@ -26,8 +26,15 @@ def _scan(*rules: str) -> ScanResult:
         target="repo",
         started_at=datetime.now(timezone.utc),
         findings=[
-            Finding(id=f"x:{r}", rule_id=r, scanner="patterns", title=r, description="",
-                    location=Location(path="a.py", snippet="bad()"), severity=Severity.HIGH)
+            Finding(
+                id=f"x:{r}",
+                rule_id=r,
+                scanner="patterns",
+                title=r,
+                description="",
+                location=Location(path="a.py", snippet="bad()"),
+                severity=Severity.HIGH,
+            )
             for r in rules
         ],
     )
@@ -41,14 +48,17 @@ def test_failed_push_does_not_advance_baseline(tmp_path: Path):
         raise RuntimeError("cloud down")
 
     with pytest.raises(RuntimeError):
-        run_watch_cycle(scan_fn=lambda: _scan("r1", "r2"), state_dir=store,
-                        push_fn=failing_push)
+        run_watch_cycle(scan_fn=lambda: _scan("r1", "r2"), state_dir=store, push_fn=failing_push)
     latest = load_snapshot(latest_snapshot_path(store))
     assert latest is not None and [f.rule_id for f in latest.findings] == ["r1"]
 
     pushed: list[ScanResult] = []
-    retry = run_watch_cycle(scan_fn=lambda: _scan("r1", "r2"), state_dir=store,
-                            push_fn=pushed.append, fail_on_drift=Severity.HIGH)
+    retry = run_watch_cycle(
+        scan_fn=lambda: _scan("r1", "r2"),
+        state_dir=store,
+        push_fn=pushed.append,
+        fail_on_drift=Severity.HIGH,
+    )
     # The change is still reported as drift and is pushed on the retry.
     assert retry.drift is not None and len(retry.drift.added) == 1
     assert retry.exit_code == 1
@@ -62,11 +72,19 @@ def test_commit_fn_runs_only_after_successful_push(tmp_path: Path):
         raise RuntimeError("nope")
 
     with pytest.raises(RuntimeError):
-        run_watch_cycle(scan_fn=lambda: _scan(), state_dir=tmp_path,
-                        push_fn=failing_push, commit_fn=lambda: committed.append(1))
+        run_watch_cycle(
+            scan_fn=lambda: _scan(),
+            state_dir=tmp_path,
+            push_fn=failing_push,
+            commit_fn=lambda: committed.append(1),
+        )
     assert committed == []
-    run_watch_cycle(scan_fn=lambda: _scan(), state_dir=tmp_path,
-                    push_fn=lambda r: None, commit_fn=lambda: committed.append(1))
+    run_watch_cycle(
+        scan_fn=lambda: _scan(),
+        state_dir=tmp_path,
+        push_fn=lambda r: None,
+        commit_fn=lambda: committed.append(1),
+    )
     assert committed == [1]
 
 
@@ -86,9 +104,15 @@ def test_loop_survives_failing_cycles(tmp_path: Path, monkeypatch):
             raise KeyboardInterrupt
 
     monkeypatch.setattr(scheduler.time, "sleep", fake_sleep)
-    code = run_watch_loop(scan_fn=scan_fn, state_dir=tmp_path, interval_seconds=1,
-                          once=False, fail_on_drift=None, push_fn=None,
-                          on_error=errors.append)
+    code = run_watch_loop(
+        scan_fn=scan_fn,
+        state_dir=tmp_path,
+        interval_seconds=1,
+        once=False,
+        fail_on_drift=None,
+        push_fn=None,
+        on_error=errors.append,
+    )
     assert code == 0
     assert calls["scan"] == 3  # kept going after the first failure
     assert len(errors) == 1 and "scanner crashed" in str(errors[0])
@@ -99,8 +123,14 @@ def test_once_mode_still_raises(tmp_path: Path):
         raise RuntimeError("x")
 
     with pytest.raises(RuntimeError):
-        run_watch_loop(scan_fn=boom, state_dir=tmp_path, interval_seconds=1, once=True,
-                       fail_on_drift=None, push_fn=None)
+        run_watch_loop(
+            scan_fn=boom,
+            state_dir=tmp_path,
+            interval_seconds=1,
+            once=True,
+            fail_on_drift=None,
+            push_fn=None,
+        )
 
 
 def test_archives_are_pruned(tmp_path: Path):

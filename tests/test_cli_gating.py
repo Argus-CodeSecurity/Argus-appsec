@@ -28,14 +28,16 @@ def test_severity_parse_rejects_unknown_with_value_error() -> None:
 
 @pytest.mark.parametrize("flag", ["--fail-on", "--min-severity"])
 def test_scan_bad_severity_is_usage_error(tmp_path: Path, flag: str) -> None:
-    res = runner.invoke(app, ["scan", str(_clean_project(tmp_path)), flag, "hgih",
-                              "--quiet", "--no-ai"])
+    res = runner.invoke(
+        app, ["scan", str(_clean_project(tmp_path)), flag, "hgih", "--quiet", "--no-ai"]
+    )
     assert res.exit_code == 2, res.output
 
 
 def test_focused_scan_bad_fail_on_is_usage_error(tmp_path: Path) -> None:
-    res = runner.invoke(app, ["secrets", str(_clean_project(tmp_path)),
-                              "--fail-on", "nope", "--quiet"])
+    res = runner.invoke(
+        app, ["secrets", str(_clean_project(tmp_path)), "--fail-on", "nope", "--quiet"]
+    )
     assert res.exit_code == 2, res.output
 
 
@@ -65,11 +67,19 @@ def test_config_errors_fail_gate_defaults() -> None:
 
 def test_scan_fails_on_scanner_error_when_gating(tmp_path: Path, crashing_secrets) -> None:
     project = str(_clean_project(tmp_path))
-    base = ["scan", project, "--scanners", "secrets", "--quiet", "--no-ai", "--no-cache",
-            "-f", "json"]
+    base = [
+        "scan",
+        project,
+        "--scanners",
+        "secrets",
+        "--quiet",
+        "--no-ai",
+        "--no-cache",
+        "-f",
+        "json",
+    ]
     assert runner.invoke(app, [*base, "--fail-on", "critical"]).exit_code == 1
-    assert runner.invoke(app, [*base, "--fail-on", "critical",
-                               "--no-fail-on-error"]).exit_code == 0
+    assert runner.invoke(app, [*base, "--fail-on", "critical", "--no-fail-on-error"]).exit_code == 0
     # Without a threshold the run does not gate, so errors are only reported.
     assert runner.invoke(app, base).exit_code == 0
 
@@ -84,8 +94,8 @@ def test_focused_scan_fails_on_scanner_error(tmp_path: Path, crashing_secrets) -
 def test_policy_check_fails_on_scanner_error(tmp_path: Path, crashing_secrets) -> None:
     project = _clean_project(tmp_path)
     (project / ".argus.yml").write_text(
-        "policies:\n  - id: block-secrets\n    when:\n      scanner: secrets\n"
-        "    action: block\n", encoding="utf-8")
-    res = runner.invoke(app, ["policy", "check", str(project), "--scanners", "secrets",
-                              "--quiet"])
+        "policies:\n  - id: block-secrets\n    when:\n      scanner: secrets\n    action: block\n",
+        encoding="utf-8",
+    )
+    res = runner.invoke(app, ["policy", "check", str(project), "--scanners", "secrets", "--quiet"])
     assert res.exit_code == 1, res.output

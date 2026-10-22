@@ -54,11 +54,14 @@ def _iam_wildcard_lines(lines: list[str]) -> list[int]:
             out.append(lineno)
     return out
 
+
 _RULES: list[tuple[str, str, re.Pattern[str], Severity, str, str]] = [
     (
         "cloud.public-s3-acl",
         "Public S3 ACL or public access block disabled",
-        re.compile(r'acl\s*=\s*"public-read|public_access_block\s*\{[^}]*block_public_acls\s*=\s*false'),
+        re.compile(
+            r'acl\s*=\s*"public-read|public_access_block\s*\{[^}]*block_public_acls\s*=\s*false'
+        ),
         Severity.HIGH,
         "Public object storage exposes data to the internet.",
         "Enable block public access and use private ACLs with IAM policies.",
@@ -66,7 +69,9 @@ _RULES: list[tuple[str, str, re.Pattern[str], Severity, str, str]] = [
     (
         "cloud.open-security-group",
         "Security group or firewall open to 0.0.0.0/0",
-        re.compile(r'0\.0\.0\.0/0|cidr\s*=\s*"0\.0\.0\.0/0"|source_ranges\s*=\s*\["0\.0\.0\.0/0"\]'),
+        re.compile(
+            r'0\.0\.0\.0/0|cidr\s*=\s*"0\.0\.0\.0/0"|source_ranges\s*=\s*\["0\.0\.0\.0/0"\]'
+        ),
         Severity.HIGH,
         "World-open ingress allows anyone to reach the service.",
         "Restrict to known CIDR ranges or private networks.",
@@ -121,7 +126,9 @@ class CloudScanner(Scanner):
         arch = project.architecture or {}
         if arch.get("cloud") or arch.get("iac"):
             return True
-        return any(_CLOUD_FILES.search(f.rel_path) or _is_cloudformation(f) for f in project.files())
+        return any(
+            _CLOUD_FILES.search(f.rel_path) or _is_cloudformation(f) for f in project.files()
+        )
 
     def scan(self, ctx: ScannerContext) -> Iterable[Finding]:
         counter = 0
@@ -134,8 +141,15 @@ class CloudScanner(Scanner):
                     for lineno in _iam_wildcard_lines(lines):
                         counter += 1
                         yield self._mk(
-                            f.rel_path, rule_id, title, severity, why, fix, lineno,
-                            lines[lineno - 1][:2000], counter,
+                            f.rel_path,
+                            rule_id,
+                            title,
+                            severity,
+                            why,
+                            fix,
+                            lineno,
+                            lines[lineno - 1][:2000],
+                            counter,
                         )
                     continue
                 reported: set[int] = set()
@@ -143,7 +157,9 @@ class CloudScanner(Scanner):
                     if lineno not in reported and pattern.search(line):
                         reported.add(lineno)
                         counter += 1
-                        yield self._mk(f.rel_path, rule_id, title, severity, why, fix, lineno, line, counter)
+                        yield self._mk(
+                            f.rel_path, rule_id, title, severity, why, fix, lineno, line, counter
+                        )
 
     @staticmethod
     def _mk(path, rule, title, severity, why, fix, lineno, line, counter) -> Finding:

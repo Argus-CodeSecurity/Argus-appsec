@@ -35,7 +35,7 @@ def test_fileref_text_is_threadsafe(tmp_path: Path):
 
     Before the fix, a racing reader could observe the in-progress read as "".
     """
-    content = ("payload-line\n" * 5000)  # big enough to widen the read window
+    content = "payload-line\n" * 5000  # big enough to widen the read window
     p = tmp_path / "big.py"
     p.write_text(content, encoding="utf-8")
 
@@ -47,8 +47,7 @@ def test_fileref_text_is_threadsafe(tmp_path: Path):
         ref = FileRef(path=p, rel_path="big.py", size=len(content))
         results: list[str] = []
         gate = threading.Barrier(8)
-        threads = [threading.Thread(target=read, args=(ref, results, gate))
-                   for _ in range(8)]
+        threads = [threading.Thread(target=read, args=(ref, results, gate)) for _ in range(8)]
         for t in threads:
             t.start()
         for t in threads:
@@ -99,10 +98,8 @@ def test_untrusted_repo_ignores_convention_rules(tmp_path: Path):
     trusted.trust_project_config = True
     untrusted = Config()
     untrusted.trust_project_config = False
-    n_trusted = len(scanner._effective_rules(
-        ScannerContext(project=project, config=trusted)))
-    n_untrusted = len(scanner._effective_rules(
-        ScannerContext(project=project, config=untrusted)))
+    n_trusted = len(scanner._effective_rules(ScannerContext(project=project, config=trusted)))
+    n_untrusted = len(scanner._effective_rules(ScannerContext(project=project, config=untrusted)))
     assert n_trusted == len(BUILTIN_RULES) + 1
     assert n_untrusted == len(BUILTIN_RULES)
 
@@ -123,8 +120,10 @@ def test_torch_load_unbalanced_line_is_left_alone():
 
 def test_yaml_load_with_loader_is_not_autofixed():
     # safe_load takes no Loader= kwarg; rewriting would raise TypeError at runtime.
-    assert fix_line("patterns.python-yaml-load",
-                    "cfg = yaml.load(raw, Loader=yaml.FullLoader)") is None
+    assert (
+        fix_line("patterns.python-yaml-load", "cfg = yaml.load(raw, Loader=yaml.FullLoader)")
+        is None
+    )
 
 
 def test_yaml_load_plain_is_fixed_and_verified():
@@ -140,7 +139,8 @@ def _git(root: Path, *args: str) -> None:
 
 def _init_repo(tmp_path: Path) -> Path:
     (tmp_path / "a.py").write_text(
-        "import yaml\nx = yaml.load(open('c').read())\n", encoding="utf-8")
+        "import yaml\nx = yaml.load(open('c').read())\n", encoding="utf-8"
+    )
     (tmp_path / "unrelated.py").write_text("WIP = 1\n", encoding="utf-8")
     _git(tmp_path, "init", "-q")
     _git(tmp_path, "-c", "user.name=t", "-c", "user.email=t@t", "add", "-A")
@@ -150,18 +150,25 @@ def _init_repo(tmp_path: Path) -> Path:
 
 def _yaml_finding():
     from argus.core.models import Finding, Location, Severity
+
     return Finding(
-        id="patterns:python-yaml-load:1", rule_id="patterns.python-yaml-load",
-        scanner="patterns", title="yaml.load", description="",
-        location=Location(path="a.py", start_line=2), severity=Severity.HIGH)
+        id="patterns:python-yaml-load:1",
+        rule_id="patterns.python-yaml-load",
+        scanner="patterns",
+        title="yaml.load",
+        description="",
+        location=Location(path="a.py", start_line=2),
+        severity=Severity.HIGH,
+    )
 
 
 @pytest.mark.skipif(git_missing, reason="git not available")
 def test_fix_workflow_refuses_dirty_tree(tmp_path: Path):
     repo = _init_repo(tmp_path)
     (repo / "unrelated.py").write_text("WIP = 2  # uncommitted\n", encoding="utf-8")
-    outcome = run_fix_workflow(Project.from_path(repo), [_yaml_finding()],
-                               FixOptions(open_pr=False))
+    outcome = run_fix_workflow(
+        Project.from_path(repo), [_yaml_finding()], FixOptions(open_pr=False)
+    )
     assert outcome.error and "uncommitted" in outcome.error
     assert not outcome.committed
 
@@ -169,10 +176,13 @@ def test_fix_workflow_refuses_dirty_tree(tmp_path: Path):
 @pytest.mark.skipif(git_missing, reason="git not available")
 def test_fix_workflow_stages_only_changed_files(tmp_path: Path):
     repo = _init_repo(tmp_path)  # clean tree
-    outcome = run_fix_workflow(Project.from_path(repo), [_yaml_finding()],
-                               FixOptions(open_pr=False))
+    outcome = run_fix_workflow(
+        Project.from_path(repo), [_yaml_finding()], FixOptions(open_pr=False)
+    )
     assert outcome.committed
     committed = subprocess.run(
         ["git", "-C", str(repo), "show", "--name-only", "--pretty=format:", "HEAD"],
-        capture_output=True, text=True).stdout.split()
+        capture_output=True,
+        text=True,
+    ).stdout.split()
     assert committed == ["a.py"]  # unrelated.py is never swept in

@@ -62,7 +62,7 @@ def test_build_spdx(tmp_path: Path):
 def test_authz_flags_missing_auth_on_admin_route(tmp_path: Path):
     app = tmp_path / "app.py"
     app.write_text(
-        'from fastapi import FastAPI\napp = FastAPI()\n\n'
+        "from fastapi import FastAPI\napp = FastAPI()\n\n"
         '@app.get("/admin/users")\nasync def list_users():\n    return []\n',
         encoding="utf-8",
     )
@@ -85,7 +85,9 @@ def test_authz_flags_weak_jwt(tmp_path: Path):
 def test_compare_fingerprints_install_script_added():
     old = BehaviorFingerprint("npm", "pkg", "1.0.0")
     new = BehaviorFingerprint(
-        "npm", "pkg", "1.1.0",
+        "npm",
+        "pkg",
+        "1.1.0",
         install_scripts=["postinstall"],
         suspicious_script=True,
     )
@@ -104,9 +106,10 @@ def test_npm_fingerprint_mocked():
         return httpx.Response(200, json=payload)
 
     transport = httpx.MockTransport(handler)
-    with httpx.Client(transport=transport) as client, patch(
-        "argus.supply_chain.behavior.httpx.Client"
-    ) as mock_cls:
+    with (
+        httpx.Client(transport=transport) as client,
+        patch("argus.supply_chain.behavior.httpx.Client") as mock_cls,
+    ):
         mock_cls.return_value.__enter__.return_value = client
         fp = npm_fingerprint("evil-pkg", "1.0.0")
     assert fp is not None
@@ -146,9 +149,14 @@ def test_dependency_diff_scanner(tmp_path: Path):
 
 def test_cross_file_attack_chain_kev_reachable():
     dep = Finding(
-        id="d:1", rule_id="dependencies.cve", scanner="dependencies",
-        title="CVE", description="", location=Location(path="requirements.txt"),
-        severity=Severity.HIGH, tags=["kev"],
+        id="d:1",
+        rule_id="dependencies.cve",
+        scanner="dependencies",
+        title="CVE",
+        description="",
+        location=Location(path="requirements.txt"),
+        severity=Severity.HIGH,
+        tags=["kev"],
         metadata={"kev": True, "reachability": "imported"},
     )
     chains = find_chains([dep])
@@ -157,13 +165,21 @@ def test_cross_file_attack_chain_kev_reachable():
 
 def test_cross_file_ssrf_cloud_secret_chain():
     ssrf = Finding(
-        id="s:1", rule_id="patterns.ssrf", scanner="patterns",
-        title="SSRF", description="", location=Location(path="a.py"),
-        severity=Severity.HIGH, cwe=["CWE-918"],
+        id="s:1",
+        rule_id="patterns.ssrf",
+        scanner="patterns",
+        title="SSRF",
+        description="",
+        location=Location(path="a.py"),
+        severity=Severity.HIGH,
+        cwe=["CWE-918"],
     )
     secret = Finding(
-        id="s:2", rule_id="secrets.aws", scanner="secrets",
-        title="AWS key", description="",
+        id="s:2",
+        rule_id="secrets.aws",
+        scanner="secrets",
+        title="AWS key",
+        description="",
         location=Location(path="b.py", snippet="AWS_SECRET=xxx"),
         severity=Severity.CRITICAL,
     )
@@ -190,7 +206,7 @@ def test_malware_flags_obfuscated_python(tmp_path: Path):
 
 def test_authz_skips_public_login_route(tmp_path: Path):
     (tmp_path / "app.py").write_text(
-        'from fastapi import FastAPI\napp = FastAPI()\n\n'
+        "from fastapi import FastAPI\napp = FastAPI()\n\n"
         '@app.post("/user/login")\nasync def login():\n    return {}\n',
         encoding="utf-8",
     )

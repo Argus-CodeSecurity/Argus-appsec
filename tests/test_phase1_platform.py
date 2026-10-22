@@ -20,8 +20,11 @@ from argus.sbom.cyclonedx import build_cyclonedx
 
 def _finding(rule, path="app.py", line=10, scanner="patterns"):
     return Finding(
-        id=f"{rule}:{line}", rule_id=rule, scanner=scanner,
-        title=rule, description="",
+        id=f"{rule}:{line}",
+        rule_id=rule,
+        scanner=scanner,
+        title=rule,
+        description="",
         location=Location(path=path, start_line=line),
         severity=Severity.HIGH,
     )
@@ -91,8 +94,13 @@ def test_policy_blocks_on_severity():
     result.findings = [
         _finding("x", scanner="patterns"),
         Finding(
-            id="c:1", rule_id="y", scanner="secrets", title="s", description="",
-            location=Location(path="k"), severity=Severity.CRITICAL,
+            id="c:1",
+            rule_id="y",
+            scanner="secrets",
+            title="s",
+            description="",
+            location=Location(path="k"),
+            severity=Severity.CRITICAL,
         ),
     ]
     policies = [{"id": "block-critical", "when": {"severity": "critical"}, "action": "block"}]

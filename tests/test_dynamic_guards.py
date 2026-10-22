@@ -34,15 +34,15 @@ def _public_example(monkeypatch):
         return True if host.endswith("example.com") else real(host)
 
     monkeypatch.setattr(posture, "_hostname_is_public", fake)
-    for var in ("HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY", "http_proxy", "https_proxy",
-                "all_proxy"):
+    for var in ("HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY", "http_proxy", "https_proxy", "all_proxy"):
         monkeypatch.delenv(var, raising=False)
 
 
 def test_public_origin_connected_to_public_peer_is_read():
     def handler(request):
-        return httpx.Response(200, text="hello",
-                              extensions={"network_stream": _Stream("93.184.216.34")})
+        return httpx.Response(
+            200, text="hello", extensions={"network_stream": _Stream("93.184.216.34")}
+        )
 
     s = posture.GuardedSession("https://app.example.com/", client=_client(handler))
     resp = s.get("https://app.example.com/")
@@ -52,8 +52,11 @@ def test_public_origin_connected_to_public_peer_is_read():
 def test_dns_rebinding_to_metadata_is_refused():
     # DNS said public, but the socket actually connected to link-local metadata.
     def handler(request):
-        return httpx.Response(200, text="secret-credentials",
-                              extensions={"network_stream": _Stream("169.254.169.254", 80)})
+        return httpx.Response(
+            200,
+            text="secret-credentials",
+            extensions={"network_stream": _Stream("169.254.169.254", 80)},
+        )
 
     s = posture.GuardedSession("http://app.example.com/", client=_client(handler))
     with pytest.raises(ValueError, match="non-public address"):
@@ -88,8 +91,11 @@ def test_operator_chosen_local_target_is_allowed():
 
 def test_redirect_into_private_space_is_refused():
     def handler(request):
-        return httpx.Response(302, headers={"location": "http://169.254.169.254/"},
-                              extensions={"network_stream": _Stream("93.184.216.34")})
+        return httpx.Response(
+            302,
+            headers={"location": "http://169.254.169.254/"},
+            extensions={"network_stream": _Stream("93.184.216.34")},
+        )
 
     s = posture.GuardedSession("https://app.example.com/", client=_client(handler))
     with pytest.raises(ValueError, match="non-public host"):
@@ -100,11 +106,11 @@ def test_body_is_capped():
     big = b"a" * 3_000_000
 
     def handler(request):
-        return httpx.Response(200, content=big,
-                              extensions={"network_stream": _Stream("93.184.216.34")})
+        return httpx.Response(
+            200, content=big, extensions={"network_stream": _Stream("93.184.216.34")}
+        )
 
-    s = posture.GuardedSession("https://app.example.com/", client=_client(handler),
-                               max_bytes=1000)
+    s = posture.GuardedSession("https://app.example.com/", client=_client(handler), max_bytes=1000)
     resp = s.get("https://app.example.com/")
     assert resp.truncated and len(resp.content) == 1000
 
@@ -113,8 +119,8 @@ def test_session_deadline_is_enforced():
     def handler(request):
         return httpx.Response(200, extensions={"network_stream": _Stream("93.184.216.34")})
 
-    s = posture.GuardedSession("https://app.example.com/", client=_client(handler),
-                               deadline_seconds=0)
+    s = posture.GuardedSession(
+        "https://app.example.com/", client=_client(handler), deadline_seconds=0
+    )
     with pytest.raises(TimeoutError):
         s.get("https://app.example.com/")
-

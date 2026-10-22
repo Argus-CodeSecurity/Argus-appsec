@@ -42,9 +42,11 @@ from argus.supply_chain.scripts import LIFECYCLE_HOOKS, SUSPICIOUS_INSTALL_SCRIP
 
 @lru_cache(maxsize=1)
 def _load_popular() -> dict:
-    with resources.files("argus.scanners.data").joinpath("supply_chain.json").open(
-        encoding="utf-8"
-    ) as fh:
+    with (
+        resources.files("argus.scanners.data")
+        .joinpath("supply_chain.json")
+        .open(encoding="utf-8") as fh
+    ):
         return json.load(fh).get("popular", {})
 
 
@@ -100,8 +102,9 @@ def _scan_npm_scripts(project, counter: int) -> Iterable[Finding]:
                 ),
                 # The line number lets the engine merge this with the malware
                 # scanner's finding for the same script (same file, line, CWE).
-                location=Location(path=f.rel_path, start_line=_hook_line(f, hook),
-                                  snippet=body[:200]),
+                location=Location(
+                    path=f.rel_path, start_line=_hook_line(f, hook), snippet=body[:200]
+                ),
                 severity=Severity.HIGH,
                 confidence=Confidence.MEDIUM,
                 likelihood=Likelihood.POSSIBLE,
@@ -135,9 +138,7 @@ def _scan_npm_scripts(project, counter: int) -> Iterable[Finding]:
 class SupplyChainScanner(Scanner):
     name = "supply-chain"
     category = "supply-chain"
-    description = (
-        "Flags known malicious packages, typosquats, and suspicious install scripts."
-    )
+    description = "Flags known malicious packages, typosquats, and suspicious install scripts."
 
     def applies_to(self, project) -> bool:
         # File presence only: parsing every manifest here ran untrusted input
@@ -209,8 +210,7 @@ class SupplyChainScanner(Scanner):
                     scanner="supply-chain",
                     title=f"Possible typosquat: {pkg}",
                     description=(
-                        f"`{pkg}` is one edit away from popular package(s): "
-                        f"{', '.join(typos)}."
+                        f"`{pkg}` is one edit away from popular package(s): {', '.join(typos)}."
                     ),
                     location=Location(path=path, snippet=f"{pkg}=={version}"),
                     severity=Severity.HIGH,

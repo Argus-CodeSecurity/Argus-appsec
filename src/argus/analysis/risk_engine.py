@@ -9,9 +9,13 @@ from argus.core.models import Finding, ScanResult, Severity
 # Verdicts the reachability analysis actually writes to metadata["reachability"]
 # that mean first-party code uses the dependency ("imported" is the common one;
 # the old check looked only for "REACHABLE", so the boost never fired).
-_REACHABLE_VERDICTS = frozenset({
-    reachability.IMPORTED, reachability.REACHABLE, reachability.VERIFIED,
-})
+_REACHABLE_VERDICTS = frozenset(
+    {
+        reachability.IMPORTED,
+        reachability.REACHABLE,
+        reachability.VERIFIED,
+    }
+)
 
 
 def _is_reachable(f: Finding) -> bool:

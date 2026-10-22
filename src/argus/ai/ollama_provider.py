@@ -77,8 +77,9 @@ class OllamaProvider(AIProvider):
         attempts = max_retries() + 1
         for attempt in range(attempts):
             try:
-                resp = httpx.post(f"{_host()}/api/chat", json=payload,
-                                  timeout=request_timeout(_DEFAULT_TIMEOUT))
+                resp = httpx.post(
+                    f"{_host()}/api/chat", json=payload, timeout=request_timeout(_DEFAULT_TIMEOUT)
+                )
                 resp.raise_for_status()
                 break
             except httpx.TransportError:

@@ -78,7 +78,8 @@ def operator_target(ctx: ScannerContext) -> str | None:
     if url in _project_declared_urls(ctx.project.root):
         log.warning(
             "Ignoring the DAST URL from the scanned project's .argus.yml; "
-            "pass --live-target or set %s to choose a target.", ENV_URL,
+            "pass --live-target or set %s to choose a target.",
+            ENV_URL,
         )
         return None
     return url
@@ -129,7 +130,9 @@ class DastScanner(Scanner):
                         cwe=["CWE-79"],
                         owasp=["A03:2021-Injection"],
                         why_vulnerable="Reflected user input may enable cross-site scripting.",
-                        remediation=Remediation(summary="Encode output and validate input server-side."),
+                        remediation=Remediation(
+                            summary="Encode output and validate input server-side."
+                        ),
                         tags=["dast", "dynamic", "xss"],
                         metadata={"verification": "verified", "finding_kind": "dynamic"},
                     )
@@ -149,7 +152,9 @@ class DastScanner(Scanner):
                     confidence=Confidence.HIGH,
                     likelihood=Likelihood.POSSIBLE,
                     why_vulnerable="Wildcard CORS on sensitive endpoints enables cross-origin abuse.",
-                    remediation=Remediation(summary="Restrict Access-Control-Allow-Origin to trusted domains."),
+                    remediation=Remediation(
+                        summary="Restrict Access-Control-Allow-Origin to trusted domains."
+                    ),
                     tags=["dast", "dynamic", "api"],
                     metadata={"verification": "verified", "finding_kind": "dynamic"},
                 )

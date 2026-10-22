@@ -68,10 +68,12 @@ _COOKIE = "argus_dashboard_token"
 CSRF_TOKEN = secrets.token_urlsafe(32)
 
 SECURITY_HEADERS: tuple[tuple[bytes, bytes], ...] = (
-    (b"content-security-policy",
-     b"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; "
-     b"img-src 'self' data:; object-src 'none'; base-uri 'none'; "
-     b"form-action 'self'; frame-ancestors 'none'"),
+    (
+        b"content-security-policy",
+        b"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; "
+        b"img-src 'self' data:; object-src 'none'; base-uri 'none'; "
+        b"form-action 'self'; frame-ancestors 'none'",
+    ),
     (b"x-content-type-options", b"nosniff"),
     (b"x-frame-options", b"DENY"),
     (b"referrer-policy", b"no-referrer"),
@@ -165,25 +167,47 @@ class _GuardMiddleware:
     def __init__(self, app: Any) -> None:
         self.app = app
 
-    async def _respond(self, send: Any, status: int, body: bytes, *,
-                       content_type: bytes = b"text/plain; charset=utf-8",
-                       extra: tuple[tuple[bytes, bytes], ...] = ()) -> None:
-        await send({
-            "type": "http.response.start",
-            "status": status,
-            "headers": [(b"content-type", content_type),
-                        (b"content-length", str(len(body)).encode()),
-                        *SECURITY_HEADERS, *extra],
-        })
+    async def _respond(
+        self,
+        send: Any,
+        status: int,
+        body: bytes,
+        *,
+        content_type: bytes = b"text/plain; charset=utf-8",
+        extra: tuple[tuple[bytes, bytes], ...] = (),
+    ) -> None:
+        await send(
+            {
+                "type": "http.response.start",
+                "status": status,
+                "headers": [
+                    (b"content-type", content_type),
+                    (b"content-length", str(len(body)).encode()),
+                    *SECURITY_HEADERS,
+                    *extra,
+                ],
+            }
+        )
         await send({"type": "http.response.body", "body": body})
 
-    async def _error(self, scope: dict, send: Any, status: int, message: str,
-                     extra: tuple[tuple[bytes, bytes], ...] = ()) -> None:
+    async def _error(
+        self,
+        scope: dict,
+        send: Any,
+        status: int,
+        message: str,
+        extra: tuple[tuple[bytes, bytes], ...] = (),
+    ) -> None:
         if scope.get("path", "").startswith("/api/"):
             import json
 
-            await self._respond(send, status, json.dumps({"error": message}).encode(),
-                                content_type=b"application/json", extra=extra)
+            await self._respond(
+                send,
+                status,
+                json.dumps({"error": message}).encode(),
+                content_type=b"application/json",
+                extra=extra,
+            )
         else:
             await self._respond(send, status, message.encode(), extra=extra)
 
@@ -193,7 +217,8 @@ class _GuardMiddleware:
             return True
         auth = headers.get("authorization", "")
         if auth.lower().startswith("bearer ") and hmac.compare_digest(
-                auth[7:].strip().encode(), token.encode()):
+            auth[7:].strip().encode(), token.encode()
+        ):
             return True
         for part in headers.get("cookie", "").split(";"):
             name, _, value = part.strip().partition("=")
@@ -215,18 +240,34 @@ class _GuardMiddleware:
         if not self._authorized(headers):
             query = dict(parse_qsl(scope.get("query_string", b"").decode("latin-1")))
             supplied = query.pop("token", None)
-            if (supplied and settings.token and scope.get("method") == "GET"
-                    and hmac.compare_digest(supplied.encode(), settings.token.encode())):
+            if (
+                supplied
+                and settings.token
+                and scope.get("method") == "GET"
+                and hmac.compare_digest(supplied.encode(), settings.token.encode())
+            ):
                 # One-time login link: remember the token in a cookie and drop it
                 # from the URL so it does not linger in history.
                 location = scope.get("path", "/") + (f"?{urlencode(query)}" if query else "")
                 cookie = f"{_COOKIE}={settings.token}; Path=/; HttpOnly; SameSite=Strict"
-                await self._respond(send, 303, b"", extra=(
-                    (b"location", location.encode()), (b"set-cookie", cookie.encode()),
-                    (b"cache-control", b"no-store")))
+                await self._respond(
+                    send,
+                    303,
+                    b"",
+                    extra=(
+                        (b"location", location.encode()),
+                        (b"set-cookie", cookie.encode()),
+                        (b"cache-control", b"no-store"),
+                    ),
+                )
                 return
-            await self._error(scope, send, 401, "Authentication required",
-                              extra=((b"www-authenticate", b"Bearer"),))
+            await self._error(
+                scope,
+                send,
+                401,
+                "Authentication required",
+                extra=((b"www-authenticate", b"Bearer"),),
+            )
             return
 
         limit = _MAX_REPORT_BYTES + _MULTIPART_OVERHEAD
@@ -234,8 +275,9 @@ class _GuardMiddleware:
         if declared is not None:
             try:
                 if int(declared) > limit:
-                    await self._error(scope, send, 413,
-                                      f"Report exceeds {_MAX_REPORT_BYTES} byte limit")
+                    await self._error(
+                        scope, send, 413, f"Report exceeds {_MAX_REPORT_BYTES} byte limit"
+                    )
                     return
             except ValueError:
                 await self._error(scope, send, 400, "Invalid Content-Length")
@@ -259,8 +301,10 @@ class _GuardMiddleware:
                 state["started"] = True
                 existing = {k.lower() for k, _ in message.get("headers", [])}
                 message = dict(message)
-                message["headers"] = [*message.get("headers", []),
-                                      *(h for h in SECURITY_HEADERS if h[0] not in existing)]
+                message["headers"] = [
+                    *message.get("headers", []),
+                    *(h for h in SECURITY_HEADERS if h[0] not in existing),
+                ]
             await send(message)
 
         # The overflow may surface as _BodyTooLarge, or be turned into a 400 by
@@ -333,10 +377,14 @@ def _ingest(session: Session, raw: str):
 
 @app.get("/", response_class=HTMLResponse)
 def index(request: Request, session: Session = Depends(get_session)):
-    return templates.TemplateResponse(request, "projects.html", {
-        "projects": store.list_projects(session),
-        "stats": store.overall_stats(session),
-    })
+    return templates.TemplateResponse(
+        request,
+        "projects.html",
+        {
+            "projects": store.list_projects(session),
+            "stats": store.overall_stats(session),
+        },
+    )
 
 
 @app.get("/projects/{slug}", response_class=HTMLResponse)
@@ -344,11 +392,15 @@ def project_detail(slug: str, request: Request, session: Session = Depends(get_s
     project = store.get_project(session, slug)
     if project is None or project.id is None:
         raise HTTPException(404, "Project not found")
-    return templates.TemplateResponse(request, "project.html", {
-        "project": project,
-        "scans": store.list_scans(session, project.id),
-        "trend": charts.trend_geometry(store.trend(session, project.id)),
-    })
+    return templates.TemplateResponse(
+        request,
+        "project.html",
+        {
+            "project": project,
+            "scans": store.list_scans(session, project.id),
+            "trend": charts.trend_geometry(store.trend(session, project.id)),
+        },
+    )
 
 
 @app.get("/scans/{scan_id}", response_class=HTMLResponse)
@@ -356,12 +408,16 @@ def scan_detail(scan_id: int, request: Request, session: Session = Depends(get_s
     scan = store.get_scan(session, scan_id)
     if scan is None:
         raise HTTPException(404, "Scan not found")
-    return templates.TemplateResponse(request, "scan.html", {
-        "scan": scan,
-        "project": store.get_project_by_id(session, scan.project_id),
-        "findings": store.get_findings(session, scan_id),
-        "bar": charts.severity_bar(scan.severity_counts, scan.total_findings),
-    })
+    return templates.TemplateResponse(
+        request,
+        "scan.html",
+        {
+            "scan": scan,
+            "project": store.get_project_by_id(session, scan.project_id),
+            "findings": store.get_findings(session, scan_id),
+            "bar": charts.severity_bar(scan.severity_counts, scan.total_findings),
+        },
+    )
 
 
 @app.get("/upload", response_class=HTMLResponse)
@@ -370,8 +426,9 @@ def upload_form(request: Request):
 
 
 @app.post("/upload")
-async def upload_submit(file: UploadFile, csrf_token: str = Form(""),
-                        session: Session = Depends(get_session)):
+async def upload_submit(
+    file: UploadFile, csrf_token: str = Form(""), session: Session = Depends(get_session)
+):
     if not hmac.compare_digest(csrf_token.encode(), CSRF_TOKEN.encode()):
         raise HTTPException(403, "Missing or invalid CSRF token; reload the upload page")
     raw = await _read_upload_limited(file)
@@ -392,8 +449,7 @@ async def api_ingest(request: Request, session: Session = Depends(get_session)):
     if not _is_json(request):
         # Browsers can send text/plain or form bodies cross-site without a
         # preflight; requiring JSON makes a forged cross-site POST impossible.
-        return JSONResponse({"error": "Content-Type must be application/json"},
-                            status_code=415)
+        return JSONResponse({"error": "Content-Type must be application/json"}, status_code=415)
     try:
         raw = await _read_body_limited(request)
     except HTTPException as exc:
@@ -404,8 +460,12 @@ async def api_ingest(request: Request, session: Session = Depends(get_session)):
         scan = await run_in_threadpool(_ingest, session, raw)
     except Exception as exc:
         return JSONResponse({"error": f"invalid report: {exc}"}, status_code=400)
-    return {"scan_id": scan.id, "url": f"/scans/{scan.id}",
-            "risk_score": scan.risk_score, "findings": scan.total_findings}
+    return {
+        "scan_id": scan.id,
+        "url": f"/scans/{scan.id}",
+        "risk_score": scan.risk_score,
+        "findings": scan.total_findings,
+    }
 
 
 def serve(host: str = "127.0.0.1", port: int = 8000) -> None:
@@ -425,6 +485,7 @@ def serve(host: str = "127.0.0.1", port: int = 8000) -> None:
     if not _is_loopback_bind(host):
         logging.getLogger("argus.dashboard").warning(
             "Dashboard bound to %s with token authentication. Serve it behind TLS: "
-            "the token travels in every request.", host,
+            "the token travels in every request.",
+            host,
         )
     uvicorn.run(app, host=host, port=port)

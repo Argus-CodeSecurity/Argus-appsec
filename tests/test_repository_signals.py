@@ -15,10 +15,13 @@ def _arch(tmp_path: Path, files: dict[str, str]) -> dict:
 
 
 def test_pg_substrings_do_not_imply_postgres(tmp_path):
-    arch = _arch(tmp_path, {
-        "requirements.txt": "Pillow\npgpy\npip-upgrader\n",
-        "app.py": "logo = 'logo.jpg'\n# upgrade the schema\n",
-    })
+    arch = _arch(
+        tmp_path,
+        {
+            "requirements.txt": "Pillow\npgpy\npip-upgrader\n",
+            "app.py": "logo = 'logo.jpg'\n# upgrade the schema\n",
+        },
+    )
     assert "PostgreSQL" not in arch["datastores"]
 
 

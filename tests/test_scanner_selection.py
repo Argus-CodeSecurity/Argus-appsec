@@ -38,13 +38,15 @@ def test_unknown_scanner_name_is_config_error(tmp_path: Path) -> None:
 def test_excluding_everything_requested_is_config_error(tmp_path: Path) -> None:
     with pytest.raises(ConfigError, match="no scanners"):
         ScanEngine(_cfg(scanners=["secrets"], exclude_scanners=["secrets"])).scan(
-            _project(tmp_path))
+            _project(tmp_path)
+        )
 
 
 def test_cli_unknown_scanner_exits_2(tmp_path: Path) -> None:
     _project(tmp_path)
-    res = runner.invoke(app, ["scan", str(tmp_path), "--scanners", "secret",
-                              "--quiet", "--no-ai", "--no-cache"])
+    res = runner.invoke(
+        app, ["scan", str(tmp_path), "--scanners", "secret", "--quiet", "--no-ai", "--no-cache"]
+    )
     assert res.exit_code == 2, res.output
 
 

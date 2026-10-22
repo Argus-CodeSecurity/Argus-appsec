@@ -59,10 +59,11 @@ def test_sql_injection_caught_when_query_assigned_then_executed(tmp_path):
     This is the cross-line case line-anchored, execute()-only patterns miss.
     """
     findings = _run_patterns(
-        tmp_path, "app.py",
-        'def q(username):\n'
-        '    query = f"SELECT * FROM users WHERE name = \'{username}\'"\n'
-        '    cursor.execute(query)\n',
+        tmp_path,
+        "app.py",
+        "def q(username):\n"
+        "    query = f\"SELECT * FROM users WHERE name = '{username}'\"\n"
+        "    cursor.execute(query)\n",
     )
     sqli = [f for f in findings if "CWE-89" in f.cwe]
     assert len(sqli) == 1  # detected exactly once, no double report
@@ -71,8 +72,9 @@ def test_sql_injection_caught_when_query_assigned_then_executed(tmp_path):
 
 def test_inline_execute_fstring_not_double_reported(tmp_path):
     findings = _run_patterns(
-        tmp_path, "app.py",
-        'cursor.execute(f"SELECT * FROM t WHERE id = \'{x}\'")\n',
+        tmp_path,
+        "app.py",
+        "cursor.execute(f\"SELECT * FROM t WHERE id = '{x}'\")\n",
     )
     assert len([f for f in findings if "CWE-89" in f.cwe]) == 1
 
@@ -81,11 +83,12 @@ def test_inline_execute_fstring_not_double_reported(tmp_path):
 def test_path_traversal_tainted_var_across_lines(tmp_path):
     """The case line-anchored rules miss: request input -> variable -> open()."""
     findings = _run_patterns(
-        tmp_path, "app.py",
-        'def read():\n'
+        tmp_path,
+        "app.py",
+        "def read():\n"
         '    filename = request.args.get("file")\n'
         '    with open(filename, "r") as f:\n'
-        '        return f.read()\n',
+        "        return f.read()\n",
     )
     pt = [f for f in findings if "CWE-22" in f.cwe]
     assert len(pt) == 1
@@ -94,19 +97,20 @@ def test_path_traversal_tainted_var_across_lines(tmp_path):
 
 def test_path_traversal_not_flagged_when_source_is_constant(tmp_path):
     findings = _run_patterns(
-        tmp_path, "app.py",
-        'filename = "config.yml"\n'
-        'open(filename)\n',
+        tmp_path,
+        "app.py",
+        'filename = "config.yml"\nopen(filename)\n',
     )
     assert not [f for f in findings if "CWE-22" in f.cwe]
 
 
 def test_path_traversal_not_flagged_when_sanitized(tmp_path):
     findings = _run_patterns(
-        tmp_path, "app.py",
-        'from werkzeug.utils import secure_filename\n'
+        tmp_path,
+        "app.py",
+        "from werkzeug.utils import secure_filename\n"
         'filename = secure_filename(request.args.get("file"))\n'
-        'open(filename)\n',
+        "open(filename)\n",
     )
     assert not [f for f in findings if "CWE-22" in f.cwe]
 
@@ -123,11 +127,17 @@ def test_dependencies_uses_osv_when_online(monkeypatch, vulnerable_project):
     from argus.scanners import osv
 
     fake = {
-        ("flask", "2.0.1"): [osv.OSVAdvisory(
-            id="GHSA-fake-flask", summary="Fake Flask issue", severity=Severity.HIGH,
-            cve="CVE-9999-0001", fixed="2.3.0", cwe=["CWE-79"],
-            references=["https://example.com/adv"],
-        )],
+        ("flask", "2.0.1"): [
+            osv.OSVAdvisory(
+                id="GHSA-fake-flask",
+                summary="Fake Flask issue",
+                severity=Severity.HIGH,
+                cve="CVE-9999-0001",
+                fixed="2.3.0",
+                cwe=["CWE-79"],
+                references=["https://example.com/adv"],
+            )
+        ],
     }
     monkeypatch.setattr(osv, "query", lambda eco, deps, **kw: fake)
 
@@ -189,7 +199,8 @@ def _run_patterns(tmp_path, rel_path: str, content: str):
 
 def test_weak_hash_suppressed_when_usedforsecurity_false(tmp_path):
     findings = _run_patterns(
-        tmp_path, "auth.py", "h = hashlib.md5(x, usedforsecurity=False).hexdigest()\n")
+        tmp_path, "auth.py", "h = hashlib.md5(x, usedforsecurity=False).hexdigest()\n"
+    )
     assert not [f for f in findings if f.rule_id == "patterns.weak-hash-md5-sha1"]
     # But a plain md5 IS still flagged.
     findings2 = _run_patterns(tmp_path, "auth2.py", "h = hashlib.md5(x).hexdigest()\n")
@@ -216,19 +227,20 @@ def test_eval_exec_flags_builtins_not_method_calls(tmp_path):
     )
     findings = _run_patterns(tmp_path, "store.py", safe)
     # (_run_patterns scans the whole tmp dir, so scope the check to store.py.)
-    assert not [f for f in findings
-                if f.rule_id == "patterns.python-eval-exec"
-                and f.location.path == "store.py"]
+    assert not [
+        f
+        for f in findings
+        if f.rule_id == "patterns.python-eval-exec" and f.location.path == "store.py"
+    ]
 
 
 def test_test_file_findings_are_downgraded(tmp_path):
     from argus.core.models import Confidence, Severity
 
-    findings = _run_patterns(
-        tmp_path, "tests/test_x.py", "r = requests.get(url, verify=False)\n")
+    findings = _run_patterns(tmp_path, "tests/test_x.py", "r = requests.get(url, verify=False)\n")
     tls = [f for f in findings if f.rule_id == "patterns.tls-verify-disabled"]
     assert tls, "should still report, just downgraded"
-    assert tls[0].severity < Severity.HIGH          # downgraded from HIGH
+    assert tls[0].severity < Severity.HIGH  # downgraded from HIGH
     assert tls[0].confidence == Confidence.LOW
     assert "test-context" in tls[0].tags
 
@@ -239,8 +251,9 @@ def test_private_key_in_tests_dir_downgraded(clean_project, tmp_path):
     # A private key committed under a top-level tests/ dir is test material.
     key = tmp_path / "tests" / "certs" / "server.key"
     key.parent.mkdir(parents=True, exist_ok=True)
-    key.write_text("-----BEGIN PRIVATE KEY-----\nMIIabc\n-----END PRIVATE KEY-----\n",
-                   encoding="utf-8")
+    key.write_text(
+        "-----BEGIN PRIVATE KEY-----\nMIIabc\n-----END PRIVATE KEY-----\n", encoding="utf-8"
+    )
     from argus.core.project import Project
 
     project = Project.from_path(tmp_path)
@@ -248,4 +261,4 @@ def test_private_key_in_tests_dir_downgraded(clean_project, tmp_path):
     findings = list(cls().scan(ScannerContext(project=project, config=Config(), ai=None)))
     pk = [f for f in findings if f.rule_id == "secrets.private-key-block"]
     assert pk, "still detected"
-    assert pk[0].severity <= Severity.LOW           # downgraded, not Critical
+    assert pk[0].severity <= Severity.LOW  # downgraded, not Critical

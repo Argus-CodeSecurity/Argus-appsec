@@ -67,8 +67,10 @@ def test_allowed_hosts_env(monkeypatch):
 
 
 # --- CSRF --------------------------------------------------------------------------
-@pytest.mark.parametrize("ctype", ["text/plain", "application/x-www-form-urlencoded",
-                                   "multipart/form-data; boundary=x", None])
+@pytest.mark.parametrize(
+    "ctype",
+    ["text/plain", "application/x-www-form-urlencoded", "multipart/form-data; boundary=x", None],
+)
 def test_api_ingest_requires_json_content_type(client, ctype):
     headers = {"Content-Type": ctype} if ctype else {}
     r = client.post("/api/scans", content=_report(), headers=headers)
@@ -77,15 +79,20 @@ def test_api_ingest_requires_json_content_type(client, ctype):
 
 
 def test_api_ingest_accepts_json_with_charset(client):
-    r = client.post("/api/scans", content=_report(),
-                    headers={"Content-Type": "application/json; charset=utf-8"})
+    r = client.post(
+        "/api/scans", content=_report(), headers={"Content-Type": "application/json; charset=utf-8"}
+    )
     assert r.status_code == 200
 
 
 @pytest.mark.parametrize("data", [{}, {"csrf_token": "guess"}])
 def test_upload_requires_csrf_token(client, data):
-    r = client.post("/upload", files={"file": ("r.json", _report(), "application/json")},
-                    data=data, follow_redirects=False)
+    r = client.post(
+        "/upload",
+        files={"file": ("r.json", _report(), "application/json")},
+        data=data,
+        follow_redirects=False,
+    )
     assert r.status_code == 403
     assert _scan_count() == 0
 
@@ -103,8 +110,9 @@ def test_token_required_when_configured(client, monkeypatch):
     assert r.status_code == 401 and r.json()["error"]
     assert client.get("/", headers={"Authorization": "Bearer wrong"}).status_code == 401
     assert client.get("/", headers={"Authorization": "Bearer s3cret"}).status_code == 200
-    r = client.post("/api/scans", content=_report(),
-                    headers={**JSON, "Authorization": "Bearer s3cret"})
+    r = client.post(
+        "/api/scans", content=_report(), headers={**JSON, "Authorization": "Bearer s3cret"}
+    )
     assert r.status_code == 200
 
 
@@ -167,8 +175,12 @@ def test_oversized_upload_is_refused_before_parsing(client, monkeypatch):
     monkeypatch.setattr(app_module, "_MULTIPART_OVERHEAD", 0)
     called = []
     monkeypatch.setattr(app_module, "_ingest", lambda *a: called.append(a))
-    r = client.post("/upload", files={"file": ("r.json", b"x" * 5000, "application/json")},
-                    data={"csrf_token": app_module.CSRF_TOKEN}, follow_redirects=False)
+    r = client.post(
+        "/upload",
+        files={"file": ("r.json", b"x" * 5000, "application/json")},
+        data={"csrf_token": app_module.CSRF_TOKEN},
+        follow_redirects=False,
+    )
     assert r.status_code == 413
     assert called == []
 
@@ -190,8 +202,9 @@ def test_retention_cap(client, monkeypatch):
     monkeypatch.setenv(app_module.MAX_SCANS_ENV, "2")
     base = datetime.now(timezone.utc) - timedelta(hours=5)
     for i, name in enumerate(["old", "mid", "new"]):
-        r = client.post("/api/scans", content=_report(name, base + timedelta(hours=i)),
-                        headers=JSON)
+        r = client.post(
+            "/api/scans", content=_report(name, base + timedelta(hours=i)), headers=JSON
+        )
         assert r.status_code == 200
     with Session(db.get_engine()) as s:
         names = sorted(p["project"].name for p in store.list_projects(s))

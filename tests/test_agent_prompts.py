@@ -33,9 +33,14 @@ def _ctx(tmp_path, ai) -> AgentContext:
 
 def _finding(snippet: str, rule_id: str = "custom.rule") -> Finding:
     return Finding(
-        id="x", rule_id=rule_id, scanner="patterns", title="t", description="d",
+        id="x",
+        rule_id=rule_id,
+        scanner="patterns",
+        title="t",
+        description="d",
         location=Location(path="a.py", start_line=10, snippet=snippet),
-        severity=Severity.HIGH, cwe=["CWE-89"],
+        severity=Severity.HIGH,
+        cwe=["CWE-89"],
     )
 
 
@@ -64,8 +69,10 @@ def test_ai_patch_is_never_marked_verified(tmp_path):
     # The model's rewrite no longer matches the SQL-format detection, but that
     # proves nothing about model-written code, so it must stay unverified.
     ai = _Recorder("cursor.execute('SELECT 1')")
-    f = _finding("cursor.execute('SELECT * FROM t WHERE id = %s' % uid)",
-                 rule_id="patterns.python-sql-format")
+    f = _finding(
+        "cursor.execute('SELECT * FROM t WHERE id = %s' % uid)",
+        rule_id="patterns.python-sql-format",
+    )
     PatchAgent().process(f, _ctx(tmp_path, ai))
     assert f.metadata["patch_source"] == "ai-proposed"
     assert f.remediation.verified is False
@@ -99,8 +106,7 @@ def test_exploit_parser_accepts_heading_and_spaced_names(tmp_path):
     out = AttackSimulationAgent._parse(
         "## DISCOVERY\nfuzz it\n**Data at risk:** user rows\nBefore/After: x then y"
     )
-    assert out == {"discovery": "fuzz it", "data_at_risk": "user rows",
-                   "before_after": "x then y"}
+    assert out == {"discovery": "fuzz it", "data_at_risk": "user rows", "before_after": "x then y"}
 
 
 def test_enrichment_parser_keeps_all_keys():

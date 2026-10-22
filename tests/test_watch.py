@@ -26,14 +26,20 @@ def _scan(target: str, *findings: Finding) -> ScanResult:
 
 def _f(rule: str) -> Finding:
     return Finding(
-        id=f"x:{rule}", rule_id=rule, scanner="patterns", title=rule,
-        description="", location=Location(path="a.py", snippet="bad()"),
+        id=f"x:{rule}",
+        rule_id=rule,
+        scanner="patterns",
+        title=rule,
+        description="",
+        location=Location(path="a.py", snippet="bad()"),
         severity=Severity.HIGH,
     )
 
 
 def test_state_dir_sanitizes_target():
-    assert state_dir_for("https://github.com/org/repo", Path(".argus/watch")).name.startswith("https")
+    assert state_dir_for("https://github.com/org/repo", Path(".argus/watch")).name.startswith(
+        "https"
+    )
 
 
 def test_watch_cycle_persists_and_detects_drift(tmp_path: Path):

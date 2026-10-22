@@ -41,9 +41,7 @@ _NPM_VERSION = re.compile(r"^[A-Za-z0-9^~<>=][A-Za-z0-9._^~<>=+-]*$")
 
 # node:22-slim, pinned by digest (multi-arch index) so a retagged image cannot
 # change what runs. Update the digest deliberately when moving to a newer image.
-_NODE_IMAGE = (
-    "node:22-slim@sha256:de170b39439eb0e5a3444ad7d60b015614a381e10fecae2e30ec9e735122f38d"
-)
+_NODE_IMAGE = "node:22-slim@sha256:de170b39439eb0e5a3444ad7d60b015614a381e10fecae2e30ec9e735122f38d"
 
 MODES = ("auto", "host", "docker")
 
@@ -85,25 +83,38 @@ def fetch_npm_manifest(
         _validate_npm(package, version)
     except ValueError as exc:
         return SandboxResult(
-            ok=False, mode=mode, package=package, version=version, error=str(exc),
+            ok=False,
+            mode=mode,
+            package=package,
+            version=version,
+            error=str(exc),
         )
     mode = mode.lower()
     if mode not in MODES:
         return SandboxResult(
-            ok=False, mode=mode, package=package, version=version,
+            ok=False,
+            mode=mode,
+            package=package,
+            version=version,
             error=f"unknown sandbox mode {mode!r} (expected one of {', '.join(MODES)})",
         )
     if mode in ("auto", "docker") and docker_available():
         return _docker_npm_view(package, version, timeout=timeout)
     if mode == "docker":
         return SandboxResult(
-            ok=False, mode="docker", package=package, version=version,
+            ok=False,
+            mode="docker",
+            package=package,
+            version=version,
             error="Docker is not available on PATH.",
         )
     fp = npm_fingerprint(package, version, timeout=timeout)
     if fp is None:
         return SandboxResult(
-            ok=False, mode="host", package=package, version=version,
+            ok=False,
+            mode="host",
+            package=package,
+            version=version,
             error="Registry lookup failed.",
         )
     manifest = {
@@ -115,8 +126,9 @@ def fetch_npm_manifest(
     return SandboxResult(ok=True, mode="host", package=package, version=version, manifest=manifest)
 
 
-def fetch_fingerprint(package: str, version: str, *, mode: str = "host",
-                      timeout: float = 30.0) -> BehaviorFingerprint | None:
+def fetch_fingerprint(
+    package: str, version: str, *, mode: str = "host", timeout: float = 30.0
+) -> BehaviorFingerprint | None:
     """Behavioral fingerprint of one npm package version in the given mode.
 
     Returns None when the name or version is rejected, the lookup fails, or
@@ -132,8 +144,9 @@ def fetch_fingerprint(package: str, version: str, *, mode: str = "host",
         return npm_fingerprint(package, version, timeout=timeout)
     result = fetch_npm_manifest(package, version, mode=mode, timeout=timeout)
     if not result.ok or result.manifest is None:
-        log.warning("sandboxed npm metadata fetch for %s@%s failed: %s",
-                    package, version, result.error)
+        log.warning(
+            "sandboxed npm metadata fetch for %s@%s failed: %s", package, version, result.error
+        )
         return None
     return fingerprint_from_manifest(package, version, result.manifest)
 
@@ -152,41 +165,67 @@ _DOCKER_NPM_SCRIPT = (
 def _docker_npm_view(package: str, version: str, *, timeout: float) -> SandboxResult:
     """Run ``npm view pkg@ver --json`` inside an isolated container (no install)."""
     cmd = [
-        "docker", "run", "--rm",
-        "--network", "bridge",
+        "docker",
+        "run",
+        "--rm",
+        "--network",
+        "bridge",
         "--read-only",
         # npm needs a writable cache directory even for `view`.
-        "--tmpfs", "/tmp:rw,size=64m",
+        "--tmpfs",
+        "/tmp:rw,size=64m",
         "--cap-drop=ALL",
-        "--security-opt", "no-new-privileges",
+        "--security-opt",
+        "no-new-privileges",
         "--pids-limit=64",
         "--memory=256m",
-        "--user", "node",
-        "-e", "npm_config_cache=/tmp/.npm",
-        "-e", "npm_config_update_notifier=false",
-        "-e", f"ARGUS_PKG={package}",
-        "-e", f"ARGUS_VER={version}",
+        "--user",
+        "node",
+        "-e",
+        "npm_config_cache=/tmp/.npm",
+        "-e",
+        "npm_config_update_notifier=false",
+        "-e",
+        f"ARGUS_PKG={package}",
+        "-e",
+        f"ARGUS_VER={version}",
         _NODE_IMAGE,
-        "node", "-e", _DOCKER_NPM_SCRIPT,
+        "node",
+        "-e",
+        _DOCKER_NPM_SCRIPT,
     ]
     try:
         proc = subprocess.run(
-            cmd, capture_output=True, text=True, timeout=timeout, check=False,
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            check=False,
         )
     except (OSError, subprocess.TimeoutExpired) as exc:
         return SandboxResult(
-            ok=False, mode="docker", package=package, version=version, error=str(exc),
+            ok=False,
+            mode="docker",
+            package=package,
+            version=version,
+            error=str(exc),
         )
     if proc.returncode != 0:
         return SandboxResult(
-            ok=False, mode="docker", package=package, version=version,
+            ok=False,
+            mode="docker",
+            package=package,
+            version=version,
             error=(proc.stderr or proc.stdout or "docker npm view failed").strip()[:500],
         )
     try:
         manifest = json.loads(proc.stdout)
     except (json.JSONDecodeError, RecursionError):
         return SandboxResult(
-            ok=False, mode="docker", package=package, version=version,
+            ok=False,
+            mode="docker",
+            package=package,
+            version=version,
             error="Invalid JSON from npm view.",
         )
     # A version range can match several versions: npm then returns a list.
@@ -194,9 +233,16 @@ def _docker_npm_view(package: str, version: str, *, timeout: float) -> SandboxRe
         manifest = next((m for m in reversed(manifest) if isinstance(m, dict)), None)
     if not isinstance(manifest, dict):
         return SandboxResult(
-            ok=False, mode="docker", package=package, version=version,
+            ok=False,
+            mode="docker",
+            package=package,
+            version=version,
             error="Unexpected npm view output.",
         )
     return SandboxResult(
-        ok=True, mode="docker", package=package, version=version, manifest=manifest,
+        ok=True,
+        mode="docker",
+        package=package,
+        version=version,
+        manifest=manifest,
     )

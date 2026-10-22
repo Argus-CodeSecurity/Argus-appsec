@@ -34,12 +34,12 @@ DEFAULT_BRANCH_NAME = "argus/security-fixes"
 @dataclass
 class FixOptions:
     branch: str = DEFAULT_BRANCH_NAME
-    base: str | None = None            # None -> detect the repo's default branch
+    base: str | None = None  # None -> detect the repo's default branch
     open_pr: bool = False
     include_unverified: bool = False
     dry_run: bool = False
-    force_branch: bool = False         # overwrite the branch if it already exists
-    annotate: bool = False             # post inline review comments on the opened PR
+    force_branch: bool = False  # overwrite the branch if it already exists
+    annotate: bool = False  # post inline review comments on the opened PR
     # Autonomy ladder: when set, apply only these rule ids (auto-tier fixes).
     only_rules: set[str] | None = None
     # Skip commit hooks (git commit --no-verify). Off by default: hooks such as
@@ -55,26 +55,30 @@ class FixOutcome:
     branch: str | None = None
     pushed: bool = False
     pull_request: PullRequest | None = None
-    messages: list[str] = field(default_factory=list)   # human-readable notes
+    messages: list[str] = field(default_factory=list)  # human-readable notes
     error: str | None = None
 
     def note(self, msg: str) -> None:
         self.messages.append(msg)
 
 
-def run_fix_workflow(project: Project, findings: list[Finding],
-                     options: FixOptions) -> FixOutcome:
+def run_fix_workflow(project: Project, findings: list[Finding], options: FixOptions) -> FixOutcome:
     root = Path(project.root)
 
     # Dry run: preview the file changes only, touch nothing.
     if options.dry_run:
-        report = apply_fixes(project, findings,
-                             include_unverified=options.include_unverified,
-                             dry_run=True, only_rules=options.only_rules)
+        report = apply_fixes(
+            project,
+            findings,
+            include_unverified=options.include_unverified,
+            dry_run=True,
+            only_rules=options.only_rules,
+        )
         outcome = FixOutcome(applied=report)
         if options.only_rules is not None:
-            outcome.note(f"Auto-tier: only {len(options.only_rules)} "
-                         "auto-approved rule(s) considered.")
+            outcome.note(
+                f"Auto-tier: only {len(options.only_rules)} auto-approved rule(s) considered."
+            )
         outcome.note(report.summary() + " (dry run, no files written)")
         return outcome
 
@@ -83,8 +87,10 @@ def run_fix_workflow(project: Project, findings: list[Finding],
     if not git_ops.is_git_repo(root):
         return FixOutcome(
             applied=ApplyReport(),
-            error=("Target is not a git repository. `argus fix` needs a local git "
-                   "repo to create a branch and commit fixes."),
+            error=(
+                "Target is not a git repository. `argus fix` needs a local git "
+                "repo to create a branch and commit fixes."
+            ),
         )
 
     # Safety: refuse to operate on a dirty working tree. `argus fix` creates a
@@ -94,8 +100,10 @@ def run_fix_workflow(project: Project, findings: list[Finding],
     if git_ops.has_uncommitted_changes(root):
         return FixOutcome(
             applied=ApplyReport(),
-            error=("Working tree has uncommitted changes. Commit, stash, or discard "
-                   "them first so Argus's fixes land in a clean, isolated commit."),
+            error=(
+                "Working tree has uncommitted changes. Commit, stash, or discard "
+                "them first so Argus's fixes land in a clean, isolated commit."
+            ),
         )
 
     base = options.base or git_ops.default_branch(root)
@@ -107,17 +115,20 @@ def run_fix_workflow(project: Project, findings: list[Finding],
     head_sha = git_ops.rev_parse(root, "HEAD")
     base_sha = git_ops.rev_parse(root, base)
     if base_sha is None:
-        return FixOutcome(applied=ApplyReport(),
-                          error=f"Base '{base}' does not resolve to a commit.")
+        return FixOutcome(
+            applied=ApplyReport(), error=f"Base '{base}' does not resolve to a commit."
+        )
     if head_sha != base_sha:
         current = git_ops.current_branch(root)
         return FixOutcome(
             applied=ApplyReport(),
-            error=(f"The scanned checkout ('{current}' at {(head_sha or '?')[:8]}) is "
-                   f"not the base '{base}' ({base_sha[:8]}), so the findings do not "
-                   f"match the code the fix branch would start from. Check out "
-                   f"'{base}' and re-run, or pass --base {current} to target the "
-                   f"current branch."),
+            error=(
+                f"The scanned checkout ('{current}' at {(head_sha or '?')[:8]}) is "
+                f"not the base '{base}' ({base_sha[:8]}), so the findings do not "
+                f"match the code the fix branch would start from. Check out "
+                f"'{base}' and re-run, or pass --base {current} to target the "
+                f"current branch."
+            ),
         )
 
     # Where to return to if anything fails: the branch (or detached commit) the
@@ -132,8 +143,10 @@ def run_fix_workflow(project: Project, findings: list[Finding],
         if existed and not options.force_branch:
             return FixOutcome(
                 applied=ApplyReport(),
-                error=(f"Branch '{options.branch}' already exists. Delete it, pick "
-                       f"another with --branch, or pass --force-branch."),
+                error=(
+                    f"Branch '{options.branch}' already exists. Delete it, pick "
+                    f"another with --branch, or pass --force-branch."
+                ),
             )
         git_ops.create_branch(root, options.branch, base=base, reset=existed)
         verb = "Reset" if existed else "Created"
@@ -143,13 +156,18 @@ def run_fix_workflow(project: Project, findings: list[Finding],
 
     try:
         # Apply the fixes on the branch.
-        report = apply_fixes(project, findings,
-                             include_unverified=options.include_unverified,
-                             dry_run=False, only_rules=options.only_rules)
+        report = apply_fixes(
+            project,
+            findings,
+            include_unverified=options.include_unverified,
+            dry_run=False,
+            only_rules=options.only_rules,
+        )
         outcome.applied = report
         if options.only_rules is not None:
-            outcome.note(f"Auto-tier: only {len(options.only_rules)} "
-                         "auto-approved rule(s) considered.")
+            outcome.note(
+                f"Auto-tier: only {len(options.only_rules)} auto-approved rule(s) considered."
+            )
         if not report.any_changes:
             outcome.note("No deterministic fixes could be applied; nothing to commit.")
             # Return to where the user was so an empty branch is not left checked out.
@@ -171,13 +189,13 @@ def run_fix_workflow(project: Project, findings: list[Finding],
             finding.metadata.pop(APPLIED_KEY, None)
             if finding.metadata.get("verification") == "fixed":
                 finding.metadata.pop("verification")
-        _rollback(root, original, options.branch, delete=not existed, outcome=outcome,
-                  discard=True)
+        _rollback(root, original, options.branch, delete=not existed, outcome=outcome, discard=True)
         return outcome
 
     if not options.open_pr:
-        outcome.note("Branch committed locally. Re-run with --open-pr to push and "
-                     "open a pull request.")
+        outcome.note(
+            "Branch committed locally. Re-run with --open-pr to push and open a pull request."
+        )
         return outcome
 
     # Push and open the PR.
@@ -185,17 +203,19 @@ def run_fix_workflow(project: Project, findings: list[Finding],
     return outcome
 
 
-def _push_and_open_pr(root: Path, base: str, options: FixOptions,
-                      report: ApplyReport, outcome: FixOutcome) -> None:
+def _push_and_open_pr(
+    root: Path, base: str, options: FixOptions, report: ApplyReport, outcome: FixOutcome
+) -> None:
     remote = git_ops.remote_url(root)
     if not remote:
-        outcome.error = ("No git remote configured, so the branch cannot be pushed. "
-                         "Add a remote (git remote add origin <url>) and retry.")
+        outcome.error = (
+            "No git remote configured, so the branch cannot be pushed. "
+            "Add a remote (git remote add origin <url>) and retry."
+        )
         return
     ref = parse_remote(remote)
     if ref is None:
-        outcome.error = ("Unsupported or unrecognized git remote: "
-                         f"{redact_credentials(remote)}")
+        outcome.error = f"Unsupported or unrecognized git remote: {redact_credentials(remote)}"
         return
     try:
         git_ops.push(root, options.branch, set_upstream=True, force=options.force_branch)
@@ -207,8 +227,11 @@ def _push_and_open_pr(root: Path, base: str, options: FixOptions,
 
     try:
         pr = open_pull_request(
-            ref, head=options.branch, base=base,
-            title=_pr_title(report), body=_pr_body(report),
+            ref,
+            head=options.branch,
+            base=base,
+            title=_pr_title(report),
+            body=_pr_body(report),
         )
         outcome.pull_request = pr
         outcome.note(f"Opened pull request: {pr.url}")
@@ -222,15 +245,23 @@ def _push_and_open_pr(root: Path, base: str, options: FixOptions,
 
         comments = build_fix_comments(report)
         try:
-            post_pr_review(ref, pr.number, comments,
-                           summary="Argus applied these security fixes inline.")
+            post_pr_review(
+                ref, pr.number, comments, summary="Argus applied these security fixes inline."
+            )
             outcome.note(f"Posted {len(comments)} inline annotation(s) on the pull request.")
         except HostingError as exc:  # annotation failure must not fail the whole run
             outcome.note(f"Could not post inline annotations: {exc}")
 
 
-def _rollback(root: Path, original: str, branch: str, *, delete: bool,
-              outcome: FixOutcome, discard: bool = False) -> None:
+def _rollback(
+    root: Path,
+    original: str,
+    branch: str,
+    *,
+    delete: bool,
+    outcome: FixOutcome,
+    discard: bool = False,
+) -> None:
     """Return the repo to ``original``, optionally discarding Argus's edits.
 
     With ``discard``, uncommitted changes are thrown away; this is only safe
@@ -256,8 +287,12 @@ def _commit_message(report: ApplyReport) -> str:
     for fix in report.fixes:
         mark = "verified" if fix.verified else "unverified"
         lines.append(f"- {fix.path}:{fix.line} {fix.rule_id} ({mark})")
-    lines += ["", f"Rules: {', '.join(rules)}", "",
-              "Generated by Argus (https://github.com/Argus-CodeSecurity/Argus-appsec)."]
+    lines += [
+        "",
+        f"Rules: {', '.join(rules)}",
+        "",
+        "Generated by Argus (https://github.com/Argus-CodeSecurity/Argus-appsec).",
+    ]
     return "\n".join(lines)
 
 
@@ -278,9 +313,11 @@ def _pr_body(report: ApplyReport) -> str:
         "|------|------|------|----------|",
     ]
     for f in report.fixes:
-        lines.append(f"| {md_code(f.path, in_table=True)} | {f.line} | "
-                     f"{md_code(f.rule_id, in_table=True)} | "
-                     f"{'yes' if f.verified else 'no'} |")
+        lines.append(
+            f"| {md_code(f.path, in_table=True)} | {f.line} | "
+            f"{md_code(f.rule_id, in_table=True)} | "
+            f"{'yes' if f.verified else 'no'} |"
+        )
     lines += [
         "",
         "<details><summary>Diffs</summary>",

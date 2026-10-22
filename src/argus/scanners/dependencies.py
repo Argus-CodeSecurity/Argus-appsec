@@ -48,9 +48,11 @@ log = logging.getLogger("argus.scanners.dependencies")
 
 @lru_cache(maxsize=1)
 def _load_advisories() -> list[dict]:
-    with resources.files("argus.scanners.data").joinpath("advisories.json").open(
-        encoding="utf-8"
-    ) as fh:
+    with (
+        resources.files("argus.scanners.data")
+        .joinpath("advisories.json")
+        .open(encoding="utf-8") as fh
+    ):
         return json.load(fh).get("advisories", [])
 
 
@@ -249,7 +251,7 @@ def _parse_go_mod(text: str) -> list[tuple[str, str]]:
             in_block = False
             continue
         if line.startswith("require "):
-            line = line[len("require "):].strip()
+            line = line[len("require ") :].strip()
         elif not in_block:
             continue
         m = re.match(r"^(\S+)\s+v([0-9][\w.\-]*)", line)
@@ -322,8 +324,9 @@ _PARSERS = {
 }
 
 
-def safe_parse(parser: Callable[[str], list[tuple[str, str]]], text: str,
-               where: str) -> list[tuple[str, str]]:
+def safe_parse(
+    parser: Callable[[str], list[tuple[str, str]]], text: str, where: str
+) -> list[tuple[str, str]]:
     """Run a manifest parser, treating any failure as "no packages in this file".
 
     The parsers type-check what they read, so this is a backstop: one malformed
@@ -372,8 +375,9 @@ def _dedupe_by_cve(advisories: list[dict]) -> list[dict]:
         if current is None:
             best[key] = adv
             order.append(key)
-        elif Severity.parse(adv.get("severity", "MEDIUM")) > \
-                Severity.parse(current.get("severity", "MEDIUM")):
+        elif Severity.parse(adv.get("severity", "MEDIUM")) > Severity.parse(
+            current.get("severity", "MEDIUM")
+        ):
             best[key] = adv
     return [best[k] for k in order]
 
@@ -395,8 +399,12 @@ def _osv_to_dict(adv, ecosystem: str) -> dict:
 
 
 def _annotate_reachability(
-    finding: Finding, pkg: str, ecosystem: str, py_imports: set[str] | None,
-    npm_imports: set[str] | None, py_symbols: set[str] | None = None,
+    finding: Finding,
+    pkg: str,
+    ecosystem: str,
+    py_imports: set[str] | None,
+    npm_imports: set[str] | None,
+    py_symbols: set[str] | None = None,
     affected_symbols: list[str] | None = None,
 ) -> None:
     """Attach import-level (and optional symbol-level) reachability verdicts."""
@@ -423,7 +431,10 @@ def _annotate_reachability(
 
     if py_symbols is not None and affected_symbols is not None and ecosystem == "PyPI":
         sym = symbol_verdict(
-            pkg, py_symbols, affected_symbols, imported=imported,
+            pkg,
+            py_symbols,
+            affected_symbols,
+            imported=imported,
         )
         finding.metadata["symbol_reachability"] = sym
         extra = describe_symbol_verdict(sym)
@@ -486,10 +497,12 @@ class DependencyScanner(Scanner):
         py_symbols: set[str] | None = None
         if use_reachability or symbol_reachability:
             from argus.analysis import reachability
+
             py_imports = reachability.collect_python_imports(ctx.project)
             npm_imports = reachability.collect_npm_imports(ctx.project)
             if symbol_reachability:
                 from argus.analysis.symbol_reachability import collect_python_symbols
+
                 py_symbols = collect_python_symbols(ctx.project)
 
         # Collect declared dependencies per ecosystem via the shared inventory helper.
@@ -501,12 +514,12 @@ class DependencyScanner(Scanner):
         findings: list[Finding] = []
         for ecosystem, bucket in per_eco.items():
             entries = list(bucket.values())
-            osv_map, source = self._resolve_source(
-                ecosystem, entries, online, timeout, use_cache)
+            osv_map, source = self._resolve_source(ecosystem, entries, online, timeout, use_cache)
             for path, pkg, version in entries:
                 if source == "osv":
-                    advisories = [_osv_to_dict(a, ecosystem)
-                                  for a in osv_map.get((pkg, version), [])]
+                    advisories = [
+                        _osv_to_dict(a, ecosystem) for a in osv_map.get((pkg, version), [])
+                    ]
                 else:
                     advisories = self._bundled_matches(ecosystem, pkg, version)
                 for adv in _dedupe_by_cve(advisories):
@@ -514,7 +527,11 @@ class DependencyScanner(Scanner):
                     finding = self._finding(adv, counter, path, pkg, version)
                     if use_reachability or symbol_reachability:
                         _annotate_reachability(
-                            finding, pkg, ecosystem, py_imports, npm_imports,
+                            finding,
+                            pkg,
+                            ecosystem,
+                            py_imports,
+                            npm_imports,
                             py_symbols=py_symbols,
                             affected_symbols=adv.get("affected_symbols"),
                         )
@@ -526,8 +543,10 @@ class DependencyScanner(Scanner):
             cves = {f.metadata.get("cve") for f in findings if f.metadata.get("cve")}
             if cves:
                 from argus.scanners import exploit_signals
+
                 signals = exploit_signals.enrich(
-                    {c for c in cves if c}, timeout=timeout, use_cache=use_cache)
+                    {c for c in cves if c}, timeout=timeout, use_cache=use_cache
+                )
                 for finding in findings:
                     sig = signals.get(finding.metadata.get("cve") or "")
                     if sig is not None:
@@ -545,33 +564,40 @@ class DependencyScanner(Scanner):
         # silently left it unscanned.
         pairs = [(pkg, version) for _, pkg, version in entries]
         from argus.scanners import osv
+
         try:
             return osv.query(ecosystem, pairs, timeout=timeout, use_cache=use_cache), "osv"
         except osv.OSVError as exc:
             # Offline/timeout/API problem: fall back to the bundled seed, but say so
-            #, a silent fallback in a security tool hides reduced coverage.
+            # , a silent fallback in a security tool hides reduced coverage.
             log.warning(
                 "OSV lookup for %s failed (%s); falling back to the bundled advisory "
                 "seed, which covers far fewer packages. Findings may be incomplete.",
-                ecosystem, exc,
+                ecosystem,
+                exc,
             )
             return {}, "bundled"
         except Exception as exc:  # unexpected bug: degrade, but surface it loudly
-            log.error("Unexpected error during OSV lookup for %s: %s; using the "
-                      "bundled advisory seed.", ecosystem, exc)
+            log.error(
+                "Unexpected error during OSV lookup for %s: %s; using the bundled advisory seed.",
+                ecosystem,
+                exc,
+            )
             return {}, "bundled"
 
     @staticmethod
     def _bundled_matches(ecosystem: str, pkg: str, version: str) -> list[dict]:
         out = []
         for adv in _load_advisories():
-            if adv["ecosystem"] == ecosystem and adv["package"] == pkg \
-                    and _matches_range(version, adv["vulnerable"]):
+            if (
+                adv["ecosystem"] == ecosystem
+                and adv["package"] == pkg
+                and _matches_range(version, adv["vulnerable"])
+            ):
                 out.append(adv)
         return out
 
-    def _finding(self, adv: dict, index: int, path: str, pkg: str,
-                 version: str) -> Finding:
+    def _finding(self, adv: dict, index: int, path: str, pkg: str, version: str) -> Finding:
         sev = Severity.parse(adv.get("severity", "MEDIUM"))
         cve = adv.get("cve", "")
         fixed = adv.get("fixed", "")
@@ -583,8 +609,9 @@ class DependencyScanner(Scanner):
             id=f"{self.name}:{adv['id']}:{index}",
             rule_id=f"{self.name}.{adv['id']}",
             scanner=self.name,
-            title=f"Vulnerable dependency: {pkg} {version} ({cve})" if cve
-                  else f"Vulnerable dependency: {pkg} {version}",
+            title=f"Vulnerable dependency: {pkg} {version} ({cve})"
+            if cve
+            else f"Vulnerable dependency: {pkg} {version}",
             description=adv.get("summary", adv.get("title", "")),
             location=Location(path=path, snippet=f"{pkg}=={version}"),
             severity=sev,
@@ -593,18 +620,18 @@ class DependencyScanner(Scanner):
             cwe=adv.get("cwe", ["CWE-1104"]),
             owasp=["A06:2021-Vulnerable and Outdated Components"],
             why_vulnerable=(
-                f"{pkg} {version} is affected by {cve or adv['id']}: "
-                f"{adv.get('title', '')}."
+                f"{pkg} {version} is affected by {cve or adv['id']}: {adv.get('title', '')}."
             ),
             attacker_perspective=(
                 "An attacker can use the public advisory/exploit for this known "
                 "vulnerability directly against the running application."
             ),
             business_impact="Depends on the advisory; see the referenced CVE for the "
-                            "specific impact and exploitability.",
+            "specific impact and exploitability.",
             remediation=Remediation(
-                summary=f"Upgrade {pkg} to {fixed} or later." if fixed
-                        else f"Upgrade {pkg} to a patched version.",
+                summary=f"Upgrade {pkg} to {fixed} or later."
+                if fixed
+                else f"Upgrade {pkg} to a patched version.",
                 guidance=(
                     f"Update the pinned version of {pkg} to "
                     f"{fixed or 'the latest patched release'} and re-run tests. "

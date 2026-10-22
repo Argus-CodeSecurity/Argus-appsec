@@ -15,7 +15,7 @@ class PostureStatus(str, Enum):
     PASS = "pass"
     FAIL = "fail"
     REVIEW = "review"  # no fail gate, but High+ present
-    CLEAN = "clean"    # no findings at configured floor
+    CLEAN = "clean"  # no findings at configured floor
 
 
 @dataclass(frozen=True)
@@ -139,7 +139,6 @@ def render_posture_panel(summary: PostureSummary) -> str:
     if summary.gate_label:
         lines.append("")
         lines.append(
-            f"[dim]Gate:[/dim] --fail-on {summary.gate_label}  "
-            f"[dim]Risk:[/dim] {summary.risk}/100"
+            f"[dim]Gate:[/dim] --fail-on {summary.gate_label}  [dim]Risk:[/dim] {summary.risk}/100"
         )
     return "\n".join(lines)

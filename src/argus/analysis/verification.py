@@ -14,7 +14,13 @@ def assign_verification_state(finding: Finding) -> str:
 
     existing = finding.metadata.get("verification")
     if existing in {
-        "verified", "confirmed", "fixed", "accepted", "false_positive", "likely", "detected",
+        "verified",
+        "confirmed",
+        "fixed",
+        "accepted",
+        "false_positive",
+        "likely",
+        "detected",
     }:
         return str(existing)
 

@@ -26,8 +26,7 @@ _SEVERITY = {
 # Argus confidence -> GitLab confidence vocabulary.
 _CONFIDENCE = {"low": "Low", "medium": "Medium", "high": "High"}
 
-_SCANNER = {"id": "argus", "name": "Argus",
-            "vendor": {"name": "Argus"}, "version": __version__}
+_SCANNER = {"id": "argus", "name": "Argus", "vendor": {"name": "Argus"}, "version": __version__}
 
 
 @reporter
@@ -61,8 +60,9 @@ class GitLabReporter(Reporter):
         """
         seen: dict[str, int] = {}
         out: list[dict] = []
-        ordered = sorted(result.sorted_findings(),
-                         key=lambda f: (f.fingerprint(), f.location.start_line or 0))
+        ordered = sorted(
+            result.sorted_findings(), key=lambda f: (f.fingerprint(), f.location.start_line or 0)
+        )
         ids: dict[int, str] = {}
         for f in ordered:
             fp = f.fingerprint()
@@ -104,10 +104,14 @@ class GitLabReporter(Reporter):
         ids: list[dict] = []
         for cwe in f.cwe:
             num = cwe.replace("CWE-", "")
-            ids.append({
-                "type": "cwe", "name": cwe, "value": num,
-                "url": f"https://cwe.mitre.org/data/definitions/{num}.html",
-            })
+            ids.append(
+                {
+                    "type": "cwe",
+                    "name": cwe,
+                    "value": num,
+                    "url": f"https://cwe.mitre.org/data/definitions/{num}.html",
+                }
+            )
         # GitLab requires at least one identifier; fall back to the rule id.
         if not ids:
             ids.append({"type": "argus_rule", "name": f.rule_id, "value": f.rule_id})

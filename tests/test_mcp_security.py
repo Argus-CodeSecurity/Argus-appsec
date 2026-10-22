@@ -13,10 +13,14 @@ from argus.mcp import server
 
 
 def _call(path: str) -> dict:
-    resp = server.handle_request({
-        "jsonrpc": "2.0", "id": 1, "method": "tools/call",
-        "params": {"name": "argus_scan", "arguments": {"path": path}},
-    })
+    resp = server.handle_request(
+        {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "tools/call",
+            "params": {"name": "argus_scan", "arguments": {"path": path}},
+        }
+    )
     return resp["result"]
 
 
@@ -36,12 +40,15 @@ def test_scan_inside_working_directory_is_allowed(root):
     assert json.loads(result["content"][0]["text"])["summary"]["total_findings"] >= 0
 
 
-@pytest.mark.parametrize("path_fn", [
-    lambda root: str(root.parent),
-    lambda root: "..",
-    lambda root: str(root / ".." / ".."),
-    lambda root: os.path.expanduser("~"),
-])
+@pytest.mark.parametrize(
+    "path_fn",
+    [
+        lambda root: str(root.parent),
+        lambda root: "..",
+        lambda root: str(root / ".." / ".."),
+        lambda root: os.path.expanduser("~"),
+    ],
+)
 def test_paths_outside_the_roots_are_refused(root, path_fn):
     result = _call(path_fn(root))
     assert result["isError"] is True
@@ -78,6 +85,7 @@ def test_scan_does_not_trust_project_config(root, monkeypatch):
             from datetime import datetime, timezone
 
             from argus.core.models import ScanResult
+
             return ScanResult(target=str(project.root), started_at=datetime.now(timezone.utc))
 
     monkeypatch.setattr("argus.core.engine.ScanEngine", FakeEngine)

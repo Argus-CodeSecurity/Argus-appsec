@@ -32,11 +32,13 @@ def reevaluate_intel(
             continue
         key = f"{eco}:{name}"
         if key in intel or name in intel:
-            hits.append(ReevaluationHit(
-                package=str(name),
-                ecosystem=str(eco),
-                reason="Package now flagged in threat intelligence",
-                affected_targets=by_pkg.get(key, []),
-                severity="critical",
-            ))
+            hits.append(
+                ReevaluationHit(
+                    package=str(name),
+                    ecosystem=str(eco),
+                    reason="Package now flagged in threat intelligence",
+                    affected_targets=by_pkg.get(key, []),
+                    severity="critical",
+                )
+            )
     return hits

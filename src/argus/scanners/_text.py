@@ -27,9 +27,7 @@ WINDOW_OVERLAP = 256
 #: Remote content piped straight into a shell (``curl ... | sh``). One
 #: definition shared by the malware, cicd, iac and lang-sast scanners. Linear:
 #: ``[^\n|]*`` stops at the first pipe and cannot overlap with ``\|``.
-CURL_PIPE_SHELL = (
-    r"\b(?:curl|wget|fetch)\s[^\n|]*\|\s*(?:sudo\s+(?:-\S+\s+)*)?(?:ba|z)?sh\b"
-)
+CURL_PIPE_SHELL = r"\b(?:curl|wget|fetch)\s[^\n|]*\|\s*(?:sudo\s+(?:-\S+\s+)*)?(?:ba|z)?sh\b"
 CURL_PIPE_SHELL_RE = re.compile(CURL_PIPE_SHELL, re.IGNORECASE)
 
 
@@ -41,14 +39,15 @@ def line_windows(line: str, max_len: int = MAX_SCAN_LINE) -> list[str]:
     out: list[str] = []
     start = 0
     while True:
-        out.append(line[start:start + max_len])
+        out.append(line[start : start + max_len])
         if start + max_len >= len(line):
             return out
         start += step
 
 
-def search_line(pattern: re.Pattern[str], line: str,
-                max_len: int = MAX_SCAN_LINE) -> re.Match[str] | None:
+def search_line(
+    pattern: re.Pattern[str], line: str, max_len: int = MAX_SCAN_LINE
+) -> re.Match[str] | None:
     """First match of ``pattern`` in ``line``, searching at most ``max_len`` at a time.
 
     The match's ``.string`` is the window it was found in, which is the useful
@@ -61,8 +60,9 @@ def search_line(pattern: re.Pattern[str], line: str,
     return None
 
 
-def iter_scan_lines(text: str | Sequence[str],
-                    max_len: int = MAX_SCAN_LINE) -> Iterator[tuple[int, str]]:
+def iter_scan_lines(
+    text: str | Sequence[str], max_len: int = MAX_SCAN_LINE
+) -> Iterator[tuple[int, str]]:
     """Yield ``(lineno, segment)`` pairs with every segment at most ``max_len``.
 
     ``text`` is either the file content or its already-split lines. Normal lines

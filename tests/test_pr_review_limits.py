@@ -8,8 +8,13 @@ from argus.remediation import pr_review
 
 def _finding(i: int, title: str = "t") -> Finding:
     return Finding(
-        id=f"r:{i}", rule_id="r", scanner="patterns", title=title, description="",
-        location=Location(path="a.py", start_line=i), severity=Severity.LOW,
+        id=f"r:{i}",
+        rule_id="r",
+        scanner="patterns",
+        title=title,
+        description="",
+        location=Location(path="a.py", start_line=i),
+        severity=Severity.LOW,
     )
 
 
@@ -29,13 +34,5 @@ def test_summary_body_is_hard_capped():
 
 
 def test_pure_deletion_hunk_adds_no_lines():
-    diff = (
-        "+++ b/app.py\n"
-        "@@ -5,2 +4,0 @@\n"
-        "-gone\n"
-        "-gone too\n"
-        "@@ -9 +8,2 @@\n"
-        "+new\n"
-        "+new\n"
-    )
+    diff = "+++ b/app.py\n@@ -5,2 +4,0 @@\n-gone\n-gone too\n@@ -9 +8,2 @@\n+new\n+new\n"
     assert pr_review.parse_changed_lines(diff) == {"app.py": {8, 9}}

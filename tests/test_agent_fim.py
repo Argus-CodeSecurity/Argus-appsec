@@ -55,10 +55,10 @@ def test_fim_reads_legacy_state(tmp_path: Path):
     target = tmp_path / "cfg"
     target.write_text("v1\n", encoding="utf-8")
     state = tmp_path / "integrity.json"
-    legacy = {str(target): {"hash": fim._hash_file(target)[0],
-                            "stat": fim._stat_sig(target)}}
+    legacy = {str(target): {"hash": fim._hash_file(target)[0], "stat": fim._stat_sig(target)}}
     state.write_text(json.dumps(legacy), encoding="utf-8")
     assert fim.check_integrity([str(target)], state).findings == []
     target.write_text("v2\n", encoding="utf-8")
     assert [f.rule_id for f in fim.check_integrity([str(target)], state).findings] == [
-        "fim.content-changed"]
+        "fim.content-changed"
+    ]

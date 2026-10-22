@@ -35,8 +35,7 @@ def test_sarif_is_valid_and_maps_levels(vulnerable_project):
         assert res["ruleId"] in rule_ids
         assert res["level"] in {"note", "warning", "error"}
     # GitHub security-severity present on rules.
-    assert all("security-severity" in r["properties"]
-               for r in run["tool"]["driver"]["rules"])
+    assert all("security-severity" in r["properties"] for r in run["tool"]["driver"]["rules"])
 
 
 def test_markdown_contains_sections(vulnerable_project):
@@ -51,10 +50,10 @@ def test_html_is_self_contained(vulnerable_project):
     result = _result(vulnerable_project)
     html = registry.get_reporter("html")().render(result)
     assert html.startswith("<!doctype html>")
-    assert "<style>" in html          # CSS inlined
-    assert "http-equiv" not in html   # no external refresh
+    assert "<style>" in html  # CSS inlined
+    assert "http-equiv" not in html  # no external refresh
     # No external resource references.
-    assert "src=\"http" not in html and "href=\"http" not in html
+    assert 'src="http' not in html and 'href="http' not in html
 
 
 def test_csv_has_header_and_rows(vulnerable_project):

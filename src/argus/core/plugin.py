@@ -245,25 +245,28 @@ class Registry:
     def get_scanner(self, name: str) -> type[Scanner]:
         self._ensure_entrypoints()
         if name not in self._scanners:
-            raise KeyError(self._skipped_reason("Scanner", name)
-                           or f"Unknown scanner: {name!r}. "
-                           f"Available: {sorted(self._scanners)}")
+            raise KeyError(
+                self._skipped_reason("Scanner", name)
+                or f"Unknown scanner: {name!r}. Available: {sorted(self._scanners)}"
+            )
         return self._scanners[name]
 
     def get_reporter(self, name: str) -> type[Reporter]:
         self._ensure_entrypoints()
         if name not in self._reporters:
-            raise KeyError(self._skipped_reason("Reporter", name)
-                           or f"Unknown reporter: {name!r}. "
-                           f"Available: {sorted(self._reporters)}")
+            raise KeyError(
+                self._skipped_reason("Reporter", name)
+                or f"Unknown reporter: {name!r}. Available: {sorted(self._reporters)}"
+            )
         return self._reporters[name]
 
     def get_ai_provider(self, name: str) -> type[AIProvider]:
         self._ensure_entrypoints()
         if name not in self._ai_providers:
-            raise KeyError(self._skipped_reason("AIProvider", name)
-                           or f"Unknown AI provider: {name!r}. "
-                           f"Available: {sorted(self._ai_providers)}")
+            raise KeyError(
+                self._skipped_reason("AIProvider", name)
+                or f"Unknown AI provider: {name!r}. Available: {sorted(self._ai_providers)}"
+            )
         return self._ai_providers[name]
 
     def _skipped_reason(self, kind: str, name: str) -> str | None:
@@ -288,16 +291,18 @@ class Registry:
         for ep in eps:
             try:
                 from argus.plugins.signing import verify_plugin_entry
+
                 if not verify_plugin_entry(ep):
                     import warnings
+
                     warnings.warn(f"Blocked untrusted Argus plugin {ep.name!r}", stacklevel=2)
                     continue
                 register = ep.load()
                 register()
             except Exception as exc:  # pragma: no cover - defensive
                 import warnings
-                warnings.warn(f"Failed to load Argus plugin {ep.name!r}: {exc}",
-                              stacklevel=2)
+
+                warnings.warn(f"Failed to load Argus plugin {ep.name!r}: {exc}", stacklevel=2)
 
 
 #: The shared registry every part of Argus talks to.

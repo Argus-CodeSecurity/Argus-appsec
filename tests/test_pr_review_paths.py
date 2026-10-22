@@ -17,15 +17,21 @@ pytestmark = pytest.mark.skipif(shutil.which("git") is None, reason="git is requ
 def _git(root: Path, *args: str) -> None:
     subprocess.run(
         ["git", "-c", "user.name=Test", "-c", "user.email=test@example.com", *args],
-        cwd=root, check=True, capture_output=True,
+        cwd=root,
+        check=True,
+        capture_output=True,
     )
 
 
 def _finding(path: str, line: int) -> Finding:
     return Finding(
-        id=f"patterns.python-yaml-load:{path}:{line}", rule_id="patterns.python-yaml-load", scanner="patterns", title="Unsafe yaml.load",
+        id=f"patterns.python-yaml-load:{path}:{line}",
+        rule_id="patterns.python-yaml-load",
+        scanner="patterns",
+        title="Unsafe yaml.load",
         description="yaml.load on untrusted input can construct arbitrary objects.",
-        severity=Severity.HIGH, location=Location(path=path, start_line=line),
+        severity=Severity.HIGH,
+        location=Location(path=path, start_line=line),
     )
 
 

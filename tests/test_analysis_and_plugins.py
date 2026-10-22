@@ -34,8 +34,11 @@ def test_registry_registration_and_lookup():
 
         def scan(self, ctx: ScannerContext):
             yield Finding(
-                id="dummy:1", rule_id="dummy.r", scanner="dummy",
-                title="t", description="d",
+                id="dummy:1",
+                rule_id="dummy.r",
+                scanner="dummy",
+                title="t",
+                description="d",
                 location=Location(path="x", start_line=1),
                 severity=Severity.LOW,
             )
@@ -47,6 +50,7 @@ def test_registry_registration_and_lookup():
 def test_registry_rejects_nameless_scanner():
     reg = Registry()
     with pytest.raises(ValueError):
+
         @reg.register_scanner
         class NoName(Scanner):
             def scan(self, ctx):
@@ -71,6 +75,7 @@ def test_registry_rejects_duplicate_name_different_class():
             return []
 
     with pytest.raises(ValueError, match="already registered"):
+
         @reg.register_scanner
         class Second(Scanner):
             name = "dup"
@@ -120,4 +125,4 @@ def test_analyzer_caps_aggregate_source_blob(tmp_path, monkeypatch):
 
     assert "Python" in project.languages
     assert seen["len"] <= budget + 30  # content budget + newline separators
-    assert seen["len"] < 30 * 40       # far below the unbounded total
+    assert seen["len"] < 30 * 40  # far below the unbounded total

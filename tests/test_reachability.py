@@ -18,9 +18,7 @@ from argus.core.project import Project
 
 
 def _reachability_config() -> Config:
-    return Config(
-        scanner_options={"dependencies": {"online": False, "reachability": True}}
-    )
+    return Config(scanner_options={"dependencies": {"online": False, "reachability": True}})
 
 
 def _scan_deps(tmp_path: Path, config: Config) -> list:
@@ -79,13 +77,12 @@ def test_verdict_not_imported_and_unknown():
 
 # --- scanner integration -------------------------------------------------------
 def test_dependency_findings_annotated_with_reachability(tmp_path):
-    (tmp_path / "requirements.txt").write_text(
-        "pyyaml==5.3\nflask==2.0.0\n", encoding="utf-8"
-    )
+    (tmp_path / "requirements.txt").write_text("pyyaml==5.3\nflask==2.0.0\n", encoding="utf-8")
     (tmp_path / "main.py").write_text("import yaml\nprint(yaml)\n", encoding="utf-8")
 
-    findings = {f.metadata["installed_version"]: f
-                for f in _scan_deps(tmp_path, _reachability_config())}
+    findings = {
+        f.metadata["installed_version"]: f for f in _scan_deps(tmp_path, _reachability_config())
+    }
     yaml_finding = next(f for f in findings.values() if "pyyaml" in f.title)
     flask_finding = next(f for f in findings.values() if "flask" in f.title)
 

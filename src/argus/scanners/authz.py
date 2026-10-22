@@ -148,9 +148,7 @@ def _route_path(line: str) -> str | None:
 class AuthzScanner(Scanner):
     name = "authz"
     category = "auth"
-    description = (
-        "Analyzes authentication/authorization patterns on routes and JWT usage."
-    )
+    description = "Analyzes authentication/authorization patterns on routes and JWT usage."
 
     def applies_to(self, project) -> bool:
         exts = (".py", ".js", ".jsx", ".ts", ".tsx", ".mjs")
@@ -174,16 +172,28 @@ class AuthzScanner(Scanner):
                     counter += 1
                     yield finding
                 for finding in self._check_routes(
-                    f.rel_path, lines, i, counter, file_has_router_auth,
+                    f.rel_path,
+                    lines,
+                    i,
+                    counter,
+                    file_has_router_auth,
                 ):
                     counter += 1
                     yield finding
 
     def _check_oauth_session(
-        self, path: str, line: str, line_no: int, counter: int,
+        self,
+        path: str,
+        line: str,
+        line_no: int,
+        counter: int,
     ) -> Iterable[Finding]:
         lower = line.lower()
-        if ("oauth" in lower or "openid" in lower) and re.search(r"callback|redirect", lower) and not re.search(r"state|nonce|pkce", lower):
+        if (
+            ("oauth" in lower or "openid" in lower)
+            and re.search(r"callback|redirect", lower)
+            and not re.search(r"state|nonce|pkce", lower)
+        ):
             yield Finding(
                 id=f"authz:oauth-state:{counter + 1}",
                 rule_id="authz.oauth-missing-state",
@@ -216,7 +226,9 @@ class AuthzScanner(Scanner):
                 cwe=["CWE-598"],
                 owasp=["A07:2021-Identification and Authentication Failures"],
                 why_vulnerable="URL query parameters are not a secure token channel.",
-                remediation=Remediation(summary="Exchange codes server-side; never pass tokens in URLs."),
+                remediation=Remediation(
+                    summary="Exchange codes server-side; never pass tokens in URLs."
+                ),
                 tags=["auth", "oauth", "session"],
             )
         if _SESSION_INSECURE.search(line):
@@ -239,13 +251,12 @@ class AuthzScanner(Scanner):
                 tags=["auth", "session"],
             )
 
-    def _check_jwt(self, path: str, line: str, line_no: int,
-                   counter: int) -> Iterable[Finding]:
+    def _check_jwt(self, path: str, line: str, line_no: int, counter: int) -> Iterable[Finding]:
         if "jwt" not in line.lower() and "jsonwebtoken" not in line.lower():
             return
-        if not (_JWT_WEAK.search(line) or (
-            "algorithms" in line.lower() and _JWT_NONE_ALG.search(line)
-        )):
+        if not (
+            _JWT_WEAK.search(line) or ("algorithms" in line.lower() and _JWT_NONE_ALG.search(line))
+        ):
             return
         yield Finding(
             id=f"authz:jwt-weak:{counter + 1}",
@@ -267,8 +278,7 @@ class AuthzScanner(Scanner):
                 "forge tokens and impersonate users."
             ),
             attacker_perspective=(
-                "Craft a JWT with alg=none or tamper claims after stripping "
-                "signature verification."
+                "Craft a JWT with alg=none or tamper claims after stripping signature verification."
             ),
             business_impact="Full authentication bypass for affected endpoints.",
             remediation=Remediation(
@@ -282,7 +292,11 @@ class AuthzScanner(Scanner):
         )
 
     def _check_routes(
-        self, path: str, lines: list[str], idx: int, counter: int,
+        self,
+        path: str,
+        lines: list[str],
+        idx: int,
+        counter: int,
         file_has_router_auth: bool = False,
     ) -> Iterable[Finding]:
         route_path = _route_path(lines[idx])
@@ -353,9 +367,7 @@ class AuthzScanner(Scanner):
                 business_impact="Cross-account data exposure or unauthorized actions.",
                 remediation=Remediation(
                     summary="Verify the authenticated principal may access the requested ID.",
-                    guidance=(
-                        "Compare route/user ID to session tenant; return 403 on mismatch."
-                    ),
+                    guidance=("Compare route/user ID to session tenant; return 403 on mismatch."),
                 ),
                 tags=["auth", "authorization", "idor"],
                 metadata={"route": route_path},

@@ -42,9 +42,7 @@ def test_shell_true_survives_prefer_ast(tmp_path):
     """shell=True must be reported through the full engine, not swallowed."""
     result = _engine_scan(
         tmp_path,
-        "import subprocess\n"
-        "def run(host):\n"
-        "    subprocess.run('ping ' + host, shell=True)\n",
+        "import subprocess\ndef run(host):\n    subprocess.run('ping ' + host, shell=True)\n",
     )
     cwes = {c for f in result.sorted_findings() for c in f.cwe}
     assert "CWE-78" in cwes

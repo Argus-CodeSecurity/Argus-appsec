@@ -23,9 +23,17 @@ def test_every_package_is_queried_past_the_old_cap():
         if request.url.path == "/v1/querybatch":
             queries = json.loads(request.content)["queries"]
             queried.extend(q["package"]["name"] for q in queries)
-            return httpx.Response(200, json={"results": [
-                {"vulns": [{"id": "OSV-REAL"}]} if q["package"]["name"] == "real-dep"
-                else {} for q in queries]})
+            return httpx.Response(
+                200,
+                json={
+                    "results": [
+                        {"vulns": [{"id": "OSV-REAL"}]}
+                        if q["package"]["name"] == "real-dep"
+                        else {}
+                        for q in queries
+                    ]
+                },
+            )
         return httpx.Response(200, json={"id": "OSV-REAL", "summary": "real issue"})
 
     deps = [(f"padding-{i}", "1.0.0") for i in range(6000)] + [("real-dep", "1.0.0")]

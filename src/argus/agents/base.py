@@ -47,9 +47,7 @@ def parse_sections(text: str, headers: dict[str, str]) -> dict[str, str]:
     the line. Prose that merely starts with the word ("Attackers can...",
     "Impact depends on...") is content, not a new section.
     """
-    alternatives = "|".join(
-        re.sub(r"_", r"[\\s_/-]*", re.escape(h)) for h in headers
-    )
+    alternatives = "|".join(re.sub(r"_", r"[\\s_/-]*", re.escape(h)) for h in headers)
     header_re = re.compile(
         rf"^[\W_]*({alternatives})(?![A-Za-z0-9])[^\w:\n]*(?::|$)[\s*_]*(.*)$",
         re.IGNORECASE,

@@ -20,8 +20,9 @@ pytestmark = pytest.mark.skipif(shutil.which("git") is None, reason="git not ins
 
 
 def _git(repo: Path, *args: str) -> str:
-    return subprocess.run(["git", *args], cwd=repo, check=True, capture_output=True,
-                          text=True).stdout.strip()
+    return subprocess.run(
+        ["git", *args], cwd=repo, check=True, capture_output=True, text=True
+    ).stdout.strip()
 
 
 @pytest.fixture
@@ -53,12 +54,14 @@ def test_ref_resolves_to_commit_sha(repo):
     sha = resolve_commit(repo, "HEAD~1")
     assert sha == _git(repo, "rev-parse", "HEAD~1")
     assert collect_packages_at_ref(repo, "HEAD~1") == [
-        ("PyPI", "requirements.txt", "django", "4.2")]
+        ("PyPI", "requirements.txt", "django", "4.2")
+    ]
 
 
 def test_scanner_refuses_injected_ref(repo):
-    cfg = Config(scanner_options={"dependency-diff": {
-        "ref": "--output=pwned.txt...HEAD", "behavior": False}})
+    cfg = Config(
+        scanner_options={"dependency-diff": {"ref": "--output=pwned.txt...HEAD", "behavior": False}}
+    )
     ctx = ScannerContext(project=Project.from_path(repo), config=cfg)
     with pytest.raises(ValueError):
         list(DependencyDiffScanner().scan(ctx))

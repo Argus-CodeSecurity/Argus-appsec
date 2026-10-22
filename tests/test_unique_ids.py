@@ -11,14 +11,19 @@ from argus.reporting.gitlab import GitLabReporter
 
 
 def _f(line: int) -> Finding:
-    return Finding(id=f"r:{line}", rule_id="py.eval", scanner="patterns", title="eval",
-                   description="", severity=Severity.HIGH,
-                   location=Location(path="a.py", start_line=line, snippet="eval(x)"))
+    return Finding(
+        id=f"r:{line}",
+        rule_id="py.eval",
+        scanner="patterns",
+        title="eval",
+        description="",
+        severity=Severity.HIGH,
+        location=Location(path="a.py", start_line=line, snippet="eval(x)"),
+    )
 
 
 def _result(*findings: Finding) -> ScanResult:
-    return ScanResult(target="t", started_at=datetime.now(timezone.utc),
-                      findings=list(findings))
+    return ScanResult(target="t", started_at=datetime.now(timezone.utc), findings=list(findings))
 
 
 def test_gitlab_ids_are_unique_and_first_keeps_fingerprint():

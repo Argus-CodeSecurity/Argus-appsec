@@ -75,28 +75,38 @@ def test_secret_on_long_line_is_reported_once_and_masked(tmp_path):
 
 
 def test_cicd_hardcoded_secret_snippet_is_masked(tmp_path):
-    wf = ("on: push\njobs:\n  a:\n    runs-on: ubuntu-latest\n    env:\n"
-          "      password: hunter2hunter2\n"
-          f"      api_key: \"{STRIPE}\"\n")
-    findings = [f for f in CicdScanner().scan(_ctx(tmp_path, {".github/workflows/ci.yml": wf}))
-                if f.rule_id == "cicd.hardcoded-secret"]
+    wf = (
+        "on: push\njobs:\n  a:\n    runs-on: ubuntu-latest\n    env:\n"
+        "      password: hunter2hunter2\n"
+        f'      api_key: "{STRIPE}"\n'
+    )
+    findings = [
+        f
+        for f in CicdScanner().scan(_ctx(tmp_path, {".github/workflows/ci.yml": wf}))
+        if f.rule_id == "cicd.hardcoded-secret"
+    ]
     assert len(findings) == 2
     _assert_clean(findings, "hunter2hunter2", STRIPE)
 
 
 def test_container_env_secrets_are_masked(tmp_path):
     files = {
-        "docker-compose.yml": ("services:\n  db:\n    image: postgres:16\n"
-                               "    environment:\n"
-                               "      - POSTGRES_PASSWORD=S3cr3tValue99\n"
-                               f"      - GITHUB_TOKEN={GH_1}\n"),
+        "docker-compose.yml": (
+            "services:\n  db:\n    image: postgres:16\n"
+            "    environment:\n"
+            "      - POSTGRES_PASSWORD=S3cr3tValue99\n"
+            f"      - GITHUB_TOKEN={GH_1}\n"
+        ),
         "Dockerfile": "FROM python:3.12\nENV API_KEY=QkF4cTk3dmJ2OGxM\nUSER app\n",
         "helm/values.yaml": "db:\n  password: Pa55w0rdFromHelm\n",
     }
     findings = list(ContainerScanner().scan(_ctx(tmp_path, files)))
     rules = {f.rule_id for f in findings}
-    assert {"container.env-secret", "container.dockerfile-env-secret",
-            "container.helm-values-secret"} <= rules
+    assert {
+        "container.env-secret",
+        "container.dockerfile-env-secret",
+        "container.helm-values-secret",
+    } <= rules
     _assert_clean(findings, "S3cr3tValue99", GH_1, "QkF4cTk3dmJ2OGxM", "Pa55w0rdFromHelm")
 
 

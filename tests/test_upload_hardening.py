@@ -12,8 +12,15 @@ def _client(handler) -> httpx.Client:
     return httpx.Client(transport=httpx.MockTransport(handler))
 
 
-@pytest.mark.parametrize("url", ["http://cloud.example.com", "http://10.0.0.5:8080",
-                                 "ftp://cloud.example.com", "cloud.example.com"])
+@pytest.mark.parametrize(
+    "url",
+    [
+        "http://cloud.example.com",
+        "http://10.0.0.5:8080",
+        "ftp://cloud.example.com",
+        "cloud.example.com",
+    ],
+)
 def test_token_is_never_sent_over_plain_http(url):
     sent: list[httpx.Request] = []
     client = _client(lambda r: sent.append(r) or httpx.Response(200, json={}))
@@ -24,8 +31,9 @@ def test_token_is_never_sent_over_plain_http(url):
     assert sent == []
 
 
-@pytest.mark.parametrize("url", ["http://127.0.0.1:8000", "http://localhost:8000",
-                                 "http://[::1]:8000"])
+@pytest.mark.parametrize(
+    "url", ["http://127.0.0.1:8000", "http://localhost:8000", "http://[::1]:8000"]
+)
 def test_plain_http_allowed_for_loopback(url):
     client = _client(lambda r: httpx.Response(201, json={"scanId": "1"}))
     assert push_result({}, url=url, token="t", client=client) == {"scanId": "1"}
@@ -45,10 +53,13 @@ def test_job_id_is_path_encoded():
     assert seen[1] == "/api/ingest/jobs/..%2F..%2Fadmin%3Fx%3D1"
 
 
-@pytest.mark.parametrize("response", [
-    httpx.Response(202, text="not json"),
-    httpx.Response(202, json=["unexpected", "shape"]),
-])
+@pytest.mark.parametrize(
+    "response",
+    [
+        httpx.Response(202, text="not json"),
+        httpx.Response(202, json=["unexpected", "shape"]),
+    ],
+)
 def test_malformed_responses_raise_push_error(response):
     client = _client(lambda r: response)
     with pytest.raises(PushError):

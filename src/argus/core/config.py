@@ -48,8 +48,7 @@ def _str_list(data: dict[str, Any], key: str) -> list[str]:
         return []
     if not isinstance(value, list) or not all(isinstance(v, str) for v in value):
         raise ConfigError(
-            f"{key}: expected a list of strings (e.g. {key}: [\"value\"]), "
-            f"got {value!r}"
+            f'{key}: expected a list of strings (e.g. {key}: ["value"]), got {value!r}'
         )
     return [v.strip() for v in value if v.strip()]
 
@@ -81,8 +80,7 @@ def _bool(data: dict[str, Any], key: str, default: bool, *, prefix: str = "") ->
     return value
 
 
-def _non_negative_int(data: dict[str, Any], key: str, default: int, *,
-                      prefix: str = "") -> int:
+def _non_negative_int(data: dict[str, Any], key: str, default: int, *, prefix: str = "") -> int:
     value = data.get(key)
     if value is None:
         return default
@@ -100,9 +98,9 @@ def _severity(value: Any, key: str) -> Severity:
 
 @dataclass
 class AIConfig:
-    provider: str = "heuristic"       # heuristic | anthropic | openai | ollama
-    model: str | None = None          # provider-specific; None uses the provider default
-    enabled: bool = True              # if False, findings are not AI-enriched
+    provider: str = "heuristic"  # heuristic | anthropic | openai | ollama
+    model: str | None = None  # provider-specific; None uses the provider default
+    enabled: bool = True  # if False, findings are not AI-enriched
     temperature: float = 0.0
     max_tokens: int = 4096
     # With a real model, only this many findings (highest risk first) are sent
@@ -169,8 +167,7 @@ class Config:
     autofix: dict[str, Any] = field(default_factory=dict)
 
     @classmethod
-    def load(cls, path: str | Path | None = None,
-             project_root: str | Path | None = None) -> Config:
+    def load(cls, path: str | Path | None = None, project_root: str | Path | None = None) -> Config:
         """Load config from an explicit path or by discovery in the project root."""
         data: dict[str, Any] = {}
         chosen: Path | None = None
@@ -235,8 +232,7 @@ class Config:
         for name, value in options.items():
             if not isinstance(value, dict):
                 raise ConfigError(
-                    f"scanner_options.{name}: expected a mapping, "
-                    f"got {type(value).__name__}"
+                    f"scanner_options.{name}: expected a mapping, got {type(value).__name__}"
                 )
         cfg.scanner_options = {str(k): dict(v) for k, v in options.items()}
         cfg.allow = _dict_list(data, "allow")
@@ -257,8 +253,9 @@ class Config:
                     enabled=_bool(ai, "enabled", cfg.ai.enabled, prefix="ai."),
                     temperature=float(ai.get("temperature", cfg.ai.temperature)),
                     max_tokens=int(ai.get("max_tokens", cfg.ai.max_tokens)),
-                    max_findings=_non_negative_int(ai, "max_findings",
-                                                   cfg.ai.max_findings, prefix="ai."),
+                    max_findings=_non_negative_int(
+                        ai, "max_findings", cfg.ai.max_findings, prefix="ai."
+                    ),
                 )
             except (TypeError, ValueError) as exc:
                 if isinstance(exc, ConfigError):
@@ -330,8 +327,14 @@ def _git(root: Path, *args: str) -> gitexec.GitResult:
     profile is used: the repository's config cannot launch programs.
     """
     try:
-        res = gitexec.run(root, *args, profile=gitexec.UNTRUSTED, timeout=_GIT_TIMEOUT,
-                          max_output=_MAX_CONFIG_BYTES, capture_stderr=True)
+        res = gitexec.run(
+            root,
+            *args,
+            profile=gitexec.UNTRUSTED,
+            timeout=_GIT_TIMEOUT,
+            max_output=_MAX_CONFIG_BYTES,
+            capture_stderr=True,
+        )
     except gitexec.GitNotFoundError as exc:
         raise ConfigError("--config-from-ref needs git, which was not found on PATH") from exc
     except gitexec.GitExecError as exc:
@@ -346,8 +349,12 @@ def _validate_ref(ref: str) -> str:
     # A leading "-" would be parsed by git as an option; ":" would let the
     # value pick a different path than the config file; whitespace and
     # control characters are never part of a valid ref.
-    if (not ref or ref.startswith("-") or ":" in ref
-            or any(ch.isspace() or ord(ch) < 32 for ch in ref)):
+    if (
+        not ref
+        or ref.startswith("-")
+        or ":" in ref
+        or any(ch.isspace() or ord(ch) < 32 for ch in ref)
+    ):
         raise ConfigError(f"invalid git ref for --config-from-ref: {ref!r}")
     return ref
 
@@ -374,8 +381,7 @@ def load_config_from_ref(
     """
     root = Path(project_root)
     ref = _validate_ref(ref)
-    proc = _git(root, "rev-parse", "--verify", "--quiet", "--end-of-options",
-                f"{ref}^{{commit}}")
+    proc = _git(root, "rev-parse", "--verify", "--quiet", "--end-of-options", f"{ref}^{{commit}}")
     commit = proc.stdout.strip()
     if proc.returncode != 0 or not commit:
         raise ConfigError(

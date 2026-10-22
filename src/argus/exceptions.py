@@ -68,23 +68,26 @@ def load_exceptions(path: Path) -> list[FindingException]:
         status = str(e.get("status", "accept"))
         if status not in VALID_STATUSES:
             raise ConfigError(
-                f"{where}: unknown status {status!r} "
-                f"(choose from: {', '.join(VALID_STATUSES)})"
+                f"{where}: unknown status {status!r} (choose from: {', '.join(VALID_STATUSES)})"
             )
         expires = e.get("expires_at")
         if expires is not None and _as_date(expires) is None:
             raise ConfigError(f"{where}: expires_at {expires!r} is not a YYYY-MM-DD date")
-        out.append(FindingException(
-            fingerprint=fingerprint.strip(),
-            status=status,
-            reason=str(e.get("reason", "")),
-            owner=str(e.get("owner", "")),
-            expires_at=_as_date(expires) if expires is not None else None,
-        ))
+        out.append(
+            FindingException(
+                fingerprint=fingerprint.strip(),
+                status=status,
+                reason=str(e.get("reason", "")),
+                owner=str(e.get("owner", "")),
+                expires_at=_as_date(expires) if expires is not None else None,
+            )
+        )
     return out
 
 
-def apply_exceptions(findings: list[Finding], exceptions: list[FindingException]) -> tuple[list[Finding], int]:
+def apply_exceptions(
+    findings: list[Finding], exceptions: list[FindingException]
+) -> tuple[list[Finding], int]:
     if not exceptions:
         return findings, 0
     today = datetime.now(timezone.utc).date()
@@ -112,7 +115,9 @@ def apply_exceptions(findings: list[Finding], exceptions: list[FindingException]
             }
             if matched.status == "suppress":
                 continue
-            f.metadata["verification"] = "accepted" if matched.status == "accept" else "false_positive"
+            f.metadata["verification"] = (
+                "accepted" if matched.status == "accept" else "false_positive"
+            )
         kept.append(f)
     return kept, suppressed
 

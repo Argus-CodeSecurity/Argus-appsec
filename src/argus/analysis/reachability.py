@@ -77,9 +77,7 @@ _PYPI_IMPORT_ALIASES: dict[str, tuple[str, ...]] = {
 }
 
 # `import a.b.c as x, d.e` / `from a.b import c`, captures the dotted paths.
-_IMPORT_RE = re.compile(
-    r"^\s*(?:from\s+([A-Za-z_][\w.]*)\s+import|import\s+(.+))", re.MULTILINE
-)
+_IMPORT_RE = re.compile(r"^\s*(?:from\s+([A-Za-z_][\w.]*)\s+import|import\s+(.+))", re.MULTILINE)
 
 
 def _normalize(name: str) -> str:

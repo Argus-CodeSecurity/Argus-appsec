@@ -19,7 +19,8 @@ def _project(tmp_path: Path) -> Path:
     # The extras marker looks like Rich markup and the long name exceeds the
     # console width; either one used to corrupt the printed JSON.
     (tmp_path / "requirements.txt").write_text(
-        f"{_LONG}==1.0.0\nrequests[security]==2.31.0\n", encoding="utf-8")
+        f"{_LONG}==1.0.0\nrequests[security]==2.31.0\n", encoding="utf-8"
+    )
     return tmp_path
 
 

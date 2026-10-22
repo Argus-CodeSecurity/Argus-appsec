@@ -20,8 +20,7 @@ def _ctx(root, cfg: Config) -> ScannerContext:
 def _record_requests(monkeypatch) -> list[str]:
     calls: list[str] = []
     monkeypatch.setattr(dast, "probe", lambda url: calls.append(url) or [])
-    monkeypatch.setattr(dast, "_safe_get",
-                        lambda url, timeout=8.0: calls.append(url) or None)
+    monkeypatch.setattr(dast, "_safe_get", lambda url, timeout=8.0: calls.append(url) or None)
     return calls
 
 
@@ -40,7 +39,8 @@ def test_dast_ignores_url_from_scanned_repo_config(tmp_path, monkeypatch):
 def test_dast_uses_operator_live_target(tmp_path, monkeypatch):
     monkeypatch.delenv(dast.ENV_URL, raising=False)
     (tmp_path / ".argus.yml").write_text(
-        "scanner_options:\n  dast:\n    url: http://169.254.169.254/\n", encoding="utf-8",
+        "scanner_options:\n  dast:\n    url: http://169.254.169.254/\n",
+        encoding="utf-8",
     )
     cfg = Config.load(project_root=tmp_path)
     # What `argus scan --live-target` does after loading the config.
@@ -55,7 +55,8 @@ def test_live_target_equal_to_repo_url_is_still_honoured(tmp_path, monkeypatch):
     # declare the same one must not silently disable the scan.
     monkeypatch.delenv(dast.ENV_URL, raising=False)
     (tmp_path / ".argus.yml").write_text(
-        "scanner_options:\n  dast:\n    url: https://app.example.com/\n", encoding="utf-8",
+        "scanner_options:\n  dast:\n    url: https://app.example.com/\n",
+        encoding="utf-8",
     )
     cfg = Config.load(project_root=tmp_path)
     cfg.dast_url = "https://app.example.com/"
@@ -66,7 +67,8 @@ def test_live_target_equal_to_repo_url_is_still_honoured(tmp_path, monkeypatch):
 
 def test_config_files_cannot_set_the_live_target(tmp_path):
     (tmp_path / ".argus.yml").write_text(
-        "dast_url: http://169.254.169.254/\n", encoding="utf-8",
+        "dast_url: http://169.254.169.254/\n",
+        encoding="utf-8",
     )
     assert Config.load(project_root=tmp_path).dast_url is None
 

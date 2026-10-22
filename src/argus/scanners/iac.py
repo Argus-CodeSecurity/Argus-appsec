@@ -45,38 +45,45 @@ DOCKER_RULES = [
         id="docker-user-root",
         title="Container runs as root (no USER directive)",
         pattern=re.compile(r"(?i)^\s*USER\s"),
-        negate=True, severity=Severity.MEDIUM, cwe=["CWE-250"], applies_when="dockerfile",
+        negate=True,
+        severity=Severity.MEDIUM,
+        cwe=["CWE-250"],
+        applies_when="dockerfile",
         why="Without a USER directive the container process runs as root, so a "
-            "container breakout or app compromise starts with root privileges.",
-        fix="Add a non-root USER (create a dedicated user and switch to it before "
-            "the app runs).",
+        "container breakout or app compromise starts with root privileges.",
+        fix="Add a non-root USER (create a dedicated user and switch to it before the app runs).",
     ),
     IaCRule(
         id="docker-latest-tag",
         title="Base image pinned to ':latest' (or unpinned)",
         pattern=re.compile(r"(?im)^\s*FROM\s+\S+:latest\b|^\s*FROM\s+[^:@\s]+\s*$"),
-        severity=Severity.LOW, cwe=["CWE-1104"], applies_when="dockerfile",
+        severity=Severity.LOW,
+        cwe=["CWE-1104"],
+        applies_when="dockerfile",
         confidence=Confidence.MEDIUM,
         why="An unpinned or :latest base image makes builds non-reproducible and can "
-            "silently pull in a vulnerable or malicious image.",
+        "silently pull in a vulnerable or malicious image.",
         fix="Pin the base image to a specific version and, ideally, a digest.",
     ),
     IaCRule(
         id="docker-add-remote",
         title="Use of ADD with a remote URL",
         pattern=re.compile(r"(?im)^\s*ADD\s+https?://"),
-        severity=Severity.LOW, cwe=["CWE-494"], applies_when="dockerfile",
-        why="ADD with a URL fetches remote content into the image without integrity "
-            "verification.",
+        severity=Severity.LOW,
+        cwe=["CWE-494"],
+        applies_when="dockerfile",
+        why="ADD with a URL fetches remote content into the image without integrity verification.",
         fix="Download with a pinned checksum, or use COPY for local files.",
     ),
     IaCRule(
         id="docker-curl-bash",
         title="Piping a downloaded script straight into a shell",
         pattern=CURL_PIPE_SHELL_RE,
-        severity=Severity.MEDIUM, cwe=["CWE-494"], applies_when="dockerfile",
+        severity=Severity.MEDIUM,
+        cwe=["CWE-494"],
+        applies_when="dockerfile",
         why="curl | bash executes remote code with no verification; a compromised or "
-            "MITM'd URL leads to a poisoned image.",
+        "MITM'd URL leads to a poisoned image.",
         fix="Download to a file, verify a checksum/signature, then execute.",
     ),
 ]
@@ -86,27 +93,31 @@ K8S_RULES = [
         id="k8s-privileged",
         title="Privileged container",
         pattern=re.compile(r"(?i)privileged:\s*true"),
-        severity=Severity.HIGH, cwe=["CWE-250"], applies_when="kubernetes",
+        severity=Severity.HIGH,
+        cwe=["CWE-250"],
+        applies_when="kubernetes",
         why="A privileged container has almost all host capabilities, making a "
-            "container escape trivial.",
+        "container escape trivial.",
         fix="Set privileged: false and grant only the specific capabilities needed.",
     ),
     IaCRule(
         id="k8s-run-as-root",
         title="Container allowed to run as root",
         pattern=re.compile(r"(?i)runAsNonRoot:\s*false"),
-        severity=Severity.MEDIUM, cwe=["CWE-250"], applies_when="kubernetes",
-        why="Allowing the container to run as root increases blast radius on "
-            "compromise.",
+        severity=Severity.MEDIUM,
+        cwe=["CWE-250"],
+        applies_when="kubernetes",
+        why="Allowing the container to run as root increases blast radius on compromise.",
         fix="Set runAsNonRoot: true and specify a non-zero runAsUser.",
     ),
     IaCRule(
         id="k8s-host-network",
         title="Pod uses host network namespace",
         pattern=re.compile(r"(?i)hostNetwork:\s*true"),
-        severity=Severity.MEDIUM, cwe=["CWE-668"], applies_when="kubernetes",
-        why="hostNetwork exposes the node's network stack to the pod, weakening "
-            "isolation.",
+        severity=Severity.MEDIUM,
+        cwe=["CWE-668"],
+        applies_when="kubernetes",
+        why="hostNetwork exposes the node's network stack to the pod, weakening isolation.",
         fix="Avoid hostNetwork unless strictly required; use a Service instead.",
     ),
 ]
@@ -116,28 +127,33 @@ TERRAFORM_RULES = [
         id="tf-sg-open-world",
         title="Security group open to 0.0.0.0/0",
         pattern=re.compile(r'cidr_blocks\s*=\s*\[[^\]]*"0\.0\.0\.0/0"'),
-        severity=Severity.HIGH, cwe=["CWE-284"], applies_when="terraform",
+        severity=Severity.HIGH,
+        cwe=["CWE-284"],
+        applies_when="terraform",
         why="An ingress rule open to the entire internet exposes the resource to "
-            "everyone; combined with an open sensitive port this is directly "
-            "exploitable.",
+        "everyone; combined with an open sensitive port this is directly "
+        "exploitable.",
         fix="Restrict cidr_blocks to the specific networks that need access.",
     ),
     IaCRule(
         id="tf-s3-public",
         title="S3 bucket ACL set to public",
         pattern=re.compile(r'acl\s*=\s*"public-read(-write)?"'),
-        severity=Severity.HIGH, cwe=["CWE-284"], applies_when="terraform",
+        severity=Severity.HIGH,
+        cwe=["CWE-284"],
+        applies_when="terraform",
         why="A public bucket ACL exposes stored objects to anyone.",
-        fix="Use private ACLs and grant access through explicit policies or "
-            "pre-signed URLs.",
+        fix="Use private ACLs and grant access through explicit policies or pre-signed URLs.",
     ),
     IaCRule(
         id="tf-unencrypted-storage",
         title="Storage resource without encryption",
-        pattern=re.compile(r'(?i)encrypted\s*=\s*false'),
-        severity=Severity.MEDIUM, cwe=["CWE-311"], applies_when="terraform",
+        pattern=re.compile(r"(?i)encrypted\s*=\s*false"),
+        severity=Severity.MEDIUM,
+        cwe=["CWE-311"],
+        applies_when="terraform",
         why="Disabling encryption at rest leaves stored data readable if the "
-            "underlying media or snapshot is exposed.",
+        "underlying media or snapshot is exposed.",
         fix="Set encrypted = true and manage keys via KMS.",
     ),
 ]
@@ -171,19 +187,16 @@ class IaCScanner(Scanner):
                 if rule.negate:
                     # Line by line: a multiline `^\s*` over the whole file is
                     # quadratic on a file of blank lines.
-                    if not any(rule.pattern.search(seg)
-                               for _, seg in iter_scan_lines(lines)):
+                    if not any(rule.pattern.search(seg) for _, seg in iter_scan_lines(lines)):
                         counter += 1
-                        yield self._finding(rule, counter, f.rel_path, 1,
-                                            "(directive absent)")
+                        yield self._finding(rule, counter, f.rel_path, 1, "(directive absent)")
                     continue
                 reported: set[int] = set()
                 for lineno, line in iter_scan_lines(lines):
                     if lineno not in reported and rule.pattern.search(line):
                         reported.add(lineno)
                         counter += 1
-                        yield self._finding(rule, counter, f.rel_path, lineno,
-                                            line.strip()[:200])
+                        yield self._finding(rule, counter, f.rel_path, lineno, line.strip()[:200])
 
     @staticmethod
     def _classify(f) -> str | None:
@@ -197,8 +210,7 @@ class IaCScanner(Scanner):
                 return "kubernetes"
         return None
 
-    def _finding(self, rule: IaCRule, index: int, path: str, lineno: int,
-                 snippet: str) -> Finding:
+    def _finding(self, rule: IaCRule, index: int, path: str, lineno: int, snippet: str) -> Finding:
         return Finding(
             id=f"{self.name}:{rule.id}:{index}",
             rule_id=f"{self.name}.{rule.id}",
@@ -213,7 +225,7 @@ class IaCScanner(Scanner):
             owasp=rule.owasp,
             why_vulnerable=rule.why,
             business_impact="Weakens the security posture of the deployed "
-                            "infrastructure and can enable or amplify a breach.",
+            "infrastructure and can enable or amplify a breach.",
             remediation=Remediation(summary=rule.fix, guidance=rule.fix),
             tags=["iac", rule.applies_when],
         )

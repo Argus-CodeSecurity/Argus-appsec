@@ -16,8 +16,13 @@ from argus.profiles import apply_profile
 
 def _finding(scanner: str = "patterns") -> Finding:
     return Finding(
-        id="t:1", rule_id="t", scanner=scanner, title="t", description="d",
-        location=Location(path="a.py", snippet="bad()"), severity=Severity.HIGH,
+        id="t:1",
+        rule_id="t",
+        scanner=scanner,
+        title="t",
+        description="d",
+        location=Location(path="a.py", snippet="bad()"),
+        severity=Severity.HIGH,
     )
 
 
@@ -72,7 +77,8 @@ def test_business_logic_on_corpus(tmp_path):
 
     root = tmp_path
     (root / "logic.py").write_text(
-        'price = request.args.get("price")\n', encoding="utf-8",
+        'price = request.args.get("price")\n',
+        encoding="utf-8",
     )
     p = Project.from_path(root)
     cfg = Config.load(project_root=root)

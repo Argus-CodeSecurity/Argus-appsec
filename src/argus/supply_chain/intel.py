@@ -36,9 +36,11 @@ def normalize_name(ecosystem: str, name: str) -> tuple[str, str]:
 
 
 def _bundled() -> set[tuple[str, str]]:
-    with resources.files("argus.scanners.data").joinpath("supply_chain.json").open(
-        encoding="utf-8"
-    ) as fh:
+    with (
+        resources.files("argus.scanners.data")
+        .joinpath("supply_chain.json")
+        .open(encoding="utf-8") as fh
+    ):
         data = json.load(fh)
     return {
         normalize_name(str(e["ecosystem"]), str(e["name"]))
@@ -121,8 +123,9 @@ def _fetch_remote(urls: tuple[str, ...] | str, timeout: float) -> set[tuple[str,
 
 
 @lru_cache(maxsize=8)
-def load_malicious_packages(*, online: bool = True, feed_url: str | None = None,
-                            timeout: float = 10.0) -> frozenset[tuple[str, str]]:
+def load_malicious_packages(
+    *, online: bool = True, feed_url: str | None = None, timeout: float = 10.0
+) -> frozenset[tuple[str, str]]:
     """Return merged malicious-package set (bundled + cache + optional remote)."""
     merged = set(_bundled())
     cached = _read_cache()
@@ -148,12 +151,37 @@ def is_malicious(ecosystem: str, name: str, *, online: bool = True) -> bool:
 
 
 # Popular package names used for typosquat / homoglyph detection (spec §7).
-_POPULAR_PACKAGES = frozenset({
-    "lodash", "react", "express", "axios", "request", "webpack", "typescript",
-    "eslint", "prettier", "moment", "async", "debug", "chalk", "commander",
-    "dotenv", "uuid", "jsonwebtoken", "bcrypt", "mongoose", "sequelize",
-    "django", "flask", "requests", "numpy", "pandas", "pytest", "setuptools",
-})
+_POPULAR_PACKAGES = frozenset(
+    {
+        "lodash",
+        "react",
+        "express",
+        "axios",
+        "request",
+        "webpack",
+        "typescript",
+        "eslint",
+        "prettier",
+        "moment",
+        "async",
+        "debug",
+        "chalk",
+        "commander",
+        "dotenv",
+        "uuid",
+        "jsonwebtoken",
+        "bcrypt",
+        "mongoose",
+        "sequelize",
+        "django",
+        "flask",
+        "requests",
+        "numpy",
+        "pandas",
+        "pytest",
+        "setuptools",
+    }
+)
 
 
 def levenshtein(a: str, b: str) -> int:

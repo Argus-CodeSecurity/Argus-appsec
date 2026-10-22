@@ -110,6 +110,7 @@ def save_snapshot(result: ScanResult, path: Path) -> None:
 
 def prune_snapshots(state_dir: Path, keep: int) -> list[Path]:
     """Delete all but the newest ``keep`` archived snapshots. Returns removed paths."""
+
     def _age(p: Path) -> tuple[int, str]:
         try:
             return (p.stat().st_mtime_ns, p.name)

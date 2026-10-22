@@ -19,15 +19,22 @@ def _run(tmp_path, monkeypatch, result) -> list:
 
 
 def _hs(fingerprint: str) -> SimpleNamespace:
-    return SimpleNamespace(rule="aws-access-key-id", redacted="AKI... [redacted, 20 chars]",
-                           path="old.py", commit="abc123", fingerprint=fingerprint)
+    return SimpleNamespace(
+        rule="aws-access-key-id",
+        redacted="AKI... [redacted, 20 chars]",
+        path="old.py",
+        commit="abc123",
+        fingerprint=fingerprint,
+    )
 
 
 def test_history_ids_use_the_fingerprint(tmp_path, monkeypatch):
     findings = _run(tmp_path, monkeypatch, ([_hs("1111aaaa"), _hs("2222bbbb")], False))
     ids = [f.id for f in findings if f.rule_id == "secrets.history.aws-access-key-id"]
-    assert ids == ["secrets:history:aws-access-key-id:1111aaaa",
-                   "secrets:history:aws-access-key-id:2222bbbb"]
+    assert ids == [
+        "secrets:history:aws-access-key-id:1111aaaa",
+        "secrets:history:aws-access-key-id:2222bbbb",
+    ]
 
 
 def test_truncated_history_is_reported_without_findings(tmp_path, monkeypatch):

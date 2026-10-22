@@ -58,8 +58,9 @@ class AIProvider(abc.ABC):
     #: Default model id when the user doesn't specify one.
     default_model: ClassVar[str] = ""
 
-    def __init__(self, model: str | None = None, *, temperature: float = 0.0,
-                 max_tokens: int = 4096) -> None:
+    def __init__(
+        self, model: str | None = None, *, temperature: float = 0.0, max_tokens: int = 4096
+    ) -> None:
         # Precedence: explicit (config `ai.model` / --ai-model), then the
         # ARGUS_AI_MODEL environment variable, then the provider default.
         self.model = model or os.environ.get("ARGUS_AI_MODEL") or self.default_model
@@ -87,6 +88,7 @@ class AIProvider(abc.ABC):
         which is enough for Argus's mostly single-shot agent prompts.
         """
         system = "\n\n".join(m.content for m in messages if m.role == "system")
-        convo = "\n\n".join(f"{m.role.upper()}: {m.content}"
-                            for m in messages if m.role != "system")
+        convo = "\n\n".join(
+            f"{m.role.upper()}: {m.content}" for m in messages if m.role != "system"
+        )
         return self.complete(system, convo)

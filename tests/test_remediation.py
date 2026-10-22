@@ -22,11 +22,13 @@ git_missing = shutil.which("git") is None
 
 # --- rewrites --------------------------------------------------------------
 def test_fix_line_transforms_known_rules():
-    assert fix_line("patterns.python-yaml-load", "x = yaml.load(data)") == \
-        "x = yaml.safe_load(data)"
+    assert (
+        fix_line("patterns.python-yaml-load", "x = yaml.load(data)") == "x = yaml.safe_load(data)"
+    )
     assert "sha256" in fix_line("patterns.weak-hash-md5-sha1", "hashlib.md5(x)")
     assert "shell=True" not in fix_line(
-        "patterns.python-shell-true", "subprocess.run(cmd, shell=True)")
+        "patterns.python-shell-true", "subprocess.run(cmd, shell=True)"
+    )
 
 
 def test_fix_line_unknown_rule_returns_none():
@@ -35,8 +37,9 @@ def test_fix_line_unknown_rule_returns_none():
 
 def test_fix_line_llm_rules():
     # trust_remote_code=True -> False, and the detection then clears.
-    fixed = fix_line("llm.trust-remote-code",
-                     "m = AutoModel.from_pretrained('x', trust_remote_code=True)")
+    fixed = fix_line(
+        "llm.trust-remote-code", "m = AutoModel.from_pretrained('x', trust_remote_code=True)"
+    )
     assert "trust_remote_code=False" in fixed
     assert verify_line_fixed("llm.trust-remote-code", fixed) is True
 
@@ -46,8 +49,7 @@ def test_fix_line_llm_rules():
     assert verify_line_fixed("llm.torch-load-pickle", fixed) is True
 
     # Already-safe torch.load is left alone.
-    assert fix_line("llm.torch-load-pickle",
-                    "w = torch.load('m', weights_only=True)") is None
+    assert fix_line("llm.torch-load-pickle", "w = torch.load('m', weights_only=True)") is None
 
 
 def test_verify_line_fixed():
@@ -60,19 +62,25 @@ def test_verify_line_fixed():
 # --- patch agent tiers -----------------------------------------------------
 def _agent_ctx(ai, tmp_path):
     from argus.core.project import Project
+
     return __import__("argus.agents.base", fromlist=["AgentContext"]).AgentContext(
-        project=Project.from_path(tmp_path), config=Config(), ai=ai)
+        project=Project.from_path(tmp_path), config=Config(), ai=ai
+    )
 
 
 def test_patch_deterministic_tier_labeled(tmp_path):
     from argus.agents.patch import PatchAgent
     from argus.ai.heuristic import HeuristicProvider
 
-    f = Finding(id="x", rule_id="patterns.python-yaml-load", scanner="patterns",
-                title="t", description="d",
-                location=Location(path="a.py", start_line=1,
-                                  snippet="data = yaml.load(raw)"),
-                severity=Severity.HIGH)
+    f = Finding(
+        id="x",
+        rule_id="patterns.python-yaml-load",
+        scanner="patterns",
+        title="t",
+        description="d",
+        location=Location(path="a.py", start_line=1, snippet="data = yaml.load(raw)"),
+        severity=Severity.HIGH,
+    )
     PatchAgent().process(f, _agent_ctx(HeuristicProvider(), tmp_path))
     assert f.remediation.patch and "safe_load" in f.remediation.patch
     assert f.remediation.verified is True
@@ -91,11 +99,20 @@ def test_patch_ai_tier_labeled_for_review(tmp_path):
             # Return a fixed snippet the deterministic tier would not produce.
             return "cursor.execute('SELECT * FROM t WHERE id = ?', (uid,))"
 
-    f = Finding(id="x", rule_id="patterns.python-sql-format", scanner="patterns",
-                title="SQLi", description="d",
-                location=Location(path="a.py", start_line=1,
-                                  snippet="cursor.execute('SELECT * FROM t WHERE id = %s' % uid)"),
-                severity=Severity.HIGH, cwe=["CWE-89"])
+    f = Finding(
+        id="x",
+        rule_id="patterns.python-sql-format",
+        scanner="patterns",
+        title="SQLi",
+        description="d",
+        location=Location(
+            path="a.py",
+            start_line=1,
+            snippet="cursor.execute('SELECT * FROM t WHERE id = %s' % uid)",
+        ),
+        severity=Severity.HIGH,
+        cwe=["CWE-89"],
+    )
     PatchAgent().process(f, _agent_ctx(_FakeModel(), tmp_path))
     assert f.remediation.patch
     assert f.metadata["patch_source"] == "ai-proposed"
@@ -106,8 +123,11 @@ def test_patch_ai_tier_labeled_for_review(tmp_path):
 # --- applier ---------------------------------------------------------------
 def _finding(rule_id: str, path: str, line: int) -> Finding:
     return Finding(
-        id=f"{rule_id}:{line}", rule_id=rule_id, scanner="patterns",
-        title="t", description="d",
+        id=f"{rule_id}:{line}",
+        rule_id=rule_id,
+        scanner="patterns",
+        title="t",
+        description="d",
         location=Location(path=path, start_line=line),
         severity=Severity.HIGH,
     )
@@ -135,9 +155,8 @@ def test_apply_fixes_dry_run_writes_nothing(tmp_path: Path):
     from argus.core.project import Project
 
     project = Project.from_path(tmp_path)
-    report = apply_fixes(project, [_finding("patterns.python-yaml-load", "m.py", 1)],
-                         dry_run=True)
-    assert report.any_changes            # it reports what it would do
+    report = apply_fixes(project, [_finding("patterns.python-yaml-load", "m.py", 1)], dry_run=True)
+    assert report.any_changes  # it reports what it would do
     assert src.read_text(encoding="utf-8") == original  # but changes nothing
 
 
@@ -182,13 +201,16 @@ def test_apply_fixes_reverts_syntax_breaking_change(tmp_path: Path, monkeypatch)
 
 
 # --- remote parsing --------------------------------------------------------
-@pytest.mark.parametrize("url,host,owner,repo", [
-    ("https://github.com/octo/repo.git", "github", "octo", "repo"),
-    ("https://github.com/octo/repo", "github", "octo", "repo"),
-    ("git@github.com:octo/repo.git", "github", "octo", "repo"),
-    ("https://gitlab.com/group/sub/proj.git", "gitlab", "group/sub", "proj"),
-    ("git@bitbucket.org:team/repo.git", "bitbucket", "team", "repo"),
-])
+@pytest.mark.parametrize(
+    "url,host,owner,repo",
+    [
+        ("https://github.com/octo/repo.git", "github", "octo", "repo"),
+        ("https://github.com/octo/repo", "github", "octo", "repo"),
+        ("git@github.com:octo/repo.git", "github", "octo", "repo"),
+        ("https://gitlab.com/group/sub/proj.git", "gitlab", "group/sub", "proj"),
+        ("git@bitbucket.org:team/repo.git", "bitbucket", "team", "repo"),
+    ],
+)
 def test_parse_remote(url, host, owner, repo):
     ref = parse_remote(url)
     assert ref is not None
@@ -202,13 +224,12 @@ def test_parse_remote_unknown_host():
 # --- end-to-end workflow (git-backed) --------------------------------------
 def _git_repo(tmp_path: Path) -> Path:
     (tmp_path / "app.py").write_text(
-        "import yaml\n"
-        "def load(x):\n"
-        "    return yaml.load(x)\n",
+        "import yaml\ndef load(x):\n    return yaml.load(x)\n",
         encoding="utf-8",
     )
     run = lambda *a: subprocess.run(  # noqa: E731
-        ["git", "-C", str(tmp_path), *a], check=True, capture_output=True)
+        ["git", "-C", str(tmp_path), *a], check=True, capture_output=True
+    )
     run("init", "-q")
     run("-c", "user.name=t", "-c", "user.email=t@t", "add", "-A")
     run("-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "init")
@@ -225,7 +246,8 @@ def test_fix_workflow_creates_branch_and_commits(tmp_path: Path):
     # Disable AI to keep it deterministic (already offline heuristic anyway).
 
     outcome = run_fix_workflow(
-        project, result.findings,
+        project,
+        result.findings,
         FixOptions(branch="argus/test-fixes", open_pr=False),
     )
     assert outcome.committed
@@ -255,6 +277,7 @@ def test_fix_workflow_errors_on_non_repo(tmp_path: Path):
 
     (tmp_path / "app.py").write_text("yaml.load(x)\n", encoding="utf-8")
     project = Project.from_path(tmp_path)
-    outcome = run_fix_workflow(project, [_finding("patterns.python-yaml-load", "app.py", 1)],
-                               FixOptions(open_pr=False))
+    outcome = run_fix_workflow(
+        project, [_finding("patterns.python-yaml-load", "app.py", 1)], FixOptions(open_pr=False)
+    )
     assert outcome.error and "not a git repository" in outcome.error

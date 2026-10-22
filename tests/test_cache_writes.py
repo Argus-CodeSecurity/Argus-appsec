@@ -40,8 +40,18 @@ def test_ci_profile_disables_cache(tmp_path: Path) -> None:
 
     assert PROFILES["ci"].cache is False
     (tmp_path / "app.py").write_text("x = 1\n", encoding="utf-8")
-    common = dict(config=None, project=Project.from_path(tmp_path), scanners=None,
-                  exclude=None, ai_provider=None, ai_model=None, no_ai=True,
-                  attack_sim=False, patches=False, min_severity=None, fail_on=None)
+    common = dict(
+        config=None,
+        project=Project.from_path(tmp_path),
+        scanners=None,
+        exclude=None,
+        ai_provider=None,
+        ai_model=None,
+        no_ai=True,
+        attack_sim=False,
+        patches=False,
+        min_severity=None,
+        fail_on=None,
+    )
     assert build_config(profile="ci", **common).cache is False
     assert build_config(profile="fast", **common).cache is True

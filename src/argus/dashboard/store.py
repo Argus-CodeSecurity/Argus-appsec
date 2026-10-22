@@ -89,20 +89,28 @@ def _store_result(session: Session, result: ScanResult, summary: dict, name: str
     scan_id = scan.id
 
     for f in result.sorted_findings():
-        session.add(Finding(
-            scan_id=scan_id,
-            rule_id=f.rule_id, scanner=f.scanner, title=f.title,
-            severity=int(f.severity), confidence=int(f.confidence),
-            likelihood=int(f.likelihood), risk_score=f.risk_score(),
-            path=f.location.path, line=f.location.start_line,
-            snippet=f.location.snippet or "",
-            cwe=f.cwe, owasp=f.owasp,
-            why_vulnerable=f.why_vulnerable,
-            attacker_perspective=f.attacker_perspective,
-            business_impact=f.business_impact,
-            remediation=(f.remediation.summary if f.remediation else ""),
-            tags=f.tags,
-        ))
+        session.add(
+            Finding(
+                scan_id=scan_id,
+                rule_id=f.rule_id,
+                scanner=f.scanner,
+                title=f.title,
+                severity=int(f.severity),
+                confidence=int(f.confidence),
+                likelihood=int(f.likelihood),
+                risk_score=f.risk_score(),
+                path=f.location.path,
+                line=f.location.start_line,
+                snippet=f.location.snippet or "",
+                cwe=f.cwe,
+                owasp=f.owasp,
+                why_vulnerable=f.why_vulnerable,
+                attacker_perspective=f.attacker_perspective,
+                business_impact=f.business_impact,
+                remediation=(f.remediation.summary if f.remediation else ""),
+                tags=f.tags,
+            )
+        )
     session.commit()
     session.refresh(scan)
     return scan
@@ -149,15 +157,18 @@ def list_projects(session: Session) -> list[dict]:
     out: list[dict] = []
     for project in session.exec(select(Project)).all():
         latest = session.exec(
-            select(Scan).where(Scan.project_id == project.id)
+            select(Scan)
+            .where(Scan.project_id == project.id)
             .order_by(col(Scan.created_at).desc(), col(Scan.id).desc())
         ).first()
-        out.append({
-            "project": project,
-            "latest": latest,
-            "scan_count": counts.get(project.id or -1, 0),
-        })
-    out.sort(key=lambda r: (r["latest"].risk_score if r["latest"] else -1), reverse=True)
+        out.append(
+            {
+                "project": project,
+                "latest": latest,
+                "scan_count": counts.get(project.id or -1, 0),
+            }
+        )
+    out.sort(key=lambda r: r["latest"].risk_score if r["latest"] else -1, reverse=True)
     return out
 
 
@@ -170,10 +181,13 @@ def get_project_by_id(session: Session, project_id: int) -> Project | None:
 
 
 def list_scans(session: Session, project_id: int) -> list[Scan]:
-    return list(session.exec(
-        select(Scan).where(Scan.project_id == project_id)
-        .order_by(col(Scan.created_at).desc(), col(Scan.id).desc())
-    ).all())
+    return list(
+        session.exec(
+            select(Scan)
+            .where(Scan.project_id == project_id)
+            .order_by(col(Scan.created_at).desc(), col(Scan.id).desc())
+        ).all()
+    )
 
 
 def get_scan(session: Session, scan_id: int) -> Scan | None:
@@ -181,18 +195,24 @@ def get_scan(session: Session, scan_id: int) -> Scan | None:
 
 
 def get_findings(session: Session, scan_id: int) -> list[Finding]:
-    return list(session.exec(
-        select(Finding).where(Finding.scan_id == scan_id)
-        .order_by(col(Finding.severity).desc(), col(Finding.risk_score).desc())
-    ).all())
+    return list(
+        session.exec(
+            select(Finding)
+            .where(Finding.scan_id == scan_id)
+            .order_by(col(Finding.severity).desc(), col(Finding.risk_score).desc())
+        ).all()
+    )
 
 
 def trend(session: Session, project_id: int) -> list[Scan]:
     """Scans oldest-first, for time-series charts."""
-    return list(session.exec(
-        select(Scan).where(Scan.project_id == project_id)
-        .order_by(col(Scan.created_at).asc(), col(Scan.id).asc())
-    ).all())
+    return list(
+        session.exec(
+            select(Scan)
+            .where(Scan.project_id == project_id)
+            .order_by(col(Scan.created_at).asc(), col(Scan.id).asc())
+        ).all()
+    )
 
 
 def overall_stats(session: Session) -> dict:

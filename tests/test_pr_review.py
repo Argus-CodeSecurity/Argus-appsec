@@ -29,10 +29,15 @@ deleted file mode 100644
 
 def _finding(rule, sev, path="app.py", line=11, cwe=None):
     return Finding(
-        id=f"{rule}:{line}", rule_id=rule, scanner="patterns",
-        title=f"{rule} title", description="",
-        location=Location(path=path, start_line=line), severity=sev,
-        cwe=cwe or [], why_vulnerable="because reasons",
+        id=f"{rule}:{line}",
+        rule_id=rule,
+        scanner="patterns",
+        title=f"{rule} title",
+        description="",
+        location=Location(path=path, start_line=line),
+        severity=sev,
+        cwe=cwe or [],
+        why_vulnerable="because reasons",
         remediation=Remediation(summary="do the fix"),
     )
 
@@ -49,8 +54,7 @@ def test_parse_changed_lines_empty():
 
 # --- comment building ------------------------------------------------------
 def test_finding_comment_shape():
-    c = pr_review.finding_comment(_finding("patterns.eval", Severity.HIGH, line=11,
-                                           cwe=["CWE-95"]))
+    c = pr_review.finding_comment(_finding("patterns.eval", Severity.HIGH, line=11, cwe=["CWE-95"]))
     assert c["path"] == "app.py"
     assert c["line"] == 11
     assert c["side"] == "RIGHT"
@@ -85,15 +89,18 @@ class _Ref:
 
 def test_post_findings_review_posts_inline(monkeypatch):
     calls = {}
-    monkeypatch.setattr(pr_review, "post_pr_review",
-                        lambda ref, n, comments, **kw: calls.update(review=(n, comments, kw)))
-    monkeypatch.setattr(pr_review, "post_issue_comment",
-                        lambda *a, **k: calls.update(issue=True))
+    monkeypatch.setattr(
+        pr_review,
+        "post_pr_review",
+        lambda ref, n, comments, **kw: calls.update(review=(n, comments, kw)),
+    )
+    monkeypatch.setattr(pr_review, "post_issue_comment", lambda *a, **k: calls.update(issue=True))
 
-    findings = [_finding("patterns.a", Severity.HIGH, line=11),
-                _finding("patterns.b", Severity.LOW, line=999)]  # off-diff -> summary
-    outcome = pr_review.post_findings_review(
-        _Ref(), 7, findings, changed={"app.py": {11}})
+    findings = [
+        _finding("patterns.a", Severity.HIGH, line=11),
+        _finding("patterns.b", Severity.LOW, line=999),
+    ]  # off-diff -> summary
+    outcome = pr_review.post_findings_review(_Ref(), 7, findings, changed={"app.py": {11}})
 
     assert outcome.posted and outcome.inline == 1 and outcome.leftover == 1
     n, comments, kw = calls["review"]
@@ -104,10 +111,10 @@ def test_post_findings_review_posts_inline(monkeypatch):
 
 def test_post_findings_review_summary_only_when_no_inline(monkeypatch):
     calls = {}
-    monkeypatch.setattr(pr_review, "post_pr_review",
-                        lambda *a, **k: calls.update(review=True))
-    monkeypatch.setattr(pr_review, "post_issue_comment",
-                        lambda ref, n, body, **kw: calls.update(issue=(n, body)))
+    monkeypatch.setattr(pr_review, "post_pr_review", lambda *a, **k: calls.update(review=True))
+    monkeypatch.setattr(
+        pr_review, "post_issue_comment", lambda ref, n, body, **kw: calls.update(issue=(n, body))
+    )
 
     findings = [_finding("patterns.a", Severity.HIGH, line=999)]  # not on a changed line
     outcome = pr_review.post_findings_review(_Ref(), 7, findings, changed={"app.py": {1}})
@@ -118,21 +125,29 @@ def test_post_findings_review_summary_only_when_no_inline(monkeypatch):
 
 def test_post_findings_review_dry_run_posts_nothing(monkeypatch):
     posted = {"n": 0}
-    monkeypatch.setattr(pr_review, "post_pr_review",
-                        lambda *a, **k: posted.__setitem__("n", posted["n"] + 1))
-    monkeypatch.setattr(pr_review, "post_issue_comment",
-                        lambda *a, **k: posted.__setitem__("n", posted["n"] + 1))
+    monkeypatch.setattr(
+        pr_review, "post_pr_review", lambda *a, **k: posted.__setitem__("n", posted["n"] + 1)
+    )
+    monkeypatch.setattr(
+        pr_review, "post_issue_comment", lambda *a, **k: posted.__setitem__("n", posted["n"] + 1)
+    )
     outcome = pr_review.post_findings_review(
-        _Ref(), 7, [_finding("patterns.a", Severity.HIGH, line=11)],
-        changed={"app.py": {11}}, dry_run=True)
+        _Ref(),
+        7,
+        [_finding("patterns.a", Severity.HIGH, line=11)],
+        changed={"app.py": {11}},
+        dry_run=True,
+    )
     assert posted["n"] == 0 and not outcome.posted and outcome.inline == 1
 
 
 def test_post_findings_review_clean_no_post_by_default(monkeypatch):
     posted = {"n": 0}
-    monkeypatch.setattr(pr_review, "post_pr_review",
-                        lambda *a, **k: posted.__setitem__("n", posted["n"] + 1))
-    monkeypatch.setattr(pr_review, "post_issue_comment",
-                        lambda *a, **k: posted.__setitem__("n", posted["n"] + 1))
+    monkeypatch.setattr(
+        pr_review, "post_pr_review", lambda *a, **k: posted.__setitem__("n", posted["n"] + 1)
+    )
+    monkeypatch.setattr(
+        pr_review, "post_issue_comment", lambda *a, **k: posted.__setitem__("n", posted["n"] + 1)
+    )
     outcome = pr_review.post_findings_review(_Ref(), 7, [], changed={})
     assert posted["n"] == 0 and not outcome.posted and outcome.total == 0

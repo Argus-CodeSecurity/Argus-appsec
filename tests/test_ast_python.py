@@ -76,10 +76,7 @@ def test_path_traversal(tmp_path):
 def test_code_injection(tmp_path):
     findings = _run_ast(
         tmp_path,
-        "from flask import request\n"
-        "def h():\n"
-        "    expr = request.args.get('e')\n"
-        "    eval(expr)\n",
+        "from flask import request\ndef h():\n    expr = request.args.get('e')\n    eval(expr)\n",
     )
     assert [f for f in findings if "CWE-95" in f.cwe]
 
@@ -99,9 +96,7 @@ def test_sanitized_input_not_flagged(tmp_path):
 def test_constant_not_flagged(tmp_path):
     findings = _run_ast(
         tmp_path,
-        "def h():\n"
-        "    name = 'admin'\n"
-        "    cursor.execute('SELECT * FROM u WHERE n = ' + name)\n",
+        "def h():\n    name = 'admin'\n    cursor.execute('SELECT * FROM u WHERE n = ' + name)\n",
     )
     assert not [f for f in findings if "CWE-89" in f.cwe]
 
@@ -133,7 +128,8 @@ def test_engine_dedupes_regex_and_ast(tmp_path):
     from argus.core.project import Project
 
     result = ScanEngine(Config(scanners=["patterns", "ast-python"])).scan(
-        Project.from_path(tmp_path))
+        Project.from_path(tmp_path)
+    )
     sqli = [f for f in result.findings if "CWE-89" in f.cwe]
     assert len(sqli) == 1
     assert sqli[0].scanner == "ast-python"  # the higher-confidence tier won

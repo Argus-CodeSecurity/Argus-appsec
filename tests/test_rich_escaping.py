@@ -16,10 +16,17 @@ NASTY = "[/bold] oops [link=https://evil.example]x[/link] [red]"
 
 def _result() -> ScanResult:
     f = Finding(
-        id="x", rule_id="r.[/]", scanner="patterns", title=NASTY, description="d",
+        id="x",
+        rule_id="r.[/]",
+        scanner="patterns",
+        title=NASTY,
+        description="d",
         location=Location(path="dir\\[x]\\", start_line=1, snippet=NASTY),
-        severity=Severity.HIGH, cwe=["CWE-[/dim]"],
-        why_vulnerable=NASTY, attacker_perspective=NASTY, business_impact=NASTY,
+        severity=Severity.HIGH,
+        cwe=["CWE-[/dim]"],
+        why_vulnerable=NASTY,
+        attacker_perspective=NASTY,
+        business_impact=NASTY,
         remediation=Remediation(summary=NASTY, guidance=NASTY),
     )
     return ScanResult(target="t[/]", started_at=datetime.now(timezone.utc), findings=[f])

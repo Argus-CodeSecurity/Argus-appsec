@@ -125,7 +125,10 @@ def _listening_ports() -> list[tuple[int, str]]:
     for cmd, column in attempts:
         try:
             out = subprocess.check_output(
-                cmd, text=True, timeout=15, stderr=subprocess.DEVNULL,
+                cmd,
+                text=True,
+                timeout=15,
+                stderr=subprocess.DEVNULL,
             )
         except (OSError, subprocess.SubprocessError):
             continue
@@ -201,38 +204,44 @@ def _check_ssh_config(findings: list[Finding]) -> None:
         reader = _SshdReader(p.parent)
         reader.read(p)
         for path, error in reader.unreadable:
-            findings.append(_finding(
-                "host.ssh-config-unreadable",
-                "SSH server configuration could not be read",
-                f"Argus could not read {path} ({error}), so SSH hardening was not checked.",
-                "Run the agent with read access to the sshd configuration "
-                "(for example as root or via a group with read permission).",
-                Severity.INFO,
-                path,
-                error,
-            ))
+            findings.append(
+                _finding(
+                    "host.ssh-config-unreadable",
+                    "SSH server configuration could not be read",
+                    f"Argus could not read {path} ({error}), so SSH hardening was not checked.",
+                    "Run the agent with read access to the sshd configuration "
+                    "(for example as root or via a group with read permission).",
+                    Severity.INFO,
+                    path,
+                    error,
+                )
+            )
         root = reader.values.get("permitrootlogin")
         if root and root[0].lower() == "yes":
-            findings.append(_finding(
-                "host.ssh-root-login",
-                "SSH permits root login",
-                "Direct root SSH increases blast radius on credential compromise.",
-                "Set PermitRootLogin no in sshd_config.",
-                Severity.HIGH,
-                root[1],
-                root[2],
-            ))
+            findings.append(
+                _finding(
+                    "host.ssh-root-login",
+                    "SSH permits root login",
+                    "Direct root SSH increases blast radius on credential compromise.",
+                    "Set PermitRootLogin no in sshd_config.",
+                    Severity.HIGH,
+                    root[1],
+                    root[2],
+                )
+            )
         pwd = reader.values.get("passwordauthentication")
         if pwd and pwd[0].lower() == "yes":
-            findings.append(_finding(
-                "host.ssh-password-auth",
-                "SSH password authentication enabled",
-                "Password auth is weaker than key-based auth for server access.",
-                "Prefer PubkeyAuthentication and disable PasswordAuthentication.",
-                Severity.MEDIUM,
-                pwd[1],
-                pwd[2],
-            ))
+            findings.append(
+                _finding(
+                    "host.ssh-password-auth",
+                    "SSH password authentication enabled",
+                    "Password auth is weaker than key-based auth for server access.",
+                    "Prefer PubkeyAuthentication and disable PasswordAuthentication.",
+                    Severity.MEDIUM,
+                    pwd[1],
+                    pwd[2],
+                )
+            )
         break
 
 
@@ -273,37 +282,47 @@ def _check_local_users(findings: list[Finding]) -> None:
     if system == "windows":
         try:
             out = subprocess.check_output(
-                ["net", "user"], text=True, timeout=15, stderr=subprocess.DEVNULL,
+                ["net", "user"],
+                text=True,
+                timeout=15,
+                stderr=subprocess.DEVNULL,
             )
             if "Administrator" in out and "Guest" in out:
-                findings.append(_finding(
-                    "host.local-accounts",
-                    "Review local user accounts",
-                    "Default or excessive local accounts increase lateral movement risk.",
-                    "Disable unused accounts and enforce strong local admin policy.",
-                    Severity.LOW,
-                    "host:accounts",
-                    out.splitlines()[0] if out else "",
-                ))
+                findings.append(
+                    _finding(
+                        "host.local-accounts",
+                        "Review local user accounts",
+                        "Default or excessive local accounts increase lateral movement risk.",
+                        "Disable unused accounts and enforce strong local admin policy.",
+                        Severity.LOW,
+                        "host:accounts",
+                        out.splitlines()[0] if out else "",
+                    )
+                )
         except (OSError, subprocess.SubprocessError):
             pass
         return
     try:
         passwd = _PASSWD
         if passwd.is_file():
-            rows = [ln.split(":") for ln in passwd.read_text(encoding="utf-8", errors="replace").splitlines()
-                    if ln and not ln.startswith("#")]
+            rows = [
+                ln.split(":")
+                for ln in passwd.read_text(encoding="utf-8", errors="replace").splitlines()
+                if ln and not ln.startswith("#")
+            ]
             uid0 = [row[0] for row in rows if len(row) >= 3 and row[2].strip() == "0"]
             if len(uid0) > 1:
-                findings.append(_finding(
-                    "host.multiple-uid0",
-                    "Multiple UID 0 accounts detected",
-                    f"Accounts with root privileges: {', '.join(uid0[:5])}",
-                    "Limit UID 0 to a single audited root account.",
-                    Severity.HIGH,
-                    "/etc/passwd",
-                    ",".join(uid0[:3]),
-                ))
+                findings.append(
+                    _finding(
+                        "host.multiple-uid0",
+                        "Multiple UID 0 accounts detected",
+                        f"Accounts with root privileges: {', '.join(uid0[:5])}",
+                        "Limit UID 0 to a single audited root account.",
+                        Severity.HIGH,
+                        "/etc/passwd",
+                        ",".join(uid0[:3]),
+                    )
+                )
     except OSError:
         pass
 
@@ -320,15 +339,17 @@ def _check_os_packages(findings: list[Finding]) -> None:
             out = subprocess.check_output(cmd, text=True, timeout=20, stderr=subprocess.DEVNULL)
             if "openssh-server" in out.lower() and "openssh-client" in out.lower():
                 meta = f"{label}: openssh present"
-                findings.append(_finding(
-                    "host.ssh-packages",
-                    "OpenSSH packages installed",
-                    "Verify SSH hardening and patch level for installed OpenSSH packages.",
-                    "Keep OpenSSH updated and restrict sshd_config.",
-                    Severity.LOW,
-                    f"host:packages/{label}",
-                    meta,
-                ))
+                findings.append(
+                    _finding(
+                        "host.ssh-packages",
+                        "OpenSSH packages installed",
+                        "Verify SSH hardening and patch level for installed OpenSSH packages.",
+                        "Keep OpenSSH updated and restrict sshd_config.",
+                        Severity.LOW,
+                        f"host:packages/{label}",
+                        meta,
+                    )
+                )
             break
         except (OSError, subprocess.SubprocessError, FileNotFoundError):
             continue
@@ -354,15 +375,17 @@ def assess_host(*, label: str | None = None) -> ScanResult:
         try:
             check(findings)
         except Exception as exc:  # one broken check must not sink the others
-            findings.append(_finding(
-                "host.check-failed",
-                f"Host check '{name}' could not run",
-                f"The {name} check failed with {exc.__class__.__name__}: {exc}",
-                "Check the agent's permissions and logs on this host.",
-                Severity.INFO,
-                f"host:check/{name}",
-                str(exc),
-            ))
+            findings.append(
+                _finding(
+                    "host.check-failed",
+                    f"Host check '{name}' could not run",
+                    f"The {name} check failed with {exc.__class__.__name__}: {exc}",
+                    "Check the agent's permissions and logs on this host.",
+                    Severity.INFO,
+                    f"host:check/{name}",
+                    str(exc),
+                )
+            )
 
     return ScanResult(
         target=f"host:{hostname}",

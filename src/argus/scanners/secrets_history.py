@@ -54,23 +54,40 @@ def find_history_secrets(root: Path) -> tuple[list[HistorySecret], bool]:
     if not _git.is_git_repo(root):
         return [], False
     proc = _git.run_git(
-        root, "log", "-p", "-U0", "--all", "--no-color", "--no-merges",
-        timeout=_TIMEOUT, max_output=_MAX_OUTPUT_BYTES,
+        root,
+        "log",
+        "-p",
+        "-U0",
+        "--all",
+        "--no-color",
+        "--no-merges",
+        timeout=_TIMEOUT,
+        max_output=_MAX_OUTPUT_BYTES,
     )
     if proc is None:
-        log.warning("git history scan of %s failed or timed out after %ss; "
-                    "history was not checked for secrets", root, _TIMEOUT)
+        log.warning(
+            "git history scan of %s failed or timed out after %ss; "
+            "history was not checked for secrets",
+            root,
+            _TIMEOUT,
+        )
         return [], True
     if proc.returncode != 0:
-        log.warning("git log failed in %s (exit %s); history was not checked "
-                    "for secrets", root, proc.returncode)
+        log.warning(
+            "git log failed in %s (exit %s); history was not checked for secrets",
+            root,
+            proc.returncode,
+        )
         return [], False
 
     text = proc.stdout
     truncated = proc.truncated
     if truncated:
-        log.warning("git history of %s exceeds %d bytes; only the newest commits "
-                    "were checked for secrets", root, _MAX_OUTPUT_BYTES)
+        log.warning(
+            "git history of %s exceeds %d bytes; only the newest commits were checked for secrets",
+            root,
+            _MAX_OUTPUT_BYTES,
+        )
 
     seen: set[tuple[str, str]] = set()
     found: list[HistorySecret] = []
@@ -93,9 +110,14 @@ def find_history_secrets(root: Path) -> tuple[list[HistorySecret], bool]:
                 key = (rule, digest)
                 if key not in seen:
                     seen.add(key)
-                    found.append(HistorySecret(
-                        rule=rule, redacted=SecretsScanner._redact(m.group(0)),
-                        path=path, commit=commit, fingerprint=digest[:16],
-                    ))
+                    found.append(
+                        HistorySecret(
+                            rule=rule,
+                            redacted=SecretsScanner._redact(m.group(0)),
+                            path=path,
+                            commit=commit,
+                            fingerprint=digest[:16],
+                        )
+                    )
                 break  # one secret per line is enough
     return found, truncated

@@ -11,7 +11,10 @@ from argus.core.project import MAX_TEXT_BYTES
 from argus.scanners.dependencies import _PARSERS, collect_packages, safe_parse
 
 __all__ = [
-    "collect_packages", "collect_packages_at_ref", "resolve_commit", "split_ref_spec",
+    "collect_packages",
+    "collect_packages_at_ref",
+    "resolve_commit",
+    "split_ref_spec",
 ]
 
 # Seconds allowed for one git call while reading manifests at a ref.
@@ -27,16 +30,20 @@ def split_ref_spec(ref_spec: str, *, head: str = "HEAD") -> tuple[str, str]:
     return spec, head
 
 
-def _git(root: Path, *args: str, max_output: int = gitexec.DEFAULT_MAX_OUTPUT,
-         ) -> gitexec.GitResult | None:
+def _git(
+    root: Path,
+    *args: str,
+    max_output: int = gitexec.DEFAULT_MAX_OUTPUT,
+) -> gitexec.GitResult | None:
     """Run git on the (untrusted) scanned repository; None if it cannot run.
 
     Uses the hardened runner, so the repository's own config cannot launch
     programs, and the output is capped.
     """
     try:
-        return gitexec.run(root, *args, profile=gitexec.UNTRUSTED,
-                           timeout=_GIT_TIMEOUT, max_output=max_output)
+        return gitexec.run(
+            root, *args, profile=gitexec.UNTRUSTED, timeout=_GIT_TIMEOUT, max_output=max_output
+        )
     except gitexec.GitExecError:
         return None
 
@@ -55,8 +62,7 @@ def resolve_commit(root: Path, ref: str) -> str:
     ref = ref.strip()
     if not gitexec.is_safe_ref(ref):
         raise ValueError(f"invalid git ref: {ref!r}")
-    proc = _git(root, "rev-parse", "--verify", "--quiet", "--end-of-options",
-                f"{ref}^{{commit}}")
+    proc = _git(root, "rev-parse", "--verify", "--quiet", "--end-of-options", f"{ref}^{{commit}}")
     sha = proc.stdout.strip() if proc is not None else ""
     if proc is None or proc.returncode != 0 or not _is_sha(sha):
         raise ValueError(f"unknown git ref: {ref!r}")

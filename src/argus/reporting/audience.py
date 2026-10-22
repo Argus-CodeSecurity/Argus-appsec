@@ -25,8 +25,11 @@ from argus.core.models import ScanResult, Severity
 AUDIENCES = ("dev", "exec", "auditor")
 
 _SEV_COLOR = {
-    Severity.CRITICAL: "red", Severity.HIGH: "dark_orange", Severity.MEDIUM: "yellow",
-    Severity.LOW: "green", Severity.INFO: "dim",
+    Severity.CRITICAL: "red",
+    Severity.HIGH: "dark_orange",
+    Severity.MEDIUM: "yellow",
+    Severity.LOW: "green",
+    Severity.INFO: "dim",
 }
 
 
@@ -41,8 +44,10 @@ def render_for_audience(result: ScanResult, audience: str) -> str:
 
 def _counts_line(result: ScanResult) -> str:
     c = {str(k).lower(): v for k, v in result.counts_by_severity().items()}
-    return (f"critical {c.get('critical', 0)}, high {c.get('high', 0)}, "
-            f"medium {c.get('medium', 0)}, low {c.get('low', 0)}")
+    return (
+        f"critical {c.get('critical', 0)}, high {c.get('high', 0)}, "
+        f"medium {c.get('medium', 0)}, low {c.get('low', 0)}"
+    )
 
 
 def _exec_view(result: ScanResult, findings) -> str:
@@ -60,16 +65,16 @@ def _exec_view(result: ScanResult, findings) -> str:
     for f in top:
         color = _SEV_COLOR.get(f.severity, "white")
         impact = f.business_impact or f.why_vulnerable or f.title
-        lines.append(f"  [{color}]{escape(f.severity.label.upper())}[/{color}]  "
-                     f"{escape(f.title)}")
+        lines.append(f"  [{color}]{escape(f.severity.label.upper())}[/{color}]  {escape(f.title)}")
         first = impact.splitlines()[0] if impact.strip() else impact
         lines.append(f"      {escape(first[:160])}")
     return "\n".join(lines)
 
 
 def _auditor_view(result: ScanResult, findings) -> str:
-    langs = escape(", ".join((result.project_summary or {}).get("languages", {}) or [])
-                   or "the scanned files")
+    langs = escape(
+        ", ".join((result.project_summary or {}).get("languages", {}) or []) or "the scanned files"
+    )
     by_cwe = Counter(c for f in findings for c in f.cwe)
     by_owasp = Counter(o for f in findings for o in f.owasp)
     lines = [
@@ -86,8 +91,10 @@ def _auditor_view(result: ScanResult, findings) -> str:
     ]
     for f in findings:
         tax = ", ".join(f.cwe + f.owasp) or "-"
-        lines.append(f"  {f.severity.label.upper():8} {escape(f.rule_id)}  "
-                     f"{escape('[' + tax + ']')}  {escape(f.location.as_ref())}")
+        lines.append(
+            f"  {f.severity.label.upper():8} {escape(f.rule_id)}  "
+            f"{escape('[' + tax + ']')}  {escape(f.location.as_ref())}"
+        )
     return "\n".join(lines)
 
 
@@ -95,8 +102,10 @@ def _dev_view(result: ScanResult, findings) -> str:
     lines = [f"[bold]Developer view[/bold]  ({len(findings)} finding(s))", ""]
     for f in findings:
         color = _SEV_COLOR.get(f.severity, "white")
-        lines.append(f"[{color}]{escape(f.severity.label.upper())}[/{color}]  "
-                     f"{escape(f.title)}  [dim]{escape(f.location.as_ref())}[/dim]")
+        lines.append(
+            f"[{color}]{escape(f.severity.label.upper())}[/{color}]  "
+            f"{escape(f.title)}  [dim]{escape(f.location.as_ref())}[/dim]"
+        )
         if f.why_vulnerable.strip():
             lines.append(f"    Why: {escape(f.why_vulnerable.splitlines()[0][:180])}")
         if f.remediation:

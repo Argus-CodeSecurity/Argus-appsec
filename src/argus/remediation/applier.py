@@ -37,9 +37,9 @@ _LINE_BREAK = re.compile(r"(\r?\n)")
 class AppliedFix:
     """One line-level change the applier made (or would make, when dry-run)."""
 
-    path: str            # project-relative path
+    path: str  # project-relative path
     rule_id: str
-    line: int            # 1-indexed
+    line: int  # 1-indexed
     before: str
     after: str
     finding_id: str
@@ -48,8 +48,10 @@ class AppliedFix:
     def unified_diff(self) -> str:
         return "".join(
             difflib.unified_diff(
-                [self.before + "\n"], [self.after + "\n"],
-                fromfile=f"a/{self.path}", tofile=f"b/{self.path}",
+                [self.before + "\n"],
+                [self.after + "\n"],
+                fromfile=f"a/{self.path}",
+                tofile=f"b/{self.path}",
                 lineterm="\n",
             )
         )
@@ -68,8 +70,7 @@ class ApplyReport:
 
     def summary(self) -> str:
         verb = "would fix" if self.dry_run else "fixed"
-        return (f"{verb} {len(self.fixes)} finding(s) across "
-                f"{len(self.changed_files)} file(s)")
+        return f"{verb} {len(self.fixes)} finding(s) across {len(self.changed_files)} file(s)"
 
 
 def apply_fixes(
@@ -111,7 +112,8 @@ def apply_fixes(
             continue
         if not resolved.is_relative_to(root) or abs_path.is_symlink():
             report.skipped.append(
-                f"{rel_path}: refusing to write outside the project or through a symlink")
+                f"{rel_path}: refusing to write outside the project or through a symlink"
+            )
             continue
         if not abs_path.exists():
             report.skipped.append(f"{rel_path}: file not found")
@@ -139,29 +141,37 @@ def apply_fixes(
             idx = (finding.location.start_line or 0) - 1
             if idx < 0 or idx >= len(lines):
                 report.skipped.append(
-                    f"{rel_path}:{finding.location.start_line}: line out of range")
+                    f"{rel_path}:{finding.location.start_line}: line out of range"
+                )
                 continue
             original = lines[idx]
             fixed = fix_line(finding.rule_id, original)
             if fixed is None or fixed == original:
                 report.skipped.append(
                     f"{rel_path}:{finding.location.start_line}: "
-                    f"no deterministic fix for {finding.rule_id}")
+                    f"no deterministic fix for {finding.rule_id}"
+                )
                 continue
             verified = verify_line_fixed(finding.rule_id, fixed)
             if not verified and not include_unverified:
                 report.skipped.append(
                     f"{rel_path}:{finding.location.start_line}: "
-                    f"fix for {finding.rule_id} did not verify (use --include-unverified)")
+                    f"fix for {finding.rule_id} did not verify (use --include-unverified)"
+                )
                 continue
 
             lines[idx] = fixed
-            pending.append(AppliedFix(
-                path=rel_path, rule_id=finding.rule_id,
-                line=finding.location.start_line or 0,
-                before=original, after=fixed,
-                finding_id=finding.id, verified=verified,
-            ))
+            pending.append(
+                AppliedFix(
+                    path=rel_path,
+                    rule_id=finding.rule_id,
+                    line=finding.location.start_line or 0,
+                    before=original,
+                    after=fixed,
+                    finding_id=finding.id,
+                    verified=verified,
+                )
+            )
             fixed_findings.append(finding)
 
         if not pending:
@@ -178,8 +188,8 @@ def apply_fixes(
         syntax_error = _syntax_error(rel_path, new_text)
         if syntax_error is not None:
             report.skipped.append(
-                f"{rel_path}: fix reverted, would introduce a syntax error "
-                f"({syntax_error})")
+                f"{rel_path}: fix reverted, would introduce a syntax error ({syntax_error})"
+            )
             continue
 
         report.fixes.extend(pending)

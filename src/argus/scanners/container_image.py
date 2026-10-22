@@ -43,8 +43,11 @@ def _from_refs(text: str) -> list[str]:
 
 
 def _is_dockerfile(name: str) -> bool:
-    return (name in ("Dockerfile", "Containerfile") or name.startswith("Dockerfile.")
-            or name.endswith(".Dockerfile"))
+    return (
+        name in ("Dockerfile", "Containerfile")
+        or name.startswith("Dockerfile.")
+        or name.endswith(".Dockerfile")
+    )
 
 
 def _inspect_image(ref: str) -> dict | None:
@@ -67,7 +70,9 @@ def _inspect_image(ref: str) -> dict | None:
 class ContainerImageScanner(Scanner):
     name = "container-image"
     category = "container"
-    description = "Inspect local OCI/Docker images for root user, privileged mode, and exposed ports."
+    description = (
+        "Inspect local OCI/Docker images for root user, privileged mode, and exposed ports."
+    )
 
     def applies_to(self, project) -> bool:
         return True
@@ -105,7 +110,9 @@ class ContainerImageScanner(Scanner):
                     confidence=Confidence.HIGH,
                     likelihood=Likelihood.POSSIBLE,
                     why_vulnerable="Root in containers expands privilege escalation blast radius.",
-                    remediation=Remediation(summary="Add a non-root USER directive in the Dockerfile."),
+                    remediation=Remediation(
+                        summary="Add a non-root USER directive in the Dockerfile."
+                    ),
                     tags=["container", "image"],
                     metadata={"verification": "confirmed"},
                 )
@@ -120,7 +127,9 @@ class ContainerImageScanner(Scanner):
                     severity=Severity.CRITICAL,
                     confidence=Confidence.HIGH,
                     likelihood=Likelihood.LIKELY,
-                    remediation=Remediation(summary="Drop privileged mode unless strictly required."),
+                    remediation=Remediation(
+                        summary="Drop privileged mode unless strictly required."
+                    ),
                     tags=["container", "image"],
                     metadata={"verification": "confirmed"},
                 )

@@ -65,8 +65,13 @@ def _timeout() -> float:
         return _DEFAULT_TIMEOUT
 
 
-def _run(root: Path, *args: str, check: bool = True, timeout: float | None = None,
-         config: Sequence[str] = ()) -> subprocess.CompletedProcess[str]:
+def _run(
+    root: Path,
+    *args: str,
+    check: bool = True,
+    timeout: float | None = None,
+    config: Sequence[str] = (),
+) -> subprocess.CompletedProcess[str]:
     """Run one git command through the shared runner; raise GitError on failure.
 
     Output is decoded leniently (git output carries file content and paths in
@@ -75,8 +80,14 @@ def _run(root: Path, *args: str, check: bool = True, timeout: float | None = Non
     carries a non-zero return code so callers treat it as unavailable.
     """
     try:
-        res = gitexec.run(root, *args, profile=gitexec.WORKTREE, config=config,
-                          timeout=timeout or _timeout(), capture_stderr=True)
+        res = gitexec.run(
+            root,
+            *args,
+            profile=gitexec.WORKTREE,
+            config=config,
+            timeout=timeout or _timeout(),
+            capture_stderr=True,
+        )
     except gitexec.GitExecError as exc:
         raise GitError(str(exc)) from exc
     returncode, stderr = res.returncode, res.stderr
@@ -128,16 +139,24 @@ def diff(root: Path, *args: str) -> str:
     file names match the scanner's paths. External diff drivers and textconv
     filters are disabled.
     """
-    return _run(root, "diff", "--no-ext-diff", "--no-textconv", *args,
-                config=("core.quotePath=false",)).stdout
+    return _run(
+        root, "diff", "--no-ext-diff", "--no-textconv", *args, config=("core.quotePath=false",)
+    ).stdout
 
 
 def rev_parse(root: Path, ref: str) -> str | None:
     """Resolve ``ref`` to a commit sha, or None if it is not a commit."""
     if not _safe_ref(ref):
         return None
-    proc = _run(root, "rev-parse", "--verify", "--quiet", "--end-of-options",
-                f"{ref}^{{commit}}", check=False)
+    proc = _run(
+        root,
+        "rev-parse",
+        "--verify",
+        "--quiet",
+        "--end-of-options",
+        f"{ref}^{{commit}}",
+        check=False,
+    )
     if proc.returncode != 0:
         return None
     return proc.stdout.strip() or None
@@ -153,8 +172,7 @@ def show_file(root: Path, ref: str, rel_path: str) -> str | None:
     sha = rev_parse(root, ref)
     if sha is None:
         return None
-    proc = _run(root, "show", "--no-ext-diff", "--no-textconv", f"{sha}:{rel_path}",
-                check=False)
+    proc = _run(root, "show", "--no-ext-diff", "--no-textconv", f"{sha}:{rel_path}", check=False)
     if proc.returncode != 0:
         return None
     return proc.stdout
@@ -183,8 +201,7 @@ def remote_url(root: Path, remote: str = "origin") -> str | None:
     return proc.stdout.strip() or None
 
 
-def create_branch(root: Path, name: str, *, base: str | None = None,
-                  reset: bool = False) -> None:
+def create_branch(root: Path, name: str, *, base: str | None = None, reset: bool = False) -> None:
     """Create branch ``name`` at ``base`` and check it out.
 
     With ``reset`` an existing branch is moved to ``base`` (``checkout -B``)
@@ -218,8 +235,18 @@ def reset_hard(root: Path) -> None:
 def branch_exists(root: Path, name: str) -> bool:
     if not _safe_ref(name):
         return False
-    return _run(root, "rev-parse", "--verify", "--quiet", "--end-of-options",
-                f"refs/heads/{name}", check=False).returncode == 0
+    return (
+        _run(
+            root,
+            "rev-parse",
+            "--verify",
+            "--quiet",
+            "--end-of-options",
+            f"refs/heads/{name}",
+            check=False,
+        ).returncode
+        == 0
+    )
 
 
 def stage_all(root: Path) -> None:
@@ -241,8 +268,14 @@ def _config_value(root: Path, key: str) -> str:
     return _run(root, "config", "--get", key, check=False).stdout.strip()
 
 
-def commit(root: Path, message: str, *, author_name: str = "Argus",
-           author_email: str = "argus@localhost", no_verify: bool = False) -> str:
+def commit(
+    root: Path,
+    message: str,
+    *,
+    author_name: str = "Argus",
+    author_email: str = "argus@localhost",
+    no_verify: bool = False,
+) -> str:
     """Commit staged changes; return the commit sha.
 
     The user's own identity is used whenever one is configured (git config or
@@ -252,11 +285,15 @@ def commit(root: Path, message: str, *, author_name: str = "Argus",
     unless ``no_verify`` is explicitly requested.
     """
     identity: list[str] = []
-    if not (_config_value(root, "user.name")
-            or (os.environ.get("GIT_AUTHOR_NAME") and os.environ.get("GIT_COMMITTER_NAME"))):
+    if not (
+        _config_value(root, "user.name")
+        or (os.environ.get("GIT_AUTHOR_NAME") and os.environ.get("GIT_COMMITTER_NAME"))
+    ):
         identity.append(f"user.name={author_name}")
-    if not (_config_value(root, "user.email")
-            or (os.environ.get("GIT_AUTHOR_EMAIL") and os.environ.get("GIT_COMMITTER_EMAIL"))):
+    if not (
+        _config_value(root, "user.email")
+        or (os.environ.get("GIT_AUTHOR_EMAIL") and os.environ.get("GIT_COMMITTER_EMAIL"))
+    ):
         identity.append(f"user.email={author_email}")
     args = ["commit", "-m", message]
     if no_verify:
@@ -265,8 +302,14 @@ def commit(root: Path, message: str, *, author_name: str = "Argus",
     return _run(root, "rev-parse", "HEAD").stdout.strip()
 
 
-def push(root: Path, branch: str, *, remote: str = "origin",
-         set_upstream: bool = True, force: bool = False) -> None:
+def push(
+    root: Path,
+    branch: str,
+    *,
+    remote: str = "origin",
+    set_upstream: bool = True,
+    force: bool = False,
+) -> None:
     args = ["push"]
     if set_upstream:
         args.append("-u")

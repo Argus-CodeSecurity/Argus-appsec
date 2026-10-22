@@ -41,19 +41,23 @@ def build_security_graph(result: ScanResult) -> dict:
 
     for f in result.findings[:200]:
         fid = f"finding:{f.fingerprint()}"
-        nodes.append({
-            "id": fid,
-            "type": "finding",
-            "label": f.rule_id,
-            "severity": f.severity.label,
-        })
+        nodes.append(
+            {
+                "id": fid,
+                "type": "finding",
+                "label": f.rule_id,
+                "severity": f.severity.label,
+            }
+        )
         loc = f.location.path
         if loc:
             edges.append({"from": loc, "to": fid, "kind": "affects"})
 
     chains = [f for f in result.findings if "attack-chain" in f.tags or f.scanner == "chains"]
     for c in chains[:20]:
-        edges.append({"from": "internet", "to": f"finding:{c.fingerprint()}", "kind": "attack_path"})
+        edges.append(
+            {"from": "internet", "to": f"finding:{c.fingerprint()}", "kind": "attack_path"}
+        )
 
     return {
         "nodes": nodes,

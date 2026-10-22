@@ -15,8 +15,11 @@ from argus.remediation.applier import _syntax_error
 
 def _finding(rule_id="patterns.x", path="a.py", line=1, snippet="danger()") -> Finding:
     return Finding(
-        id=f"{rule_id}:{line}", rule_id=rule_id, scanner="patterns",
-        title="t", description="d",
+        id=f"{rule_id}:{line}",
+        rule_id=rule_id,
+        scanner="patterns",
+        title="t",
+        description="d",
         location=Location(path=path, start_line=line, snippet=snippet),
         severity=Severity.HIGH,
     )
@@ -53,8 +56,7 @@ def test_baseline_suppresses_known_findings(tmp_path: Path):
     known = _finding(snippet="old_bug()")
     result.add(known)
     baseline_path = tmp_path / "baseline.json"
-    baseline_path.write_text(
-        result.model_dump_json(indent=2), encoding="utf-8")
+    baseline_path.write_text(result.model_dump_json(indent=2), encoding="utf-8")
 
     fps = load_fingerprints(baseline_path)
     current = [known, _finding(rule_id="patterns.y", snippet="new_bug()")]

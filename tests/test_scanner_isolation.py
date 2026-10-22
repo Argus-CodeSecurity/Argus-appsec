@@ -22,7 +22,8 @@ from argus.scanners.ast_python import is_available
 DEPTH = 3000  # well past the default recursion limit of 1000
 
 needs_ast = pytest.mark.skipif(
-    not is_available(), reason="tree-sitter (the [ast] extra) is not installed")
+    not is_available(), reason="tree-sitter (the [ast] extra) is not installed"
+)
 
 
 def _scan(tmp_path: Path, scanner: str, files: dict[str, str], options=None) -> list:
@@ -43,14 +44,18 @@ PY_VULN = (
     "    value = name\n"
     "    cursor.execute('SELECT * FROM t WHERE n = ' + value)\n"
 )
-PY_DEEP = "x = " + "(" * DEPTH + "1" + ")" * DEPTH + "\n" + "y = " + "f(" * DEPTH + ")" * DEPTH + "\n"
+PY_DEEP = (
+    "x = " + "(" * DEPTH + "1" + ")" * DEPTH + "\n" + "y = " + "f(" * DEPTH + ")" * DEPTH + "\n"
+)
 
 
 @needs_ast
 def test_ast_python_survives_deep_nesting(tmp_path):
     findings = _scan(tmp_path, "ast-python", {"deep.py": PY_DEEP, "app.py": PY_VULN})
-    assert any(f.rule_id == "ast-python.ast-sql-injection" and f.location.path == "app.py"
-               for f in findings)
+    assert any(
+        f.rule_id == "ast-python.ast-sql-injection" and f.location.path == "app.py"
+        for f in findings
+    )
 
 
 @needs_ast
@@ -83,11 +88,12 @@ def test_ast_python_isolates_a_failing_file(tmp_path, monkeypatch):
 def test_ast_python_xfile_survives_deep_nesting(tmp_path):
     files = {
         "deep.py": PY_DEEP,
-        "db.py": ("def run_query(uid):\n"
-                  "    cursor.execute('SELECT * FROM users WHERE id = ' + uid)\n"),
-        "routes.py": ("from db import run_query\n"
-                      "def handler():\n"
-                      "    run_query(request.args.get('id'))\n"),
+        "db.py": (
+            "def run_query(uid):\n    cursor.execute('SELECT * FROM users WHERE id = ' + uid)\n"
+        ),
+        "routes.py": (
+            "from db import run_query\ndef handler():\n    run_query(request.args.get('id'))\n"
+        ),
     }
     findings = _scan(tmp_path, "ast-python-xfile", files)
     assert any(f.rule_id == "ast-python-xfile.ast-sql-injection" for f in findings)
@@ -95,19 +101,31 @@ def test_ast_python_xfile_survives_deep_nesting(tmp_path):
 
 def _js_available() -> bool:
     from argus.scanners.ast_js import is_available as js_ok
+
     return js_ok()
 
 
 @pytest.mark.skipif(not _js_available(), reason="tree-sitter JS grammar not installed")
 def test_ast_js_survives_deep_nesting(tmp_path):
-    deep = "const x = " + "[" * DEPTH + "]" * DEPTH + ";\nconst y = " + "f(" * DEPTH + ")" * DEPTH + ";\n"
-    vuln = ("app.get('/u', (req, res) => {\n"
-            "  const id = req.query.id;\n"
-            "  db.query('SELECT * FROM users WHERE id = ' + id);\n"
-            "});\n")
+    deep = (
+        "const x = "
+        + "[" * DEPTH
+        + "]" * DEPTH
+        + ";\nconst y = "
+        + "f(" * DEPTH
+        + ")" * DEPTH
+        + ";\n"
+    )
+    vuln = (
+        "app.get('/u', (req, res) => {\n"
+        "  const id = req.query.id;\n"
+        "  db.query('SELECT * FROM users WHERE id = ' + id);\n"
+        "});\n"
+    )
     findings = _scan(tmp_path, "ast-js", {"deep.js": deep, "app.js": vuln})
-    assert any(f.rule_id == "ast-js.ast-sql-injection" and f.location.path == "app.js"
-               for f in findings)
+    assert any(
+        f.rule_id == "ast-js.ast-sql-injection" and f.location.path == "app.js" for f in findings
+    )
 
 
 def test_secrets_history_failure_keeps_working_tree_findings(tmp_path, monkeypatch):
@@ -118,8 +136,12 @@ def test_secrets_history_failure_keeps_working_tree_findings(tmp_path, monkeypat
 
     monkeypatch.setattr(secrets_history, "find_history_secrets", explode)
     key = "AKIA" + "Q7RT2LMX9PZK4HNB"
-    findings = _scan(tmp_path, "secrets", {"config.py": f'KEY = "{key}"\n'},
-                     options={"secrets": {"history": True}})
+    findings = _scan(
+        tmp_path,
+        "secrets",
+        {"config.py": f'KEY = "{key}"\n'},
+        options={"secrets": {"history": True}},
+    )
     rules = {f.rule_id for f in findings}
     assert "secrets.aws-access-key-id" in rules
     assert "secrets.history-scan-failed" in rules

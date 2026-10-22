@@ -64,9 +64,7 @@ _RULES: list[tuple[str, str, re.Pattern[str], Severity, str, str]] = [
     (
         "cicd.script-injection",
         "Expression interpolated directly into run script",
-        re.compile(
-            r"run:\s*[^\n]*\$\{\{\s*github\.(event\.(issue|comment|discussion)|head_ref)"
-        ),
+        re.compile(r"run:\s*[^\n]*\$\{\{\s*github\.(event\.(issue|comment|discussion)|head_ref)"),
         Severity.HIGH,
         "Untrusted event fields in run scripts enable command injection.",
         "Pass values through env vars and quote them, or use action inputs.",
@@ -74,9 +72,7 @@ _RULES: list[tuple[str, str, re.Pattern[str], Severity, str, str]] = [
     (
         "cicd.hardcoded-secret",
         "Possible secret in workflow environment",
-        re.compile(
-            r"(?i)(password|secret|token|api_key)\s*:\s*['\"]?[A-Za-z0-9_./+=-]{8,}"
-        ),
+        re.compile(r"(?i)(password|secret|token|api_key)\s*:\s*['\"]?[A-Za-z0-9_./+=-]{8,}"),
         Severity.CRITICAL,
         "Secrets in workflow YAML are visible in git history and fork PRs.",
         "Use platform secret stores (GitHub Secrets, GitLab CI variables).",
@@ -111,7 +107,7 @@ def _permission_block_lines(lines: list[str]) -> list[int]:
         if len(line) > MAX_SCAN_LINE or not _PERMISSIONS_KEY.match(line):
             continue
         indent = len(line) - len(line.lstrip())
-        for entry in lines[idx + 1:idx + 20]:
+        for entry in lines[idx + 1 : idx + 20]:
             if not entry.strip() or entry.lstrip().startswith("#"):
                 continue
             if len(entry) - len(entry.lstrip()) <= indent:
@@ -126,7 +122,9 @@ def _permission_block_lines(lines: list[str]) -> list[int]:
 class CicdScanner(Scanner):
     name = "cicd"
     category = "cicd"
-    description = "Flags risky patterns in GitHub Actions, GitLab CI, Jenkins, and other CI configs."
+    description = (
+        "Flags risky patterns in GitHub Actions, GitLab CI, Jenkins, and other CI configs."
+    )
 
     file_local = True
 
@@ -141,8 +139,7 @@ class CicdScanner(Scanner):
             lines = f.lines()
             for rule_id, title, pattern, severity, why, fix in _RULES:
                 reported: set[int] = set()
-                hits = [(n, seg) for n, seg in iter_scan_lines(lines)
-                        if pattern.search(seg)]
+                hits = [(n, seg) for n, seg in iter_scan_lines(lines) if pattern.search(seg)]
                 if rule_id == "cicd.excessive-permissions":
                     hits += [(n, lines[n - 1]) for n in _permission_block_lines(lines)]
                     hits.sort(key=lambda h: h[0])
@@ -157,13 +154,17 @@ class CicdScanner(Scanner):
                         scanner="cicd",
                         title=title,
                         description=why,
-                        location=Location(path=f.rel_path, start_line=lineno, snippet=redact_line(line).strip()[:200]),
+                        location=Location(
+                            path=f.rel_path,
+                            start_line=lineno,
+                            snippet=redact_line(line).strip()[:200],
+                        ),
                         severity=severity,
                         confidence=Confidence.MEDIUM,
                         likelihood=Likelihood.POSSIBLE,
-                        cwe=["CWE-94"] if "injection" in rule_id else (
-                            ["CWE-250"] if "privileged" in rule_id else ["CWE-798"]
-                        ),
+                        cwe=["CWE-94"]
+                        if "injection" in rule_id
+                        else (["CWE-250"] if "privileged" in rule_id else ["CWE-798"]),
                         owasp=["A05:2021-Security Misconfiguration"],
                         why_vulnerable=why,
                         remediation=Remediation(summary=fix, guidance=fix),

@@ -74,8 +74,7 @@ class MarkdownReporter(Reporter):
         counts = result.counts_by_severity()
         header = "| " + " | ".join(counts.keys()) + " | Total |"
         divider = "|" + "|".join(["---"] * (len(counts) + 1)) + "|"
-        row = "| " + " | ".join(str(v) for v in counts.values()) + \
-              f" | {sum(counts.values())} |"
+        row = "| " + " | ".join(str(v) for v in counts.values()) + f" | {sum(counts.values())} |"
         return "\n".join(["## Summary", "", header, divider, row])
 
     def _finding(self, index: int, f) -> str:
@@ -96,12 +95,15 @@ class MarkdownReporter(Reporter):
             lines.extend(md_fence(f.location.snippet))
             lines.append("")
         if f.why_vulnerable:
-            lines.append("**Why it's a vulnerability:** "
-                         + md_text(f.why_vulnerable, multiline=True))
+            lines.append(
+                "**Why it's a vulnerability:** " + md_text(f.why_vulnerable, multiline=True)
+            )
             lines.append("")
         if f.attacker_perspective:
-            lines.append("**How an attacker exploits it:** "
-                         + md_text(f.attacker_perspective, multiline=True))
+            lines.append(
+                "**How an attacker exploits it:** "
+                + md_text(f.attacker_perspective, multiline=True)
+            )
             lines.append("")
         if f.business_impact:
             lines.append("**Business impact:** " + md_text(f.business_impact, multiline=True))
@@ -138,8 +140,7 @@ class MarkdownReporter(Reporter):
             if value:
                 lines.append(f"- **{label}:** {md_text(value)}")
         lines.append("")
-        lines.append("_Simulation generated in an isolated context; no live target "
-                     "was contacted._")
+        lines.append("_Simulation generated in an isolated context; no live target was contacted._")
         lines.append("</details>")
         lines.append("")
         return "\n".join(lines)

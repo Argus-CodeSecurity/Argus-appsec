@@ -32,8 +32,19 @@ class CSVReporter(Reporter):
     description = "Flat one-row-per-finding export for spreadsheets."
 
     _COLUMNS = [
-        "id", "scanner", "rule_id", "severity", "confidence", "likelihood",
-        "risk_score", "title", "path", "line", "cwe", "owasp", "remediation",
+        "id",
+        "scanner",
+        "rule_id",
+        "severity",
+        "confidence",
+        "likelihood",
+        "risk_score",
+        "title",
+        "path",
+        "line",
+        "cwe",
+        "owasp",
+        "remediation",
         "docs_url",
     ]
 
@@ -42,20 +53,22 @@ class CSVReporter(Reporter):
         writer = csv.DictWriter(buf, fieldnames=self._COLUMNS)
         writer.writeheader()
         for f in result.sorted_findings():
-            writer.writerow({
-                "id": f.id,
-                "scanner": f.scanner,
-                "rule_id": f.rule_id,
-                "severity": f.severity.label,
-                "confidence": f.confidence.label,
-                "likelihood": f.likelihood.label,
-                "risk_score": f.risk_score(),
-                "title": f.title,
-                "path": f.location.path,
-                "line": f.location.start_line or "",
-                "cwe": ";".join(f.cwe),
-                "owasp": ";".join(f.owasp),
-                "remediation": f.remediation.summary if f.remediation else "",
-                "docs_url": f.docs_url,
-            })
+            writer.writerow(
+                {
+                    "id": f.id,
+                    "scanner": f.scanner,
+                    "rule_id": f.rule_id,
+                    "severity": f.severity.label,
+                    "confidence": f.confidence.label,
+                    "likelihood": f.likelihood.label,
+                    "risk_score": f.risk_score(),
+                    "title": f.title,
+                    "path": f.location.path,
+                    "line": f.location.start_line or "",
+                    "cwe": ";".join(f.cwe),
+                    "owasp": ";".join(f.owasp),
+                    "remediation": f.remediation.summary if f.remediation else "",
+                    "docs_url": f.docs_url,
+                }
+            )
         return buf.getvalue()

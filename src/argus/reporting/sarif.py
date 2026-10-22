@@ -127,8 +127,7 @@ class SARIFReporter(Reporter):
         else:
             # Not a file (git history, a URL, ...): a physical location would
             # point at a path that does not exist in the repository.
-            location = {"logicalLocations": [{"name": path or "(unknown)",
-                                              "kind": "resource"}]}
+            location = {"logicalLocations": [{"name": path or "(unknown)", "kind": "resource"}]}
 
         return {
             "ruleId": f.rule_id,

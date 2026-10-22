@@ -32,9 +32,18 @@ def _result(n: int) -> ScanResult:
     r = ScanResult(target=".", started_at=datetime.now(timezone.utc))
     for i in range(n):
         sev = Severity.CRITICAL if i % 10 == 0 else Severity.LOW
-        r.add(Finding(id=f"t:r:{i}", rule_id=f"t.r{i}", scanner="t", title=f"finding-{i}",
-                      description="d", severity=sev, cwe=["CWE-89"],
-                      location=Location(path="a.py", start_line=i + 1)))
+        r.add(
+            Finding(
+                id=f"t:r:{i}",
+                rule_id=f"t.r{i}",
+                scanner="t",
+                title=f"finding-{i}",
+                description="d",
+                severity=sev,
+                cwe=["CWE-89"],
+                location=Location(path="a.py", start_line=i + 1),
+            )
+        )
     return r
 
 

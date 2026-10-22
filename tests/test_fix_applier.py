@@ -14,8 +14,12 @@ RULE = "patterns.python-yaml-load"
 
 def _finding(path: str, line: int) -> Finding:
     return Finding(
-        id=f"{RULE}:{path}:{line}", rule_id=RULE, scanner="patterns", title="t",
-        description="d", location=Location(path=path, start_line=line),
+        id=f"{RULE}:{path}:{line}",
+        rule_id=RULE,
+        scanner="patterns",
+        title="t",
+        description="d",
+        location=Location(path=path, start_line=line),
         severity=Severity.HIGH,
     )
 
@@ -23,8 +27,9 @@ def _finding(path: str, line: int) -> Finding:
 def test_latin1_file_is_skipped_not_fatal(tmp_path: Path):
     (tmp_path / "latin.py").write_bytes(b"# caf\xe9\nimport yaml\nx = yaml.load(s)\n")
     (tmp_path / "ok.py").write_text("import yaml\nx = yaml.load(s)\n", encoding="utf-8")
-    report = apply_fixes(Project.from_path(tmp_path),
-                         [_finding("latin.py", 3), _finding("ok.py", 2)])
+    report = apply_fixes(
+        Project.from_path(tmp_path), [_finding("latin.py", 3), _finding("ok.py", 2)]
+    )
     assert any("latin.py" in s and "not UTF-8" in s for s in report.skipped)
     assert report.changed_files == ["ok.py"]
     assert (tmp_path / "latin.py").read_bytes().startswith(b"# caf\xe9")

@@ -71,10 +71,7 @@ class ScanEngine:
 
         # AI provider (shared by all agents). Falls back to heuristic if needed.
         ai = build_provider(self.config.ai)
-        self._progress(
-            f"AI provider: {ai.name}"
-            + ("" if ai.is_remote else " (local / offline)")
-        )
+        self._progress(f"AI provider: {ai.name}" + ("" if ai.is_remote else " (local / offline)"))
 
         # 2. Scan. Scanners are independent, so they run concurrently; results
         # are merged in selection order to keep output deterministic. File-local
@@ -134,6 +131,7 @@ class ScanEngine:
         # Correlate the surviving findings into higher-impact attack chains, then
         # apply the severity filter to findings and chains together.
         from argus.analysis.attack_chains import find_chains
+
         result.findings.extend(c.to_finding() for c in find_chains(result.findings))
         result.findings = self._filter(result.findings)
         if self.config.ai.enabled:
@@ -180,13 +178,13 @@ class ScanEngine:
         if not self.config.cache or project.origin != "local":
             return None
         from argus.core.cache import ScanCache
+
         try:
             return ScanCache(project.root, __version__)
         except Exception:  # cache trouble must never break a scan
             return None
 
-    def _scan_cached(self, scanner: Scanner, ctx: ScannerContext,
-                     cache) -> list[Finding]:
+    def _scan_cached(self, scanner: Scanner, ctx: ScannerContext, cache) -> list[Finding]:
         """Run a file-local scanner, reusing cached findings for unchanged files.
 
         Unchanged files (matched by content hash) contribute their cached
@@ -211,6 +209,7 @@ class ScanEngine:
         fresh: list[Finding] = []
         if misses:
             import copy
+
             subset = copy.copy(ctx.project)
             subset._files_cache = tuple(misses)
             sub_ctx = ScannerContext(project=subset, config=ctx.config, ai=ctx.ai)
@@ -233,8 +232,7 @@ class ScanEngine:
         ids unique and reports reproducible. Ids keyed by path/line (taint and
         AST findings) are already stable and pass through untouched.
         """
-        findings.sort(key=lambda f: (f.location.path, f.location.start_line or 0,
-                                     f.rule_id, f.id))
+        findings.sort(key=lambda f: (f.location.path, f.location.start_line or 0, f.rule_id, f.id))
         pattern = re.compile(rf"^{re.escape(scanner_name)}:([^:]+):(\d+)$")
         counter = 0
         for f in findings:
@@ -291,9 +289,7 @@ class ScanEngine:
                 self._progress(f"Ignoring unknown scanner '{name}' in exclusions.")
         names = [n for n in chosen_names if n not in self.config.exclude_scanners]
         if not names:
-            raise ConfigError(
-                "no scanners selected: every requested scanner is excluded"
-            )
+            raise ConfigError("no scanners selected: every requested scanner is excluded")
         selected: list[Scanner] = []
         failed: list[str] = []
         errors: list[str] = []
@@ -311,8 +307,7 @@ class ScanEngine:
                 self._progress(f"Skipping scanner '{name}' (not applicable).")
         return selected, failed, errors
 
-    def _run_agents(self, result: ScanResult, project: Project,
-                    ai: AIProvider) -> None:
+    def _run_agents(self, result: ScanResult, project: Project, ai: AIProvider) -> None:
         agent_ctx = AgentContext(project=project, config=self.config, ai=ai)
         enrichment = EnrichmentAgent()
         simulator = AttackSimulationAgent()
@@ -328,11 +323,11 @@ class ScanEngine:
         if ai.name != "heuristic":
             from argus.ai.heuristic import HeuristicProvider
 
-            ranked = sorted(range(len(result.findings)),
-                            key=lambda i: -result.findings[i].risk_score())
-            model_ids = set(ranked[:self.config.ai.max_findings])
-            fallback_ctx = AgentContext(project=project, config=self.config,
-                                        ai=HeuristicProvider())
+            ranked = sorted(
+                range(len(result.findings)), key=lambda i: -result.findings[i].risk_score()
+            )
+            model_ids = set(ranked[: self.config.ai.max_findings])
+            fallback_ctx = AgentContext(project=project, config=self.config, ai=HeuristicProvider())
             skipped = len(result.findings) - len(model_ids)
             if skipped:
                 self._progress(
@@ -371,17 +366,16 @@ class ScanEngine:
     @staticmethod
     def _rule_matches(rule_id: str, target: str) -> bool:
         """A suppression rule id matches by full id, short id, or last segment."""
-        return (rule_id == target or rule_id.endswith("." + target)
-                or rule_id.split(".")[-1] == target)
+        return (
+            rule_id == target or rule_id.endswith("." + target) or rule_id.split(".")[-1] == target
+        )
 
     @classmethod
-    def _apply_inline_suppressions(cls, findings: list[Finding],
-                                   project: Project) -> list[Finding]:
+    def _apply_inline_suppressions(cls, findings: list[Finding], project: Project) -> list[Finding]:
         """Drop findings whose source line carries a matching argus-ignore comment."""
         needed = {f.location.path for f in findings if f.location.start_line is not None}
         lines_by_path: dict[str, list[str]] = {
-            fref.rel_path: fref.lines() for fref in project.files()
-            if fref.rel_path in needed
+            fref.rel_path: fref.lines() for fref in project.files() if fref.rel_path in needed
         }
         today = datetime.now(timezone.utc).date()
         kept: list[Finding] = []
@@ -450,8 +444,11 @@ class ScanEngine:
             path = str(path)
             p = finding.location.path or ""
             name = p.rsplit("/", 1)[-1]
-            if not (fnmatch.fnmatch(p, path) or fnmatch.fnmatch(name, path)
-                    or (path.endswith("/**") and p.startswith(path[:-2]))):
+            if not (
+                fnmatch.fnmatch(p, path)
+                or fnmatch.fnmatch(name, path)
+                or (path.endswith("/**") and p.startswith(path[:-2]))
+            ):
                 return False
         return True
 
@@ -475,8 +472,7 @@ class ScanEngine:
     @classmethod
     def _prefer_ast(cls, findings: list[Finding], scanners_run: list[str]) -> list[Finding]:
         covered_ext = tuple(
-            ext for name, exts in cls._AST_LANG_EXT.items() if name in scanners_run
-            for ext in exts
+            ext for name, exts in cls._AST_LANG_EXT.items() if name in scanners_run for ext in exts
         )
         if not covered_ext:
             return findings
@@ -507,21 +503,22 @@ class ScanEngine:
         CWE in the same file within a small line window, so distinct issues and
         within-tier findings are preserved. Findings with no line or CWE pass through.
         """
-        passthrough = [f for f in findings
-                       if f.location.start_line is None or not f.cwe]
-        mergeable = [f for f in findings
-                     if f.location.start_line is not None and f.cwe]
-        mergeable.sort(key=lambda f: (f.location.path, tuple(sorted(f.cwe)),
-                                      f.location.start_line or 0))
+        passthrough = [f for f in findings if f.location.start_line is None or not f.cwe]
+        mergeable = [f for f in findings if f.location.start_line is not None and f.cwe]
+        mergeable.sort(
+            key=lambda f: (f.location.path, tuple(sorted(f.cwe)), f.location.start_line or 0)
+        )
         kept: list[Finding] = []
         for f in mergeable:
             prev = kept[-1] if kept else None
-            if (prev is not None
-                    and prev.scanner != f.scanner
-                    and prev.location.path == f.location.path
-                    and sorted(prev.cwe) == sorted(f.cwe)
-                    and (f.location.start_line or 0)
-                        - (prev.location.start_line or 0) <= cls._DEDUPE_WINDOW):
+            if (
+                prev is not None
+                and prev.scanner != f.scanner
+                and prev.location.path == f.location.path
+                and sorted(prev.cwe) == sorted(f.cwe)
+                and (f.location.start_line or 0) - (prev.location.start_line or 0)
+                <= cls._DEDUPE_WINDOW
+            ):
                 if (f.confidence, f.severity) > (prev.confidence, prev.severity):
                     kept[-1] = f
                 continue

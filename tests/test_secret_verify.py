@@ -29,8 +29,11 @@ def mock_httpx(monkeypatch):
         def _get(url, headers=None, timeout=None):
             calls.append(url)
             return _Resp(status_code, payload)
+
         import httpx
+
         monkeypatch.setattr(httpx, "get", _get)
+
     make.calls = calls
     return make
 
@@ -72,9 +75,7 @@ def test_network_error_is_unknown(monkeypatch):
 
 def test_scanner_escalates_verified_live(tmp_path, mock_httpx, monkeypatch):
     mock_httpx(200)  # everything verifies live
-    (tmp_path / "cfg.py").write_text(
-        'GITHUB_TOKEN = "ghp_' + "a" * 36 + '"\n', encoding="utf-8"
-    )
+    (tmp_path / "cfg.py").write_text('GITHUB_TOKEN = "ghp_' + "a" * 36 + '"\n', encoding="utf-8")
     project = Project.from_path(tmp_path)
     cfg = Config(scanner_options={"secrets": {"verify": True, "entropy": False}})
     ctx = ScannerContext(project=project, config=cfg, ai=None)
@@ -93,8 +94,8 @@ def test_secrets_scanner_not_cached_when_verifying(tmp_path):
     project = Project.from_path(tmp_path)
     scanner = registry.get_scanner("secrets")()
     verifying = ScannerContext(
-        project=project,
-        config=Config(scanner_options={"secrets": {"verify": True}}), ai=None)
+        project=project, config=Config(scanner_options={"secrets": {"verify": True}}), ai=None
+    )
     plain = ScannerContext(project=project, config=Config(), ai=None)
     assert scanner.cacheable(verifying) is False
     assert scanner.cacheable(plain) is True

@@ -24,12 +24,20 @@ def test_ss_output_uses_local_address_column():
     assert [p for p, _ in ports] == [22, 5432, 53, 3389, 6379]
 
 
-@pytest.mark.parametrize("addr,expected", [
-    ("0.0.0.0:22", ("0.0.0.0", 22)), ("*:22", ("*", 22)), ("[::]:22", ("::", 22)),
-    (":::22", ("::", 22)), ("127.0.0.53%lo:53", ("127.0.0.53", 53)),
-    ("*.22", ("*", 22)), ("127.0.0.1.5432", ("127.0.0.1", 5432)),
-    ("::1.631", ("::1", 631)), ("0.0.0.0:*", None),
-])
+@pytest.mark.parametrize(
+    "addr,expected",
+    [
+        ("0.0.0.0:22", ("0.0.0.0", 22)),
+        ("*:22", ("*", 22)),
+        ("[::]:22", ("::", 22)),
+        (":::22", ("::", 22)),
+        ("127.0.0.53%lo:53", ("127.0.0.53", 53)),
+        ("*.22", ("*", 22)),
+        ("127.0.0.1.5432", ("127.0.0.1", 5432)),
+        ("::1.631", ("::1", 631)),
+        ("0.0.0.0:*", None),
+    ],
+)
 def test_split_host_port(addr, expected):
     assert host_posture.split_host_port(addr) == expected
 
@@ -45,8 +53,9 @@ def test_bind_scope():
 
 
 def test_listeners_skip_loopback_and_flag_exposed(monkeypatch):
-    monkeypatch.setattr(host_posture, "_listening_ports",
-                        lambda: host_posture.parse_listeners(SS_OUTPUT, 3))
+    monkeypatch.setattr(
+        host_posture, "_listening_ports", lambda: host_posture.parse_listeners(SS_OUTPUT, 3)
+    )
     findings: list = []
     host_posture._check_listeners(findings)
     by_port = {f.location.path: f for f in findings}
@@ -66,8 +75,11 @@ def _sshd(monkeypatch, tmp_path: Path, text: str) -> list:
 
 
 def test_sshd_tabs_equals_and_first_match_wins(monkeypatch, tmp_path: Path):
-    findings = _sshd(monkeypatch, tmp_path,
-                     "PermitRootLogin\tyes\nPermitRootLogin no\nPasswordAuthentication=yes\n")
+    findings = _sshd(
+        monkeypatch,
+        tmp_path,
+        "PermitRootLogin\tyes\nPermitRootLogin no\nPasswordAuthentication=yes\n",
+    )
     rules = sorted(f.rule_id for f in findings)
     assert rules == ["host.ssh-password-auth", "host.ssh-root-login"]
 
@@ -81,9 +93,11 @@ def test_sshd_follows_include_and_stops_at_match(monkeypatch, tmp_path: Path):
     conf_d = tmp_path / "sshd_config.d"
     conf_d.mkdir()
     (conf_d / "50-cloud.conf").write_text("PasswordAuthentication yes\n", encoding="utf-8")
-    findings = _sshd(monkeypatch, tmp_path,
-                     "Include sshd_config.d/*.conf\n"
-                     "Match User backup\n    PermitRootLogin yes\n")
+    findings = _sshd(
+        monkeypatch,
+        tmp_path,
+        "Include sshd_config.d/*.conf\nMatch User backup\n    PermitRootLogin yes\n",
+    )
     rules = [f.rule_id for f in findings]
     assert rules == ["host.ssh-password-auth"]
     assert findings[0].location.path.endswith("50-cloud.conf")
@@ -114,8 +128,9 @@ def test_unreadable_sshd_config_is_informational(monkeypatch, tmp_path: Path):
 
 def test_short_passwd_lines_do_not_crash(monkeypatch, tmp_path: Path):
     passwd = tmp_path / "passwd"
-    passwd.write_text("root:x:0:0::/root:/bin/sh\nbroken\ntoor:x:0:0::/:/bin/sh\n+\n",
-                      encoding="utf-8")
+    passwd.write_text(
+        "root:x:0:0::/root:/bin/sh\nbroken\ntoor:x:0:0::/:/bin/sh\n+\n", encoding="utf-8"
+    )
     monkeypatch.setattr(host_posture, "_PASSWD", passwd)
     monkeypatch.setattr(host_posture.platform, "system", lambda: "Linux")
     findings: list = []

@@ -18,8 +18,12 @@ HOSTILE_PATH = "src/a`b|c @team.py"
 
 def _hostile_finding() -> Finding:
     return Finding(
-        id="x:1", rule_id="py.sqli", scanner="patterns", title=HOSTILE_TITLE,
-        description="d", location=Location(path=HOSTILE_PATH, start_line=3),
+        id="x:1",
+        rule_id="py.sqli",
+        scanner="patterns",
+        title=HOSTILE_TITLE,
+        description="d",
+        location=Location(path=HOSTILE_PATH, start_line=3),
         severity=Severity.HIGH,
         why_vulnerable="cc @everyone\n# Heading\n<script>alert(1)</script>",
         remediation=Remediation(summary="see [here](https://evil.example)"),
@@ -63,8 +67,9 @@ def test_md_fence_longer_than_content_backticks():
 
 
 def test_markdown_report_escapes_untrusted_fields():
-    result = ScanResult(target="t", started_at=datetime.now(timezone.utc),
-                        findings=[_hostile_finding()])
+    result = ScanResult(
+        target="t", started_at=datetime.now(timezone.utc), findings=[_hostile_finding()]
+    )
     md = MarkdownReporter().render(result)
     _assert_inert(md)
     # No hostile heading line was created from the model/scanner prose.
@@ -82,8 +87,15 @@ def test_pr_review_comment_and_summary_are_escaped():
 
 
 def test_fix_pr_body_and_annotations_escape_paths():
-    fix = AppliedFix(path="x|y`@team.py", rule_id="r", line=1, before="a ```",
-                     after="b", finding_id="f", verified=True)
+    fix = AppliedFix(
+        path="x|y`@team.py",
+        rule_id="r",
+        line=1,
+        before="a ```",
+        after="b",
+        finding_id="f",
+        verified=True,
+    )
     report = ApplyReport(fixes=[fix], changed_files=[fix.path])
     body = _pr_body(report)
     row = next(line for line in body.splitlines() if "x\\|y" in line)

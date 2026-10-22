@@ -138,9 +138,19 @@ def _load_state(state_file: Path) -> dict[str, dict] | None:
     return data if isinstance(data, dict) else None
 
 
-def _fim_finding(kind: str, rule: str, path: str, title: str, description: str,
-                 severity: Severity, why: str, fix: str, *, snippet: str | None = None,
-                 metadata: dict[str, Any] | None = None) -> Finding:
+def _fim_finding(
+    kind: str,
+    rule: str,
+    path: str,
+    title: str,
+    description: str,
+    severity: Severity,
+    why: str,
+    fix: str,
+    *,
+    snippet: str | None = None,
+    metadata: dict[str, Any] | None = None,
+) -> Finding:
     return Finding(
         id=f"fim:{kind}:{path}",
         rule_id=rule,
@@ -172,17 +182,21 @@ def _compare(previous: dict[str, dict] | None, current: dict[str, dict]) -> list
     findings: list[Finding] = []
     for path, now in current.items():
         if now.get("error"):
-            findings.append(_fim_finding(
-                "unreadable", "fim.unreadable", path,
-                f"Monitored path could not be read: {path}",
-                f"Argus could not read {path} ({now['error']}), so changes to it "
-                "cannot be detected.",
-                Severity.MEDIUM,
-                "An unreadable monitored file is an unmonitored file; a permission "
-                "change can also be a sign of tampering.",
-                "Give the agent read access to the path, or remove it from integrity_paths.",
-                snippet=str(now["error"]),
-            ))
+            findings.append(
+                _fim_finding(
+                    "unreadable",
+                    "fim.unreadable",
+                    path,
+                    f"Monitored path could not be read: {path}",
+                    f"Argus could not read {path} ({now['error']}), so changes to it "
+                    "cannot be detected.",
+                    Severity.MEDIUM,
+                    "An unreadable monitored file is an unmonitored file; a permission "
+                    "change can also be a sign of tampering.",
+                    "Give the agent read access to the path, or remove it from integrity_paths.",
+                    snippet=str(now["error"]),
+                )
+            )
         if previous is None:
             continue  # first cycle: establish the baseline
         before = previous.get(path)
@@ -190,26 +204,34 @@ def _compare(previous: dict[str, dict] | None, current: dict[str, dict]) -> list
             continue  # path newly added to the config
         before_absent, now_absent = bool(before.get("absent")), bool(now.get("absent"))
         if before_absent and not now_absent:
-            findings.append(_fim_finding(
-                "created", "fim.file-created", path,
-                f"Monitored path appeared: {path}",
-                "A path on the integrity watch list did not exist in the previous "
-                "agent cycle and now does.",
-                Severity.HIGH,
-                "New files at security-sensitive locations (cron entries, "
-                "authorized_keys, sudoers.d) are a common persistence technique.",
-                "Confirm the file was created intentionally; remove it if not.",
-            ))
+            findings.append(
+                _fim_finding(
+                    "created",
+                    "fim.file-created",
+                    path,
+                    f"Monitored path appeared: {path}",
+                    "A path on the integrity watch list did not exist in the previous "
+                    "agent cycle and now does.",
+                    Severity.HIGH,
+                    "New files at security-sensitive locations (cron entries, "
+                    "authorized_keys, sudoers.d) are a common persistence technique.",
+                    "Confirm the file was created intentionally; remove it if not.",
+                )
+            )
             continue
         if now_absent and not before_absent:
-            findings.append(_fim_finding(
-                "removed", "fim.file-removed", path,
-                f"Monitored file removed: {path}",
-                "A file on the integrity watch list no longer exists.",
-                Severity.HIGH,
-                "Removal of security-sensitive files may indicate tampering.",
-                "Restore the file from backup if removal was not planned.",
-            ))
+            findings.append(
+                _fim_finding(
+                    "removed",
+                    "fim.file-removed",
+                    path,
+                    f"Monitored file removed: {path}",
+                    "A file on the integrity watch list no longer exists.",
+                    Severity.HIGH,
+                    "Removal of security-sensitive files may indicate tampering.",
+                    "Restore the file from backup if removal was not planned.",
+                )
+            )
             continue
         if now_absent:
             continue
@@ -219,29 +241,45 @@ def _compare(previous: dict[str, dict] | None, current: dict[str, dict]) -> list
             desc = "File content hash differs from the previous agent cycle."
             if now.get("type") == "dir":
                 meta.update(_dir_changes(before, now))
-                desc = ("Directory contents differ from the previous agent cycle "
-                        f"(added: {len(meta['added'])}, removed: {len(meta['removed'])}, "
-                        f"modified: {len(meta['modified'])}; lists capped at {_MAX_LISTED}).")
-            findings.append(_fim_finding(
-                "changed", "fim.content-changed", path,
-                f"Critical file changed: {path}", desc, Severity.HIGH,
-                "Unexpected changes to security-sensitive files may indicate compromise.",
-                "Review the change and restore from known-good backup if unauthorized.",
-                metadata=meta,
-            ))
+                desc = (
+                    "Directory contents differ from the previous agent cycle "
+                    f"(added: {len(meta['added'])}, removed: {len(meta['removed'])}, "
+                    f"modified: {len(meta['modified'])}; lists capped at {_MAX_LISTED})."
+                )
+            findings.append(
+                _fim_finding(
+                    "changed",
+                    "fim.content-changed",
+                    path,
+                    f"Critical file changed: {path}",
+                    desc,
+                    Severity.HIGH,
+                    "Unexpected changes to security-sensitive files may indicate compromise.",
+                    "Review the change and restore from known-good backup if unauthorized.",
+                    metadata=meta,
+                )
+            )
         bstat, nstat = before.get("stat") or {}, now.get("stat") or {}
         perm_keys = ("mode", "uid")
-        if (bstat and nstat and b_hash == n_hash
-                and any(bstat.get(k) != nstat.get(k) for k in perm_keys)):
-            findings.append(_fim_finding(
-                "perm", "fim.permission-changed", path,
-                f"File permissions changed: {path}",
-                "Metadata changed without content hash change.",
-                Severity.MEDIUM,
-                "Permission changes on sensitive files can weaken access controls.",
-                "Verify the permission change was authorized.",
-                snippet=str({k: nstat.get(k) for k in perm_keys}),
-            ))
+        if (
+            bstat
+            and nstat
+            and b_hash == n_hash
+            and any(bstat.get(k) != nstat.get(k) for k in perm_keys)
+        ):
+            findings.append(
+                _fim_finding(
+                    "perm",
+                    "fim.permission-changed",
+                    path,
+                    f"File permissions changed: {path}",
+                    "Metadata changed without content hash change.",
+                    Severity.MEDIUM,
+                    "Permission changes on sensitive files can weaken access controls.",
+                    "Verify the permission change was authorized.",
+                    snippet=str({k: nstat.get(k) for k in perm_keys}),
+                )
+            )
     return findings
 
 

@@ -129,8 +129,7 @@ def push_result(
             raise PushError(f"could not reach {endpoint}: {exc}") from exc
         if resp.status_code in (401, 403):
             raise PushError(
-                "authentication failed; check the cloud API token "
-                "(--token / ARGUS_CLOUD_TOKEN)."
+                "authentication failed; check the cloud API token (--token / ARGUS_CLOUD_TOKEN)."
             )
         if resp.status_code == 202:
             body = resp.json()
@@ -146,8 +145,7 @@ def push_result(
                     raise PushError("authentication failed while polling ingest job")
                 if poll.status_code >= 300:
                     raise PushError(
-                        f"cloud ingest poll failed (HTTP {poll.status_code}): "
-                        f"{poll.text[:300]}"
+                        f"cloud ingest poll failed (HTTP {poll.status_code}): {poll.text[:300]}"
                     )
                 status_body = poll.json()
                 state = status_body.get("status")
@@ -163,10 +161,7 @@ def push_result(
                 time.sleep(0.5)
             raise PushError("timed out waiting for cloud ingest job to complete")
         if resp.status_code >= 300:
-            raise PushError(
-                f"cloud rejected the scan (HTTP {resp.status_code}): "
-                f"{resp.text[:300]}"
-            )
+            raise PushError(f"cloud rejected the scan (HTTP {resp.status_code}): {resp.text[:300]}")
         try:
             return resp.json()
         except ValueError:
@@ -206,14 +201,10 @@ def push_sbom(
             raise PushError(f"could not reach {endpoint}: {exc}") from exc
         if resp.status_code in (401, 403):
             raise PushError(
-                "authentication failed; check the cloud API token "
-                "(--token / ARGUS_CLOUD_TOKEN)."
+                "authentication failed; check the cloud API token (--token / ARGUS_CLOUD_TOKEN)."
             )
         if resp.status_code >= 300:
-            raise PushError(
-                f"cloud rejected the SBOM (HTTP {resp.status_code}): "
-                f"{resp.text[:300]}"
-            )
+            raise PushError(f"cloud rejected the SBOM (HTTP {resp.status_code}): {resp.text[:300]}")
         try:
             return resp.json()
         except ValueError:

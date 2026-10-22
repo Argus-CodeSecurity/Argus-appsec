@@ -100,8 +100,7 @@ def resolve(target: str, *, branch: str | None = None) -> ResolvedTarget:
         return _clone(target, branch=branch)
 
     raise ValueError(
-        f"Could not resolve target {target!r}. Provide a local path, a git URL, "
-        "or a website URL."
+        f"Could not resolve target {target!r}. Provide a local path, a git URL, or a website URL."
     )
 
 
@@ -135,12 +134,21 @@ def _clone_command(url: str, branch: str | None, dest: str) -> list[str]:
         # Never run hooks (a user/global template could install some), never
         # use local-file or ext:: transports (also for submodules), and keep
         # fsmonitor (a configurable command) off.
-        "-c", f"core.hooksPath={os.devnull}",
-        "-c", "protocol.file.allow=never",
-        "-c", "protocol.ext.allow=never",
-        "-c", "core.fsmonitor=false",
-        "-c", "submodule.recurse=false",
-        "clone", "--depth", "1", "--single-branch", "--no-tags",
+        "-c",
+        f"core.hooksPath={os.devnull}",
+        "-c",
+        "protocol.file.allow=never",
+        "-c",
+        "protocol.ext.allow=never",
+        "-c",
+        "core.fsmonitor=false",
+        "-c",
+        "submodule.recurse=false",
+        "clone",
+        "--depth",
+        "1",
+        "--single-branch",
+        "--no-tags",
     ]
     if branch:
         cmd += ["--branch", branch]
@@ -169,7 +177,10 @@ def _run_clone(cmd: list[str], dest: Path) -> None:
     """
     with tempfile.TemporaryFile() as errf:
         proc = subprocess.Popen(
-            cmd, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=errf,
+            cmd,
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            stderr=errf,
             env=_clone_env(),
         )
         deadline = time.monotonic() + _CLONE_TIMEOUT_SECONDS
@@ -181,9 +192,7 @@ def _run_clone(cmd: list[str], dest: Path) -> None:
                 except subprocess.TimeoutExpired:
                     pass
                 if time.monotonic() > deadline:
-                    raise RuntimeError(
-                        f"git clone timed out after {_CLONE_TIMEOUT_SECONDS}s"
-                    )
+                    raise RuntimeError(f"git clone timed out after {_CLONE_TIMEOUT_SECONDS}s")
                 size = _clone_dir_size(dest)
                 if size > _MAX_CLONE_BYTES:
                     raise RuntimeError(
@@ -202,13 +211,10 @@ def _run_clone(cmd: list[str], dest: Path) -> None:
 
 def _clone(url: str, *, branch: str | None) -> ResolvedTarget:
     if shutil.which("git") is None:
-        raise RuntimeError(
-            "git is required to scan a remote repository but was not found on PATH."
-        )
+        raise RuntimeError("git is required to scan a remote repository but was not found on PATH.")
     if not _is_safe_clone_url(url):
         raise ValueError(
-            f"Refusing to clone {url!r}: only https, http, ssh, and git transports "
-            "are allowed."
+            f"Refusing to clone {url!r}: only https, http, ssh, and git transports are allowed."
         )
     if branch is not None and (not branch.strip() or branch.startswith("-")):
         raise ValueError(f"Refusing to clone: invalid branch name {branch!r}")
@@ -228,8 +234,7 @@ def _clone(url: str, *, branch: str | None) -> ResolvedTarget:
         raise
 
     origin = _origin_for(url)
-    project = Project.from_path(tmp, origin=origin, origin_url=url,
-                                name=_repo_name(url))
+    project = Project.from_path(tmp, origin=origin, origin_url=url, name=_repo_name(url))
     return ResolvedTarget(project=project, _tempdir=tmp)
 
 

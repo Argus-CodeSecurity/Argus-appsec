@@ -35,10 +35,10 @@ def test_scan_ignores_rules_planted_in_target(tmp_path: Path):
     target.mkdir()
     (target / "app.py").write_text('API_KEY = "AKIAIOSFODNN7EXAMPLE"\n', encoding="utf-8")
     # An attacker with write access tries to switch the scan off.
-    (target / ".argus.yml").write_text("scanners: [iac]\nmin_severity: critical\n",
-                                       encoding="utf-8")
-    scan, cleanup = runner._scan_target(AgentTarget(path=str(target), scanners=["secrets"]),
-                                        "h")
+    (target / ".argus.yml").write_text(
+        "scanners: [iac]\nmin_severity: critical\n", encoding="utf-8"
+    )
+    scan, cleanup = runner._scan_target(AgentTarget(path=str(target), scanners=["secrets"]), "h")
     try:
         result = scan()
     finally:
@@ -57,10 +57,13 @@ def test_failing_target_does_not_stop_the_cycle(tmp_path: Path, monkeypatch):
     good = tmp_path / "good"
     good.mkdir()
     (good / "a.py").write_text("x = 1\n", encoding="utf-8")
-    cfg = _config(tmp_path, targets=[
-        AgentTarget(path=str(tmp_path / "missing-dir"), scanners=["secrets"]),
-        AgentTarget(path=str(good), scanners=["secrets"]),
-    ])
+    cfg = _config(
+        tmp_path,
+        targets=[
+            AgentTarget(path=str(tmp_path / "missing-dir"), scanners=["secrets"]),
+            AgentTarget(path=str(good), scanners=["secrets"]),
+        ],
+    )
     seen: list[str] = []
     summary = runner.run_agent_cycle(cfg, on_target=lambda p, r: seen.append(p))
     assert seen == [str(good)]
@@ -71,12 +74,19 @@ def test_failing_target_does_not_stop_the_cycle(tmp_path: Path, monkeypatch):
 
 def test_step_failure_is_pushed_as_finding(tmp_path: Path, monkeypatch):
     pushed: list[dict] = []
-    monkeypatch.setattr(runner, "push_result",
-                        lambda payload, url, token: pushed.append(payload) or {})
-    monkeypatch.setattr(runner, "assess_host",
-                        lambda label=None: (_ for _ in ()).throw(RuntimeError("ss exploded")))
-    cfg = _config(tmp_path, host_posture=True, push=True,
-                  cloud_url="https://cloud.example.com", cloud_token="t")
+    monkeypatch.setattr(
+        runner, "push_result", lambda payload, url, token: pushed.append(payload) or {}
+    )
+    monkeypatch.setattr(
+        runner, "assess_host", lambda label=None: (_ for _ in ()).throw(RuntimeError("ss exploded"))
+    )
+    cfg = _config(
+        tmp_path,
+        host_posture=True,
+        push=True,
+        cloud_url="https://cloud.example.com",
+        cloud_token="t",
+    )
     summary = runner.run_agent_cycle(cfg)
     assert summary.errors and "ss exploded" in summary.errors[0]
     assert len(pushed) == 1
@@ -86,8 +96,13 @@ def test_step_failure_is_pushed_as_finding(tmp_path: Path, monkeypatch):
 def test_failed_push_keeps_integrity_baseline(tmp_path: Path, monkeypatch):
     watched = tmp_path / "sshd_config"
     watched.write_text("v1\n", encoding="utf-8")
-    cfg = _config(tmp_path, integrity_paths=[str(watched)], push=True,
-                  cloud_url="https://cloud.example.com", cloud_token="t")
+    cfg = _config(
+        tmp_path,
+        integrity_paths=[str(watched)],
+        push=True,
+        cloud_url="https://cloud.example.com",
+        cloud_token="t",
+    )
     state_file = cfg.state_dir / "integrity.json"
 
     monkeypatch.setattr(runner, "push_result", lambda payload, url, token: {})
@@ -105,8 +120,9 @@ def test_failed_push_keeps_integrity_baseline(tmp_path: Path, monkeypatch):
     assert baseline[str(watched)]["hash"] == v1_hash  # not advanced to the tampered file
     # The change must be reported again once the cloud is back.
     pushed: list[dict] = []
-    monkeypatch.setattr(runner, "push_result",
-                        lambda payload, url, token: pushed.append(payload) or {})
+    monkeypatch.setattr(
+        runner, "push_result", lambda payload, url, token: pushed.append(payload) or {}
+    )
     runner.run_agent_cycle(cfg)
     rules = [f["rule"] for p in pushed for f in p["findings"]]
     assert "fim.content-changed" in rules

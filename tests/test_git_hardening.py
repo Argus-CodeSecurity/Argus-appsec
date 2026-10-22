@@ -24,7 +24,8 @@ def _git_plain(root: Path, *args: str, stdin: str | None = None) -> str:
     # Bytes in/out so Windows text mode does not turn object bodies into CRLF.
     proc = subprocess.run(
         ["git", "-C", str(root), "-c", "commit.gpgsign=false", *args],
-        check=True, capture_output=True,
+        check=True,
+        capture_output=True,
         input=stdin.encode("utf-8") if stdin is not None else None,
     )
     return proc.stdout.decode("utf-8")
@@ -86,8 +87,12 @@ def test_payload_fires_without_hardening(tmp_path):
 def test_hardened_runner_does_not_execute_repo_config(tmp_path):
     repo, marker = _hostile_repo(tmp_path)
     assert _git.is_git_repo(repo)
-    for args in (("ls-files",), ("log", "-1"), ("log", "-p", "--all"),
-                 ("log", "-5", "--name-only", "--", "requirements.txt")):
+    for args in (
+        ("ls-files",),
+        ("log", "-1"),
+        ("log", "-p", "--all"),
+        ("log", "-5", "--name-only", "--", "requirements.txt"),
+    ):
         res = _git.run_git(repo, *args)
         assert res is not None and res.returncode == 0, args
     assert not marker.exists(), marker.read_text()
@@ -132,8 +137,9 @@ def test_history_keeps_distinct_secrets_with_same_prefix(tmp_path):
     from argus.scanners.secrets_history import find_history_secrets
 
     repo = _plain_repo(tmp_path)
-    (repo / "a.py").write_text('K1 = "AKIAIOSFODNN7EXAMPLE"\nK2 = "AKIAJ2345678ABCDEFGH"\n',
-                               encoding="utf-8")
+    (repo / "a.py").write_text(
+        'K1 = "AKIAIOSFODNN7EXAMPLE"\nK2 = "AKIAJ2345678ABCDEFGH"\n', encoding="utf-8"
+    )
     _git_plain(repo, "add", "-A")
     _git_plain(repo, "commit", "-q", "-m", "keys")
     found, truncated = find_history_secrets(repo)
@@ -179,8 +185,12 @@ def test_profiles_pin_what_each_job_can_live_without(tmp_path):
     worktree = gitexec.git_argv(tmp_path, "log", profile=gitexec.WORKTREE)
     for argv in (untrusted, worktree):
         assert argv[:2] == ["git", "--no-pager"]
-        for pin in ("core.fsmonitor=", "diff.external=", "core.pager=cat",
-                    "log.showSignature=false"):
+        for pin in (
+            "core.fsmonitor=",
+            "diff.external=",
+            "core.pager=cat",
+            "log.showSignature=false",
+        ):
             assert pin in argv
         assert "--no-textconv" in argv and "--no-ext-diff" in argv
     # Only untrusted reads switch off hooks, credential helpers and transports;
@@ -240,7 +250,8 @@ def test_inventory_reads_at_ref_without_executing_repo_config(tmp_path):
 
     repo, marker = _hostile_repo(tmp_path)
     assert collect_packages_at_ref(repo, "HEAD~0") == [
-        ("PyPI", "requirements.txt", "requests", "2.0")]
+        ("PyPI", "requirements.txt", "requests", "2.0")
+    ]
     assert not marker.exists(), marker.read_text()
 
 
@@ -268,8 +279,9 @@ def test_history_secret_ids_differ_per_secret(tmp_path):
     from argus.scanners.secrets import SecretsScanner
 
     repo = _plain_repo(tmp_path)
-    (repo / "a.py").write_text('K1 = "AKIAIOSFODNN7EXAMPLE"\nK2 = "AKIAJ2345678ABCDEFGH"\n',
-                               encoding="utf-8")
+    (repo / "a.py").write_text(
+        'K1 = "AKIAIOSFODNN7EXAMPLE"\nK2 = "AKIAJ2345678ABCDEFGH"\n', encoding="utf-8"
+    )
     _git_plain(repo, "add", "-A")
     _git_plain(repo, "commit", "-q", "-m", "keys")
     (repo / "a.py").write_text("K = None\n", encoding="utf-8")
@@ -277,8 +289,9 @@ def test_history_secret_ids_differ_per_secret(tmp_path):
 
     cfg = Config(scanner_options={"secrets": {"history": True}})
     ctx = ScannerContext(project=Project.from_path(repo), config=cfg)
-    ids = [f.id for f in SecretsScanner().scan(ctx)
-           if f.rule_id == "secrets.history.aws-access-key-id"]
+    ids = [
+        f.id for f in SecretsScanner().scan(ctx) if f.rule_id == "secrets.history.aws-access-key-id"
+    ]
     assert len(ids) == 2 and len(set(ids)) == 2
     # Keyed on the fingerprint of the full value, not a position in history.
     assert all(len(i.rsplit(":", 1)[1]) == 16 for i in ids)

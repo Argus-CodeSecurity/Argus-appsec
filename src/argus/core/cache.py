@@ -94,9 +94,7 @@ class ScanCache:
             return None
 
     def store(self, scanner: str, file: str, findings: list[Finding]) -> None:
-        self._entries.setdefault(scanner, {})[file] = [
-            f.model_dump(mode="json") for f in findings
-        ]
+        self._entries.setdefault(scanner, {})[file] = [f.model_dump(mode="json") for f in findings]
         self._dirty = True
 
     def prune(self, scanner: str, live_files: set[str]) -> None:
@@ -119,11 +117,13 @@ class ScanCache:
             # A unique temp file per writer: concurrent runs on the same project
             # each write their own file and atomically replace the cache, so
             # one run can never rename another's half-written file into place.
-            fd, tmp = tempfile.mkstemp(prefix=self.path.stem + ".",
-                                       suffix=".tmp", dir=self.path.parent)
+            fd, tmp = tempfile.mkstemp(
+                prefix=self.path.stem + ".", suffix=".tmp", dir=self.path.parent
+            )
             with os.fdopen(fd, "w", encoding="utf-8") as fh:
-                json.dump({"format": _CACHE_FORMAT, "argus": self.version,
-                           "entries": self._entries}, fh)
+                json.dump(
+                    {"format": _CACHE_FORMAT, "argus": self.version, "entries": self._entries}, fh
+                )
             os.replace(tmp, self.path)
             tmp = None
         except OSError as exc:  # a read-only cache dir must never fail the scan

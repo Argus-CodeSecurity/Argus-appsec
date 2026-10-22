@@ -21,14 +21,23 @@ def test_each_watch_cycle_rescans_current_files(tmp_path: Path, monkeypatch) -> 
     def fake_loop(*, scan_fn, **_kwargs) -> int:
         results.append(scan_fn())
         # Change the tree between cycles: a new file and edited content.
-        (repo / "keys.py").write_text('AWS_SECRET = "AKIAIOSFODNN7EXAMPLE"\n',
-                                      encoding="utf-8")
+        (repo / "keys.py").write_text('AWS_SECRET = "AKIAIOSFODNN7EXAMPLE"\n', encoding="utf-8")
         results.append(scan_fn())
         return 0
 
     monkeypatch.setattr(argus.watch, "run_watch_loop", fake_loop)
-    res = runner.invoke(app, ["watch", str(repo), "--scanners", "secrets",
-                              "--state-dir", str(tmp_path / "state"), "--quiet"])
+    res = runner.invoke(
+        app,
+        [
+            "watch",
+            str(repo),
+            "--scanners",
+            "secrets",
+            "--state-dir",
+            str(tmp_path / "state"),
+            "--quiet",
+        ],
+    )
     assert res.exit_code == 0, res.output
     first, second = results
     assert not first.findings

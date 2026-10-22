@@ -52,8 +52,7 @@ def test_rules_option_path(tmp_path):
     (tmp_path / "myrules.yml").write_text(_RULE_YAML, encoding="utf-8")
     (tmp_path / "app.py").write_text("y = BANNED_TOKEN\n", encoding="utf-8")
     # A trusted (local) project may point at a rules file inside itself.
-    cfg = Config(scanner_options={"patterns": {"rules": "myrules.yml"}},
-                 trust_project_config=True)
+    cfg = Config(scanner_options={"patterns": {"rules": "myrules.yml"}}, trust_project_config=True)
     findings = _scan(tmp_path, cfg)
     assert any(f.rule_id == "patterns.no-eval-marker" for f in findings)
 
@@ -87,15 +86,14 @@ def test_custom_rules_disable_cache(tmp_path):
     # No custom rules -> normal cacheable behavior.
     plain = tmp_path / "plain"
     plain.mkdir()
-    ctx_plain = ScannerContext(project=Project.from_path(plain), config=Config(),
-                               ai=None)
+    ctx_plain = ScannerContext(project=Project.from_path(plain), config=Config(), ai=None)
     assert scanner.cacheable(ctx_plain) is True
 
     # Custom rules present -> not cacheable (they can change without a file change).
     withrules = tmp_path / "withrules"
     (withrules / ".argus" / "rules").mkdir(parents=True)
-    (withrules / ".argus" / "rules" / "team.yml").write_text(_RULE_YAML,
-                                                             encoding="utf-8")
-    ctx_rules = ScannerContext(project=Project.from_path(withrules),
-                               config=Config(trust_project_config=True), ai=None)
+    (withrules / ".argus" / "rules" / "team.yml").write_text(_RULE_YAML, encoding="utf-8")
+    ctx_rules = ScannerContext(
+        project=Project.from_path(withrules), config=Config(trust_project_config=True), ai=None
+    )
     assert scanner.cacheable(ctx_rules) is False

@@ -12,12 +12,14 @@ from argus.scanners.container_image import ContainerImageScanner, _from_refs
 
 
 def test_from_skips_flags_stages_and_args():
-    text = ("ARG BASE=python:3.12\n"
-            "FROM --platform=$BUILDPLATFORM golang:1.22 AS builder\n"
-            "FROM $BASE\n"
-            "FROM builder AS test\n"
-            "FROM scratch\n"
-            "from --platform=linux/amd64 alpine:3.20\n")
+    text = (
+        "ARG BASE=python:3.12\n"
+        "FROM --platform=$BUILDPLATFORM golang:1.22 AS builder\n"
+        "FROM $BASE\n"
+        "FROM builder AS test\n"
+        "FROM scratch\n"
+        "from --platform=linux/amd64 alpine:3.20\n"
+    )
     assert _from_refs(text) == ["golang:1.22", "alpine:3.20"]
 
 
@@ -40,17 +42,25 @@ def _run(tmp_path: Path, files: dict[str, str], monkeypatch, options=None) -> li
 
 
 def test_every_dockerfile_is_read_and_ref_follows_double_dash(tmp_path, monkeypatch):
-    calls = _run(tmp_path, {
-        "Dockerfile": "FROM --platform=linux/amd64 python:3.12-slim\n",
-        "services/api/Dockerfile": "FROM node:22-alpine\n",
-        "worker.Dockerfile": "FROM python:3.12-slim\n",
-    }, monkeypatch)
+    calls = _run(
+        tmp_path,
+        {
+            "Dockerfile": "FROM --platform=linux/amd64 python:3.12-slim\n",
+            "services/api/Dockerfile": "FROM node:22-alpine\n",
+            "worker.Dockerfile": "FROM python:3.12-slim\n",
+        },
+        monkeypatch,
+    )
     refs = [c[-1] for c in calls]
     assert sorted(refs) == ["node:22-alpine", "python:3.12-slim"]
     assert all(c[:3] == ["docker", "inspect", "--"] for c in calls)
 
 
 def test_option_like_refs_never_reach_docker(tmp_path, monkeypatch):
-    calls = _run(tmp_path, {"Dockerfile": "FROM -v\n"}, monkeypatch,
-                 options={"images": ["--help", "-f{{json .}}", "ok/image:1"]})
+    calls = _run(
+        tmp_path,
+        {"Dockerfile": "FROM -v\n"},
+        monkeypatch,
+        options={"images": ["--help", "-f{{json .}}", "ok/image:1"]},
+    )
     assert [c[-1] for c in calls] == ["ok/image:1"]

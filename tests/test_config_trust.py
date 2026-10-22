@@ -74,30 +74,44 @@ def remote_repo(tmp_path: Path, monkeypatch) -> Path:
 
 
 def test_focused_command_ignores_remote_config(remote_repo: Path) -> None:
-    res = runner.invoke(app, ["secrets", "https://github.com/evil/repo", "--fail-on", "low",
-                              "--quiet"])
+    res = runner.invoke(
+        app, ["secrets", "https://github.com/evil/repo", "--fail-on", "low", "--quiet"]
+    )
     assert res.exit_code == 1, res.output
 
 
 def test_scan_ignores_remote_config(remote_repo: Path) -> None:
-    res = runner.invoke(app, ["scan", "https://github.com/evil/repo", "--fail-on", "low",
-                              "--quiet", "--no-ai", "-f", "json"])
+    res = runner.invoke(
+        app,
+        [
+            "scan",
+            "https://github.com/evil/repo",
+            "--fail-on",
+            "low",
+            "--quiet",
+            "--no-ai",
+            "-f",
+            "json",
+        ],
+    )
     assert res.exit_code == 1, res.output
 
 
 def test_policy_check_ignores_remote_policies(remote_repo: Path) -> None:
     # A permissive in-repo policy set must not be what the gate evaluates.
     (remote_repo / ".argus.yml").write_text(
-        "policies:\n  - id: only-warn\n    when:\n      scanner: secrets\n"
-        "    action: warn\n", encoding="utf-8")
+        "policies:\n  - id: only-warn\n    when:\n      scanner: secrets\n    action: warn\n",
+        encoding="utf-8",
+    )
     res = runner.invoke(app, ["policy", "check", "https://github.com/evil/repo", "--quiet"])
     assert res.exit_code == 2, res.output  # no trusted policies configured
 
 
 def test_baseline_create_ignores_remote_config(remote_repo: Path, tmp_path: Path) -> None:
     out = tmp_path / "baseline.json"
-    res = runner.invoke(app, ["baseline", "create", "https://github.com/evil/repo",
-                              "-o", str(out), "--quiet"])
+    res = runner.invoke(
+        app, ["baseline", "create", "https://github.com/evil/repo", "-o", str(out), "--quiet"]
+    )
     assert res.exit_code == 0, res.output
     assert '"secrets' in out.read_text(encoding="utf-8")
 
@@ -121,18 +135,18 @@ def _suppression_repo(tmp_path: Path) -> Path:
     assert found
     entries = "".join(
         f"  - fingerprint: '{f.fingerprint()}'\n    status: suppress\n"
-        f"    reason: accepted\n    owner: me\n" for f in found)
+        f"    reason: accepted\n    owner: me\n"
+        for f in found
+    )
     (tmp_path / ".argus").mkdir()
-    (tmp_path / ".argus" / "exceptions.yml").write_text(
-        "exceptions:\n" + entries, encoding="utf-8")
+    (tmp_path / ".argus" / "exceptions.yml").write_text("exceptions:\n" + entries, encoding="utf-8")
     return tmp_path
 
 
 def _scan(project: Project, *, trusted: bool):
     from argus.core.engine import ScanEngine
 
-    cfg = Config(scanners=["patterns", "secrets"], cache=False,
-                 trust_project_config=trusted)
+    cfg = Config(scanners=["patterns", "secrets"], cache=False, trust_project_config=trusted)
     cfg.ai.enabled = False
     return ScanEngine(cfg).scan(project)
 

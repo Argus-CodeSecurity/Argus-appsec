@@ -9,14 +9,20 @@ from argus.reporting.audience import render_for_audience
 
 
 def _result() -> ScanResult:
-    r = ScanResult(target="/proj",
-                   started_at=datetime(2026, 1, 1, tzinfo=timezone.utc),
-                   argus_version="0.7.0")
+    r = ScanResult(
+        target="/proj", started_at=datetime(2026, 1, 1, tzinfo=timezone.utc), argus_version="0.7.0"
+    )
     r.findings = [
         Finding(
-            id="1", rule_id="patterns.sqli", scanner="patterns", title="SQL injection",
-            description="d", location=Location(path="a.py", start_line=5),
-            severity=Severity.CRITICAL, cwe=["CWE-89"], owasp=["A03:2021-Injection"],
+            id="1",
+            rule_id="patterns.sqli",
+            scanner="patterns",
+            title="SQL injection",
+            description="d",
+            location=Location(path="a.py", start_line=5),
+            severity=Severity.CRITICAL,
+            cwe=["CWE-89"],
+            owasp=["A03:2021-Injection"],
             why_vulnerable="Untrusted input reaches a database query.",
             business_impact="Full database compromise and data exfiltration.",
             remediation=Remediation(summary="Use parameterized queries."),

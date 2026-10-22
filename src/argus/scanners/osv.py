@@ -113,14 +113,16 @@ def _cache_put(vuln_id: str, vuln: dict, cache_dir: Path) -> None:
     try:  # cache is best-effort; a write failure must never fail a scan
         cache_dir.mkdir(parents=True, exist_ok=True)
         _cache_file(cache_dir, vuln_id).write_text(
-            json.dumps({"fetched": time.time(), "vuln": vuln}), encoding="utf-8")
+            json.dumps({"fetched": time.time(), "vuln": vuln}), encoding="utf-8"
+        )
     except OSError:
         pass
 
 
 # --- HTTP with retry -------------------------------------------------------
-def _request_with_retry(client: httpx.Client, method: str, url: str,
-                        **kwargs: object) -> httpx.Response:
+def _request_with_retry(
+    client: httpx.Client, method: str, url: str, **kwargs: object
+) -> httpx.Response:
     """Issue a request, retrying transient failures with exponential backoff.
 
     Returns the last response on a retryable status after exhausting attempts (so
@@ -148,10 +150,14 @@ def _request_with_retry(client: httpx.Client, method: str, url: str,
 
 
 # --- public API ------------------------------------------------------------
-def query(ecosystem: str,
-          deps: Mapping[str, str] | Iterable[tuple[str, str]], *,
-          timeout: float = 15.0, use_cache: bool = True,
-          client: httpx.Client | None = None) -> dict[tuple[str, str], list[OSVAdvisory]]:
+def query(
+    ecosystem: str,
+    deps: Mapping[str, str] | Iterable[tuple[str, str]],
+    *,
+    timeout: float = 15.0,
+    use_cache: bool = True,
+    client: httpx.Client | None = None,
+) -> dict[tuple[str, str], list[OSVAdvisory]]:
     """Return advisories per (package, version) for the given ecosystem.
 
     ``deps`` may be a ``{name: version}`` mapping (one version per package) or an
@@ -182,11 +188,13 @@ def query(ecosystem: str,
     try:
         # 1) Batched lookups across all packages (no silent truncation).
         for start in range(0, len(items), _BATCH_SIZE):
-            chunk = items[start:start + _BATCH_SIZE]
-            queries = [{"package": {"name": n, "ecosystem": ecosystem}, "version": v}
-                       for n, v in chunk]
+            chunk = items[start : start + _BATCH_SIZE]
+            queries = [
+                {"package": {"name": n, "ecosystem": ecosystem}, "version": v} for n, v in chunk
+            ]
             resp = _request_with_retry(
-                client, "POST", f"{OSV_API}/v1/querybatch", json={"queries": queries})
+                client, "POST", f"{OSV_API}/v1/querybatch", json={"queries": queries}
+            )
             resp.raise_for_status()
             for res in resp.json().get("results", []):
                 ids = [v["id"] for v in (res.get("vulns") or [])]
@@ -225,8 +233,12 @@ def query(ecosystem: str,
             client.close()
 
     if skipped:
-        log.warning("OSV: %d advisory record(s) could not be fetched after %d "
-                    "attempts and were omitted from this scan.", skipped, _MAX_RETRIES)
+        log.warning(
+            "OSV: %d advisory record(s) could not be fetched after %d "
+            "attempts and were omitted from this scan.",
+            skipped,
+            _MAX_RETRIES,
+        )
 
     out: dict[tuple[str, str], list[OSVAdvisory]] = {}
     for (name, version), ids in zip(items, per_pkg_ids, strict=False):
@@ -246,11 +258,13 @@ def _parse_vuln(vuln: dict, *, package: str = "") -> OSVAdvisory:
     if cve:
         refs.insert(0, f"https://nvd.nist.gov/vuln/detail/{cve}")
 
-    cwe = [c for c in (vuln.get("database_specific", {}).get("cwe_ids") or [])
-           if isinstance(c, str)]
+    cwe = [
+        c for c in (vuln.get("database_specific", {}).get("cwe_ids") or []) if isinstance(c, str)
+    ]
 
     symbols: list[str] = []
     from argus.analysis.symbol_reachability import extract_osv_symbols
+
     symbols = extract_osv_symbols(vuln, package)
 
     return OSVAdvisory(
@@ -315,8 +329,8 @@ _CVSS3_AV = {"N": 0.85, "A": 0.62, "L": 0.55, "P": 0.2}
 _CVSS3_AC = {"L": 0.77, "H": 0.44}
 _CVSS3_UI = {"N": 0.85, "R": 0.62}
 _CVSS3_CIA = {"H": 0.56, "L": 0.22, "N": 0.0}
-_CVSS3_PR_U = {"N": 0.85, "L": 0.62, "H": 0.27}   # scope unchanged
-_CVSS3_PR_C = {"N": 0.85, "L": 0.68, "H": 0.5}    # scope changed
+_CVSS3_PR_U = {"N": 0.85, "L": 0.62, "H": 0.27}  # scope unchanged
+_CVSS3_PR_C = {"N": 0.85, "L": 0.68, "H": 0.5}  # scope changed
 
 
 def _cvss3_roundup(value: float) -> float:
@@ -348,11 +362,7 @@ def _cvss3_base_score(vector: str) -> float | None:
         return None  # missing/invalid metric -> let the caller fall back
 
     iss = 1 - (1 - conf) * (1 - integ) * (1 - avail)
-    impact = (
-        7.52 * (iss - 0.029) - 3.25 * (iss - 0.02) ** 15
-        if scope_changed
-        else 6.42 * iss
-    )
+    impact = 7.52 * (iss - 0.029) - 3.25 * (iss - 0.02) ** 15 if scope_changed else 6.42 * iss
     if impact <= 0:
         return 0.0
     exploitability = 8.22 * av * ac * pr * ui

@@ -40,9 +40,12 @@ class BadgeReporter(Reporter):
         else:
             message, color = f"{low} low", "yellowgreen"
 
-        return json.dumps({
-            "schemaVersion": 1,
-            "label": "security",
-            "message": message,
-            "color": color,
-        }, indent=2)
+        return json.dumps(
+            {
+                "schemaVersion": 1,
+                "label": "security",
+                "message": message,
+                "color": color,
+            },
+            indent=2,
+        )

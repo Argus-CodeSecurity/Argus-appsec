@@ -53,39 +53,50 @@ def _fit(unit: str) -> str:
 
 
 ADVERSARIAL = [
-    ("malware curl-pipe-shell, spaces", _malware("malware.curl-pipe-shell"),
-     "curl " + " " * (MAX_SCAN_LINE - 5)),
-    ("malware curl-pipe-shell, repeated curl", _malware("malware.curl-pipe-shell"),
-     _fit("curl ")),
-    ("malware data-exfil", _malware("malware.data-exfil-env"),
-     "curl " + " " * (MAX_SCAN_LINE - 5)),
-    ("malware reverse-shell python", _malware("malware.reverse-shell-bash"),
-     "python -c '" + _fit("socket")[:-11]),
-    ("malware js-atob-eval", _malware("malware.js-atob-eval"),
-     "atob(x)" + " " * (MAX_SCAN_LINE - 7)),
-    ("malware obfuscated-exec", _malware("malware.obfuscated-exec"),
-     _fit("b64decode(x) ")),
+    (
+        "malware curl-pipe-shell, spaces",
+        _malware("malware.curl-pipe-shell"),
+        "curl " + " " * (MAX_SCAN_LINE - 5),
+    ),
+    ("malware curl-pipe-shell, repeated curl", _malware("malware.curl-pipe-shell"), _fit("curl ")),
+    ("malware data-exfil", _malware("malware.data-exfil-env"), "curl " + " " * (MAX_SCAN_LINE - 5)),
+    (
+        "malware reverse-shell python",
+        _malware("malware.reverse-shell-bash"),
+        "python -c '" + _fit("socket")[:-11],
+    ),
+    (
+        "malware js-atob-eval",
+        _malware("malware.js-atob-eval"),
+        "atob(x)" + " " * (MAX_SCAN_LINE - 7),
+    ),
+    ("malware obfuscated-exec", _malware("malware.obfuscated-exec"), _fit("b64decode(x) ")),
     ("secrets assignment, repeated keyword", secrets._ASSIGNMENT, _fit("secret")),
     ("secrets assignment, long key", secrets._ASSIGNMENT, _fit("a_token_")),
     ("shared curl-pipe", CURL_PIPE_SHELL_RE, _fit("curl ")),
-    ("lang-sast curl-pipe", lang_sast._RULES[".sh"][0][1],
-     "curl " + " " * (MAX_SCAN_LINE - 5)),
+    ("lang-sast curl-pipe", lang_sast._RULES[".sh"][0][1], "curl " + " " * (MAX_SCAN_LINE - 5)),
     ("cicd hardcoded-secret", cicd._RULES[4][2], _fit("password:")),
-    ("patterns sql f-string", _pattern_rule("python-sql-fstring"),
-     'f"' + _fit(" select from {")[:-2]),
-    ("patterns sql f-string, many quotes", _pattern_rule("python-sql-fstring"),
-     _fit('f"select from ')),
-    ("patterns sql format", _pattern_rule("python-sql-format"),
-     'execute("' + _fit(' select "')[:-9]),
-    ("patterns path traversal", _pattern_rule("path-traversal-join"),
-     _fit("open(input")),
-    ("patterns js sql concat", _pattern_rule("js-sql-concat"),
-     _fit("${a} x ")),
+    (
+        "patterns sql f-string",
+        _pattern_rule("python-sql-fstring"),
+        'f"' + _fit(" select from {")[:-2],
+    ),
+    (
+        "patterns sql f-string, many quotes",
+        _pattern_rule("python-sql-fstring"),
+        _fit('f"select from '),
+    ),
+    (
+        "patterns sql format",
+        _pattern_rule("python-sql-format"),
+        'execute("' + _fit(' select "')[:-9],
+    ),
+    ("patterns path traversal", _pattern_rule("path-traversal-join"), _fit("open(input")),
+    ("patterns js sql concat", _pattern_rule("js-sql-concat"), _fit("${a} x ")),
 ]
 
 
-@pytest.mark.parametrize("label,pattern,text", ADVERSARIAL,
-                         ids=[a[0] for a in ADVERSARIAL])
+@pytest.mark.parametrize("label,pattern,text", ADVERSARIAL, ids=[a[0] for a in ADVERSARIAL])
 def test_hardened_pattern_is_fast_on_adversarial_line(label, pattern, text):
     assert len(text) <= MAX_SCAN_LINE
     elapsed = _timed(lambda: pattern.search(text))
@@ -158,14 +169,16 @@ def test_cloud_iam_wildcard_has_no_whole_file_backtracking(tmp_path):
 
 
 def test_cloud_iam_wildcard_reports_action_line(tmp_path):
-    tf = ('resource "aws_iam_policy" "p" {\n'
-          '  policy = jsonencode({\n'
-          '    Statement = [{\n'
-          '      Action   = "*"\n'
-          '      Resource = "*"\n'
-          '    }]\n'
-          '  })\n'
-          '}\n')
+    tf = (
+        'resource "aws_iam_policy" "p" {\n'
+        "  policy = jsonencode({\n"
+        "    Statement = [{\n"
+        '      Action   = "*"\n'
+        '      Resource = "*"\n'
+        "    }]\n"
+        "  })\n"
+        "}\n"
+    )
     ctx = _ctx(tmp_path, {"iam.tf": tf})
     hits = [f for f in cloud.CloudScanner().scan(ctx) if f.rule_id == "cloud.iam-wildcard"]
     assert [f.location.start_line for f in hits] == [4]
@@ -174,8 +187,7 @@ def test_cloud_iam_wildcard_reports_action_line(tmp_path):
 def test_cloud_iam_wildcard_ignores_far_apart_statements(tmp_path):
     tf = 'Action = "*"\n' + "# filler\n" * 100 + 'Resource = "*"\n'
     ctx = _ctx(tmp_path, {"iam.tf": tf})
-    assert not any(f.rule_id == "cloud.iam-wildcard"
-                   for f in cloud.CloudScanner().scan(ctx))
+    assert not any(f.rule_id == "cloud.iam-wildcard" for f in cloud.CloudScanner().scan(ctx))
 
 
 def test_authz_router_check_is_fast_and_correct():
@@ -184,18 +196,24 @@ def test_authz_router_check_is_fast_and_correct():
     assert elapsed < 2 * BUDGET, f"{elapsed:.2f}s"
     assert authz._has_router_auth(
         'router = APIRouter(\n    prefix="/dependencies",\n'
-        '    dependencies=[Depends(get_current_user)],\n)\n')
-    assert not authz._has_router_auth("router = APIRouter(prefix='/x')\nx = dependencies=[Depends(a)]\n")
+        "    dependencies=[Depends(get_current_user)],\n)\n"
+    )
+    assert not authz._has_router_auth(
+        "router = APIRouter(prefix='/x')\nx = dependencies=[Depends(a)]\n"
+    )
     assert not authz._has_router_auth("router = APIRouter(dependencies=[])\nDepends(a)\n")
 
 
 def test_container_cap_add_block_and_flow_forms(tmp_path):
-    compose = ("services:\n  app:\n    image: app:1.0\n    cap_add:\n"
-               "      - NET_ADMIN\n      - SYS_ADMIN\n  other:\n"
-               "    cap_add: [\"SYS_ADMIN\"]\n")
+    compose = (
+        "services:\n  app:\n    image: app:1.0\n    cap_add:\n"
+        "      - NET_ADMIN\n      - SYS_ADMIN\n  other:\n"
+        '    cap_add: ["SYS_ADMIN"]\n'
+    )
     ctx = _ctx(tmp_path, {"docker-compose.yml": compose})
-    hits = [f for f in container.ContainerScanner().scan(ctx)
-            if f.rule_id == "container.cap-sys-admin"]
+    hits = [
+        f for f in container.ContainerScanner().scan(ctx) if f.rule_id == "container.cap-sys-admin"
+    ]
     assert sorted(f.location.start_line for f in hits) == [4, 8]
 
 
@@ -207,12 +225,13 @@ def test_container_cap_add_hostile_whitespace(tmp_path):
 
 
 def test_cicd_permissions_block_form_is_detected(tmp_path):
-    wf = ("on: push\npermissions:\n  # repo-wide\n  contents: write\n"
-          "jobs:\n  a:\n    permissions:\n      contents: read\n"
-          "    runs-on: ubuntu-latest\n")
+    wf = (
+        "on: push\npermissions:\n  # repo-wide\n  contents: write\n"
+        "jobs:\n  a:\n    permissions:\n      contents: read\n"
+        "    runs-on: ubuntu-latest\n"
+    )
     ctx = _ctx(tmp_path, {".github/workflows/ci.yml": wf})
-    hits = [f for f in cicd.CicdScanner().scan(ctx)
-            if f.rule_id == "cicd.excessive-permissions"]
+    hits = [f for f in cicd.CicdScanner().scan(ctx) if f.rule_id == "cicd.excessive-permissions"]
     assert [f.location.start_line for f in hits] == [2]
 
 

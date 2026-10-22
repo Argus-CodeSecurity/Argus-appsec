@@ -136,10 +136,12 @@ REWRITES: dict[str, Callable[[str], str | None]] = {
 # Deliberately NOT auto by default (they can change runtime behavior): weak-hash
 # (changes digests), shell=True->False (breaks string commands), tls-verify
 # (breaks self-signed), torch.load / trust_remote_code (can break model loading).
-AUTO_APPLY: frozenset[str] = frozenset({
-    "patterns.python-yaml-load",   # yaml.load -> safe_load: the recommended default
-    "patterns.flask-debug-true",   # debug=True -> False: never ship debug on
-})
+AUTO_APPLY: frozenset[str] = frozenset(
+    {
+        "patterns.python-yaml-load",  # yaml.load -> safe_load: the recommended default
+        "patterns.flask-debug-true",  # debug=True -> False: never ship debug on
+    }
+)
 
 
 def auto_apply_rules(config: object | None = None) -> set[str]:

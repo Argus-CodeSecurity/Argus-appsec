@@ -30,8 +30,7 @@ from argus.remediation.rewrites import fix_line, verify_line_fixed
 _SYSTEM = (
     "You are a secure-coding assistant. Given a vulnerable code snippet and the "
     "issue, return ONLY a minimal corrected version of the snippet that resolves "
-    "the vulnerability while preserving behavior. Do not add commentary.\n"
-    + UNTRUSTED_NOTICE
+    "the vulnerability while preserving behavior. Do not add commentary.\n" + UNTRUSTED_NOTICE
 )
 
 _HUNK_HEADER = re.compile(r"^@@ -(\d+)((?:,\d+)?) \+(\d+)((?:,\d+)?) @@")
@@ -59,14 +58,13 @@ class PatchAgent(Agent):
 
         if fixed and fixed != original:
             finding.remediation.patch = self._unified_diff(
-                finding.location.path, original, fixed,
-                start_line=finding.location.start_line or 1)
+                finding.location.path, original, fixed, start_line=finding.location.start_line or 1
+            )
             finding.remediation.verified = verified
             finding.metadata["patch_source"] = source
             if source == "ai-proposed":
                 finding.metadata["patch_review"] = "human-review-required"
-                note = ("Machine-proposed fix, review before merging. "
-                        "(Not automatically verified.)")
+                note = "Machine-proposed fix, review before merging. (Not automatically verified.)"
                 finding.remediation.guidance = (
                     note + "\n\n" + finding.remediation.guidance
                 ).strip()
@@ -100,8 +98,11 @@ class PatchAgent(Agent):
         offset = max(start_line, 1) - 1
         out: list[str] = []
         for line in difflib.unified_diff(
-            before.split("\n"), after.split("\n"),
-            fromfile=f"a/{path}", tofile=f"b/{path}", lineterm="",
+            before.split("\n"),
+            after.split("\n"),
+            fromfile=f"a/{path}",
+            tofile=f"b/{path}",
+            lineterm="",
         ):
             m = _HUNK_HEADER.match(line)
             if m:

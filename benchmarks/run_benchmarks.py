@@ -48,7 +48,7 @@ RESULTS_DIR = HERE / "results"
 @dataclass
 class Corpus:
     name: str
-    git_url: str | None = None          # None => local path via env var
+    git_url: str | None = None  # None => local path via env var
     env_dir: str | None = None
     description: str = ""
     # Optional path to a ground-truth findings file for precision/recall.
@@ -61,13 +61,13 @@ CORPORA = [
         name="juice-shop",
         git_url="https://github.com/juice-shop/juice-shop",
         description="OWASP Juice Shop, modern JS/TS web app, the standard "
-                    "deliberately-vulnerable target.",
+        "deliberately-vulnerable target.",
     ),
     Corpus(
         name="dvwa",
         git_url="https://github.com/digininja/DVWA",
         description="Damn Vulnerable Web Application (PHP), exercises the "
-                    "secrets/deps/IaC layers on a non-Python/JS stack.",
+        "secrets/deps/IaC layers on a non-Python/JS stack.",
     ),
     Corpus(
         name="webgoat",
@@ -78,7 +78,7 @@ CORPORA = [
         name="sard-local",
         env_dir="ARGUS_BENCH_SARD_DIR",
         description="NIST SARD/Juliet cases (manual download; see module "
-                    "docstring). Ground-truth labels ship with the suite.",
+        "docstring). Ground-truth labels ship with the suite.",
     ),
 ]
 
@@ -94,7 +94,8 @@ def _checkout(corpus: Corpus) -> tuple[Path, str]:
         if not root or not Path(root).is_dir():
             raise FileNotFoundError(
                 f"corpus '{corpus.name}' needs {corpus.env_dir} to point at a "
-                "local directory (manual download)")
+                "local directory (manual download)"
+            )
         return Path(root), f"local:{root}"
     dest = CORPORA_DIR / corpus.name
     if not dest.exists():
@@ -106,9 +107,21 @@ def _checkout(corpus: Corpus) -> tuple[Path, str]:
 
 def _scan(target: Path, extra_args: list[str]) -> tuple[dict, float]:
     out = CORPORA_DIR / "_scan.json"
-    cmd = [sys.executable, "-m", "argus", "scan", str(target),
-           "--no-ai", "--no-cache", "--quiet", "-f", "json", "-o", str(out),
-           *extra_args]
+    cmd = [
+        sys.executable,
+        "-m",
+        "argus",
+        "scan",
+        str(target),
+        "--no-ai",
+        "--no-cache",
+        "--quiet",
+        "-f",
+        "json",
+        "-o",
+        str(out),
+        *extra_args,
+    ]
     start = time.perf_counter()
     proc = subprocess.run(cmd, capture_output=True, text=True)
     elapsed = time.perf_counter() - start
@@ -138,10 +151,11 @@ def bench(corpus: Corpus) -> dict | None:
         "ground_truth": corpus.ground_truth,
     }
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
-    (RESULTS_DIR / f"{corpus.name}.json").write_text(
-        json.dumps(result, indent=2), encoding="utf-8")
-    print(f"  {result['total_findings']} findings in {result['scan_seconds']}s "
-          f"({result['by_scanner']})")
+    (RESULTS_DIR / f"{corpus.name}.json").write_text(json.dumps(result, indent=2), encoding="utf-8")
+    print(
+        f"  {result['total_findings']} findings in {result['scan_seconds']}s "
+        f"({result['by_scanner']})"
+    )
     return result
 
 
@@ -160,9 +174,9 @@ def summarize(results: list[dict]) -> None:
         by_scanner = ", ".join(f"{k}: {v}" for k, v in sorted(r["by_scanner"].items()))
         lines.append(
             f"| {r['corpus']} | `{str(r['commit'])[:10]}` | {r['argus_version']} "
-            f"| {r['total_findings']} | {r['scan_seconds']} | {by_scanner} |")
-    (RESULTS_DIR / "SUMMARY.md").write_text("\n".join(lines) + "\n",
-                                            encoding="utf-8")
+            f"| {r['total_findings']} | {r['scan_seconds']} | {by_scanner} |"
+        )
+    (RESULTS_DIR / "SUMMARY.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
     print(f"\nSummary written to {RESULTS_DIR / 'SUMMARY.md'}")
 
 

@@ -94,9 +94,12 @@ def test_api_ingest_and_pages_render(client, report):
 
 
 def test_upload_form_ingests_file(client, report):
-    r = client.post("/upload", files={"file": ("report.json", report, "application/json")},
-                    data={"csrf_token": CSRF_TOKEN},
-                    follow_redirects=False)
+    r = client.post(
+        "/upload",
+        files={"file": ("report.json", report, "application/json")},
+        data={"csrf_token": CSRF_TOKEN},
+        follow_redirects=False,
+    )
     assert r.status_code == 303
     assert r.headers["location"].startswith("/scans/")
 

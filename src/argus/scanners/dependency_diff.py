@@ -63,9 +63,7 @@ def _change_finding(change: PackageChange, counter: int) -> Finding:
         business_impact="Unreviewed dependency changes can introduce CVEs or malware.",
         remediation=Remediation(
             summary="Review the dependency diff before merge.",
-            guidance=(
-                "Run `argus scan --diff` and inspect SBOM delta; pin trusted versions."
-            ),
+            guidance=("Run `argus scan --diff` and inspect SBOM delta; pin trusted versions."),
         ),
         tags=["supply-chain", "dependency-diff", change.change],
         metadata={
@@ -78,16 +76,15 @@ def _change_finding(change: PackageChange, counter: int) -> Finding:
     )
 
 
-def _behavior_findings(change: PackageChange, counter: int, *, timeout: float,
-                       sandbox: str = "host") -> Iterable[Finding]:
+def _behavior_findings(
+    change: PackageChange, counter: int, *, timeout: float, sandbox: str = "host"
+) -> Iterable[Finding]:
     if change.ecosystem != "npm" or change.change != "changed":
         return
     if not change.old_version or not change.new_version:
         return
-    old_fp = fetch_fingerprint(change.package, change.old_version, mode=sandbox,
-                               timeout=timeout)
-    new_fp = fetch_fingerprint(change.package, change.new_version, mode=sandbox,
-                               timeout=timeout)
+    old_fp = fetch_fingerprint(change.package, change.old_version, mode=sandbox, timeout=timeout)
+    new_fp = fetch_fingerprint(change.package, change.new_version, mode=sandbox, timeout=timeout)
     for anomaly in compare_fingerprints(old_fp, new_fp):
         counter += 1
         yield Finding(
@@ -151,10 +148,10 @@ class DependencyDiffScanner(Scanner):
         # Set by `argus supply-chain --sandbox`; plain scans query from the host.
         sandbox = str(opts.get("sandbox") or "host").lower()
         if sandbox not in MODES:
-            raise ValueError(f"unknown sandbox mode {sandbox!r} "
-                             f"(expected one of {', '.join(MODES)})")
+            raise ValueError(
+                f"unknown sandbox mode {sandbox!r} (expected one of {', '.join(MODES)})"
+            )
         for counter, change in enumerate(diff_packages(Path(ctx.project.root), str(ref)), start=1):
             yield _change_finding(change, counter)
             if behavior:
-                yield from _behavior_findings(change, counter, timeout=timeout,
-                                              sandbox=sandbox)
+                yield from _behavior_findings(change, counter, timeout=timeout, sandbox=sandbox)

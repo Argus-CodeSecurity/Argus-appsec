@@ -20,9 +20,7 @@ def _isolated_scan_cache(tmp_path_factory, monkeypatch):
     Keeps test runs from reading stale entries out of (or littering) the real
     ~/.cache/argus. Cache behavior itself is exercised in test_cache.py.
     """
-    monkeypatch.setenv(
-        "ARGUS_CACHE_DIR", str(tmp_path_factory.mktemp("argus-cache"))
-    )
+    monkeypatch.setenv("ARGUS_CACHE_DIR", str(tmp_path_factory.mktemp("argus-cache")))
 
 
 @pytest.fixture(autouse=True)
@@ -64,28 +62,26 @@ def _offline_exploit_signals(request, monkeypatch):
 def vulnerable_project(tmp_path: Path) -> Project:
     """A tiny project with one planted vulnerability of each major class."""
     (tmp_path / "app.py").write_text(
-        'import hashlib, subprocess, yaml\n'
-        'from flask import Flask, request\n'
-        'app = Flask(__name__)\n'
+        "import hashlib, subprocess, yaml\n"
+        "from flask import Flask, request\n"
+        "app = Flask(__name__)\n"
         'AWS_ACCESS_KEY_ID = "AKIAIOSFODNN7EXAMPLE"\n'
         '@app.route("/user")\n'
-        'def q():\n'
+        "def q():\n"
         '    uid = request.args.get("id")\n'
-        '    cursor.execute("SELECT * FROM users WHERE id = \'%s\'" % uid)\n'
+        "    cursor.execute(\"SELECT * FROM users WHERE id = '%s'\" % uid)\n"
         '@app.route("/ping")\n'
-        'def run():\n'
+        "def run():\n"
         '    subprocess.run("ping " + request.args.get("host"), shell=True)\n'
-        'def load(raw):\n'
-        '    return yaml.load(raw)\n'
-        'def h(p):\n'
-        '    return hashlib.md5(p.encode()).hexdigest()\n',
+        "def load(raw):\n"
+        "    return yaml.load(raw)\n"
+        "def h(p):\n"
+        "    return hashlib.md5(p.encode()).hexdigest()\n",
         encoding="utf-8",
     )
-    (tmp_path / "requirements.txt").write_text(
-        "flask==2.0.1\npyyaml==5.3.1\n", encoding="utf-8"
-    )
+    (tmp_path / "requirements.txt").write_text("flask==2.0.1\npyyaml==5.3.1\n", encoding="utf-8")
     (tmp_path / "Dockerfile").write_text(
-        "FROM python:latest\nCOPY . /app\nCMD [\"python\", \"app.py\"]\n",
+        'FROM python:latest\nCOPY . /app\nCMD ["python", "app.py"]\n',
         encoding="utf-8",
     )
     return Project.from_path(tmp_path)
@@ -94,9 +90,7 @@ def vulnerable_project(tmp_path: Path) -> Project:
 @pytest.fixture
 def clean_project(tmp_path: Path) -> Project:
     """A project with no planted vulnerabilities."""
-    (tmp_path / "main.py").write_text(
-        "def add(a, b):\n    return a + b\n", encoding="utf-8"
-    )
+    (tmp_path / "main.py").write_text("def add(a, b):\n    return a + b\n", encoding="utf-8")
     return Project.from_path(tmp_path)
 
 

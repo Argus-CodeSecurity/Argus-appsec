@@ -52,7 +52,7 @@ def _sys_admin_cap_lines(lines: list[str]) -> list[int]:
             if "SYS_ADMIN" in m.group("inline").upper():
                 out.append(idx + 1)
             continue
-        for item in lines[idx + 1:idx + 50]:
+        for item in lines[idx + 1 : idx + 50]:
             if not item.strip() or item.lstrip().startswith("#"):
                 continue
             im = _CAP_ITEM.match(item[:MAX_SCAN_LINE])
@@ -114,27 +114,51 @@ class ContainerScanner(Scanner):
     def _iter_compose(self, f) -> Iterable[Finding]:
         lines = f.lines()
         checks = [
-            (_PRIVILEGED, "container.privileged", Severity.HIGH,
-             "Privileged compose service", "Remove privileged: true."),
-            (_HOST_NETWORK, "container.host-network", Severity.HIGH,
-             "Compose service uses host network", "Use bridge networks."),
-            (_IMAGE_LATEST, "container.image-latest", Severity.LOW,
-             "Compose image uses :latest tag", "Pin image digest or version."),
-            (_SECRET_ENV, "container.env-secret", Severity.CRITICAL,
-             "Secret-like value in compose environment", "Use secrets/files, not plain env."),
+            (
+                _PRIVILEGED,
+                "container.privileged",
+                Severity.HIGH,
+                "Privileged compose service",
+                "Remove privileged: true.",
+            ),
+            (
+                _HOST_NETWORK,
+                "container.host-network",
+                Severity.HIGH,
+                "Compose service uses host network",
+                "Use bridge networks.",
+            ),
+            (
+                _IMAGE_LATEST,
+                "container.image-latest",
+                Severity.LOW,
+                "Compose image uses :latest tag",
+                "Pin image digest or version.",
+            ),
+            (
+                _SECRET_ENV,
+                "container.env-secret",
+                Severity.CRITICAL,
+                "Secret-like value in compose environment",
+                "Use secrets/files, not plain env.",
+            ),
         ]
         for lineno in _sys_admin_cap_lines(lines):
             yield self._finding(
-                f.rel_path, "container.cap-sys-admin", "CAP_SYS_ADMIN in compose",
-                Severity.HIGH, "Avoid granting SYS_ADMIN in compose services.",
-                lineno, "cap_add: SYS_ADMIN", 0,
+                f.rel_path,
+                "container.cap-sys-admin",
+                "CAP_SYS_ADMIN in compose",
+                Severity.HIGH,
+                "Avoid granting SYS_ADMIN in compose services.",
+                lineno,
+                "cap_add: SYS_ADMIN",
+                0,
             )
         for pattern, rule, sev, title, fix in checks:
             for lineno, line in enumerate(lines, start=1):
                 m = search_line(pattern, line)
                 if m:
-                    yield self._finding(f.rel_path, rule, title, sev, fix, lineno,
-                                        m.string, 0)
+                    yield self._finding(f.rel_path, rule, title, sev, fix, lineno, m.string, 0)
 
     def _iter_k8s(self, f) -> Iterable[Finding]:
         for lineno, line in enumerate(f.lines(), start=1):
@@ -142,17 +166,25 @@ class ContainerScanner(Scanner):
                 continue  # an image reference is never this long
             if _IMAGE_LATEST.search(line):
                 yield self._finding(
-                    f.rel_path, "container.k8s-image-latest",
-                    "Kubernetes workload uses :latest image tag", Severity.MEDIUM,
+                    f.rel_path,
+                    "container.k8s-image-latest",
+                    "Kubernetes workload uses :latest image tag",
+                    Severity.MEDIUM,
                     "Pin container images to a digest or immutable version tag.",
-                    lineno, line, 0,
+                    lineno,
+                    line,
+                    0,
                 )
             elif _IMAGE_NO_DIGEST.search(line) and "@" not in line:
                 yield self._finding(
-                    f.rel_path, "container.k8s-image-no-digest",
-                    "Kubernetes image reference has no digest", Severity.LOW,
+                    f.rel_path,
+                    "container.k8s-image-no-digest",
+                    "Kubernetes image reference has no digest",
+                    Severity.LOW,
                     "Prefer image@sha256:... for immutable deploys.",
-                    lineno, line, 0,
+                    lineno,
+                    line,
+                    0,
                 )
 
     def _iter_helm_values(self, f) -> Iterable[Finding]:
@@ -160,10 +192,14 @@ class ContainerScanner(Scanner):
             m = search_line(_SECRET_ENV, line)
             if m:
                 yield self._finding(
-                    f.rel_path, "container.helm-values-secret",
-                    "Secret-like value in Helm values", Severity.HIGH,
+                    f.rel_path,
+                    "container.helm-values-secret",
+                    "Secret-like value in Helm values",
+                    Severity.HIGH,
                     "Use Kubernetes secrets or external secret stores, not plain values.",
-                    lineno, m.string, 0,
+                    lineno,
+                    m.string,
+                    0,
                 )
 
     def _iter_dockerfile_extra(self, f) -> Iterable[Finding]:
@@ -171,10 +207,14 @@ class ContainerScanner(Scanner):
             m = search_line(_DOCKERFILE_ENV_SECRET, line)
             if m:
                 yield self._finding(
-                    f.rel_path, "container.dockerfile-env-secret",
-                    "Secret-like ENV in Dockerfile", Severity.HIGH,
+                    f.rel_path,
+                    "container.dockerfile-env-secret",
+                    "Secret-like ENV in Dockerfile",
+                    Severity.HIGH,
                     "Use runtime secrets or build-args from CI, not committed ENV.",
-                    lineno, m.string, 0,
+                    lineno,
+                    m.string,
+                    0,
                 )
 
     @staticmethod
@@ -185,7 +225,9 @@ class ContainerScanner(Scanner):
             scanner="container",
             title=title,
             description=fix,
-            location=Location(path=path, start_line=lineno, snippet=redact_line(line).strip()[:200]),
+            location=Location(
+                path=path, start_line=lineno, snippet=redact_line(line).strip()[:200]
+            ),
             severity=severity,
             confidence=Confidence.MEDIUM,
             likelihood=Likelihood.POSSIBLE,

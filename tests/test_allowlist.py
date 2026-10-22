@@ -29,33 +29,57 @@ def test_no_allowlist_reports(tmp_path):
 
 
 def test_allow_by_rule_and_path(tmp_path):
-    assert not _has_shell(_scan(tmp_path, [
-        {"rule": "python-shell-true", "path": "deploy.py", "reason": "trusted"}]))
+    assert not _has_shell(
+        _scan(tmp_path, [{"rule": "python-shell-true", "path": "deploy.py", "reason": "trusted"}])
+    )
 
 
 def test_allow_requires_reason(tmp_path):
-    assert _has_shell(_scan(tmp_path, [
-        {"rule": "python-shell-true", "path": "deploy.py"}]))
+    assert _has_shell(_scan(tmp_path, [{"rule": "python-shell-true", "path": "deploy.py"}]))
 
 
 def test_allow_wrong_path_does_not_match(tmp_path):
-    assert _has_shell(_scan(tmp_path, [
-        {"rule": "python-shell-true", "path": "other.py", "reason": "x"}]))
+    assert _has_shell(
+        _scan(tmp_path, [{"rule": "python-shell-true", "path": "other.py", "reason": "x"}])
+    )
 
 
 def test_allow_path_glob(tmp_path):
-    assert not _has_shell(_scan(tmp_path, [
-        {"rule": "python-shell-true", "path": "*.py", "reason": "x"}]))
+    assert not _has_shell(
+        _scan(tmp_path, [{"rule": "python-shell-true", "path": "*.py", "reason": "x"}])
+    )
 
 
 def test_allow_expired_resurfaces(tmp_path):
-    assert _has_shell(_scan(tmp_path, [
-        {"rule": "python-shell-true", "path": "deploy.py", "reason": "x", "until": "2000-01-01"}]))
+    assert _has_shell(
+        _scan(
+            tmp_path,
+            [
+                {
+                    "rule": "python-shell-true",
+                    "path": "deploy.py",
+                    "reason": "x",
+                    "until": "2000-01-01",
+                }
+            ],
+        )
+    )
 
 
 def test_allow_future_until_suppresses(tmp_path):
-    assert not _has_shell(_scan(tmp_path, [
-        {"rule": "python-shell-true", "path": "deploy.py", "reason": "x", "until": "2099-01-01"}]))
+    assert not _has_shell(
+        _scan(
+            tmp_path,
+            [
+                {
+                    "rule": "python-shell-true",
+                    "path": "deploy.py",
+                    "reason": "x",
+                    "until": "2099-01-01",
+                }
+            ],
+        )
+    )
 
 
 def test_allow_entry_matching_everything_is_rejected(tmp_path):

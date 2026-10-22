@@ -52,20 +52,28 @@ def test_package_json_keeps_valid_entries_next_to_bad_ones():
     assert _parse_package_json(HOSTILE_PACKAGE_JSON[0]) == [("ok", "1.2.3")]
 
 
-@pytest.mark.parametrize("text", [
-    '{"default": ["requests"], "develop": 3}',
-    '{"default": {"requests": {"version": 2}}, "develop": {"x": "==1.0"}}',
-    DEEP,
-], ids=["list-and-int", "int-version", "deep"])
+@pytest.mark.parametrize(
+    "text",
+    [
+        '{"default": ["requests"], "develop": 3}',
+        '{"default": {"requests": {"version": 2}}, "develop": {"x": "==1.0"}}',
+        DEEP,
+    ],
+    ids=["list-and-int", "int-version", "deep"],
+)
 def test_pipfile_lock_wrong_types(text):
     _parse_pipfile_lock(text)
 
 
-@pytest.mark.parametrize("text", [
-    '{"packages": 5, "packages-dev": {"a": 1}}',
-    '{"packages": [{"name": ["x"], "version": "1.0"}, {"name": "ok/pkg", "version": "v2.0"}]}',
-    DEEP,
-], ids=["wrong-sections", "list-name", "deep"])
+@pytest.mark.parametrize(
+    "text",
+    [
+        '{"packages": 5, "packages-dev": {"a": 1}}',
+        '{"packages": [{"name": ["x"], "version": "1.0"}, {"name": "ok/pkg", "version": "v2.0"}]}',
+        DEEP,
+    ],
+    ids=["wrong-sections", "list-name", "deep"],
+)
 def test_composer_lock_wrong_types(text):
     pairs = _parse_composer_lock(text)
     assert all(isinstance(n, str) for n, _ in pairs)
@@ -127,10 +135,14 @@ def test_provenance_wrong_types(tmp_path):
     files["bom.provenance.json"] = "﻿" + json.dumps(docs[0])
     ctx = ScannerContext(project=_project(tmp_path, files), config=Config())
     findings = list(ProvenanceScanner().scan(ctx))
-    missing = {f.location.path for f in findings
-               if f.rule_id == "provenance.missing-builder-id"}
-    assert {"provenance0.json", "provenance1.json", "provenance2.json",
-            "deep.intoto.jsonl", "bom.provenance.json"} <= missing
+    missing = {f.location.path for f in findings if f.rule_id == "provenance.missing-builder-id"}
+    assert {
+        "provenance0.json",
+        "provenance1.json",
+        "provenance2.json",
+        "deep.intoto.jsonl",
+        "bom.provenance.json",
+    } <= missing
 
 
 def test_openapi_wrong_types(tmp_path):
