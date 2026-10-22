@@ -44,7 +44,9 @@ def test_unknown_tool_is_reported_in_band():
     assert resp["result"]["isError"] is True
 
 
-def test_scan_tool_returns_structured_findings(vulnerable_project):
+def test_scan_tool_returns_structured_findings(vulnerable_project, monkeypatch):
+    # The tool only scans inside its allowed roots (default: the working directory).
+    monkeypatch.setenv("ARGUS_MCP_ROOTS", str(vulnerable_project.root))
     resp = handle_request({
         "jsonrpc": "2.0", "id": 5, "method": "tools/call",
         "params": {"name": "argus_scan",
