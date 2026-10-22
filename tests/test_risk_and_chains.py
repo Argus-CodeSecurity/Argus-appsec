@@ -31,7 +31,7 @@ def _aws_key_finding() -> Finding:
     key = "AKIA" + "ABCDEFGHIJKLMNOP"
     finding = SecretsScanner()._make_finding(
         rule_id="aws-access-key-id", index=1, path="cfg.py", lineno=1,
-        line=f"key = '{key}'", matched=key, severity=Severity.CRITICAL,
+        line=f"key = '{key}'", severity=Severity.CRITICAL,
         confidence=Confidence.HIGH,
         title="Hardcoded credential: aws access key id",
     )
