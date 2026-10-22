@@ -14,6 +14,7 @@ scanners and agents can consult it instead of re-deriving it.
 from __future__ import annotations
 
 import re
+from functools import lru_cache
 from typing import Any
 
 from argus.analysis.languages import detect_language
@@ -81,6 +82,23 @@ _AUTH_PATTERNS = (
     r"@login_required", r"authorize", r"Authentication", r"bcrypt",
     r"session\[", r"Bearer ",
 )
+
+
+@lru_cache(maxsize=256)
+def _needle_re(needle: str) -> re.Pattern[str]:
+    """Match ``needle`` as the start of a dependency-name word.
+
+    The needle must not follow a letter or digit ("pg" must not match "jpg"
+    or "upgrade"). Short needles (under 5 characters) must also end the word
+    ("pg" matches "pg", "pg-pool" and "pg8000" but not "pgpy"); longer ones
+    may be a prefix ("psycopg" matches "psycopg2-binary").
+    """
+    tail = r"(?![A-Za-z])" if len(needle) < 5 else ""
+    return re.compile(r"(?<![A-Za-z0-9])" + re.escape(needle) + tail)
+
+
+def _has_needle(needle: str, text: str) -> bool:
+    return _needle_re(needle).search(text) is not None
 
 
 class RepositoryAnalyzer:
@@ -186,8 +204,8 @@ class RepositoryAnalyzer:
         found: list[str] = []
         deps_joined = " ".join(deps)
         for label, needles in signs.items():
-            if any(n.lower() in deps_joined for n in needles) or \
-               any(n in source for n in needles):
+            if any(_has_needle(n.lower(), deps_joined) for n in needles) or \
+               any(_has_needle(n, source) for n in needles):
                 found.append(label)
         return found
 
@@ -196,7 +214,7 @@ class RepositoryAnalyzer:
         found: list[str] = []
         deps_joined = " ".join(deps)
         for name, (dep_needles, src_regexes) in _FRAMEWORK_SIGNS.items():
-            if any(n.lower() in deps_joined for n in dep_needles) or \
+            if any(_has_needle(n.lower(), deps_joined) for n in dep_needles) or \
                any(re.search(rx, source) for rx in src_regexes):
                 found.append(name)
         return found
