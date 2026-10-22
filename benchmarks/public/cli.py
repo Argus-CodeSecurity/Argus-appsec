@@ -62,7 +62,7 @@ def _write_findings(dataset: str, tool: str, meta: dict, found: list[scoring.Fin
     path = _findings_path(dataset, tool)
     path.parent.mkdir(parents=True, exist_ok=True)
     body = {"meta": meta, "columns": ["file", "line", "rule_id", "cwes"], "findings": rows}
-    path.write_text(json.dumps(body, indent=1) + "\n", encoding="utf-8")
+    path.write_text(json.dumps(body, indent=1) + "\n", encoding="utf-8", newline="\n")
 
 
 def _read_findings(dataset: str, tool: str) -> tuple[dict, list[scoring.Finding]] | None:
@@ -209,7 +209,7 @@ def run_dataset(name: str, wanted: list[str], args: argparse.Namespace) -> dict 
         "tools": results,
     }
     RESULTS.mkdir(parents=True, exist_ok=True)
-    out_path.write_text(json.dumps(doc, indent=2) + "\n", encoding="utf-8")
+    out_path.write_text(json.dumps(doc, indent=2) + "\n", encoding="utf-8", newline="\n")
     print(f"  wrote {out_path.relative_to(BENCH.parent)}")
     return doc
 

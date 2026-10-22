@@ -156,5 +156,6 @@ def write_summary(results_dir: Path) -> Path:
         else:
             lines += recall_section(doc)
     out = results_dir / "SUMMARY.md"
-    out.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
+    # LF on every platform so a re-run on Windows does not rewrite every line.
+    out.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8", newline="\n")
     return out
