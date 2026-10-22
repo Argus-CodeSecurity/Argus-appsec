@@ -6,7 +6,7 @@ version bump, and what may change at any time. Argus follows
 [Semantic Versioning](https://semver.org/).
 
 > **0.x note.** Argus is in early alpha (0.x). Under SemVer, 0.x makes no strong
-> stability guarantees, so during 0.x a *minor* bump (0.x → 0.(x+1)) may include a
+> stability guarantees, so during 0.x a *minor* bump (0.x to 0.(x+1)) may include a
 > breaking change. We still document breaks in the [CHANGELOG](CHANGELOG.md) and
 > avoid them where we can, and we apply the policy below as if it were already 1.0
 > so the transition to 1.0 is boring.

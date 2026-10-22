@@ -1,4 +1,4 @@
-// Argus Dashboard — theme persistence + client-side findings filter. No deps.
+// Argus dashboard: theme persistence + client-side findings filter. No deps.
 (function () {
   // --- theme toggle -------------------------------------------------------
   var root = document.documentElement;

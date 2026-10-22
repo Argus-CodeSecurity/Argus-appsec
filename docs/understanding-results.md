@@ -1,8 +1,8 @@
 # Understanding your scan results
 
-Argus gives you **measurable security signals**, not a simple “secure / insecure”
-badge. This page explains every number and status a user sees — in the terminal,
-in CI, and in Argus Cloud — so you can decide whether your project meets **your**
+Argus gives you **measurable security signals**, not a simple "secure / insecure"
+badge. This page explains every number and status a user sees (in the terminal,
+in CI, and in Argus Cloud) so you can decide whether your project meets **your**
 policy.
 
 !!! tip "The one-minute version"
@@ -12,12 +12,12 @@ policy.
 
 ---
 
-## What “secure” means with Argus
+## What "secure" means with Argus
 
 Security is **posture**, not perfection. Argus answers:
 
-> “Given the checks we can run on this target, are there issues at or above the
-> severity my team cares about — and are we getting better or worse?”
+> "Given the checks we can run on this target, are there issues at or above the
+> severity my team cares about, and are we getting better or worse?"
 
 A **passing** scan does **not** guarantee:
 
@@ -52,7 +52,7 @@ After every scan you see a box like this:
 | Field | What it means | How to use it |
 |-------|---------------|---------------|
 | **Target name** | Project or path scanned | Groups history in the dashboard |
-| **Aggregate risk** | Single 0–100 headline score | Trend over time; **lower is better** |
+| **Aggregate risk** | Single 0 to 100 headline score | Trend over time; **lower is better** |
 | **Findings** | Total count after filters | Volume indicator, not the only metric |
 | **Critical / High / …** | Count per severity band | Most teams gate on **Critical + High** |
 
@@ -65,29 +65,29 @@ Failing: findings at/above High.
 and exits with code **1** (see [Exit codes](#exit-codes)).
 
 After the findings table, Argus prints a **Security posture** panel summarizing
-pass/fail, what to fix first, and your risk score — so you do not have to
+pass/fail, what to fix first, and your risk score, so you do not have to
 interpret raw numbers alone.
 
 ---
 
-## Risk score (0–100)
+## Risk score (0 to 100)
 
 Each finding has its own risk score. The **aggregate risk** for the whole scan
 is computed from all findings:
 
-- The **worst finding sets the floor** — one Critical dominates many Low items.
+- The **worst finding sets the floor**: one Critical dominates many Low items.
 - Additional findings nudge the score up slightly (volume matters, but less than severity).
 - **0** = no findings. **100** = worst-case stack of issues.
 
 | Score range | Typical meaning |
 |-------------|-----------------|
-| **0–20** | Clean or only Low/Info noise |
-| **21–50** | Medium issues present; review when convenient |
-| **51–80** | High-severity issues; fix before release |
-| **81–100** | Critical or many High issues; treat as urgent |
+| **0 to 20** | Clean or only Low/Info noise |
+| **21 to 50** | Medium issues present; review when convenient |
+| **51 to 80** | High-severity issues; fix before release |
+| **81 to 100** | Critical or many High issues; treat as urgent |
 
-Compare **your score to your last scan**, not to an abstract “perfect 0”. A
-team that went from 85 → 40 is improving even if 40 is not zero.
+Compare **your score to your last scan**, not to an abstract "perfect 0". A
+team that went from 85 to 40 is improving even if 40 is not zero.
 
 ---
 
@@ -107,10 +107,10 @@ Your **gate** is your choice. Common defaults:
 # Block on High and Critical (most teams)
 argus scan . --fail-on high
 
-# Stricter — also block Medium
+# Stricter: also block Medium
 argus scan . --fail-on medium
 
-# Report only — never fail the command
+# Report only: never fail the command
 argus scan .
 ```
 
@@ -136,7 +136,7 @@ Full CI details: [CI/CD integration](ci-cd.md).
 
 ---
 
-## How different users know they are “OK”
+## How different users know they are "OK"
 
 ### Developer (terminal)
 
@@ -167,13 +167,13 @@ argus scan . --audience auditor  # CWE / OWASP taxonomy for evidence
 | CI status | Meaning |
 |-----------|---------|
 | Green check | No High+ findings in that commit |
-| Red build | High or Critical present — merge blocked |
+| Red build | High or Critical present; merge blocked |
 
 ### Team lead (Argus Cloud dashboard)
 
-After `argus push`, open **Dashboard → Overview**:
+After `argus push`, open **Dashboard > Overview**:
 
-| Widget | “Good” signal |
+| Widget | "Good" signal |
 |--------|----------------|
 | **Critical findings** | **0** |
 | **Severity donut** | No growing red/orange slice |
@@ -182,7 +182,7 @@ After `argus push`, open **Dashboard → Overview**:
 
 Open **Scan detail** for one run:
 
-| Section | “Good” signal |
+| Section | "Good" signal |
 |---------|----------------|
 | **Risk score** | Lower than previous scan on same target |
 | **Drift since previous scan** | **New findings: 0** (no regression) |
@@ -190,12 +190,12 @@ Open **Scan detail** for one run:
 
 ### Security / compliance (export)
 
-Paid Argus Cloud plans: **Dashboard → Compliance** exports CSV/JSON with
+Paid Argus Cloud plans: **Dashboard > Compliance** exports CSV/JSON with
 findings, severities, CWEs, and timestamps for auditors.
 
 ---
 
-## Drift — are you getting better or worse?
+## Drift: are you getting better or worse?
 
 One scan is a snapshot. **Drift** compares two snapshots:
 
@@ -208,8 +208,8 @@ argus drift before.json after.json --fail-on high
 
 | Drift column | Meaning |
 |--------------|---------|
-| **Added** | New findings since last scan — investigate |
-| **Removed** | Fixed since last scan — good |
+| **Added** | New findings since last scan; investigate |
+| **Removed** | Fixed since last scan; good |
 | **Severity changed** | Same issue, different priority |
 
 Continuous monitoring:
@@ -228,9 +228,9 @@ you push consecutive scans for the same target.
 
 Not every alert is a bug. Use:
 
-- **`allow:` in `.argus.yml`** — documented suppressions with optional expiry
-- **`# argus-ignore:` comments** — inline, with required reason
-- **Dashboard → Exceptions** (Argus Cloud) — org-wide VEX by fingerprint
+- **`allow:` in `.argus.yml`**: documented suppressions with optional expiry
+- **`# argus-ignore:` comments**: inline, with required reason
+- **Dashboard > Exceptions** (Argus Cloud): org-wide VEX by fingerprint
 
 See [Triage & baselines](triage.md) for full syntax.
 
@@ -274,13 +274,13 @@ exclude_paths:
 
 ---
 
-## Practical checklist: “Am I secure enough?”
+## Practical checklist: "Am I secure enough?"
 
 Use this after every release candidate:
 
 ```
-[ ] argus scan . --fail-on high          → exit 0
-[ ] Critical count = 0, High count = 0   → in terminal summary
+[ ] argus scan . --fail-on high          -> exit 0
+[ ] Critical count = 0, High count = 0   -> in terminal summary
 [ ] CI Argus job green on main branch
 [ ] Dashboard: no new High+ drift since last deploy
 [ ] Known false positives documented in allow: or Exceptions
@@ -291,7 +291,7 @@ Use this after every release candidate:
 
 ## Example scenarios
 
-### Scenario A — Clean OSS project
+### Scenario A: Clean OSS project
 
 ```
 Aggregate risk: 44.9/100   Findings: 26
@@ -300,9 +300,9 @@ Exit: 0
 ```
 
 **Verdict:** Passes `--fail-on high`. Medium items (e.g. unpinned GitHub Actions)
-are hygiene — fix when convenient, not release blockers unless you gate on Medium.
+are hygiene: fix when convenient, not release blockers unless you gate on Medium.
 
-### Scenario B — App with open High issues
+### Scenario B: App with open High issues
 
 ```
 Aggregate risk: 99.7/100   Findings: 47
@@ -314,7 +314,7 @@ Exit: 1
 **Verdict:** Does **not** meet the standard High gate. Triage Critical first,
 then High CVEs and secrets. Re-scan until exit 0.
 
-### Scenario C — Whole monorepo scanned by mistake
+### Scenario C: Whole monorepo scanned by mistake
 
 Scanning a parent folder that contains benchmark apps, examples, and tests will
 inflate counts dramatically. **Scan each deployable app separately**, or use
@@ -328,7 +328,7 @@ inflate counts dramatically. **Scan each deployable app separately**, or use
 |----------|---------------|
 | Did I pass my policy? | Exit code + `Failing:` line + Critical/High counts |
 | How bad is it overall? | Aggregate risk score (trend, not absolute) |
-| What regressed? | `argus drift` or Cloud scan detail → Drift |
+| What regressed? | `argus drift` or Cloud scan detail > Drift |
 | What should I fix first? | Table sorted by severity; `--audience exec` for top 5 |
 | How do I reduce noise? | [Triage & baselines](triage.md) |
 | How do I gate CI? | [CI/CD integration](ci-cd.md) |
@@ -338,8 +338,8 @@ inflate counts dramatically. **Scan each deployable app separately**, or use
 
 ## Related pages
 
-- [Triage & baselines](triage.md) — baselines, allowlists, exclusions
-- [CI/CD integration](ci-cd.md) — GitHub Action, exit codes, SARIF
-- [Drift detection](drift.md) — compare scans over time
-- [Web dashboard](dashboard.md) — local scan history (optional extra)
-- [Scanners & coverage](scanners.md) — what each scanner detects
+- [Triage & baselines](triage.md): baselines, allowlists, exclusions
+- [CI/CD integration](ci-cd.md): GitHub Action, exit codes, SARIF
+- [Drift detection](drift.md): compare scans over time
+- [Web dashboard](dashboard.md): local scan history (optional extra)
+- [Scanners & coverage](scanners.md): what each scanner detects

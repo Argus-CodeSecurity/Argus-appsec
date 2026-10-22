@@ -338,7 +338,7 @@ class _JsAnalyzer:
         fn_text = self._text(fn)
         sink = next((s for s in CALL_SINKS if s.fn.search(fn_text)), None)
         if sink is None:
-            # child_process.exec — not RegExp.prototype.exec
+            # child_process.exec, not RegExp.prototype.exec
             if fn.type == "member_expression" and self._text(fn).endswith(".exec"):
                 obj = fn.child_by_field_name("object")
                 obj_text = self._text(obj) if obj else ""

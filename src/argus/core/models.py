@@ -222,7 +222,7 @@ class Finding(BaseModel):
         return f"{self.rule_id}|{self.location.path}|L{self.location.start_line}"
 
     def risk_score(self) -> float:
-        """A 0–100 score combining severity, confidence, and likelihood.
+        """A 0 to 100 score combining severity, confidence, and likelihood.
 
         Used for ranking and for the aggregate risk number. The weighting favors
         severity while letting confidence and likelihood modulate.
@@ -265,7 +265,7 @@ class ScanResult(BaseModel):
         return counts
 
     def aggregate_risk(self) -> float:
-        """A single 0–100 risk number for the whole target.
+        """A single 0 to 100 risk number for the whole target.
 
         Not a mean, a single critical should dominate a pile of lows. We take a
         softmax-ish blend: the worst finding sets the floor, volume nudges it up.

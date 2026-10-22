@@ -131,7 +131,7 @@ def sbom(
                 err_console.print(f"[red]Error:[/red] {exc}")
                 raise typer.Exit(1) from exc
             console.print(
-                f"[green]SBOM uploaded[/green] ({count} components) → {resp.get('url', 'dashboard')}"
+                f"[green]SBOM uploaded[/green] ({count} components): {resp.get('url', 'dashboard')}"
             )
         elif output:
             output.write_text(text, encoding="utf-8")

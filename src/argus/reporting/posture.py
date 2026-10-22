@@ -1,4 +1,4 @@
-"""Security posture summary — plain-language interpretation of scan results.
+"""Security posture summary: plain-language interpretation of scan results.
 
 Helps users answer: "Am I secure enough?" without reading every finding.
 """
@@ -58,7 +58,7 @@ def evaluate_posture(
             headline="No findings at or above the configured severity.",
             bullets=(
                 "Nothing matched the active scanners at your min-severity threshold.",
-                "A clean scan means these checks found nothing — not that every "
+                "A clean scan means these checks found nothing, not that every "
                 "possible attack is ruled out.",
                 "Keep scanning in CI and compare drift on the next change.",
             ),
@@ -69,7 +69,7 @@ def evaluate_posture(
     bullets: tuple[str, ...]
     if gate_failed:
         status = PostureStatus.FAIL
-        headline = f"Does not meet your {gate} gate — fix before merge or deploy."
+        headline = f"Does not meet your {gate} gate; fix before merge or deploy."
         bullets = (
             f"Critical: {critical}, High: {high}, Medium: {medium}, Low: {low}.",
             "Address Critical and High findings first (secrets, RCE, serious CVEs).",
@@ -79,18 +79,18 @@ def evaluate_posture(
         )
     elif critical > 0 or high > 0:
         status = PostureStatus.REVIEW
-        headline = "High-severity issues found — review before release."
+        headline = "High-severity issues found; review before release."
         bullets = (
             f"Critical: {critical}, High: {high}. No --fail-on gate is active.",
             "Add --fail-on high in CI to block merges automatically.",
-            f"Aggregate risk {risk}/100 — lower is better; track trend over time.",
+            f"Aggregate risk {risk}/100 (lower is better; track the trend over time).",
         )
     elif medium > 0 or low > 0:
         status = PostureStatus.PASS if fail_on else PostureStatus.REVIEW
         if fail_on and not gate_failed:
-            headline = f"Meets your {gate} gate — only lower-severity items remain."
+            headline = f"Meets your {gate} gate; only lower-severity items remain."
         else:
-            headline = "No Critical or High findings — hygiene items may remain."
+            headline = "No Critical or High findings; hygiene items may remain."
         bullets = (
             f"Medium: {medium}, Low: {low}. Schedule fixes when convenient.",
             f"Aggregate risk {risk}/100.",
@@ -102,7 +102,7 @@ def evaluate_posture(
         bullets = ("Re-scan after your next change or in CI.",)
 
     if result.errors:
-        bullets = (*bullets, "Warning: one or more scanners failed — coverage may be incomplete.")
+        bullets = (*bullets, "Warning: one or more scanners failed; coverage may be incomplete.")
 
     return PostureSummary(
         status=status,

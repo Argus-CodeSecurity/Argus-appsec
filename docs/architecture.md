@@ -21,7 +21,7 @@ well-defined object to the next.
                                     ▼
                          [ Scanner.scan(ctx) ]*   ──▶  Finding[]
                                     │
-              agents (per finding)  │  EnrichmentAgent → AttackSimulationAgent → PatchAgent
+              agents (per finding)  │  EnrichmentAgent -> AttackSimulationAgent -> PatchAgent
                                     ▼
                               ScanResult
                                     │
@@ -67,7 +67,7 @@ location, severity, and taxonomy (CWE/OWASP). The reasoning fields
 completed later by an agent. This split is what lets a simple regex scanner and a
 sophisticated AI agent contribute to the same finding without coupling.
 
-`risk_score()` blends severity, confidence, and likelihood into a 0–100 number;
+`risk_score()` blends severity, confidence, and likelihood into a 0 to 100 number;
 `ScanResult.aggregate_risk()` rolls findings up into a single target score that is
 dominated by the worst finding rather than averaged.
 
@@ -153,7 +153,7 @@ failing the scan.
 
 ## Error handling philosophy
 
-A scan should be robust to a single broken component. A scanner that raises is
+A single broken component must not stop a scan. A scanner that raises is
 recorded in `ScanResult.errors` and the scan continues. An agent that fails on a
 finding falls back to heuristic enrichment for that finding. The goal is that
 `argus scan` always produces a usable report.

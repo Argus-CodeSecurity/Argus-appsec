@@ -18,11 +18,11 @@ the detection no longer fires. Current rewrites:
 
 | Rule | Change |
 |------|--------|
-| `patterns.python-yaml-load` | `yaml.load(...)` → `yaml.safe_load(...)` |
-| `patterns.weak-hash-md5-sha1` | MD5 / SHA-1 → SHA-256 |
+| `patterns.python-yaml-load` | `yaml.load(...)` to `yaml.safe_load(...)` |
+| `patterns.weak-hash-md5-sha1` | MD5 / SHA-1 to SHA-256 |
 | `patterns.python-shell-true` | remove `shell=True` from `subprocess` calls |
 | `patterns.tls-verify-disabled` | re-enable certificate verification |
-| `patterns.flask-debug-true` | `debug=True` → `debug=False` |
+| `patterns.flask-debug-true` | `debug=True` to `debug=False` |
 
 Findings without a deterministic rewrite are left for you to fix manually (the
 scan report still explains them and, with an AI provider, can suggest a patch).

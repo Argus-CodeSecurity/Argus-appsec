@@ -98,11 +98,11 @@ def describe_symbol_verdict(verdict: str) -> str:
     if verdict == SYMBOL_REACHABLE:
         return (
             "Reachability (symbol-level, experimental): vulnerable symbol usage "
-            "detected in first-party code — treat as likely affected."
+            "detected in first-party code; treat as likely affected."
         )
     if verdict == IMPORT_ONLY:
         return (
             "Reachability (symbol-level): package is imported but no affected "
-            "symbol usage was found — lower priority, not proof of safety."
+            "symbol usage was found; lower priority, not proof of safety."
         )
     return ""

@@ -142,7 +142,7 @@ Argus scans source code with two complementary scanners:
 - **`ast-python`** and **`ast-js`** (optional), tree-sitter data-flow analyzers
   for **Python** and **JavaScript/TypeScript** that track tainted values through
   *multiple* variable hops, so they catch injection the regex tier misses
-  (e.g. `x = req.query.id` → `y = x` → `db.query('... ' + y)`). They also avoid
+  (e.g. `x = req.query.id`, then `y = x`, then `db.query('... ' + y)`). They also avoid
   the regex tier's common false positives: a **parameterized query**
   (`db.query('... WHERE id = ?', [id])`) and **sanitized** values
   (`DOMPurify.sanitize(...)`, `Number(...)`, `secure_filename(...)`) are treated

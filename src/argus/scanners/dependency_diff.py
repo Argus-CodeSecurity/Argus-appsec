@@ -32,7 +32,7 @@ def _change_finding(change: PackageChange, counter: int) -> Finding:
     else:
         title = (
             f"Dependency version changed: {change.package} "
-            f"{change.old_version} → {change.new_version}"
+            f"{change.old_version} -> {change.new_version}"
         )
         severity = Severity.MEDIUM
         why = "Version changes can introduce new vulnerabilities or malicious behavior."
@@ -96,7 +96,7 @@ def _behavior_findings(change: PackageChange, counter: int, *, timeout: float,
             scanner="dependency-diff",
             title=f"Behavioral anomaly in {change.package} version update",
             description=(
-                f"{change.package} {change.old_version} → {change.new_version}: {anomaly}."
+                f"{change.package} {change.old_version} -> {change.new_version}: {anomaly}."
             ),
             location=Location(path=change.manifest, snippet=anomaly),
             severity=Severity.CRITICAL,

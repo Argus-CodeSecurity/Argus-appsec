@@ -144,14 +144,14 @@ class HTMLReporter(Reporter):
         items = "".join(f"<li><strong>{label}:</strong> {_esc(val)}</li>"
                         for label, val in rows if val)
         return f"""
-    <details class="sim"><summary>🎯 Attack simulation</summary>
+    <details class="sim"><summary>Attack simulation</summary>
       <ul>{items}</ul>
     </details>"""
 
     def _remediation(self, rem) -> str:
         patch = ""
         if rem.patch:
-            status = "verified ✓" if rem.verified else "proposed"
+            status = "verified" if rem.verified else "proposed"
             patch = (f'<div class="patch-status">Patch ({status})</div>'
                      f'<pre class="patch">{_esc(rem.patch)}</pre>')
         guidance = (f"<p>{_esc(rem.guidance)}</p>"

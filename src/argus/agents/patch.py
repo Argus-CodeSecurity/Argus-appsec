@@ -4,7 +4,7 @@ Proposes a concrete fix as a unified diff and, where possible, verifies it. Two
 paths:
 
 * **Deterministic rewrites** for a set of well-understood rules (e.g. unsafe
-  ``yaml.load`` → ``yaml.safe_load``). These are self-verifying: Argus re-runs the
+  ``yaml.load`` to ``yaml.safe_load``). These are self-verifying: Argus re-runs the
   triggering pattern against the rewritten line and only marks the patch
   ``verified`` if the detection no longer fires, a fast, local proxy for "the fix
   resolves the issue without obviously breaking the line".

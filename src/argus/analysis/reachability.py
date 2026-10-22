@@ -10,7 +10,7 @@ directories are already excluded by the project walker).
 Deliberately heuristic and honest about it:
 
 * It matches *top-level module names*, mapping distribution names to import
-  names (``pyyaml`` → ``yaml``) via normalization plus a small alias table.
+  names (``pyyaml`` to ``yaml``) via normalization plus a small alias table.
 * "Imported" does **not** prove the vulnerable function is called (that is the
   call-graph tier, planned); "not imported" can be wrong for dynamic imports
   (``importlib``, plugins) or an unmapped import alias. Verdicts therefore
