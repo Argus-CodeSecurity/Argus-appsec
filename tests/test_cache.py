@@ -97,3 +97,29 @@ def test_remote_projects_are_never_cached(vulnerable_project, monkeypatch):
     vulnerable_project.origin = "github"
     engine = ScanEngine(Config())
     assert engine._open_cache(vulnerable_project) is None
+
+
+def test_changed_argus_code_invalidates_the_cache(tmp_path, monkeypatch):
+    # A rule edit in a source checkout changes the code fingerprint but not
+    # __version__; cached findings from the old rule must not be reused.
+    from argus.core import cache as cache_mod
+    from argus.core.models import Finding, Location, Severity
+
+    monkeypatch.setenv("ARGUS_CACHE_DIR", str(tmp_path / "cache"))
+    finding = Finding(
+        id="r:1",
+        rule_id="r",
+        scanner="patterns",
+        title="t",
+        description="",
+        severity=Severity.LOW,
+        location=Location(path="a.py", start_line=1),
+    )
+    monkeypatch.setattr(cache_mod, "code_fingerprint", lambda: "old-rules")
+    first = cache_mod.ScanCache(tmp_path, "0.9.0")
+    first.store("patterns@x", "a.py@y", [finding])
+    first.save()
+    assert cache_mod.ScanCache(tmp_path, "0.9.0").lookup("patterns@x", "a.py@y")
+
+    monkeypatch.setattr(cache_mod, "code_fingerprint", lambda: "new-rules")
+    assert cache_mod.ScanCache(tmp_path, "0.9.0").lookup("patterns@x", "a.py@y") is None

@@ -32,7 +32,7 @@ def test_concurrent_saves_leave_a_valid_cache(tmp_path: Path, monkeypatch) -> No
     files = sorted(p.name for p in cache_dir.iterdir())
     assert len(files) == 1 and files[0].endswith(".json"), files  # no stray .tmp
     blob = json.loads((cache_dir / files[0]).read_text(encoding="utf-8"))
-    assert blob["argus"] == "test"
+    assert blob["argus"].startswith("test+")  # version plus code fingerprint
 
 
 def test_ci_profile_disables_cache(tmp_path: Path) -> None:

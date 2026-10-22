@@ -11,8 +11,10 @@ Correctness properties:
 
 * Keyed by **content hash**, never by mtime, a file restored to a previous
   state hits the cache, an edited file never does.
-* The Argus version and the scanner's options are part of the key, so a rule
-  update or a config change invalidates cleanly.
+* The Argus version, a fingerprint of the installed Argus code, and the
+  scanner's options are part of the key, so a rule update or a config change
+  invalidates cleanly, including in a source checkout where rules change
+  without a version bump.
 * Cross-file analyses (dependency/OSV lookups have their own cache; future
   cross-file taint) are never cached here, only scanners that declare
   themselves ``file_local``.
@@ -27,6 +29,7 @@ with ``ARGUS_CACHE_DIR``) and can be disabled with ``--no-cache`` or
 from __future__ import annotations
 
 import contextlib
+import functools
 import hashlib
 import json
 import logging
@@ -45,6 +48,27 @@ def _cache_dir() -> Path:
     override = os.environ.get("ARGUS_CACHE_DIR")
     base = Path(override) if override else Path.home() / ".cache" / "argus"
     return base / "scan"
+
+
+@functools.lru_cache(maxsize=1)
+def code_fingerprint() -> str:
+    """A short digest of the installed Argus source files (path, size, mtime).
+
+    Scanner rules live in code, so a changed rule must invalidate cached
+    findings even when ``__version__`` is unchanged, as in an editable install.
+    Stat-only, computed once per process.
+    """
+    package = Path(__file__).resolve().parent.parent
+    h = hashlib.sha256()
+    for path in sorted(package.rglob("*")):
+        if path.suffix not in (".py", ".json", ".yml", ".yaml") or "__pycache__" in path.parts:
+            continue
+        try:
+            st = path.stat()
+        except OSError:
+            continue
+        h.update(f"{path.relative_to(package).as_posix()}:{st.st_size}:{st.st_mtime_ns}\n".encode())
+    return h.hexdigest()[:12]
 
 
 def file_key(rel_path: str, text: str) -> str:
@@ -70,7 +94,7 @@ class ScanCache:
     def __init__(self, project_root: Path, argus_version: str) -> None:
         digest = hashlib.sha256(str(project_root).encode("utf-8")).hexdigest()[:24]
         self.path = _cache_dir() / f"{digest}.json"
-        self.version = argus_version
+        self.version = f"{argus_version}+{code_fingerprint()}"
         self._entries: dict[str, dict[str, list[dict]]] = {}
         self._dirty = False
         self._load()
