@@ -19,6 +19,7 @@ from pathlib import Path
 from argus.core.models import Finding
 from argus.remediation import git_ops
 from argus.remediation.hosting import RepoRef, post_issue_comment, post_pr_review
+from argus.reporting.md_escape import md_code, md_text
 
 # `@@ -old,+new @@` hunk header; we only need the new-side start and length.
 _HUNK = re.compile(r"^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@")
@@ -107,15 +108,19 @@ def changed_lines(root: str | Path, base: str, head: str = "HEAD") -> dict[str, 
 
 
 def finding_comment(f: Finding) -> dict:
-    """Build one inline GitHub review-comment payload for a finding."""
-    parts = [f"**Argus | {f.severity.label} · {f.title}**", f"`{f.rule_id}`"]
+    """Build one inline GitHub review-comment payload for a finding.
+
+    Everything interpolated comes from the scanned (possibly hostile) PR, so it
+    is escaped: no links, HTML or @mentions can ride along on the bot's token.
+    """
+    parts = [f"**Argus | {f.severity.label} · {md_text(f.title)}**", md_code(f.rule_id)]
     if f.why_vulnerable:
-        parts.append(f"\n{f.why_vulnerable}")
+        parts.append("\n" + md_text(f.why_vulnerable, multiline=True))
     if f.remediation and f.remediation.summary:
-        parts.append(f"\n**Fix:** {f.remediation.summary}")
+        parts.append(f"\n**Fix:** {md_text(f.remediation.summary)}")
     mapping = ", ".join(f.cwe + f.owasp)
     if mapping:
-        parts.append(f"\n_{mapping}_")
+        parts.append(f"\n_{md_text(mapping)}_")
     return {
         "path": f.location.path,
         "line": f.location.start_line,
@@ -159,8 +164,8 @@ def review_summary(total: int, inline_count: int, leftover: list[Finding]) -> st
             + (" Others are listed here:" if leftover else "")
         )
     for f in leftover:
-        lines.append(f"- **{f.severity.label}** `{f.rule_id}` "
-                     f"- {f.title} ({f.location.as_ref()})")
+        lines.append(f"- **{f.severity.label}** {md_code(f.rule_id)} "
+                     f"- {md_text(f.title)} ({md_code(f.location.as_ref())})")
     lines += ["", "_Only findings introduced by this PR are shown "
               "(diff-aware). Nothing was modified._"]
     return "\n".join(lines)

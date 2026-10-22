@@ -25,6 +25,7 @@ from argus.remediation.hosting import (
     open_pull_request,
     parse_remote,
 )
+from argus.reporting.md_escape import md_code, md_fence
 
 DEFAULT_BRANCH_NAME = "argus/security-fixes"
 
@@ -229,7 +230,8 @@ def _pr_body(report: ApplyReport) -> str:
         "|------|------|------|----------|",
     ]
     for f in report.fixes:
-        lines.append(f"| `{f.path}` | {f.line} | `{f.rule_id}` | "
+        lines.append(f"| {md_code(f.path, in_table=True)} | {f.line} | "
+                     f"{md_code(f.rule_id, in_table=True)} | "
                      f"{'yes' if f.verified else 'no'} |")
     lines += [
         "",
@@ -237,7 +239,7 @@ def _pr_body(report: ApplyReport) -> str:
         "",
     ]
     for f in report.fixes:
-        lines += ["```diff", f.unified_diff().rstrip(), "```", ""]
+        lines += [*md_fence(f.unified_diff().rstrip(), "diff"), ""]
     lines += [
         "</details>",
         "",
