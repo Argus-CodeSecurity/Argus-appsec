@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from pathlib import Path
+from typing import TypeVar
 
 import typer
+from rich.markup import escape
 from rich.table import Table
 
 from argus.cli._common import (
@@ -16,6 +19,22 @@ from argus.cli._common import (
 )
 from argus.cli._console import console, err_console
 from argus.cli.output import write_stdout
+
+_T = TypeVar("_T")
+
+
+def _diff_or_exit(diff: Callable[[Path, str], _T], root: Path, ref_spec: str) -> _T:
+    """Run a ref-range diff; an invalid or unknown ref is a usage error (exit 2).
+
+    The diff helpers raise ValueError for a ref git does not know or one that
+    looks like an option. That is the operator's input, so it gets a one-line
+    message, not a traceback.
+    """
+    try:
+        return diff(root, ref_spec)
+    except ValueError as exc:
+        err_console.print(f"[red]Error:[/red] {escape(str(exc))}")
+        raise typer.Exit(2) from exc
 
 
 def sbom(
@@ -65,7 +84,7 @@ def sbom(
             if not git_ops.is_git_repo(resolved.project.root):
                 err_console.print("[red]Error:[/red] --diff requires a local git repository.")
                 raise typer.Exit(2)
-            changes = diff_components(resolved.project.root, diff_ref)
+            changes = _diff_or_exit(diff_components, resolved.project.root, diff_ref)
             doc = diff_to_dict(changes, ref_spec=diff_ref)
             text = json.dumps(doc, indent=2, sort_keys=True) + "\n"
             if output:
@@ -160,7 +179,7 @@ def dependencies(
         raise typer.Exit(2)
 
     try:
-        changes = diff_packages(resolved.project.root, diff_ref)
+        changes = _diff_or_exit(diff_packages, resolved.project.root, diff_ref)
         payload = {
             "diff": diff_ref,
             "changes": [
@@ -286,6 +305,22 @@ def supply_chain_cmd(
                 "sandbox": sandbox,
             }
 
+        # Compute the dependency changes before the (slower) scan so a bad
+        # --diff ref fails fast. An automatically chosen base that git cannot
+        # resolve (e.g. a repository without commits) only skips this section.
+        changes = []
+        if diff_ref:
+            changes = _diff_or_exit(diff_packages, project.root, diff_ref)
+        elif git_ops.is_git_repo(project.root):
+            auto_ref = f"{git_ops.default_branch(project.root)}...HEAD"
+            try:
+                changes = diff_packages(project.root, auto_ref)
+            except ValueError as exc:
+                if not quiet:
+                    err_console.print(
+                        f"[dim]· Dependency changes skipped: {escape(str(exc))}[/dim]"
+                    )
+
         result = ScanEngine(cfg, progress=progress_printer(quiet)).scan(project)
 
         payload: dict = {
@@ -303,18 +338,16 @@ def supply_chain_cmd(
                 for f in result.findings
             ],
         }
-        if git_ops.is_git_repo(project.root):
-            ref = diff_ref or f"{git_ops.default_branch(project.root)}...HEAD"
-            payload["dependency_changes"] = [
-                {
-                    "ecosystem": c.ecosystem,
-                    "package": c.package,
-                    "change": c.change,
-                    "old_version": c.old_version,
-                    "new_version": c.new_version,
-                }
-                for c in diff_packages(project.root, ref)
-            ]
+        payload["dependency_changes"] = [
+            {
+                "ecosystem": c.ecosystem,
+                "package": c.package,
+                "change": c.change,
+                "old_version": c.old_version,
+                "new_version": c.new_version,
+            }
+            for c in changes
+        ]
         if auth_map:
             payload["auth_map"] = [e.to_dict() for e in build_auth_map(project)]
 
