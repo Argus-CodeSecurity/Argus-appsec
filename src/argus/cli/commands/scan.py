@@ -155,6 +155,14 @@ def scan(
         "--deep",
         help="Shorthand for --profile deep (maximum scanner depth).",
     ),
+    import_sarif: list[Path] | None = typer.Option(
+        None,
+        "--import-sarif",
+        metavar="FILE",
+        help="Also import results from this SARIF 2.1.0 file (Semgrep, CodeQL, "
+        "gitleaks, Trivy, Bandit, ...) and merge them with Argus's findings; "
+        "the same issue at the same place is reported once. Repeatable.",
+    ),
     quiet: bool = typer.Option(False, "--quiet", "-q", help="Suppress progress output."),
 ) -> None:
     """Scan a target and report findings."""
@@ -170,6 +178,11 @@ def scan(
 
     # A URL target runs the posture layer directly (no source to analyze).
     if resolved.web is not None:
+        if import_sarif:
+            err_console.print(
+                "[red]Error:[/red] --import-sarif needs a source target (a path or repository)."
+            )
+            raise typer.Exit(2)
         if not quiet:
             err_console.print(
                 "[dim]- Running read-only posture checks (not full DAST). "
@@ -243,8 +256,25 @@ def scan(
         if live_target:
             cfg.dast_url = live_target
 
+        # Parse imports before scanning so a bad file fails fast (exit 2).
+        imported = None
+        if import_sarif:
+            from argus.cli.commands.imports import load_imports
+
+            imported = load_imports(import_sarif, project.root, quiet=quiet)
+
         engine = ScanEngine(cfg, progress=progress_printer(quiet))
         result = engine.scan(project)
+
+        if imported is not None:
+            from argus.importers import merge_into
+
+            merged = merge_into(result, imported, project, cfg, progress=progress_printer(quiet))
+            if not quiet and merged:
+                err_console.print(
+                    f"[dim]- {merged} imported finding(s) matched an existing finding "
+                    "and were merged into it.[/dim]"
+                )
 
         # Optional runtime posture layer alongside the static scan.
         if live_target:
