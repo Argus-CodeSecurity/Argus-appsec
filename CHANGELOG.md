@@ -7,6 +7,119 @@ include breaking changes, noted explicitly).
 
 ## [Unreleased]
 
+This release is a security hardening release. Argus runs on untrusted code (pull
+requests from forks, cloned repositories), and a full review found ways a
+hostile repository could execute code, read outside the scan root, hang a
+scan, hide its own findings, or make a CI gate pass. All of them are fixed.
+Upgrading is recommended for every user.
+
+### Breaking changes
+- **Repository config is untrusted by default.** `Config()` now defaults to
+  `trust_project_config=False`. A cloned remote's `.argus.yml`,
+  `.argus/rules`, `.argus/exceptions.yml` and inline `argus-ignore` comments
+  are ignored unless you pass `--trust-remote-config`. Library code that builds
+  `Config()` directly must set `trust_project_config=True` to honour them.
+- **Scanner crashes fail the gate.** When a `fail_on` threshold is set, a
+  scanner error now fails the run (a crashed scanner reports nothing, which a
+  gate must not read as a pass). Opt out with `--no-fail-on-error` or
+  `fail_on_error: false`. `policy check` always fails on scanner errors.
+- **Configuration mistakes exit 2.** Wrong types in `.argus.yml` (for example
+  `exclude_paths: "dist/*"`), unknown `--scanners` names, a selection that
+  leaves no scanner, an unknown profile, an invalid severity, invalid policies,
+  a malformed `exceptions.yml`, and `policy check` with no policies configured
+  now exit 2 instead of being coerced or ignored.
+- **Dashboard requests are restricted.** Only loopback Host headers are
+  accepted (add names with `ARGUS_DASHBOARD_ALLOWED_HOSTS`); `/api/scans`
+  requires `Content-Type: application/json`; the upload form requires its CSRF
+  token; binding to a non-loopback address requires `ARGUS_DASHBOARD_TOKEN`.
+- **`argus push` refuses `http://`** except for loopback hosts.
+- **The MCP server only scans inside its working directory** (or
+  `ARGUS_MCP_ROOTS`).
+- **A DAST URL in the scanned project's own `.argus.yml` is ignored.** Use
+  `--live-target` or `ARGUS_DAST_URL`.
+- **`argus fix` runs your git commit hooks** and commits with your own git
+  identity. It refuses to run when `HEAD` is not the base branch.
+- **`watch` state directory names changed**, so the first cycle after
+  upgrading records a fresh baseline.
+
+### Security
+- Scanning a repository can no longer execute code through its `.git/config`
+  (`core.fsmonitor`, `gpg.program`, `diff.external`, textconv); every git call
+  runs with hardened config overrides, timeouts and bounded output.
+- GitHub Action inputs are passed to the shell through the environment instead
+  of being interpolated, closing a command-injection path for workflows that
+  forward untrusted event data. On pull requests the Action now reads Argus
+  config from the base branch (`pr-config-from-base`).
+- Regular expressions that a crafted file could drive into minutes of
+  backtracking were rewritten to linear forms, and every line-based search is
+  bounded.
+- Secret values are masked everywhere they appear in a snippet, including
+  second tokens on the same line and CI/CD and container findings.
+- Dashboard: DNS-rebinding and cross-site request protection, security headers,
+  optional token authentication, request size limits, owner-only database
+  permissions, and clamped report timestamps.
+- DAST and live posture probes verify the connected peer address, refuse
+  redirects into private networks, and cap response size.
+- Markdown reports, PR review comments and fix PR bodies escape untrusted text,
+  links, HTML and @mentions.
+- Every prompt sent to a model fences and caps the scanned snippet;
+  AI-proposed patches are never marked verified.
+- Remote clones are bounded, skip Git LFS downloads, and never leak temporary
+  directories on timeout.
+
+### Added
+- `--config-from-ref REF` on `scan`, `review`, `policy check` and
+  `baseline create`: read Argus config from a git ref (the base branch) and
+  treat the checked-out tree as untrusted.
+- `fix --no-verify` to skip commit hooks explicitly.
+- `ai.max_findings` (default 25): only the highest-risk findings are sent to a
+  model; the rest get offline reasoning.
+- `ARGUS_AI_TIMEOUT`, `ARGUS_AI_MAX_RETRIES`, `ARGUS_GIT_TIMEOUT`,
+  `ARGUS_MCP_SCAN_TIMEOUT`, `ARGUS_DASHBOARD_MAX_SCANS`,
+  `ARGUS_WATCH_KEEP_SNAPSHOTS` and `ARGUS_DAST_URL`.
+- New informational findings when part of an analysis could not run:
+  `<scanner>.analysis-skipped`, `secrets.history-scan-failed`,
+  `secrets.history-scan-incomplete`, `agent.step-failed`, `fim.file-created`,
+  `fim.unreadable`, `host.ssh-config-unreadable`, `host.check-failed`.
+- Python 3.13 support, CodeQL and dependency review in CI, signed build
+  provenance and SBOM attestations for releases and the container image.
+- Governance: `GOVERNANCE.md`, `MAINTAINERS.md`, `SUPPORT.md`, a complete
+  security policy, the full Contributor Covenant, and DCO sign-off.
+
+### Changed
+- The default Anthropic model is `claude-sonnet-5-5` (override with
+  `ARGUS_AI_MODEL`, `ai.model` or `--ai-model`); model calls default to a 60 s
+  timeout and 2 retries; the default `max_tokens` is 4096.
+- `argus watch` re-reads the target every cycle, keeps running after a failed
+  cycle, and prunes old snapshots. The host agent keeps monitoring when a step
+  or push fails, and reports the failure.
+- The `ci` profile disables the scan cache.
+- `--diff` keeps every finding (with a warning) when the diff cannot be
+  computed, and works when scanning a subdirectory.
+- PR review comments use repository-relative paths and the summary is capped
+  at 50 entries.
+- The malware scanner reports findings in test files at lower severity
+  instead of skipping them, and never skips `conftest.py` or `setup.py`.
+- The container image is pinned by digest and installed from the hash-locked
+  dependency set.
+
+### Fixed
+- `sbom` and `inventory` JSON on stdout is no longer wrapped or stripped.
+- `argus watch` saw only the first cycle's files.
+- The host agent never detected listening ports on Linux and crashed on
+  unreadable `sshd_config`; file integrity monitoring missed new files,
+  directory contents and unreadable files.
+- Packages beyond a fixed count were silently dropped from OSV lookups.
+- Deeply nested files or malformed manifests could zero out a whole scanner or
+  crash the scan.
+- The auth map ranked risks in the wrong order; PostgreSQL was detected from
+  "jpg" and "upgrade"; the reachability risk boost and the AWS credential
+  attack chain never fired.
+- JUnit and SARIF output stay valid for any path or text; GitLab report ids are
+  unique.
+- The fix applier keeps original line endings, skips non-UTF-8 files, and
+  restores the working tree and branch on failure.
+
 ## [0.8.1] - 2026-09-07
 
 ### Added
