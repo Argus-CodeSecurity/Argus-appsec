@@ -36,3 +36,13 @@ updates:
       interval: weekly
     cooldown:
       default-days: 5
+
+  # examples/vulnerable-app is deliberately vulnerable: it is the target the
+  # scanners and docs demonstrate against. Never upgrade its dependencies.
+  - package-ecosystem: pip
+    directory: "/examples/vulnerable-app"
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 0
+    ignore:
+      - dependency-name: "*"
