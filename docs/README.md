@@ -1,9 +1,5 @@
 # Argus documentation
 
-- [Specification compliance](SPEC_COMPLIANCE.md), mapping the full product spec to implementation.
-- [Publishing](PUBLISHING.md), checklist before pushing to GitHub and PyPI.
-- [Repository split](repository-split.md), what belongs in the public repo vs commercial add-ons.
-- [Project layout](project-layout.md), workspace folder structure.
 - [Configuration drift](drift.md), compare scans and inventories over time.
 - [Server agent](agent.md), multi-path host monitoring with `argus agent`.
 - [Architecture](architecture.md), the core, the scan pipeline, and the plugin seams.
@@ -14,7 +10,11 @@
 - [Attack Simulation Mode](attack-simulation.md), the safe, educational exploit demonstrations.
 - [LLM / AI security](llm-security.md), the OWASP-LLM-Top-10 scanner for AI-era codebases.
 - [CI/CD integration](ci-cd.md), the GitHub Action, GitLab CI, Bitbucket, Docker, pre-commit, and exit codes.
+- [Infrastructure scanning](infrastructure-scanning.md), CI/CD pipelines, containers, and cloud IaC.
+- [Policy as code](policy.md), YAML policies evaluated with `argus policy check`.
 - [Performance](performance.md), caching, parallelism, and measured scan times.
+
+The rendered site is published at <https://argus-codesecurity.github.io/Argus-appsec/>.
 
 New to Argus? Start with the [top-level README](../README.md) for install and a
 quick start, then come back here.

@@ -74,7 +74,9 @@ dashboard = [
 ]
 # Build the documentation site (MkDocs Material).
 docs = [
-  "mkdocs-material>=9.5",
+  # MkDocs 2.0 removes the plugin and theme systems Material depends on.
+  "mkdocs>=1.6,<2",
+  "mkdocs-material>=9.5,<10",
 ]
 # Everything for local development and tests
 dev = [

@@ -17,9 +17,6 @@ exclude_paths:
   # same reason as tests/** below.
   - "benchmarks/**"
   - "tests/**"
-  # Separate, commercially-licensed add-on package (kept out of this repo); it
-  # has its own tooling and a gitignored signing key, not part of this scan.
-  - "argus-k8s/**"
   # Rule/replacement definitions necessarily embed the patterns they detect
   # (the LLM rule text mentions `trust_remote_code=True`; the fix engine's
   # rewrites map `yaml.load`, `verify=False`, weak hashes, …).

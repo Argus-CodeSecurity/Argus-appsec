@@ -13,10 +13,11 @@ and checks that the fix actually works.
 [![Python](https://img.shields.io/pypi/pyversions/argus-appsec?color=6ea8fe)](https://pypi.org/project/argus-appsec/)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
 [![CI](https://github.com/Argus-CodeSecurity/Argus-appsec/actions/workflows/ci.yml/badge.svg)](https://github.com/Argus-CodeSecurity/Argus-appsec/actions/workflows/ci.yml)
-[![Self-scan](https://img.shields.io/badge/self--scan-clean-brightgreen)](.github/workflows/argus-scan.yml)
+[![Self-scan](https://github.com/Argus-CodeSecurity/Argus-appsec/actions/workflows/argus-scan.yml/badge.svg)](https://github.com/Argus-CodeSecurity/Argus-appsec/actions/workflows/argus-scan.yml)
+[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/Argus-CodeSecurity/Argus-appsec/badge)](https://securityscorecards.dev/viewer/?uri=github.com/Argus-CodeSecurity/Argus-appsec)
 [![OWASP LLM Top 10](https://img.shields.io/badge/OWASP-LLM%20Top%2010-111c33)](https://genai.owasp.org/llm-top-10/)
 
-[Install](#install) · [Quick start](#quick-start) · [How it works](#how-it-works) · [Docs](docs/) · [Roadmap](#roadmap)
+[Install](#install) | [Quick start](#quick-start) | [How it works](#how-it-works) | [Docs](https://argus-codesecurity.github.io/Argus-appsec/) | [Roadmap](#roadmap)
 
 </div>
 
@@ -30,7 +31,7 @@ remediation. Then it can generate a patch and confirm the patch closes the issue
 > **Status: early alpha.** The architecture and full pipeline are in place: a working
 > CLI, built-in scanners (secrets, dependencies, SAST, IaC, CI/CD, containers, cloud,
 > supply chain, LLM/agent), a multi-provider AI layer, cross-file taint analysis, and
-> six report formats. See the [roadmap](#roadmap).
+> nine report formats. See the [roadmap](#roadmap).
 
 ## Why Argus
 
@@ -42,9 +43,6 @@ remediation. Then it can generate a patch and confirm the patch closes the issue
 - **It fixes, not just finds** - Deterministic, self-verified fixes go to a fresh branch and open a pull request. An AI-proposed tier drafts riskier fixes, verifies them, and labels them for human review. Nothing risky is ever auto-applied.
 - **CI-native** - Deterministic output, SARIF and GitLab reports, and diff-aware scanning so pull requests are gated only on findings they introduce. One-block GitHub Action, pre-commit hooks, and a Docker image.
 - **Plugin-based throughout** - Scanners, reporters, and AI providers are plugins. Add a language, a report format, or even a rule in plain YAML without touching the core.
-
-For local folder naming before you push, see [docs/project-layout.md](docs/project-layout.md).
-For what belongs in the public repo vs commercial add-ons, see [docs/repository-split.md](docs/repository-split.md).
 
 ## Install
 
@@ -257,21 +255,19 @@ via `.argus/rules/*.yml` or `scanner_options.patterns.rules`. See
 [docs/dashboard.md](docs/dashboard.md).
 
 **Kubernetes.** The `iac` scanner checks Kubernetes manifests statically as part
-of a normal scan. Assessing a **live** cluster read-only (pod security, RBAC,
-network policies, exposed services) is a commercial add-on, `argus-k8s`, that
-plugs an `argus cluster` command into the CLI when licensed.
+of a normal scan. Live-cluster assessment is out of scope for the core; add-on
+packages can provide it through the `argus.commands` plugin entry point.
 
 **Distribution.** An official GitHub Action, pre-commit hooks, and a published Docker
 image. See [docs/ci-cd.md](docs/ci-cd.md).
 
-**Implemented (Phase 4).** Configuration drift via `argus drift`, static asset inventory via `argus inventory`, local continuous monitoring via `argus watch`, and multi-path server agent via `argus agent`.
+**Monitoring and drift.** Configuration drift via `argus drift`, static asset
+inventory via `argus inventory`, local continuous monitoring via `argus watch`, and
+a multi-path host agent via `argus agent`.
 
-**Implemented (Phase 3).** CI/CD pipeline scanner (GitHub Actions, GitLab CI,
-Jenkinsfile), container/compose checks, and cloud configuration patterns for
-AWS/Azure/GCP in Terraform and CloudFormation. Live cloud posture (AWS/Azure/GCP)
-is available via commercial add-ons.
-
-**Implemented (Phase 5).** Argus Cloud SaaS: billing, licensing, scan ingest, org invites, and drift in the dashboard.
+**Pipelines, containers, cloud.** CI/CD pipeline scanner (GitHub Actions, GitLab
+CI, Jenkinsfile), container and Compose checks, and cloud configuration patterns
+for AWS, Azure, and GCP in Terraform and CloudFormation.
 
 **Planned.** Full dynamic analysis (DAST) building on the posture layer, deeper taint
 depth (multi-hop cross-file), more deep-analysis languages, and richer compliance rule packs.
@@ -300,18 +296,29 @@ security review of critical code.
 
 ## Contributing
 
-Contributions are welcome from everyone. The flow is the standard one:
+Contributions are welcome from individuals and organizations alike. The flow is
+the standard one:
 
 1. **Fork** this repository.
-2. Create a branch and make your change, with tests.
-3. Open a **pull request**. The template will guide you, and CI runs tests and lint
-   automatically.
+2. Create a branch (see the naming convention in CONTRIBUTING.md) and make your
+   change, with tests.
+3. Commit with a `Signed-off-by` line (`git commit -s`) to certify the
+   [Developer Certificate of Origin](https://developercertificate.org/).
+4. Open a **pull request**. The template will guide you, and CI runs tests, lint,
+   type checks, and the accuracy benchmark automatically.
 
 Scanners, language support, compliance rules, and report formats are especially
-welcome, and the plugin model means most additions never touch the core. See
-[CONTRIBUTING.md](CONTRIBUTING.md) for setup and standards, and
-[CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) for community guidelines.
+welcome, and the plugin model means most additions never touch the core.
+
+| Document | Purpose |
+|---|---|
+| [CONTRIBUTING.md](CONTRIBUTING.md) | Development setup, standards, branch and commit conventions |
+| [GOVERNANCE.md](GOVERNANCE.md) | Roles, decision making, and how to become a maintainer |
+| [SECURITY.md](SECURITY.md) | How to report a vulnerability privately; supported versions |
+| [SUPPORT.md](SUPPORT.md) | Where to ask questions and get help |
+| [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) | Community standards |
+| [THREAT_MODEL.md](THREAT_MODEL.md) | What Argus defends against, and what it does not |
 
 ## License
 
-Apache-2.0. See [LICENSE](LICENSE).
+Apache-2.0. See [LICENSE](LICENSE) and [NOTICE](NOTICE).

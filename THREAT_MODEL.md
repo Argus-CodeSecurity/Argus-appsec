@@ -8,9 +8,9 @@ vulnerability class. This document states what Argus defends against, how, and
 what residual risk remains. It is kept honest on purpose: it lists the gaps, not
 just the wins.
 
-Scope: the open-source core (`argus-appsec`). The commercial add-on
-(`argus-k8s`) and the hosted SaaS (`argus-cloud`) have their own trust boundaries
-and are covered separately.
+Scope: the open-source core (`argus-appsec`). Separately distributed add-on
+packages and hosted services have their own trust boundaries and are covered by
+their own threat models.
 
 ## Trust boundaries and assets
 
@@ -113,10 +113,6 @@ and are covered separately.
   in CI is still planned so new shipped rules cannot regress.
 - **Prompt injection**: see section 8; hardening the enrichment prompt contract
   is an active review area.
-- **`argus-k8s` and `argus-cloud`**: separate components with their own trust
-  boundaries (a live cluster reader and an internet-facing SaaS). Each needs its
-  own threat model before it is offered; the SaaS in particular must be reviewed
-  for auth, tenant isolation (IDOR), and webhook replay before any deployment.
 
 ## Reporting
 

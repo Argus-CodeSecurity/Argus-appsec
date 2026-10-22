@@ -54,7 +54,7 @@ All inputs are optional; the useful ones:
 ### Hand-rolled workflow
 
 If you need more control, a ready-to-copy workflow lives at
-[`.github/workflows/argus-scan.yml`](../.github/workflows/argus-scan.yml). It runs
+[`.github/workflows/argus-scan.yml`](https://github.com/Argus-CodeSecurity/Argus-appsec/blob/main/.github/workflows/argus-scan.yml). It runs
 Argus, writes SARIF, and uploads it to GitHub Code Scanning so findings appear as
 PR annotations and in the Security tab.
 
@@ -101,7 +101,7 @@ argus scan . --baseline /tmp/baseline.json --fail-on high --quiet
 Findings are matched by a **content-based fingerprint** (the whitespace-normalized
 offending code, not the line number), so a finding is still recognized as
 pre-existing after unrelated edits shift it up or down the file. The shipped
-[`argus-scan.yml`](../.github/workflows/argus-scan.yml) workflow does this
+[`argus-scan.yml`](https://github.com/Argus-CodeSecurity/Argus-appsec/blob/main/.github/workflows/argus-scan.yml) workflow does this
 automatically on pull requests.
 
 ## Reproducibility
@@ -166,7 +166,7 @@ catching a secret **before it enters git history** takes three lines:
 # .pre-commit-config.yaml
 repos:
   - repo: https://github.com/Argus-CodeSecurity/Argus-appsec
-    rev: v0.7.0
+    rev: v0.8.1
     hooks:
       - id: argus-secrets        # fast, secrets-only, made for every commit
       # - id: argus              # full static scan, heavier; consider pre-push
