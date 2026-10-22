@@ -9,8 +9,32 @@ concrete subclasses.
 from __future__ import annotations
 
 import abc
+import os
 from dataclasses import dataclass
 from typing import ClassVar
+
+# Network defaults for model calls. SDK defaults (a 10 minute timeout) would let
+# one stalled request hold a CI job for a very long time.
+DEFAULT_TIMEOUT = 60.0
+DEFAULT_MAX_RETRIES = 2
+
+
+def request_timeout(default: float = DEFAULT_TIMEOUT) -> float:
+    """Per-request timeout in seconds (``ARGUS_AI_TIMEOUT`` overrides)."""
+    try:
+        value = float(os.environ.get("ARGUS_AI_TIMEOUT", default))
+    except ValueError:
+        return default
+    return value if value > 0 else default
+
+
+def max_retries(default: int = DEFAULT_MAX_RETRIES) -> int:
+    """Retries on transient errors (``ARGUS_AI_MAX_RETRIES`` overrides)."""
+    try:
+        value = int(os.environ.get("ARGUS_AI_MAX_RETRIES", default))
+    except ValueError:
+        return default
+    return max(value, 0)
 
 
 @dataclass
@@ -32,7 +56,9 @@ class AIProvider(abc.ABC):
 
     def __init__(self, model: str | None = None, *, temperature: float = 0.0,
                  max_tokens: int = 1500) -> None:
-        self.model = model or self.default_model
+        # Precedence: explicit (config `ai.model` / --ai-model), then the
+        # ARGUS_AI_MODEL environment variable, then the provider default.
+        self.model = model or os.environ.get("ARGUS_AI_MODEL") or self.default_model
         self.temperature = temperature
         self.max_tokens = max_tokens
 
