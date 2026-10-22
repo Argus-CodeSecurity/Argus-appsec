@@ -26,6 +26,7 @@ from argus.core.models import (
     Severity,
 )
 from argus.core.plugin import Scanner, ScannerContext, scanner
+from argus.scanners._text import MAX_SCAN_LINE, iter_scan_lines
 
 
 @dataclass
@@ -64,7 +65,14 @@ RULES: list[Rule] = [
         # interpolation is almost always SQL injection, wherever it is run,
         # including when assigned to a variable first and passed to execute() later
         # (which line-anchored, execute()-only patterns miss).
-        pattern=_rx(r"(?i)f['\"][^\n]*?\b(select|insert|update|delete)\b[^\n]*?\b(from|where|into|set|values)\b[^\n]*?\{[^}]*\}"),
+        # Each step is an atomic `(?=(?P<x>...))(?P=x)` group: it takes the first
+        # keyword / brace and never retries later ones. The earliest choice is
+        # always the best one here, and without it a failed search on a long
+        # line backtracked over every combination (cubic time).
+        pattern=_rx(r"(?i)f['\"]"
+                    r"(?=(?P<dml>[^\n]*?\b(?:select|insert|update|delete)\b))(?P=dml)"
+                    r"(?=(?P<cl>[^\n]*?\b(?:from|where|into|set|values)\b))(?P=cl)"
+                    r"(?=(?P<br>[^\n]*?\{))(?P=br)[^\n]*\}"),
         severity=Severity.HIGH, cwe=["CWE-89"], owasp=["A03:2021-Injection"],
         languages={"Python"}, confidence=Confidence.MEDIUM,
         why="A SQL statement is built from an f-string that interpolates a variable, "
@@ -82,7 +90,9 @@ RULES: list[Rule] = [
         # execute() with %-formatting, concatenation, or .format() on a SQL string.
         # Distinct from the f-string rule above (no `f` prefix here) so the two
         # never both fire on the same statement.
-        pattern=_rx(r"(?i)(execute|executemany)\s*\(\s*['\"].*?\b(select|insert|update|delete|drop)\b.*?['\"]\s*(%|\+|\.format\()"),
+        pattern=_rx(r"(?i)(execute|executemany)\s*\(\s*['\"]"
+                    r"(?=(?P<kw>.*?\b(?:select|insert|update|delete|drop)\b))(?P=kw)"
+                    r".*?['\"]\s*(%|\+|\.format\()"),
         severity=Severity.HIGH, cwe=["CWE-89"], owasp=["A03:2021-Injection"],
         languages={"Python"}, confidence=Confidence.MEDIUM,
         why="A SQL statement passed to execute() is assembled with %-formatting, "
@@ -314,7 +324,8 @@ RULES: list[Rule] = [
     Rule(
         id="path-traversal-join",
         title="Possible path traversal in file access",
-        pattern=_rx(r"(?i)(open|readFile|sendFile|File)\(\s*[^)]*(request|req\.|params|input|argv)[^)]*\)"),
+        pattern=_rx(r"(?i)(open|readFile|sendFile|File)\(\s*"
+                    r"(?=(?P<src>[^)]*?(?:request|req\.|params|input|argv)))(?P=src)[^)]*\)"),
         severity=Severity.MEDIUM, cwe=["CWE-22"], owasp=["A01:2021-Broken Access Control"],
         confidence=Confidence.LOW,
         why="A filesystem path is built from request input without normalization, so "
@@ -415,13 +426,13 @@ class PatternScanner(Scanner):
             for rule in rules:
                 if rule.languages and f.language not in rule.languages:
                     continue
-                for lineno, line in enumerate(lines, start=1):
-                    if len(line) > 2000:
-                        continue
-                    if not rule.pattern.search(line):
+                reported: set[int] = set()
+                for lineno, line in iter_scan_lines(lines):
+                    if lineno in reported or not rule.pattern.search(line):
                         continue
                     if rule.suppress and rule.suppress.search(line):
                         continue  # a known-safe idiom on this line
+                    reported.add(lineno)
                     counter += 1
                     yield self._finding(rule, counter, f.rel_path, lineno, line,
                                         in_test=in_test)
@@ -439,13 +450,15 @@ class PatternScanner(Scanner):
         lines = f.lines()
         tainted: set[str] = set()
         for line in lines:
+            if len(line) > MAX_SCAN_LINE:
+                continue
             m = _TAINT_ASSIGN.match(line)
             if m and _TAINT_SOURCE.search(m.group(2)) and not _PATH_SANITIZER.search(m.group(2)):
                 tainted.add(m.group(1))
         if not tainted:
             return
         for lineno, line in enumerate(lines, start=1):
-            if len(line) > 2000 or _PATH_SANITIZER.search(line):
+            if len(line) > MAX_SCAN_LINE or _PATH_SANITIZER.search(line):
                 continue
             sink = _PATH_SINK.search(line)
             if not sink:

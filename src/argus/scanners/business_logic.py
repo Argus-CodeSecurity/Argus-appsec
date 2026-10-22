@@ -7,6 +7,7 @@ from collections.abc import Iterable
 
 from argus.core.models import Confidence, Finding, Likelihood, Location, Remediation, Severity
 from argus.core.plugin import Scanner, ScannerContext, scanner
+from argus.scanners._text import MAX_SCAN_LINE
 
 _PRICE_MUTATION = re.compile(
     r"(?:price|amount|total|cost|fee)\s*[=:]\s*(?:req\.|request\.|params\.|body\.|input\.)",
@@ -71,7 +72,8 @@ class BusinessLogicScanner(Scanner):
         for f in ctx.project.files():
             if f.suffix not in (".py", ".js", ".ts", ".java", ".php", ".rb"):
                 continue
-            lines = f.text().splitlines()
+            # Cut to the shared scan limit: _RACE_HINT runs on a window of these.
+            lines = [ln[:MAX_SCAN_LINE] for ln in f.text().splitlines()]
             for i, line in enumerate(lines, 1):
                 if _PRICE_MUTATION.search(line):
                     yield _f("logic.price-from-request", f.rel_path, i, line,

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import bisect
 import re
 from collections.abc import Iterable
 
@@ -14,6 +15,7 @@ from argus.core.models import (
     Severity,
 )
 from argus.core.plugin import Scanner, ScannerContext, scanner
+from argus.scanners._text import iter_scan_lines
 
 _CLOUD_FILES = re.compile(
     r"\.(tf|tfvars|hcl)$|cloudformation\.(ya?ml|json)$|/template\.(ya?ml|json)$",
@@ -26,6 +28,31 @@ def _is_cloudformation(f) -> bool:
         return False
     head = f.text()[:500]
     return "AWSTemplateFormatVersion" in head or "AWS::CloudFormation" in head
+
+
+_IAM_ACTION = re.compile(r'Action\s*=\s*"\*"')
+_IAM_RESOURCE = re.compile(r'Resource\s*=\s*"\*"')
+# How far below an `Action = "*"` line its `Resource = "*"` may appear and still
+# count as the same policy statement.
+_IAM_STATEMENT_LINES = 20
+
+
+def _iam_wildcard_lines(lines: list[str]) -> list[int]:
+    """Line numbers of `Action = "*"` lines followed closely by `Resource = "*"`."""
+    actions: list[int] = []
+    resources: list[int] = []
+    for lineno, seg in iter_scan_lines(lines):
+        m = _IAM_ACTION.search(seg)
+        if m and (not actions or actions[-1] != lineno):
+            actions.append(lineno)
+        if _IAM_RESOURCE.search(seg) and (not resources or resources[-1] != lineno):
+            resources.append(lineno)
+    out: list[int] = []
+    for lineno in actions:
+        i = bisect.bisect_left(resources, lineno)
+        if i < len(resources) and resources[i] <= lineno + _IAM_STATEMENT_LINES:
+            out.append(lineno)
+    return out
 
 _RULES: list[tuple[str, str, re.Pattern[str], Severity, str, str]] = [
     (
@@ -55,7 +82,10 @@ _RULES: list[tuple[str, str, re.Pattern[str], Severity, str, str]] = [
     (
         "cloud.iam-wildcard",
         "IAM policy allows Action: * on Resource: *",
-        re.compile(r'Action\s*=\s*"\*".*Resource\s*=\s*"\*"', re.S),
+        # Matched per line against the Action line; the Resource half is looked
+        # up in the following lines by _iam_wildcard_lines (no DOTALL search over
+        # the whole file, which was quadratic on hostile input).
+        _IAM_ACTION,
         Severity.CRITICAL,
         "Overly broad IAM policies enable full account takeover.",
         "Scope actions and resources to least privilege.",
@@ -98,19 +128,20 @@ class CloudScanner(Scanner):
         for f in ctx.project.files():
             if not (_CLOUD_FILES.search(f.rel_path) or _is_cloudformation(f)):
                 continue
-            text = f.text()
+            lines = f.lines()
             for rule_id, title, pattern, severity, why, fix in _RULES:
                 if rule_id == "cloud.iam-wildcard":
-                    match = pattern.search(text)
-                    if match:
+                    for lineno in _iam_wildcard_lines(lines):
                         counter += 1
-                        snippet = match.group(0).replace("\n", " ").strip()[:200]
                         yield self._mk(
-                            f.rel_path, rule_id, title, severity, why, fix, 1, snippet, counter,
+                            f.rel_path, rule_id, title, severity, why, fix, lineno,
+                            lines[lineno - 1][:2000], counter,
                         )
                     continue
-                for lineno, line in enumerate(f.lines(), start=1):
-                    if pattern.search(line):
+                reported: set[int] = set()
+                for lineno, line in iter_scan_lines(lines):
+                    if lineno not in reported and pattern.search(line):
+                        reported.add(lineno)
                         counter += 1
                         yield self._mk(f.rel_path, rule_id, title, severity, why, fix, lineno, line, counter)
 

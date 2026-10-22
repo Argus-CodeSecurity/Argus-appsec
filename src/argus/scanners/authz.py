@@ -7,6 +7,7 @@ routes that accept object IDs without obvious ownership checks nearby.
 
 from __future__ import annotations
 
+import bisect
 import re
 from collections.abc import Iterable
 
@@ -19,6 +20,7 @@ from argus.core.models import (
     Severity,
 )
 from argus.core.plugin import Scanner, ScannerContext, scanner
+from argus.scanners._text import MAX_SCAN_LINE
 from argus.scanners.patterns import _is_test_file
 
 _FASTAPI_ROUTE = re.compile(
@@ -76,10 +78,8 @@ _PUBLIC_ROUTE = re.compile(
     r"redoc|static|assets|favicon|metrics|probe)(?:/|$)",
     re.IGNORECASE,
 )
-_ROUTER_DEPS = re.compile(
-    r"APIRouter\s*\([^)]*dependencies\s*=\s*\[[^\]]*Depends",
-    re.IGNORECASE | re.DOTALL,
-)
+_ROUTER_CALL = re.compile(r"APIRouter\s*\(", re.IGNORECASE)
+_ROUTER_DEPS_KEY = re.compile(r"dependencies\s*=\s*\[", re.IGNORECASE)
 _OWNERSHIP_HINT = re.compile(
     r"(owner|tenant|user_id|account_id|current_user|request\.user|"
     r"get_current_user|authorize|permission|forbidden|403)",
@@ -87,8 +87,42 @@ _OWNERSHIP_HINT = re.compile(
 )
 
 
+def _has_router_auth(text: str) -> bool:
+    """True if some `APIRouter(` is followed by `dependencies=[` before any `)`,
+    with `Depends` appearing before the list's closing `]`.
+
+    This used to be one DOTALL regex over the whole file, which backtracked
+    across the rest of the file for every unterminated `APIRouter(` (cubic on a
+    hostile file). Here every token is located once and the ordering
+    conditions are checked with binary search, so the cost is O(n log n).
+    """
+    calls = [m.end() for m in _ROUTER_CALL.finditer(text)]
+    if not calls:
+        return False
+    closes = [m.start() for m in re.finditer(r"\)", text)]
+    brackets = [m.start() for m in re.finditer(r"\]", text)]
+    depends = [m.start() for m in re.finditer(r"(?i)Depends", text)]
+    for key in _ROUTER_DEPS_KEY.finditer(text):
+        # Nearest preceding APIRouter( call, with no `)` between it and the key.
+        ci = bisect.bisect_right(calls, key.start()) - 1
+        if ci < 0:
+            continue
+        pi = bisect.bisect_left(closes, calls[ci])
+        if pi < len(closes) and closes[pi] < key.start():
+            continue
+        # `Depends` before the first `]` after the opening bracket.
+        bi = bisect.bisect_left(brackets, key.end())
+        limit = brackets[bi] if bi < len(brackets) else len(text)
+        di = bisect.bisect_left(depends, key.end())
+        if di < len(depends) and depends[di] + len("Depends") <= limit:
+            return True
+    return False
+
+
 def _lines(text: str) -> list[str]:
-    return text.splitlines()
+    # Lines are cut to the shared scan limit: the route and JWT checks below
+    # run on them and on windows of them, and none needs more than that.
+    return [line[:MAX_SCAN_LINE] for line in text.splitlines()]
 
 
 def _window(lines: list[str], idx: int, before: int = 8, after: int = 12) -> str:
@@ -131,7 +165,7 @@ class AuthzScanner(Scanner):
                 continue
             text = f.text()
             lines = _lines(text)
-            file_has_router_auth = bool(_ROUTER_DEPS.search(text))
+            file_has_router_auth = _has_router_auth(text)
             for i, line in enumerate(lines):
                 for finding in self._check_jwt(f.rel_path, line, i + 1, counter):
                     counter += 1

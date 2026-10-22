@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import math
 import re
-from collections.abc import Iterable
+from collections.abc import Iterable, Iterator
 
 from argus.core.models import (
     Confidence,
@@ -25,6 +25,7 @@ from argus.core.models import (
     Severity,
 )
 from argus.core.plugin import Scanner, ScannerContext, scanner
+from argus.scanners._text import iter_scan_lines
 
 # name -> (compiled pattern, severity). Ordered most to least specific.
 _SIGNATURES: dict[str, re.Pattern[str]] = {
@@ -41,15 +42,28 @@ _SIGNATURES: dict[str, re.Pattern[str]] = {
     "generic-bearer": re.compile(r"(?i)bearer\s+[A-Za-z0-9_\-\.=]{20,}"),
 }
 
-# Generic key-ish assignments whose RHS we entropy-check.
+# Generic key-ish assignments whose RHS we entropy-check. The key must start at a
+# name boundary and is bounded, and whether it names a secret is checked
+# separately (_SECRET_KEY_NAME): the old single pattern put two unbounded name
+# classes around an alternation they could also match, which made a failed
+# search cubic in the line length.
 _ASSIGNMENT = re.compile(
-    r"""(?ix)
-    (?P<key>[A-Za-z0-9_\-\.]*(?:secret|token|passw(?:or)?d|api[_\-]?key|access[_\-]?key|
-        private[_\-]?key|client[_\-]?secret|auth)[A-Za-z0-9_\-\.]*)
+    r"""(?x)
+    (?<![A-Za-z0-9_\-\.])(?P<key>[A-Za-z0-9_\-\.]{1,80})
     \s*[:=]\s*
     ['"](?P<val>[^'"\n]{12,120})['"]
     """
 )
+_SECRET_KEY_NAME = re.compile(
+    r"(?i)secret|token|passw(?:or)?d|api[_\-]?key|access[_\-]?key|"
+    r"private[_\-]?key|client[_\-]?secret|auth")
+
+
+def _secret_assignments(line: str) -> Iterator[re.Match[str]]:
+    """Assignments on ``line`` whose key name looks like it holds a secret."""
+    for m in _ASSIGNMENT.finditer(line):
+        if _SECRET_KEY_NAME.search(m.group("key")):
+            yield m
 
 # Values that look like placeholders, not real secrets.
 _PLACEHOLDER = re.compile(
@@ -112,10 +126,9 @@ class SecretsScanner(Scanner):
                 continue
             is_example = bool(_EXAMPLE_FILE.search(f.rel_path))
 
-            for lineno, line in enumerate(f.lines(), start=1):
-                if len(line) > 1000:  # skip minified/huge lines
-                    continue
-
+            # Over-long (minified) lines are windowed, not skipped, so padding a
+            # line cannot hide a key and no single search sees unbounded text.
+            for lineno, line in iter_scan_lines(f.lines()):
                 for rule, pattern in _SIGNATURES.items():
                     m = pattern.search(line)
                     if not m:
@@ -134,7 +147,7 @@ class SecretsScanner(Scanner):
 
                 if not entropy_enabled:
                     continue
-                am = _ASSIGNMENT.search(line)
+                am = next(_secret_assignments(line), None)
                 if am:
                     val = am.group("val")
                     if _PLACEHOLDER.search(val) or " " in val.strip():

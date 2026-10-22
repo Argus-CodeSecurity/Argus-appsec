@@ -21,6 +21,7 @@ from argus.core.models import (
     Severity,
 )
 from argus.core.plugin import Scanner, ScannerContext, scanner
+from argus.scanners._text import CURL_PIPE_SHELL_RE, iter_scan_lines
 
 
 @dataclass
@@ -43,7 +44,7 @@ DOCKER_RULES = [
     IaCRule(
         id="docker-user-root",
         title="Container runs as root (no USER directive)",
-        pattern=re.compile(r"(?im)^\s*USER\s+"),
+        pattern=re.compile(r"(?i)^\s*USER\s"),
         negate=True, severity=Severity.MEDIUM, cwe=["CWE-250"], applies_when="dockerfile",
         why="Without a USER directive the container process runs as root, so a "
             "container breakout or app compromise starts with root privileges.",
@@ -72,7 +73,7 @@ DOCKER_RULES = [
     IaCRule(
         id="docker-curl-bash",
         title="Piping a downloaded script straight into a shell",
-        pattern=re.compile(r"(?i)(curl|wget)\b[^\n|]*\|\s*(sudo\s+)?(sh|bash)\b"),
+        pattern=CURL_PIPE_SHELL_RE,
         severity=Severity.MEDIUM, cwe=["CWE-494"], applies_when="dockerfile",
         why="curl | bash executes remote code with no verification; a compromised or "
             "MITM'd URL leads to a poisoned image.",
@@ -163,19 +164,23 @@ class IaCScanner(Scanner):
             kind = self._classify(f)
             if kind is None:
                 continue
-            text = f.text()
             lines = f.lines()
             for rule in ALL_RULES:
                 if rule.applies_when != kind:
                     continue
                 if rule.negate:
-                    if not rule.pattern.search(text):
+                    # Line by line: a multiline `^\s*` over the whole file is
+                    # quadratic on a file of blank lines.
+                    if not any(rule.pattern.search(seg)
+                               for _, seg in iter_scan_lines(lines)):
                         counter += 1
                         yield self._finding(rule, counter, f.rel_path, 1,
                                             "(directive absent)")
                     continue
-                for lineno, line in enumerate(lines, start=1):
-                    if rule.pattern.search(line):
+                reported: set[int] = set()
+                for lineno, line in iter_scan_lines(lines):
+                    if lineno not in reported and rule.pattern.search(line):
+                        reported.add(lineno)
                         counter += 1
                         yield self._finding(rule, counter, f.rel_path, lineno,
                                             line.strip()[:200])

@@ -7,6 +7,7 @@ from collections.abc import Iterable
 
 from argus.core.models import Confidence, Finding, Likelihood, Location, Remediation, Severity
 from argus.core.plugin import Scanner, ScannerContext, scanner
+from argus.scanners._text import CURL_PIPE_SHELL_RE, iter_scan_lines
 
 _RULES: dict[str, list[tuple[str, re.Pattern, str, Severity, str]]] = {
     ".java": [
@@ -66,7 +67,7 @@ _RULES: dict[str, list[tuple[str, re.Pattern, str, Severity, str]]] = {
          "Swift Process launch", Severity.MEDIUM, "CWE-78"),
     ],
     ".sh": [
-        ("lang.shell.curl-pipe", re.compile(r"(?:curl|wget)\s+[^\n|]+\|\s*(?:ba)?sh\b"),
+        ("lang.shell.curl-pipe", CURL_PIPE_SHELL_RE,
          "Remote script piped to shell", Severity.HIGH, "CWE-494"),
         ("lang.shell.eval-var", re.compile(r"\beval\s+[\"']?\$"),
          "Shell eval on variable", Severity.HIGH, "CWE-94"),
@@ -96,9 +97,11 @@ class LangSastScanner(Scanner):
             rules = _RULES.get(f.suffix)
             if not rules:
                 continue
-            for i, line in enumerate(f.text().splitlines(), 1):
+            reported: set[tuple[str, int]] = set()
+            for i, line in iter_scan_lines(f.text()):
                 for rule_id, pattern, title, sev, cwe in rules:
-                    if pattern.search(line):
+                    if (rule_id, i) not in reported and pattern.search(line):
+                        reported.add((rule_id, i))
                         yield Finding(
                             id=f"lang-sast:{rule_id}:{f.rel_path}:{i}",
                             rule_id=rule_id,
