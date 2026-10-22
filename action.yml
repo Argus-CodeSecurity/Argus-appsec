@@ -15,6 +15,10 @@
 #
 # On pull requests the action is diff-aware by default: it scans the base branch
 # to build a baseline, then reports and gates only on findings the PR introduces.
+#
+# Security note for maintainers: inputs are never interpolated into `run:` blocks
+# with `${{ }}`. Every value reaches the shell through `env:` and is quoted, so a
+# caller that wires an input from untrusted event data cannot inject commands.
 name: "Argus Security Scan"
 description: >-
   AI-enriched application security scanning: hardcoded secrets, vulnerable
@@ -22,7 +26,7 @@ description: >-
   and IaC misconfigurations, with explanations, SARIF upload to GitHub Code
   Scanning, and diff-aware pull-request gating. Offline by default: no API key
   needed and code never leaves the runner.
-author: "Haseeb Farooq"
+author: "The Argus Authors"
 
 branding:
   icon: "eye"
@@ -82,7 +86,9 @@ inputs:
     required: false
     default: "false"
   argus-version:
-    description: "argus-appsec version to install (default: latest from PyPI)."
+    description: >-
+      argus-appsec version to install from PyPI. Empty (the default) installs the
+      Argus source bundled with this action ref, so `@vX.Y.Z` runs exactly X.Y.Z.
     required: false
     default: ""
   python-version:
@@ -90,7 +96,9 @@ inputs:
     required: false
     default: "3.12"
   extra-args:
-    description: "Extra arguments appended verbatim to `argus scan`."
+    description: >-
+      Extra arguments appended to `argus scan`, split on whitespace like a shell
+      would (quotes are not interpreted).
     required: false
     default: ""
 
@@ -102,17 +110,25 @@ outputs:
 runs:
   using: "composite"
   steps:
-    - uses: actions/setup-python@v5
+    - uses: actions/setup-python@0b93645e9fea7318ecaed2b359559ac225c90a2b # v5.3.0
       with:
         python-version: ${{ inputs.python-version }}
 
     - name: Install Argus
       shell: bash
+      env:
+        ARGUS_VERSION: ${{ inputs.argus-version }}
+        ACTION_PATH: ${{ github.action_path }}
       run: |
-        if [ -n "${{ inputs.argus-version }}" ]; then
-          pip install --quiet "argus-appsec==${{ inputs.argus-version }}"
+        set -euo pipefail
+        if [ -n "$ARGUS_VERSION" ]; then
+          if ! [[ "$ARGUS_VERSION" =~ ^[0-9A-Za-z.+!-]+$ ]]; then
+            echo "::error::argus-version must be a plain version string, got: $ARGUS_VERSION"
+            exit 1
+          fi
+          python -m pip install --quiet "argus-appsec==${ARGUS_VERSION}"
         else
-          pip install --quiet argus-appsec
+          python -m pip install --quiet "$ACTION_PATH"
         fi
 
     - name: Build baseline from base branch (diff-aware PRs)
@@ -133,36 +149,55 @@ runs:
 
     - name: Run Argus
       shell: bash
+      env:
+        INPUT_PATH: ${{ inputs.path }}
+        INPUT_SARIF_FILE: ${{ inputs.sarif-file }}
+        INPUT_SCANNERS: ${{ inputs.scanners }}
+        INPUT_EXCLUDE_SCANNERS: ${{ inputs.exclude-scanners }}
+        INPUT_MIN_SEVERITY: ${{ inputs.min-severity }}
+        INPUT_CONFIG: ${{ inputs.config }}
+        INPUT_FAIL_ON: ${{ inputs.fail-on }}
+        INPUT_EXTRA_ARGS: ${{ inputs.extra-args }}
       run: |
-        args=(scan "${{ inputs.path }}" -f sarif -o "${{ inputs.sarif-file }}" --quiet)
-        [ -n "${{ inputs.scanners }}" ]         && args+=(--scanners "${{ inputs.scanners }}")
-        [ -n "${{ inputs.exclude-scanners }}" ] && args+=(--exclude "${{ inputs.exclude-scanners }}")
-        [ -n "${{ inputs.min-severity }}" ]     && args+=(--min-severity "${{ inputs.min-severity }}")
-        [ -n "${{ inputs.config }}" ]           && args+=(--config "${{ inputs.config }}")
-        [ -n "${{ inputs.fail-on }}" ]          && args+=(--fail-on "${{ inputs.fail-on }}")
+        set -uo pipefail
+        args=(scan "$INPUT_PATH" -f sarif -o "$INPUT_SARIF_FILE" --quiet)
+        [ -n "$INPUT_SCANNERS" ]         && args+=(--scanners "$INPUT_SCANNERS")
+        [ -n "$INPUT_EXCLUDE_SCANNERS" ] && args+=(--exclude "$INPUT_EXCLUDE_SCANNERS")
+        [ -n "$INPUT_MIN_SEVERITY" ]     && args+=(--min-severity "$INPUT_MIN_SEVERITY")
+        [ -n "$INPUT_CONFIG" ]           && args+=(--config "$INPUT_CONFIG")
+        [ -n "$INPUT_FAIL_ON" ]          && args+=(--fail-on "$INPUT_FAIL_ON")
         [ -f "${RUNNER_TEMP}/argus-baseline.json" ] && args+=(--baseline "${RUNNER_TEMP}/argus-baseline.json")
-        # shellcheck disable=SC2086 -- extra-args is intentionally word-split
-        argus "${args[@]}" ${{ inputs.extra-args }}
+        # Word-split extra-args into an array without evaluating it, so globs,
+        # `$(...)` and `;` stay literal arguments instead of running.
+        extra=()
+        [ -n "$INPUT_EXTRA_ARGS" ] && read -r -a extra <<< "$INPUT_EXTRA_ARGS"
+        argus "${args[@]}" "${extra[@]}"
 
     - name: Comment findings on the pull request (PR bot)
-      if: github.event_name == 'pull_request' && inputs.pr-comment == 'true'
+      # Run even when the gate above failed: that is when the comment matters most.
+      if: (success() || failure()) && github.event_name == 'pull_request' && inputs.pr-comment == 'true'
       shell: bash
       env:
         GITHUB_TOKEN: ${{ github.token }}
+        INPUT_PATH: ${{ inputs.path }}
+        INPUT_SCANNERS: ${{ inputs.scanners }}
+        INPUT_EXCLUDE_SCANNERS: ${{ inputs.exclude-scanners }}
+        INPUT_MIN_SEVERITY: ${{ inputs.min-severity }}
+        INPUT_CONFIG: ${{ inputs.config }}
       run: |
         # Post only the findings this PR introduces as an inline review. Never
         # fail the build here; gating is the `fail-on` job's responsibility.
-        args=(review "${{ inputs.path }}" --quiet)
-        [ -n "${{ inputs.scanners }}" ]         && args+=(--scanners "${{ inputs.scanners }}")
-        [ -n "${{ inputs.exclude-scanners }}" ] && args+=(--exclude "${{ inputs.exclude-scanners }}")
-        [ -n "${{ inputs.min-severity }}" ]     && args+=(--min-severity "${{ inputs.min-severity }}")
-        [ -n "${{ inputs.config }}" ]           && args+=(--config "${{ inputs.config }}")
+        args=(review "$INPUT_PATH" --quiet)
+        [ -n "$INPUT_SCANNERS" ]         && args+=(--scanners "$INPUT_SCANNERS")
+        [ -n "$INPUT_EXCLUDE_SCANNERS" ] && args+=(--exclude "$INPUT_EXCLUDE_SCANNERS")
+        [ -n "$INPUT_MIN_SEVERITY" ]     && args+=(--min-severity "$INPUT_MIN_SEVERITY")
+        [ -n "$INPUT_CONFIG" ]           && args+=(--config "$INPUT_CONFIG")
         [ -f "${RUNNER_TEMP}/argus-baseline.json" ] && args+=(--baseline "${RUNNER_TEMP}/argus-baseline.json")
         argus "${args[@]}" || echo "::warning::Argus PR review could not be posted."
 
     - name: Upload SARIF to GitHub Code Scanning
       if: always() && inputs.upload-sarif == 'true'
-      uses: github/codeql-action/upload-sarif@v3
+      uses: github/codeql-action/upload-sarif@1b549b9259bda1cb5ddde3b41741a82a2d15a841 # v3.28.13
       with:
         sarif_file: ${{ inputs.sarif-file }}
         category: ${{ inputs.category }}
