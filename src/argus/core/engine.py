@@ -608,15 +608,51 @@ class ScanEngine:
     # The `reason` is required (so suppressions are documented). The rule id is
     # optional; without it every finding on the line is suppressed. An optional
     # `until=YYYY-MM-DD` makes the suppression expire so accepted risk resurfaces.
-    # `#` and `//` comment styles are both accepted.
-    _INLINE_IGNORE = re.compile(
-        r"""(?:\#|//)\s*argus-ignore
+    # `#` and `//` comments are accepted in every file; the comment styles of
+    # other languages only in files of that type (_INLINE_MARKERS), so a `;` or
+    # `--` that is code elsewhere never starts a suppression.
+    _INLINE_BODY = r"""\s*argus-ignore
             (?::\s*(?P<rule>[A-Za-z0-9_.\-]+))?
             [^\n]*?reason\s*=\s*['"](?P<reason>[^'"]+)['"]
             (?:[^\n]*?until\s*=\s*(?P<until>\d{4}-\d{2}-\d{2}))?
-        """,
-        re.VERBOSE,
-    )
+        """
+    _INLINE_IGNORE = re.compile(r"(?:\#|//)" + _INLINE_BODY, re.VERBOSE)
+    # Extra comment openers by file suffix (lower case).
+    _INLINE_MARKERS: dict[str, tuple[str, ...]] = {
+        # -- line comments: SQL, Lua, Haskell
+        ".sql": ("--",),
+        ".lua": ("--",),
+        ".hs": ("--",),
+        # <!-- --> comments: HTML, XML, Markdown
+        ".html": ("<!--",),
+        ".htm": ("<!--",),
+        ".xhtml": ("<!--",),
+        ".xml": ("<!--",),
+        ".md": ("<!--",),
+        ".markdown": ("<!--",),
+        # ; line comments: INI, Lisp dialects
+        ".ini": (";",),
+        ".lisp": (";",),
+        ".lsp": (";",),
+        ".el": (";",),
+        ".clj": (";",),
+    }
+    _INLINE_BY_SUFFIX: dict[str, re.Pattern[str]] = {}
+
+    @classmethod
+    def _inline_pattern(cls, path: str) -> re.Pattern[str]:
+        """The argus-ignore pattern for a file, chosen by its suffix."""
+        name = path.rsplit("/", 1)[-1].lower()
+        suffix = name[name.rfind(".") :] if "." in name else ""
+        extra = cls._INLINE_MARKERS.get(suffix)
+        if not extra:
+            return cls._INLINE_IGNORE
+        pattern = cls._INLINE_BY_SUFFIX.get(suffix)
+        if pattern is None:
+            openers = "|".join(re.escape(m) for m in ("#", "//", *extra))
+            pattern = re.compile(f"(?:{openers})" + cls._INLINE_BODY, re.VERBOSE)
+            cls._INLINE_BY_SUFFIX[suffix] = pattern
+        return pattern
 
     @staticmethod
     def _rule_matches(rule_id: str, target: str) -> bool:
@@ -650,7 +686,7 @@ class ScanEngine:
             if line_no is None or lines is None or not 1 <= line_no <= len(lines):
                 kept.append(finding)
                 continue
-            m = cls._INLINE_IGNORE.search(lines[line_no - 1])
+            m = cls._inline_pattern(finding.location.path).search(lines[line_no - 1])
             if m is None:
                 kept.append(finding)
                 continue

@@ -82,7 +82,18 @@ subprocess.run(
 
 - Scope by rule id (full `patterns.python-shell-true`, short `python-shell-true`,
   or the last segment). Omit the rule id to suppress every finding on the line.
-- `//` comments work too, for JavaScript/TypeScript.
+- `#` and `//` comments work in every file. Other comment styles work in
+  their own file types:
+
+  | Comment | Files |
+  |---|---|
+  | `-- argus-ignore ...` | SQL (`.sql`), Lua (`.lua`), Haskell (`.hs`) |
+  | `<!-- argus-ignore ... -->` | HTML (`.html`, `.htm`, `.xhtml`), XML (`.xml`), Markdown (`.md`, `.markdown`) |
+  | `; argus-ignore ...` | INI (`.ini`), Lisp (`.lisp`, `.lsp`, `.el`, `.clj`) |
+
+  ```sql
+  INSERT INTO settings VALUES ('smtp_password', 'changeme');  -- argus-ignore reason="local dev seed data"
+  ```
 - **Expiring suppressions.** Add `until=YYYY-MM-DD` and the suppression lapses on
   that date, so accepted risk resurfaces instead of hiding forever:
 
