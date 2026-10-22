@@ -33,19 +33,13 @@ import dataclasses
 import fnmatch
 import logging
 import re
+import threading
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from datetime import date, datetime, timezone
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from argus import __version__
-from argus.agents import (
-    AgentContext,
-    AttackSimulationAgent,
-    EnrichmentAgent,
-    PatchAgent,
-)
-from argus.ai.factory import build_provider
 from argus.analysis.repository import RepositoryAnalyzer
 from argus.core.config import Config, ConfigError
 from argus.core.models import Finding, ScanResult
@@ -56,6 +50,7 @@ if TYPE_CHECKING:
     from argus.ai.base import AIProvider
     from argus.audit import AuditEvent
     from argus.context import ProjectContext
+    from argus.core.config import AIConfig
 
 # A callback the CLI uses to render progress. No-op by default.
 ProgressFn = Callable[[str], None]
@@ -67,6 +62,41 @@ log = logging.getLogger("argus.engine")
 # part of the context, so editing context.yml re-analyzes the affected files.
 _CONTEXT_LANGUAGE = {"ast-python": "python", "ast-js": "javascript"}
 _CONTEXT_CLEARED_KEY = "context_cleared"
+
+
+def build_provider(cfg: AIConfig) -> AIProvider:
+    """The configured AI provider (see :func:`argus.ai.factory.build_provider`).
+
+    Imported on use: the provider modules pull in model SDK and HTTP client
+    imports that a run without AI enrichment never needs.
+    """
+    from argus.ai.factory import build_provider as build
+
+    return build(cfg)
+
+
+class _DeferredProvider:
+    """The configured AI provider, built the first time anything uses it.
+
+    With AI enrichment off the engine never calls a model, but scanners still
+    receive ``ctx.ai``. Building it on first attribute access keeps the model
+    clients out of runs that never touch it (``argus check`` among them),
+    while a scanner that does use ``ctx.ai`` gets the same provider as before.
+    """
+
+    def __init__(self, cfg: AIConfig) -> None:
+        self._cfg = cfg
+        self._provider: AIProvider | None = None
+        self._lock = threading.Lock()
+
+    def _get(self) -> AIProvider:
+        with self._lock:
+            if self._provider is None:
+                self._provider = build_provider(self._cfg)
+            return self._provider
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._get(), name)
 
 
 class ScanEngine:
@@ -89,8 +119,7 @@ class ScanEngine:
         result.project_summary = project.summary()
 
         # AI provider (shared by all agents). Falls back to heuristic if needed.
-        ai = build_provider(self.config.ai)
-        self._progress(f"AI provider: {ai.name}" + ("" if ai.is_remote else " (local / offline)"))
+        ai = self._provider()
 
         # 2. Scan. Scanners are independent, so they run concurrently; results
         # are merged in selection order to keep output deterministic. File-local
@@ -168,7 +197,7 @@ class ScanEngine:
         into another finding and record who else reported them.
         """
         if ai is None:
-            ai = build_provider(self.config.ai)
+            ai = self._provider()
         project = self._working_copy(project)
         result.findings = [
             f
@@ -265,6 +294,15 @@ class ScanEngine:
             f"highest severity {result.highest_severity().label}."
         )
         return result
+
+    def _provider(self) -> AIProvider:
+        """The AI provider for this run; deferred when enrichment is off."""
+        if not self.config.ai.enabled:
+            self._progress("AI enrichment: off")
+            return cast("AIProvider", _DeferredProvider(self.config.ai))
+        ai = build_provider(self.config.ai)
+        self._progress(f"AI provider: {ai.name}" + ("" if ai.is_remote else " (local / offline)"))
+        return ai
 
     # --- caching --------------------------------------------------------------
     def _open_cache(self, project: Project):
@@ -417,6 +455,8 @@ class ScanEngine:
         return selected, failed, errors
 
     def _run_agents(self, result: ScanResult, project: Project, ai: AIProvider) -> None:
+        from argus.agents import AgentContext, AttackSimulationAgent, EnrichmentAgent, PatchAgent
+
         agent_ctx = AgentContext(project=project, config=self.config, ai=ai)
         enrichment = EnrichmentAgent()
         simulator = AttackSimulationAgent()

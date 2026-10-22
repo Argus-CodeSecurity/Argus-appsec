@@ -10,7 +10,6 @@ from pathlib import Path
 
 import typer
 from rich.markup import escape
-from rich.table import Table
 
 from argus import __version__
 from argus.cli._console import console, err_console
@@ -24,6 +23,8 @@ def starter_config() -> str:
 
 def scanners() -> None:
     """List available scanners."""
+    from rich.table import Table
+
     table = Table(title="Scanners", show_lines=False)
     table.add_column("Name", style="bold")
     table.add_column("Category")
@@ -35,6 +36,8 @@ def scanners() -> None:
 
 def reporters() -> None:
     """List available report formats."""
+    from rich.table import Table
+
     table = Table(title="Reporters")
     table.add_column("Name", style="bold")
     table.add_column("Extension")
@@ -46,6 +49,8 @@ def reporters() -> None:
 
 def providers() -> None:
     """List AI providers and whether each is currently usable."""
+    from rich.table import Table
+
     table = Table(title="AI providers")
     table.add_column("Name", style="bold")
     table.add_column("Location")

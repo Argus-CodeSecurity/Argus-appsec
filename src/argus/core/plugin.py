@@ -11,6 +11,12 @@ plugins register on import; third-party packages register through the
 ``argus.plugins`` entry-point group declared in ``pyproject.toml``. Adding a new
 language, scanner, or report format therefore never requires editing the core.
 
+Built-in reporters and AI providers are imported lazily:
+:func:`argus.plugins.register_builtins` adds a loader per kind with
+:meth:`Registry.add_loader`, and the first lookup of that kind runs it. A
+command that never looks up reporters or AI providers (``argus check``) does
+not import them, or the HTTP clients they pull in.
+
 Third-party code should import these names from :mod:`argus.plugin_api`, the
 stable, versioned surface. Every plugin class carries an ``api_version``; the
 registry skips (and logs) a plugin built for a different
@@ -22,10 +28,10 @@ from __future__ import annotations
 
 import abc
 import logging
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from importlib import metadata
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar
 
 from argus.core.models import Finding, ScanResult
 
@@ -41,6 +47,25 @@ if TYPE_CHECKING:
 PLUGIN_API_VERSION = 1
 
 logger = logging.getLogger("argus.plugins")
+
+# One scan of the installed distributions' entry points per process, keyed by
+# the function that produced it (so a test that replaces it gets a new scan).
+# Each scan reads every distribution's metadata, which costs tens of
+# milliseconds; plugin discovery and CLI command discovery share it.
+_ENTRY_POINT_SCAN: tuple[object, Any] | None = None
+
+
+def plugin_entry_points(group: str) -> list[metadata.EntryPoint]:
+    """The installed entry points of ``group``."""
+    global _ENTRY_POINT_SCAN
+    scan = metadata.entry_points
+    if _ENTRY_POINT_SCAN is None or _ENTRY_POINT_SCAN[0] is not scan:
+        _ENTRY_POINT_SCAN = (scan, scan())
+    eps: Any = _ENTRY_POINT_SCAN[1]
+    select = getattr(eps, "select", None)
+    if select is not None:
+        return list(select(group=group))
+    return [ep for ep in eps if getattr(ep, "group", None) == group]
 
 
 class PluginVersionError(ValueError):
@@ -161,6 +186,58 @@ class Registry:
         # Plugins skipped for an incompatible api_version: (kind, name) -> reason.
         self._rejected: dict[tuple[str, str], str] = {}
         self._loaded_entrypoints = False
+        # Deferred registrations per kind, run on the first lookup of that kind.
+        self._loaders: dict[str, list[Callable[[], object]]] = {
+            "Scanner": [],
+            "Reporter": [],
+            "AIProvider": [],
+        }
+
+    # --- lazy built-ins -----------------------------------------------------
+    def add_loader(self, kind: str, loader: Callable[[], object]) -> None:
+        """Run ``loader`` (which registers plugins) before the first lookup of ``kind``.
+
+        ``kind`` is ``"Scanner"``, ``"Reporter"`` or ``"AIProvider"``. Used for
+        Argus's built-ins so importing the CLI does not import every scanner,
+        report format and model client up front.
+        """
+        if kind not in self._loaders:
+            raise ValueError(f"unknown plugin kind {kind!r}")
+        self._loaders[kind].append(loader)
+
+    def _load(self, kind: str) -> None:
+        loaders = self._loaders[kind]
+        while loaders:
+            loaders.pop(0)()
+
+    @staticmethod
+    def _is_builtin(cls: type) -> bool:
+        return cls.__module__.split(".", 1)[0] == "argus"
+
+    def _claim(self, kind: str, table: dict[str, type], cls: type) -> bool:
+        """Whether ``cls`` may take its name in ``table``; raises on a real clash.
+
+        Built-ins are registered lazily, so a third-party plugin from an entry
+        point can register first. A built-in still wins its own name: the
+        third-party class is dropped and recorded as rejected, the same
+        outcome as when the built-ins were registered at import time and the
+        plugin's registration failed.
+        """
+        name = getattr(cls, "name", "")
+        existing = table.get(name)
+        if existing is None or existing is cls:
+            return True
+        if self._is_builtin(cls) and not self._is_builtin(existing):
+            reason = (
+                f"{kind} name {name!r} belongs to the built-in "
+                f"{cls.__module__}.{cls.__qualname__}; "
+                f"dropped {existing.__module__}.{existing.__qualname__}"
+            )
+            self._rejected[(kind, name)] = reason
+            logger.warning("Skipping %s", reason)
+            return True
+        self._reject_collision(kind, name, existing, cls)
+        return False  # pragma: no cover - _reject_collision raises
 
     # --- registration -------------------------------------------------------
     @staticmethod
@@ -201,10 +278,8 @@ class Registry:
             raise ValueError(f"Scanner {cls.__name__} must define a name")
         if not self._accepts("Scanner", cls):
             return cls
-        existing = self._scanners.get(cls.name)
-        if existing is not None:
-            self._reject_collision("Scanner", cls.name, existing, cls)
-        self._scanners[cls.name] = cls
+        if self._claim("Scanner", self._scanners, cls):
+            self._scanners[cls.name] = cls
         return cls
 
     def register_reporter(self, cls: type[Reporter]) -> type[Reporter]:
@@ -212,10 +287,8 @@ class Registry:
             raise ValueError(f"Reporter {cls.__name__} must define a name")
         if not self._accepts("Reporter", cls):
             return cls
-        existing = self._reporters.get(cls.name)
-        if existing is not None:
-            self._reject_collision("Reporter", cls.name, existing, cls)
-        self._reporters[cls.name] = cls
+        if self._claim("Reporter", self._reporters, cls):
+            self._reporters[cls.name] = cls
         return cls
 
     def register_ai_provider(self, cls: type[AIProvider]) -> type[AIProvider]:
@@ -223,27 +296,25 @@ class Registry:
             raise ValueError(f"AIProvider {cls.__name__} must define a name")
         if not self._accepts("AIProvider", cls):
             return cls
-        existing = self._ai_providers.get(cls.name)
-        if existing is not None:
-            self._reject_collision("AIProvider", cls.name, existing, cls)
-        self._ai_providers[cls.name] = cls
+        if self._claim("AIProvider", self._ai_providers, cls):
+            self._ai_providers[cls.name] = cls
         return cls
 
     # --- lookup -------------------------------------------------------------
     def scanners(self) -> dict[str, type[Scanner]]:
-        self._ensure_entrypoints()
+        self._ensure("Scanner")
         return dict(self._scanners)
 
     def reporters(self) -> dict[str, type[Reporter]]:
-        self._ensure_entrypoints()
+        self._ensure("Reporter")
         return dict(self._reporters)
 
     def ai_providers(self) -> dict[str, type[AIProvider]]:
-        self._ensure_entrypoints()
+        self._ensure("AIProvider")
         return dict(self._ai_providers)
 
     def get_scanner(self, name: str) -> type[Scanner]:
-        self._ensure_entrypoints()
+        self._ensure("Scanner")
         if name not in self._scanners:
             raise KeyError(
                 self._skipped_reason("Scanner", name)
@@ -252,7 +323,7 @@ class Registry:
         return self._scanners[name]
 
     def get_reporter(self, name: str) -> type[Reporter]:
-        self._ensure_entrypoints()
+        self._ensure("Reporter")
         if name not in self._reporters:
             raise KeyError(
                 self._skipped_reason("Reporter", name)
@@ -261,7 +332,7 @@ class Registry:
         return self._reporters[name]
 
     def get_ai_provider(self, name: str) -> type[AIProvider]:
-        self._ensure_entrypoints()
+        self._ensure("AIProvider")
         if name not in self._ai_providers:
             raise KeyError(
                 self._skipped_reason("AIProvider", name)
@@ -274,6 +345,11 @@ class Registry:
         return f"{name!r} is installed but was skipped: {reason}" if reason else None
 
     # --- discovery ----------------------------------------------------------
+    def _ensure(self, kind: str) -> None:
+        """Built-ins of ``kind`` first, then third-party entry points (once)."""
+        self._load(kind)
+        self._ensure_entrypoints()
+
     def _ensure_entrypoints(self) -> None:
         """Load plugins declared under the ``argus.plugins`` entry-point group.
 
@@ -285,7 +361,7 @@ class Registry:
             return
         self._loaded_entrypoints = True
         try:
-            eps = metadata.entry_points(group="argus.plugins")
+            eps = plugin_entry_points("argus.plugins")
         except Exception:  # pragma: no cover - environment dependent
             return
         for ep in eps:

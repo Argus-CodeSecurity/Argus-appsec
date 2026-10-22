@@ -10,8 +10,6 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, field
 
-import httpx
-
 from argus.supply_chain.scripts import LIFECYCLE_HOOKS, SUSPICIOUS_INSTALL_SCRIPT
 
 log = logging.getLogger("argus.supply_chain.behavior")
@@ -47,6 +45,8 @@ def npm_fingerprint(
     name: str, version: str, *, timeout: float = 10.0
 ) -> BehaviorFingerprint | None:
     """Fetch npm registry metadata for one exact version (read-only)."""
+    import httpx  # imported here: only an online fetch needs it, not every CLI start
+
     url = f"{_REGISTRY}/{name}/{version}"
     try:
         with httpx.Client(timeout=timeout, follow_redirects=True) as client:

@@ -8,7 +8,6 @@ from pathlib import Path
 
 import typer
 from rich.markup import escape
-from rich.table import Table
 
 from argus.cli._console import console, err_console
 from argus.cli.output import write_stdout
@@ -169,6 +168,8 @@ def audit_show(
     if as_json:
         write_stdout("".join(json.dumps(r, sort_keys=True) + "\n" for r in records))
         return
+    from rich.table import Table
+
     table = Table(show_lines=False)
     for col in ("seq", "time (UTC)", "actor", "action", "kind", "rule", "path", "reason"):
         table.add_column(col, overflow="fold")

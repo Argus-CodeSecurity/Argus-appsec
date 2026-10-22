@@ -9,7 +9,6 @@ from __future__ import annotations
 from pathlib import Path
 
 import typer
-from rich.table import Table
 
 from argus.cli._common import (
     cli_severity,
@@ -65,6 +64,8 @@ def focused_scan(
             output.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
             console.print(f"[green]Report:[/green] {output} ({len(result.findings)} finding(s))")
         elif not quiet:
+            from rich.table import Table
+
             table = Table(title=title)
             table.add_column("Severity")
             table.add_column("Rule")

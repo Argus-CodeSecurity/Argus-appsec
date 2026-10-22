@@ -4,6 +4,10 @@ Report formats go through the reporter registry. The console table, the
 posture panel and the fix summary are Rich renderings for humans. Anything a
 caller may pipe into a parser is written to stdout verbatim, never through
 Rich, which would soft-wrap long lines and treat ``[...]`` as markup.
+
+Rich tables and panels and the posture evaluation are imported where they
+are used: every command imports this module, and ``argus check`` never
+renders them.
 """
 
 from __future__ import annotations
@@ -14,13 +18,10 @@ from typing import TYPE_CHECKING
 
 import typer
 from rich.markup import escape
-from rich.panel import Panel
-from rich.table import Table
 
 from argus.cli._console import console, err_console
 from argus.core.models import ScanResult, Severity
 from argus.core.plugin import registry
-from argus.reporting.posture import evaluate_posture
 
 if TYPE_CHECKING:
     from argus.remediation.pullrequest import FixOutcome
@@ -112,6 +113,9 @@ def emit(
 
 def print_table(result: ScanResult) -> None:
     """The default console report: a summary panel and one row per finding."""
+    from rich.panel import Panel
+    from rich.table import Table
+
     if result.errors:
         for err in result.errors:
             err_console.print(f"[yellow]Scanner failed:[/yellow] {escape(err)}")
@@ -165,7 +169,9 @@ def print_table(result: ScanResult) -> None:
 
 def print_posture(result: ScanResult, fail_on: Severity | None) -> None:
     """The security posture panel printed after the table report."""
-    from argus.reporting.posture import render_posture_panel
+    from rich.panel import Panel
+
+    from argus.reporting.posture import evaluate_posture, render_posture_panel
 
     summary = evaluate_posture(result, fail_on)
     border = {
@@ -185,6 +191,9 @@ def print_posture(result: ScanResult, fail_on: Severity | None) -> None:
 
 def print_fix_outcome(outcome: FixOutcome, *, open_pr: bool, dry_run: bool) -> None:
     """Summarize what ``argus fix`` applied, committed or opened."""
+    from rich.panel import Panel
+    from rich.table import Table
+
     report = outcome.applied
     if report.fixes:
         table = Table(title="Fixes" + (" (dry run)" if dry_run else ""))

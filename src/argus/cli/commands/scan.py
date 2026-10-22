@@ -19,7 +19,6 @@ from argus.cli._common import (
 )
 from argus.cli._console import err_console
 from argus.cli.output import emit, print_posture, print_scanner_failure
-from argus.reporting.posture import evaluate_posture
 
 
 def scan(
@@ -324,6 +323,8 @@ def scan(
                     f"{cfg.fail_on.label if cfg.fail_on else ''}."
                 )
                 if quiet:
+                    from argus.reporting.posture import evaluate_posture
+
                     s = evaluate_posture(result, cfg.fail_on)
                     err_console.print(f"[dim]{s.headline}[/dim]")
             raise typer.Exit(1)

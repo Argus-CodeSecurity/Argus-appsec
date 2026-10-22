@@ -5,7 +5,6 @@ from __future__ import annotations
 from pathlib import Path
 
 import typer
-from rich.table import Table
 
 from argus.cli._common import cli_severity, resolve_project
 from argus.cli._console import console, err_console
@@ -82,6 +81,8 @@ def drift(
             output.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
         if not quiet:
             s = payload["summary"]
+            from rich.table import Table
+
             table = Table(title="Inventory drift")
             table.add_column("Change")
             table.add_column("Count")
@@ -105,6 +106,8 @@ def drift(
         output.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
     if not quiet:
         s = report.summary()
+        from rich.table import Table
+
         table = Table(title="Scan drift (configuration / posture change)")
         table.add_column("Change")
         table.add_column("Count")

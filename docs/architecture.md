@@ -89,6 +89,10 @@ dominated by the worst finding rather than averaged.
 
 Command functions are plain functions that take Typer options; they call into
 `argus.core` and the domain packages and keep presentation in `output.py`.
+Every command module is imported when the CLI starts (Typer needs the
+signatures), so anything heavy a command uses, such as Rich tables, report
+formats or an HTTP client, is imported inside the function that needs it.
+`argus check` runs after every edit in an editor hook and depends on this.
 Exit codes follow the CLI contract in `COMPATIBILITY.md`: 0 for a pass, 1 for
 findings at the `--fail-on` threshold or crashed scanners in a gating run, 2 for
 usage, target and configuration errors.
@@ -99,7 +103,12 @@ Two registration paths feed the same global `Registry`:
 
 1. **In-process**, importing a scanner/reporter/provider module runs its
    `@scanner`/`@reporter`/`@ai_provider` decorator, registering the class. The
-   built-ins use this via `argus.plugins.register_builtins`.
+   built-ins use this via `argus.plugins.register_builtins`, which imports the
+   scanners and defers the reporters and AI providers: the first lookup of
+   either kind (`registry.reporters()`, `registry.get_ai_provider(...)`)
+   imports them, so a command that never needs a report format or a model
+   client does not pay for importing it. A built-in always keeps its name,
+   even when a third-party plugin registered the same name first.
 2. **Entry points**, third-party packages declare a callable under the
    `argus.plugins` entry-point group in their `pyproject.toml`. The registry
    loads these lazily on first lookup. A failure in one plugin is isolated and

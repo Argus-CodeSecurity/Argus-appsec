@@ -5,7 +5,6 @@ from __future__ import annotations
 from pathlib import Path
 
 import typer
-from rich.table import Table
 
 from argus.cli._common import (
     CONFIG_FROM_REF_HELP,
@@ -95,6 +94,8 @@ def policy_check(
 
     outcome = evaluate(result, policies)
     if outcome.blocked:
+        from rich.table import Table
+
         table = Table(title="Policy violations (BLOCK)")
         table.add_column("Policy", style="bold")
         table.add_column("Finding")

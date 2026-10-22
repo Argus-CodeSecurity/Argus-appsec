@@ -8,7 +8,6 @@ from typing import TypeVar
 
 import typer
 from rich.markup import escape
-from rich.table import Table
 
 from argus.cli._common import (
     cli_severity,
@@ -221,6 +220,8 @@ def dependencies(
             output.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
             console.print(f"[green]Wrote[/green] {len(changes)} change(s) to {output}")
         else:
+            from rich.table import Table
+
             table = Table(title=f"Dependency changes ({diff_ref})")
             table.add_column("Change")
             table.add_column("Package")
@@ -355,6 +356,8 @@ def supply_chain_cmd(
             output.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
             console.print(f"[green]Supply-chain report:[/green] {output}")
         elif not quiet:
+            from rich.table import Table
+
             table = Table(title="Supply-chain findings")
             table.add_column("Severity")
             table.add_column("Rule")

@@ -108,7 +108,7 @@ def test_npm_fingerprint_mocked():
     transport = httpx.MockTransport(handler)
     with (
         httpx.Client(transport=transport) as client,
-        patch("argus.supply_chain.behavior.httpx.Client") as mock_cls,
+        patch("httpx.Client") as mock_cls,
     ):
         mock_cls.return_value.__enter__.return_value = client
         fp = npm_fingerprint("evil-pkg", "1.0.0")

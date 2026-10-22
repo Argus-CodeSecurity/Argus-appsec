@@ -92,9 +92,11 @@ config, exit 1, which both editors treat as a non-blocking hook error.
 
 Measured on Windows 11 with Python 3.11, checking one 300-line Python file:
 the check itself takes about 75 ms with a warm cache and about 220 ms
-without one. The whole `argus check` process takes about 1.2 to 1.4 s on an
-idle machine, most of it Python startup and importing Argus (about 1.0 to
-1.5 s); under heavy load it was 2 to 2.5 s.
+without one. The whole `argus check` process takes about 0.7 to 0.9 s,
+most of it Python startup and importing Argus; under heavy load it is
+slower. `argus check` does not import the report formats, the AI provider
+clients or their HTTP library unless it needs them (`-f json` loads the JSON
+reporter, `--ai` the provider).
 
 ## Claude Code
 

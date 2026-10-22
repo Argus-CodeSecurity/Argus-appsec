@@ -14,7 +14,6 @@ from rich.markup import escape
 from argus.cli._common import apply_baseline, apply_diff, build_config, cli_severity
 from argus.cli._console import err_console
 from argus.cli.output import emit, print_posture
-from argus.reporting.posture import evaluate_posture
 
 FORMAT_HELP = (
     "Output format(s): table, json, sarif, gitlab, markdown, html, csv, badge, vex. Repeatable."
@@ -158,5 +157,7 @@ def import_cmd(
             f"[red]Failing:[/red] findings at/above {cfg.fail_on.label if cfg.fail_on else ''}."
         )
         if quiet:
+            from argus.reporting.posture import evaluate_posture
+
             err_console.print(f"[dim]{evaluate_posture(result, cfg.fail_on).headline}[/dim]")
         raise typer.Exit(1)

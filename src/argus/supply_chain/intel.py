@@ -11,8 +11,6 @@ from functools import lru_cache
 from importlib import resources
 from pathlib import Path
 
-import httpx
-
 log = logging.getLogger("argus.supply_chain.intel")
 
 # Curated feeds (bundled seed + optional remote refresh). Tried in order.
@@ -108,6 +106,8 @@ def _parse_feed_payload(data: object) -> set[tuple[str, str]]:
 
 
 def _fetch_remote(urls: tuple[str, ...] | str, timeout: float) -> set[tuple[str, str]] | None:
+    import httpx  # imported here: only an online fetch needs it, not every CLI start
+
     if isinstance(urls, str):
         urls = (urls,)
     merged: set[tuple[str, str]] = set()
