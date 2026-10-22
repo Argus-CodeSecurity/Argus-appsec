@@ -7,7 +7,16 @@ include breaking changes, noted explicitly).
 
 ## [Unreleased]
 
+## [0.9.1] - 2026-10-22
+
+0.9.0 was tagged and its container image published, but the PyPI upload was
+rejected (see below), so 0.9.1 is the first PyPI release with the 0.9.0
+security hardening. It contains every 0.9.0 change plus these fixes.
+
 ### Fixed
+- Packages declare core metadata 2.4 instead of 2.5, and releases upload with
+  `pypa/gh-action-pypi-publish` v1.14.3. The upload tooling pinned for 0.9.0
+  could not read metadata 2.5 and rejected the distributions.
 - The curl-pipe-shell rule no longer fires on text that only names the
   pattern (for example "avoid `curl | bash`" in documentation or a rule's own
   explanation); a real download-and-execute always has an argument between
@@ -316,7 +325,8 @@ Simulation Mode; deterministic verified auto-fix with branch + pull-request
 creation (`argus fix`); JSON, SARIF, Markdown, HTML, and CSV reporters; plugin
 entry-point system for scanners, reporters, and providers.
 
-[Unreleased]: https://github.com/Argus-CodeSecurity/Argus-appsec/compare/v0.9.0...HEAD
+[Unreleased]: https://github.com/Argus-CodeSecurity/Argus-appsec/compare/v0.9.1...HEAD
+[0.9.1]: https://github.com/Argus-CodeSecurity/Argus-appsec/compare/v0.9.0...v0.9.1
 [0.9.0]: https://github.com/Argus-CodeSecurity/Argus-appsec/compare/v0.8.1...v0.9.0
 [0.8.1]: https://github.com/Argus-CodeSecurity/Argus-appsec/compare/v0.8.0...v0.8.1
 [0.8.0]: https://github.com/Argus-CodeSecurity/Argus-appsec/compare/v0.7.0...v0.8.0
