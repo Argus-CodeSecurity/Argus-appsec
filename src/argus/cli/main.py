@@ -2189,18 +2189,27 @@ def _load_plugin_commands() -> None:
     optional/commercial add-ons (for example the Kubernetes assessment package)
     add a subcommand without the core shipping or depending on their code. A
     failing plugin is skipped with a warning; it never breaks the core CLI.
+
+    Command plugins go through the same allowlist/blocklist/pins as scanner
+    plugins (ARGUS_PLUGIN_ALLOWLIST and friends, see argus.plugins.signing).
     """
+    import warnings
     from importlib import metadata
+
+    from argus.plugins.signing import verify_plugin_entry
 
     try:
         eps = metadata.entry_points(group="argus.commands")
     except Exception:  # pragma: no cover - environment dependent
         return
     for ep in eps:
+        if not verify_plugin_entry(ep):
+            warnings.warn(f"Blocked Argus command plugin {ep.name!r} "
+                          "(not allowed by ARGUS_PLUGIN_* settings)", stacklevel=2)
+            continue
         try:
             ep.load()(app)
         except Exception as exc:  # pragma: no cover - defensive
-            import warnings
             warnings.warn(f"Failed to load Argus command plugin {ep.name!r}: {exc}",
                           stacklevel=2)
 
