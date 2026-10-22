@@ -1,0 +1,6130 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-10-22T13:10:09+00:00",
+  "mode": "live",
+  "host": {
+    "os": "Windows",
+    "python": "3.11.9"
+  },
+  "dataset": {
+    "name": "securityeval",
+    "title": "SecurityEval v2.1 (dataset.jsonl, Insecure_code)",
+    "repo": "https://github.com/s2e-lab/SecurityEval",
+    "commit": "6f4fb70f782c6d47b02ea24341e8ef8c1eb04a6a",
+    "archive_url": "https://codeload.github.com/s2e-lab/SecurityEval/zip/6f4fb70f782c6d47b02ea24341e8ef8c1eb04a6a",
+    "archive_sha256": "1bc64370f069a92b4ad60cdeba5df17de28ce785ba83b5e2fb052197564120aa",
+    "labels_file": "dataset.jsonl",
+    "has_negatives": false,
+    "samples": 121,
+    "cwes": 69
+  },
+  "scoring": {
+    "modes": [
+      "strict",
+      "mapped",
+      "any"
+    ],
+    "mapping": {
+      "equivalence_groups": {
+        "path-traversal": [
+          22,
+          23,
+          36,
+          73,
+          99
+        ],
+        "os-command-injection": [
+          77,
+          78,
+          88
+        ],
+        "code-injection": [
+          94,
+          95
+        ],
+        "sql-injection": [
+          89,
+          564
+        ],
+        "xss": [
+          79,
+          80
+        ],
+        "weak-hash": [
+          327,
+          328,
+          916
+        ],
+        "weak-random": [
+          330,
+          331,
+          338
+        ],
+        "xml-entities": [
+          611,
+          776
+        ],
+        "tls-validation": [
+          295,
+          297
+        ],
+        "hard-coded-credentials": [
+          259,
+          321,
+          798
+        ]
+      },
+      "rule_overrides": [
+        {
+          "tool": "bandit",
+          "rule_id": "B102",
+          "adds_cwes": [
+            95
+          ],
+          "reason": "exec() use is code injection; Bandit reports CWE-78 (OS command injection)"
+        },
+        {
+          "tool": "bandit",
+          "rule_id": "B307",
+          "adds_cwes": [
+            95
+          ],
+          "reason": "eval() use is code injection; Bandit reports CWE-78 (OS command injection)"
+        },
+        {
+          "tool": "bandit",
+          "rule_id": "B313",
+          "adds_cwes": [
+            611
+          ],
+          "reason": "Bandit XML blacklist, documented as XML attacks (XXE, entity expansion); Bandit reports CWE-20"
+        },
+        {
+          "tool": "bandit",
+          "rule_id": "B314",
+          "adds_cwes": [
+            611
+          ],
+          "reason": "Bandit XML blacklist, documented as XML attacks (XXE, entity expansion); Bandit reports CWE-20"
+        },
+        {
+          "tool": "bandit",
+          "rule_id": "B315",
+          "adds_cwes": [
+            611
+          ],
+          "reason": "Bandit XML blacklist, documented as XML attacks (XXE, entity expansion); Bandit reports CWE-20"
+        },
+        {
+          "tool": "bandit",
+          "rule_id": "B316",
+          "adds_cwes": [
+            611
+          ],
+          "reason": "Bandit XML blacklist, documented as XML attacks (XXE, entity expansion); Bandit reports CWE-20"
+        },
+        {
+          "tool": "bandit",
+          "rule_id": "B317",
+          "adds_cwes": [
+            611
+          ],
+          "reason": "Bandit XML blacklist, documented as XML attacks (XXE, entity expansion); Bandit reports CWE-20"
+        },
+        {
+          "tool": "bandit",
+          "rule_id": "B318",
+          "adds_cwes": [
+            611
+          ],
+          "reason": "Bandit XML blacklist, documented as XML attacks (XXE, entity expansion); Bandit reports CWE-20"
+        },
+        {
+          "tool": "bandit",
+          "rule_id": "B319",
+          "adds_cwes": [
+            611
+          ],
+          "reason": "Bandit XML blacklist, documented as XML attacks (XXE, entity expansion); Bandit reports CWE-20"
+        },
+        {
+          "tool": "bandit",
+          "rule_id": "B320",
+          "adds_cwes": [
+            611
+          ],
+          "reason": "Bandit XML blacklist, documented as XML attacks (XXE, entity expansion); Bandit reports CWE-20"
+        },
+        {
+          "tool": "bandit",
+          "rule_id": "B405",
+          "adds_cwes": [
+            611
+          ],
+          "reason": "Bandit XML blacklist, documented as XML attacks (XXE, entity expansion); Bandit reports CWE-20"
+        },
+        {
+          "tool": "bandit",
+          "rule_id": "B406",
+          "adds_cwes": [
+            611
+          ],
+          "reason": "Bandit XML blacklist, documented as XML attacks (XXE, entity expansion); Bandit reports CWE-20"
+        },
+        {
+          "tool": "bandit",
+          "rule_id": "B407",
+          "adds_cwes": [
+            611
+          ],
+          "reason": "Bandit XML blacklist, documented as XML attacks (XXE, entity expansion); Bandit reports CWE-20"
+        },
+        {
+          "tool": "bandit",
+          "rule_id": "B408",
+          "adds_cwes": [
+            611
+          ],
+          "reason": "Bandit XML blacklist, documented as XML attacks (XXE, entity expansion); Bandit reports CWE-20"
+        },
+        {
+          "tool": "bandit",
+          "rule_id": "B409",
+          "adds_cwes": [
+            611
+          ],
+          "reason": "Bandit XML blacklist, documented as XML attacks (XXE, entity expansion); Bandit reports CWE-20"
+        },
+        {
+          "tool": "bandit",
+          "rule_id": "B410",
+          "adds_cwes": [
+            611
+          ],
+          "reason": "Bandit XML blacklist, documented as XML attacks (XXE, entity expansion); Bandit reports CWE-20"
+        },
+        {
+          "tool": "bandit",
+          "rule_id": "B506",
+          "adds_cwes": [
+            502
+          ],
+          "reason": "yaml.load without a safe loader is unsafe deserialization; Bandit reports CWE-20"
+        },
+        {
+          "tool": "semgrep",
+          "rule_id": "python.flask.security.injection.tainted-sql-string.tainted-sql-string",
+          "adds_cwes": [
+            89
+          ],
+          "reason": "tainted SQL string rule; its registry metadata says CWE-704 (type conversion)"
+        }
+      ]
+    }
+  },
+  "tools": {
+    "argus": {
+      "status": "ok",
+      "run": {
+        "tool": "argus",
+        "started_at": "2026-10-22T13:09:29+00:00",
+        "raw_sha256": "3c550351f599470b5e77e03ab9dfacb2928e1331f575ed42c26fe6b252490693",
+        "version": "0.9.2",
+        "command": [
+          "argus",
+          "scan",
+          "<dataset_root>",
+          "--no-ai",
+          "--no-cache",
+          "--quiet",
+          "-f",
+          "json",
+          "-o",
+          "<raw_output>"
+        ],
+        "exit_code": 0,
+        "seconds": 3.9,
+        "scanners_run": [
+          "patterns",
+          "ast-python",
+          "ast-python-xfile",
+          "authz",
+          "business-logic",
+          "secrets",
+          "cloud",
+          "container-image",
+          "dast",
+          "dependency-diff",
+          "llm",
+          "malware"
+        ],
+        "scanners_failed": [],
+        "notes": "offline heuristic provider (--no-ai); default scanners incl. the [ast] tier"
+      },
+      "inventory": {
+        "findings_total": 23,
+        "findings_in_scored_files": 23,
+        "findings_in_scored_files_without_cwe": 0,
+        "rules": [
+          {
+            "rule_id": "ast-python.ast-path-traversal",
+            "cwes": [
+              22
+            ],
+            "count": 5
+          },
+          {
+            "rule_id": "ast-python.ast-command-injection",
+            "cwes": [
+              78
+            ],
+            "count": 3
+          },
+          {
+            "rule_id": "ast-python.ast-code-injection",
+            "cwes": [
+              95
+            ],
+            "count": 2
+          },
+          {
+            "rule_id": "authz.missing-authentication",
+            "cwes": [
+              306
+            ],
+            "count": 2
+          },
+          {
+            "rule_id": "patterns.python-pickle-loads",
+            "cwes": [
+              502
+            ],
+            "count": 2
+          },
+          {
+            "rule_id": "patterns.python-yaml-load",
+            "cwes": [
+              502
+            ],
+            "count": 2
+          },
+          {
+            "rule_id": "patterns.tls-verify-disabled",
+            "cwes": [
+              295
+            ],
+            "count": 2
+          },
+          {
+            "rule_id": "patterns.weak-hash-md5-sha1",
+            "cwes": [
+              327
+            ],
+            "count": 2
+          },
+          {
+            "rule_id": "authz.jwt-weak-validation",
+            "cwes": [
+              347
+            ],
+            "count": 1
+          },
+          {
+            "rule_id": "patterns.flask-debug-true",
+            "cwes": [
+              489
+            ],
+            "count": 1
+          },
+          {
+            "rule_id": "secrets.high-entropy-string",
+            "cwes": [
+              798
+            ],
+            "count": 1
+          }
+        ]
+      },
+      "metrics": {
+        "strict": {
+          "per_cwe": {
+            "CWE-20": {
+              "samples": 6,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-020_author_1.py",
+                "CWE-020_author_2.py",
+                "CWE-020_codeql_1.py",
+                "CWE-020_codeql_2.py",
+                "CWE-020_codeql_3.py",
+                "CWE-020_codeql_4.py"
+              ]
+            },
+            "CWE-22": {
+              "samples": 4,
+              "detected": 1,
+              "recall": 0.25,
+              "missed": [
+                "CWE-022_author_1.py",
+                "CWE-022_author_2.py",
+                "CWE-022_codeql_2.py"
+              ]
+            },
+            "CWE-78": {
+              "samples": 2,
+              "detected": 2,
+              "recall": 1.0,
+              "missed": []
+            },
+            "CWE-79": {
+              "samples": 3,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-079_codeql_1.py",
+                "CWE-079_codeql_2.py",
+                "CWE-079_sonar_1.py"
+              ]
+            },
+            "CWE-80": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-080_author_1.py"
+              ]
+            },
+            "CWE-89": {
+              "samples": 2,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-089_author_1.py",
+                "CWE-089_codeql_1.py"
+              ]
+            },
+            "CWE-90": {
+              "samples": 2,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-090_codeql_1.py",
+                "CWE-090_codeql_2.py"
+              ]
+            },
+            "CWE-94": {
+              "samples": 3,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-094_author_1.py",
+                "CWE-094_codeql_1.py",
+                "CWE-094_sonar_1.py"
+              ]
+            },
+            "CWE-95": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-095_author_1.py"
+              ]
+            },
+            "CWE-99": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-099_sonar_1.py"
+              ]
+            },
+            "CWE-113": {
+              "samples": 2,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-113_sonar_1.py",
+                "CWE-113_sonar_2.py"
+              ]
+            },
+            "CWE-116": {
+              "samples": 2,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-116_author_1.py",
+                "CWE-116_codeql_1.py"
+              ]
+            },
+            "CWE-117": {
+              "samples": 3,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-117_author_1.py",
+                "CWE-117_codeql_1.py",
+                "CWE-117_sonar_1.py"
+              ]
+            },
+            "CWE-193": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-193_author_1.py"
+              ]
+            },
+            "CWE-200": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-200_author_1.py"
+              ]
+            },
+            "CWE-209": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-209_codeql_1.py"
+              ]
+            },
+            "CWE-215": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-215_codeql_1.py"
+              ]
+            },
+            "CWE-250": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-250_mitre_1.py"
+              ]
+            },
+            "CWE-252": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-252_author_1.py"
+              ]
+            },
+            "CWE-259": {
+              "samples": 2,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-259_author_1.py",
+                "CWE-259_author_2.py"
+              ]
+            },
+            "CWE-269": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-269_mitre_1.py"
+              ]
+            },
+            "CWE-283": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-283_mitre_1.py"
+              ]
+            },
+            "CWE-285": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-285_codeql_1.py"
+              ]
+            },
+            "CWE-295": {
+              "samples": 3,
+              "detected": 1,
+              "recall": 0.3333,
+              "missed": [
+                "CWE-295_author_1.py",
+                "CWE-295_author_2.py"
+              ]
+            },
+            "CWE-306": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-306_pearce_1.py"
+              ]
+            },
+            "CWE-319": {
+              "samples": 2,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-319_author_1.py",
+                "CWE-319_author_2.py"
+              ]
+            },
+            "CWE-321": {
+              "samples": 2,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-321_author_1.py",
+                "CWE-321_author_2.py"
+              ]
+            },
+            "CWE-326": {
+              "samples": 2,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-326_author_1.py",
+                "CWE-326_author_2.py"
+              ]
+            },
+            "CWE-327": {
+              "samples": 4,
+              "detected": 1,
+              "recall": 0.25,
+              "missed": [
+                "CWE-327_codeql_1.py",
+                "CWE-327_codeql_2.py",
+                "CWE-327_codeql_4.py"
+              ]
+            },
+            "CWE-329": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-329_sonar_1.py"
+              ]
+            },
+            "CWE-330": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-330_author_1.py"
+              ]
+            },
+            "CWE-331": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-331_author_1.py"
+              ]
+            },
+            "CWE-339": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-339_mitre_1.py"
+              ]
+            },
+            "CWE-347": {
+              "samples": 3,
+              "detected": 1,
+              "recall": 0.3333,
+              "missed": [
+                "CWE-347_sonar_2.py",
+                "CWE-347_sonar_3.py"
+              ]
+            },
+            "CWE-367": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-367_author_1.py"
+              ]
+            },
+            "CWE-377": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-377_codeql_1.py"
+              ]
+            },
+            "CWE-379": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-379_sonar_1.py"
+              ]
+            },
+            "CWE-385": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-385_mitre_1.py"
+              ]
+            },
+            "CWE-400": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-400_sonar_1.py"
+              ]
+            },
+            "CWE-406": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-406_mitre_1.py"
+              ]
+            },
+            "CWE-414": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-414_author_1.py"
+              ]
+            },
+            "CWE-425": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-425_author_1.py"
+              ]
+            },
+            "CWE-434": {
+              "samples": 2,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-434_pearce_1.py",
+                "CWE-434_pearce_2.py"
+              ]
+            },
+            "CWE-454": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-454_author_1.py"
+              ]
+            },
+            "CWE-462": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-462_mitre_1.py"
+              ]
+            },
+            "CWE-477": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-477_author_1.py"
+              ]
+            },
+            "CWE-502": {
+              "samples": 4,
+              "detected": 2,
+              "recall": 0.5,
+              "missed": [
+                "CWE-502_author_1.py",
+                "CWE-502_mitre_1.py"
+              ]
+            },
+            "CWE-521": {
+              "samples": 2,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-521_sonar_1.py",
+                "CWE-521_sonar_2.py"
+              ]
+            },
+            "CWE-522": {
+              "samples": 2,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-522_author_1.py",
+                "CWE-522_pearce_1.py"
+              ]
+            },
+            "CWE-595": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-595_author_1.py"
+              ]
+            },
+            "CWE-601": {
+              "samples": 5,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-601_codeql_1.py",
+                "CWE-601_sonar_1.py",
+                "CWE-601_sonar_2.py",
+                "CWE-601_sonar_3.py",
+                "CWE-601_sonar_4.py"
+              ]
+            },
+            "CWE-605": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-605_author_1.py"
+              ]
+            },
+            "CWE-611": {
+              "samples": 6,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-611_author_1.py",
+                "CWE-611_codeql_1.py",
+                "CWE-611_sonar_1.py",
+                "CWE-611_sonar_2.py",
+                "CWE-611_sonar_3.py",
+                "CWE-611_sonar_4.py"
+              ]
+            },
+            "CWE-641": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-641_sonar_1.py"
+              ]
+            },
+            "CWE-643": {
+              "samples": 2,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-643_codeql_1.py",
+                "CWE-643_sonar_1.py"
+              ]
+            },
+            "CWE-703": {
+              "samples": 3,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-703_author_1.py",
+                "CWE-703_author_2.py",
+                "CWE-703_author_3.py"
+              ]
+            },
+            "CWE-730": {
+              "samples": 3,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-730_author_1.py",
+                "CWE-730_codeql_1.py",
+                "CWE-730_codeql_2.py"
+              ]
+            },
+            "CWE-732": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-732_author_1.py"
+              ]
+            },
+            "CWE-759": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-759_mitre_1.py"
+              ]
+            },
+            "CWE-760": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-760_sonar_1.py"
+              ]
+            },
+            "CWE-776": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-776_codeql_1.py"
+              ]
+            },
+            "CWE-798": {
+              "samples": 2,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-798_author_1.py",
+                "CWE-798_codeql_1.py"
+              ]
+            },
+            "CWE-827": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-827_sonar_1.py"
+              ]
+            },
+            "CWE-835": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-835_author_1.py"
+              ]
+            },
+            "CWE-841": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-841_mitre_1.py"
+              ]
+            },
+            "CWE-918": {
+              "samples": 2,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-918_codeql_1.py",
+                "CWE-918_codeql_2.py"
+              ]
+            },
+            "CWE-941": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-941_mitre_1.py"
+              ]
+            },
+            "CWE-943": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-943_sonar_1.py"
+              ]
+            },
+            "CWE-1204": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-1204_sonar_1.py"
+              ]
+            }
+          },
+          "overall": {
+            "samples": 121,
+            "detected": 8,
+            "recall": 0.0661,
+            "cwe_average_recall": 0.0386,
+            "cwes": 69,
+            "cwes_with_any_detection": 6
+          }
+        },
+        "mapped": {
+          "per_cwe": {
+            "CWE-20": {
+              "samples": 6,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-020_author_1.py",
+                "CWE-020_author_2.py",
+                "CWE-020_codeql_1.py",
+                "CWE-020_codeql_2.py",
+                "CWE-020_codeql_3.py",
+                "CWE-020_codeql_4.py"
+              ]
+            },
+            "CWE-22": {
+              "samples": 4,
+              "detected": 1,
+              "recall": 0.25,
+              "missed": [
+                "CWE-022_author_1.py",
+                "CWE-022_author_2.py",
+                "CWE-022_codeql_2.py"
+              ]
+            },
+            "CWE-78": {
+              "samples": 2,
+              "detected": 2,
+              "recall": 1.0,
+              "missed": []
+            },
+            "CWE-79": {
+              "samples": 3,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-079_codeql_1.py",
+                "CWE-079_codeql_2.py",
+                "CWE-079_sonar_1.py"
+              ]
+            },
+            "CWE-80": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-080_author_1.py"
+              ]
+            },
+            "CWE-89": {
+              "samples": 2,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-089_author_1.py",
+                "CWE-089_codeql_1.py"
+              ]
+            },
+            "CWE-90": {
+              "samples": 2,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-090_codeql_1.py",
+                "CWE-090_codeql_2.py"
+              ]
+            },
+            "CWE-94": {
+              "samples": 3,
+              "detected": 2,
+              "recall": 0.6667,
+              "missed": [
+                "CWE-094_author_1.py"
+              ]
+            },
+            "CWE-95": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-095_author_1.py"
+              ]
+            },
+            "CWE-99": {
+              "samples": 1,
+              "detected": 1,
+              "recall": 1.0,
+              "missed": []
+            },
+            "CWE-113": {
+              "samples": 2,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-113_sonar_1.py",
+                "CWE-113_sonar_2.py"
+              ]
+            },
+            "CWE-116": {
+              "samples": 2,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-116_author_1.py",
+                "CWE-116_codeql_1.py"
+              ]
+            },
+            "CWE-117": {
+              "samples": 3,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-117_author_1.py",
+                "CWE-117_codeql_1.py",
+                "CWE-117_sonar_1.py"
+              ]
+            },
+            "CWE-193": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-193_author_1.py"
+              ]
+            },
+            "CWE-200": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-200_author_1.py"
+              ]
+            },
+            "CWE-209": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-209_codeql_1.py"
+              ]
+            },
+            "CWE-215": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-215_codeql_1.py"
+              ]
+            },
+            "CWE-250": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-250_mitre_1.py"
+              ]
+            },
+            "CWE-252": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-252_author_1.py"
+              ]
+            },
+            "CWE-259": {
+              "samples": 2,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-259_author_1.py",
+                "CWE-259_author_2.py"
+              ]
+            },
+            "CWE-269": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-269_mitre_1.py"
+              ]
+            },
+            "CWE-283": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-283_mitre_1.py"
+              ]
+            },
+            "CWE-285": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-285_codeql_1.py"
+              ]
+            },
+            "CWE-295": {
+              "samples": 3,
+              "detected": 1,
+              "recall": 0.3333,
+              "missed": [
+                "CWE-295_author_1.py",
+                "CWE-295_author_2.py"
+              ]
+            },
+            "CWE-306": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-306_pearce_1.py"
+              ]
+            },
+            "CWE-319": {
+              "samples": 2,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-319_author_1.py",
+                "CWE-319_author_2.py"
+              ]
+            },
+            "CWE-321": {
+              "samples": 2,
+              "detected": 1,
+              "recall": 0.5,
+              "missed": [
+                "CWE-321_author_1.py"
+              ]
+            },
+            "CWE-326": {
+              "samples": 2,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-326_author_1.py",
+                "CWE-326_author_2.py"
+              ]
+            },
+            "CWE-327": {
+              "samples": 4,
+              "detected": 1,
+              "recall": 0.25,
+              "missed": [
+                "CWE-327_codeql_1.py",
+                "CWE-327_codeql_2.py",
+                "CWE-327_codeql_4.py"
+              ]
+            },
+            "CWE-329": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-329_sonar_1.py"
+              ]
+            },
+            "CWE-330": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-330_author_1.py"
+              ]
+            },
+            "CWE-331": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-331_author_1.py"
+              ]
+            },
+            "CWE-339": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-339_mitre_1.py"
+              ]
+            },
+            "CWE-347": {
+              "samples": 3,
+              "detected": 1,
+              "recall": 0.3333,
+              "missed": [
+                "CWE-347_sonar_2.py",
+                "CWE-347_sonar_3.py"
+              ]
+            },
+            "CWE-367": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-367_author_1.py"
+              ]
+            },
+            "CWE-377": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-377_codeql_1.py"
+              ]
+            },
+            "CWE-379": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-379_sonar_1.py"
+              ]
+            },
+            "CWE-385": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-385_mitre_1.py"
+              ]
+            },
+            "CWE-400": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-400_sonar_1.py"
+              ]
+            },
+            "CWE-406": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-406_mitre_1.py"
+              ]
+            },
+            "CWE-414": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-414_author_1.py"
+              ]
+            },
+            "CWE-425": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-425_author_1.py"
+              ]
+            },
+            "CWE-434": {
+              "samples": 2,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-434_pearce_1.py",
+                "CWE-434_pearce_2.py"
+              ]
+            },
+            "CWE-454": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-454_author_1.py"
+              ]
+            },
+            "CWE-462": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-462_mitre_1.py"
+              ]
+            },
+            "CWE-477": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-477_author_1.py"
+              ]
+            },
+            "CWE-502": {
+              "samples": 4,
+              "detected": 2,
+              "recall": 0.5,
+              "missed": [
+                "CWE-502_author_1.py",
+                "CWE-502_mitre_1.py"
+              ]
+            },
+            "CWE-521": {
+              "samples": 2,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-521_sonar_1.py",
+                "CWE-521_sonar_2.py"
+              ]
+            },
+            "CWE-522": {
+              "samples": 2,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-522_author_1.py",
+                "CWE-522_pearce_1.py"
+              ]
+            },
+            "CWE-595": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-595_author_1.py"
+              ]
+            },
+            "CWE-601": {
+              "samples": 5,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-601_codeql_1.py",
+                "CWE-601_sonar_1.py",
+                "CWE-601_sonar_2.py",
+                "CWE-601_sonar_3.py",
+                "CWE-601_sonar_4.py"
+              ]
+            },
+            "CWE-605": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-605_author_1.py"
+              ]
+            },
+            "CWE-611": {
+              "samples": 6,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-611_author_1.py",
+                "CWE-611_codeql_1.py",
+                "CWE-611_sonar_1.py",
+                "CWE-611_sonar_2.py",
+                "CWE-611_sonar_3.py",
+                "CWE-611_sonar_4.py"
+              ]
+            },
+            "CWE-641": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-641_sonar_1.py"
+              ]
+            },
+            "CWE-643": {
+              "samples": 2,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-643_codeql_1.py",
+                "CWE-643_sonar_1.py"
+              ]
+            },
+            "CWE-703": {
+              "samples": 3,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-703_author_1.py",
+                "CWE-703_author_2.py",
+                "CWE-703_author_3.py"
+              ]
+            },
+            "CWE-730": {
+              "samples": 3,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-730_author_1.py",
+                "CWE-730_codeql_1.py",
+                "CWE-730_codeql_2.py"
+              ]
+            },
+            "CWE-732": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-732_author_1.py"
+              ]
+            },
+            "CWE-759": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-759_mitre_1.py"
+              ]
+            },
+            "CWE-760": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-760_sonar_1.py"
+              ]
+            },
+            "CWE-776": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-776_codeql_1.py"
+              ]
+            },
+            "CWE-798": {
+              "samples": 2,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-798_author_1.py",
+                "CWE-798_codeql_1.py"
+              ]
+            },
+            "CWE-827": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-827_sonar_1.py"
+              ]
+            },
+            "CWE-835": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-835_author_1.py"
+              ]
+            },
+            "CWE-841": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-841_mitre_1.py"
+              ]
+            },
+            "CWE-918": {
+              "samples": 2,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-918_codeql_1.py",
+                "CWE-918_codeql_2.py"
+              ]
+            },
+            "CWE-941": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-941_mitre_1.py"
+              ]
+            },
+            "CWE-943": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-943_sonar_1.py"
+              ]
+            },
+            "CWE-1204": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-1204_sonar_1.py"
+              ]
+            }
+          },
+          "overall": {
+            "samples": 121,
+            "detected": 12,
+            "recall": 0.0992,
+            "cwe_average_recall": 0.07,
+            "cwes": 69,
+            "cwes_with_any_detection": 9
+          }
+        },
+        "any": {
+          "per_cwe": {
+            "CWE-20": {
+              "samples": 6,
+              "detected": 2,
+              "recall": 0.3333,
+              "missed": [
+                "CWE-020_author_2.py",
+                "CWE-020_codeql_1.py",
+                "CWE-020_codeql_3.py",
+                "CWE-020_codeql_4.py"
+              ]
+            },
+            "CWE-22": {
+              "samples": 4,
+              "detected": 1,
+              "recall": 0.25,
+              "missed": [
+                "CWE-022_author_1.py",
+                "CWE-022_author_2.py",
+                "CWE-022_codeql_2.py"
+              ]
+            },
+            "CWE-78": {
+              "samples": 2,
+              "detected": 2,
+              "recall": 1.0,
+              "missed": []
+            },
+            "CWE-79": {
+              "samples": 3,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-079_codeql_1.py",
+                "CWE-079_codeql_2.py",
+                "CWE-079_sonar_1.py"
+              ]
+            },
+            "CWE-80": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-080_author_1.py"
+              ]
+            },
+            "CWE-89": {
+              "samples": 2,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-089_author_1.py",
+                "CWE-089_codeql_1.py"
+              ]
+            },
+            "CWE-90": {
+              "samples": 2,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-090_codeql_1.py",
+                "CWE-090_codeql_2.py"
+              ]
+            },
+            "CWE-94": {
+              "samples": 3,
+              "detected": 2,
+              "recall": 0.6667,
+              "missed": [
+                "CWE-094_author_1.py"
+              ]
+            },
+            "CWE-95": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-095_author_1.py"
+              ]
+            },
+            "CWE-99": {
+              "samples": 1,
+              "detected": 1,
+              "recall": 1.0,
+              "missed": []
+            },
+            "CWE-113": {
+              "samples": 2,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-113_sonar_1.py",
+                "CWE-113_sonar_2.py"
+              ]
+            },
+            "CWE-116": {
+              "samples": 2,
+              "detected": 1,
+              "recall": 0.5,
+              "missed": [
+                "CWE-116_codeql_1.py"
+              ]
+            },
+            "CWE-117": {
+              "samples": 3,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-117_author_1.py",
+                "CWE-117_codeql_1.py",
+                "CWE-117_sonar_1.py"
+              ]
+            },
+            "CWE-193": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-193_author_1.py"
+              ]
+            },
+            "CWE-200": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-200_author_1.py"
+              ]
+            },
+            "CWE-209": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-209_codeql_1.py"
+              ]
+            },
+            "CWE-215": {
+              "samples": 1,
+              "detected": 1,
+              "recall": 1.0,
+              "missed": []
+            },
+            "CWE-250": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-250_mitre_1.py"
+              ]
+            },
+            "CWE-252": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-252_author_1.py"
+              ]
+            },
+            "CWE-259": {
+              "samples": 2,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-259_author_1.py",
+                "CWE-259_author_2.py"
+              ]
+            },
+            "CWE-269": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-269_mitre_1.py"
+              ]
+            },
+            "CWE-283": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-283_mitre_1.py"
+              ]
+            },
+            "CWE-285": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-285_codeql_1.py"
+              ]
+            },
+            "CWE-295": {
+              "samples": 3,
+              "detected": 1,
+              "recall": 0.3333,
+              "missed": [
+                "CWE-295_author_1.py",
+                "CWE-295_author_2.py"
+              ]
+            },
+            "CWE-306": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-306_pearce_1.py"
+              ]
+            },
+            "CWE-319": {
+              "samples": 2,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-319_author_1.py",
+                "CWE-319_author_2.py"
+              ]
+            },
+            "CWE-321": {
+              "samples": 2,
+              "detected": 1,
+              "recall": 0.5,
+              "missed": [
+                "CWE-321_author_1.py"
+              ]
+            },
+            "CWE-326": {
+              "samples": 2,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-326_author_1.py",
+                "CWE-326_author_2.py"
+              ]
+            },
+            "CWE-327": {
+              "samples": 4,
+              "detected": 1,
+              "recall": 0.25,
+              "missed": [
+                "CWE-327_codeql_1.py",
+                "CWE-327_codeql_2.py",
+                "CWE-327_codeql_4.py"
+              ]
+            },
+            "CWE-329": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-329_sonar_1.py"
+              ]
+            },
+            "CWE-330": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-330_author_1.py"
+              ]
+            },
+            "CWE-331": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-331_author_1.py"
+              ]
+            },
+            "CWE-339": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-339_mitre_1.py"
+              ]
+            },
+            "CWE-347": {
+              "samples": 3,
+              "detected": 1,
+              "recall": 0.3333,
+              "missed": [
+                "CWE-347_sonar_2.py",
+                "CWE-347_sonar_3.py"
+              ]
+            },
+            "CWE-367": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-367_author_1.py"
+              ]
+            },
+            "CWE-377": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-377_codeql_1.py"
+              ]
+            },
+            "CWE-379": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-379_sonar_1.py"
+              ]
+            },
+            "CWE-385": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-385_mitre_1.py"
+              ]
+            },
+            "CWE-400": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-400_sonar_1.py"
+              ]
+            },
+            "CWE-406": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-406_mitre_1.py"
+              ]
+            },
+            "CWE-414": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-414_author_1.py"
+              ]
+            },
+            "CWE-425": {
+              "samples": 1,
+              "detected": 1,
+              "recall": 1.0,
+              "missed": []
+            },
+            "CWE-434": {
+              "samples": 2,
+              "detected": 1,
+              "recall": 0.5,
+              "missed": [
+                "CWE-434_pearce_1.py"
+              ]
+            },
+            "CWE-454": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-454_author_1.py"
+              ]
+            },
+            "CWE-462": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-462_mitre_1.py"
+              ]
+            },
+            "CWE-477": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-477_author_1.py"
+              ]
+            },
+            "CWE-502": {
+              "samples": 4,
+              "detected": 2,
+              "recall": 0.5,
+              "missed": [
+                "CWE-502_author_1.py",
+                "CWE-502_mitre_1.py"
+              ]
+            },
+            "CWE-521": {
+              "samples": 2,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-521_sonar_1.py",
+                "CWE-521_sonar_2.py"
+              ]
+            },
+            "CWE-522": {
+              "samples": 2,
+              "detected": 1,
+              "recall": 0.5,
+              "missed": [
+                "CWE-522_author_1.py"
+              ]
+            },
+            "CWE-595": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-595_author_1.py"
+              ]
+            },
+            "CWE-601": {
+              "samples": 5,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-601_codeql_1.py",
+                "CWE-601_sonar_1.py",
+                "CWE-601_sonar_2.py",
+                "CWE-601_sonar_3.py",
+                "CWE-601_sonar_4.py"
+              ]
+            },
+            "CWE-605": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-605_author_1.py"
+              ]
+            },
+            "CWE-611": {
+              "samples": 6,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-611_author_1.py",
+                "CWE-611_codeql_1.py",
+                "CWE-611_sonar_1.py",
+                "CWE-611_sonar_2.py",
+                "CWE-611_sonar_3.py",
+                "CWE-611_sonar_4.py"
+              ]
+            },
+            "CWE-641": {
+              "samples": 1,
+              "detected": 1,
+              "recall": 1.0,
+              "missed": []
+            },
+            "CWE-643": {
+              "samples": 2,
+              "detected": 1,
+              "recall": 0.5,
+              "missed": [
+                "CWE-643_codeql_1.py"
+              ]
+            },
+            "CWE-703": {
+              "samples": 3,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-703_author_1.py",
+                "CWE-703_author_2.py",
+                "CWE-703_author_3.py"
+              ]
+            },
+            "CWE-730": {
+              "samples": 3,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-730_author_1.py",
+                "CWE-730_codeql_1.py",
+                "CWE-730_codeql_2.py"
+              ]
+            },
+            "CWE-732": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-732_author_1.py"
+              ]
+            },
+            "CWE-759": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-759_mitre_1.py"
+              ]
+            },
+            "CWE-760": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-760_sonar_1.py"
+              ]
+            },
+            "CWE-776": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-776_codeql_1.py"
+              ]
+            },
+            "CWE-798": {
+              "samples": 2,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-798_author_1.py",
+                "CWE-798_codeql_1.py"
+              ]
+            },
+            "CWE-827": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-827_sonar_1.py"
+              ]
+            },
+            "CWE-835": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-835_author_1.py"
+              ]
+            },
+            "CWE-841": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-841_mitre_1.py"
+              ]
+            },
+            "CWE-918": {
+              "samples": 2,
+              "detected": 1,
+              "recall": 0.5,
+              "missed": [
+                "CWE-918_codeql_1.py"
+              ]
+            },
+            "CWE-941": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-941_mitre_1.py"
+              ]
+            },
+            "CWE-943": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-943_sonar_1.py"
+              ]
+            },
+            "CWE-1204": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-1204_sonar_1.py"
+              ]
+            }
+          },
+          "overall": {
+            "samples": 121,
+            "detected": 22,
+            "recall": 0.1818,
+            "cwe_average_recall": 0.1546,
+            "cwes": 69,
+            "cwes_with_any_detection": 18
+          }
+        }
+      }
+    },
+    "bandit": {
+      "status": "ok",
+      "run": {
+        "tool": "bandit",
+        "started_at": "2026-10-22T13:09:33+00:00",
+        "raw_sha256": "0118f1cdffb69383f72138a1f481026d0ed8fdabf61cdd93a088b57d0f4f0a8f",
+        "version": "bandit 1.9.4",
+        "command": [
+          "bandit",
+          "-r",
+          "<dataset_root>",
+          "-f",
+          "json",
+          "-o",
+          "<raw_output>",
+          "-q"
+        ],
+        "exit_code": 1,
+        "seconds": 1.8,
+        "notes": "default configuration (all plugins, all severities and confidences)"
+      },
+      "inventory": {
+        "findings_total": 67,
+        "findings_in_scored_files": 67,
+        "findings_in_scored_files_without_cwe": 0,
+        "rules": [
+          {
+            "rule_id": "B106",
+            "cwes": [
+              259
+            ],
+            "count": 6
+          },
+          {
+            "rule_id": "B413",
+            "cwes": [
+              327
+            ],
+            "count": 5
+          },
+          {
+            "rule_id": "B105",
+            "cwes": [
+              259
+            ],
+            "count": 4
+          },
+          {
+            "rule_id": "B113",
+            "cwes": [
+              400
+            ],
+            "count": 3
+          },
+          {
+            "rule_id": "B311",
+            "cwes": [
+              330
+            ],
+            "count": 3
+          },
+          {
+            "rule_id": "B314",
+            "cwes": [
+              20
+            ],
+            "count": 3
+          },
+          {
+            "rule_id": "B324",
+            "cwes": [
+              327
+            ],
+            "count": 3
+          },
+          {
+            "rule_id": "B403",
+            "cwes": [
+              502
+            ],
+            "count": 3
+          },
+          {
+            "rule_id": "B405",
+            "cwes": [
+              20
+            ],
+            "count": 3
+          },
+          {
+            "rule_id": "B605",
+            "cwes": [
+              78
+            ],
+            "count": 3
+          },
+          {
+            "rule_id": "B608",
+            "cwes": [
+              89
+            ],
+            "count": 3
+          },
+          {
+            "rule_id": "B102",
+            "cwes": [
+              78
+            ],
+            "count": 2
+          },
+          {
+            "rule_id": "B108",
+            "cwes": [
+              377
+            ],
+            "count": 2
+          },
+          {
+            "rule_id": "B301",
+            "cwes": [
+              502
+            ],
+            "count": 2
+          },
+          {
+            "rule_id": "B306",
+            "cwes": [
+              377
+            ],
+            "count": 2
+          },
+          {
+            "rule_id": "B505",
+            "cwes": [
+              326
+            ],
+            "count": 2
+          },
+          {
+            "rule_id": "B506",
+            "cwes": [
+              20
+            ],
+            "count": 2
+          },
+          {
+            "rule_id": "B101",
+            "cwes": [
+              703
+            ],
+            "count": 1
+          },
+          {
+            "rule_id": "B103",
+            "cwes": [
+              732
+            ],
+            "count": 1
+          },
+          {
+            "rule_id": "B104",
+            "cwes": [
+              605
+            ],
+            "count": 1
+          },
+          {
+            "rule_id": "B201",
+            "cwes": [
+              94
+            ],
+            "count": 1
+          },
+          {
+            "rule_id": "B307",
+            "cwes": [
+              78
+            ],
+            "count": 1
+          },
+          {
+            "rule_id": "B310",
+            "cwes": [
+              22
+            ],
+            "count": 1
+          },
+          {
+            "rule_id": "B317",
+            "cwes": [
+              20
+            ],
+            "count": 1
+          },
+          {
+            "rule_id": "B321",
+            "cwes": [
+              319
+            ],
+            "count": 1
+          },
+          {
+            "rule_id": "B402",
+            "cwes": [
+              319
+            ],
+            "count": 1
+          },
+          {
+            "rule_id": "B404",
+            "cwes": [
+              78
+            ],
+            "count": 1
+          },
+          {
+            "rule_id": "B406",
+            "cwes": [
+              20
+            ],
+            "count": 1
+          },
+          {
+            "rule_id": "B501",
+            "cwes": [
+              295
+            ],
+            "count": 1
+          },
+          {
+            "rule_id": "B504",
+            "cwes": [
+              327
+            ],
+            "count": 1
+          },
+          {
+            "rule_id": "B602",
+            "cwes": [
+              78
+            ],
+            "count": 1
+          },
+          {
+            "rule_id": "B607",
+            "cwes": [
+              78
+            ],
+            "count": 1
+          },
+          {
+            "rule_id": "B701",
+            "cwes": [
+              94
+            ],
+            "count": 1
+          }
+        ]
+      },
+      "metrics": {
+        "strict": {
+          "per_cwe": {
+            "CWE-20": {
+              "samples": 6,
+              "detected": 2,
+              "recall": 0.3333,
+              "missed": [
+                "CWE-020_codeql_1.py",
+                "CWE-020_codeql_2.py",
+                "CWE-020_codeql_3.py",
+                "CWE-020_codeql_4.py"
+              ]
+            },
+            "CWE-22": {
+              "samples": 4,
+              "detected": 1,
+              "recall": 0.25,
+              "missed": [
+                "CWE-022_author_1.py",
+                "CWE-022_codeql_1.py",
+                "CWE-022_codeql_2.py"
+              ]
+            },
+            "CWE-78": {
+              "samples": 2,
+              "detected": 2,
+              "recall": 1.0,
+              "missed": []
+            },
+            "CWE-79": {
+              "samples": 3,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-079_codeql_1.py",
+                "CWE-079_codeql_2.py",
+                "CWE-079_sonar_1.py"
+              ]
+            },
+            "CWE-80": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-080_author_1.py"
+              ]
+            },
+            "CWE-89": {
+              "samples": 2,
+              "detected": 2,
+              "recall": 1.0,
+              "missed": []
+            },
+            "CWE-90": {
+              "samples": 2,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-090_codeql_1.py",
+                "CWE-090_codeql_2.py"
+              ]
+            },
+            "CWE-94": {
+              "samples": 3,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-094_author_1.py",
+                "CWE-094_codeql_1.py",
+                "CWE-094_sonar_1.py"
+              ]
+            },
+            "CWE-95": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-095_author_1.py"
+              ]
+            },
+            "CWE-99": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-099_sonar_1.py"
+              ]
+            },
+            "CWE-113": {
+              "samples": 2,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-113_sonar_1.py",
+                "CWE-113_sonar_2.py"
+              ]
+            },
+            "CWE-116": {
+              "samples": 2,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-116_author_1.py",
+                "CWE-116_codeql_1.py"
+              ]
+            },
+            "CWE-117": {
+              "samples": 3,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-117_author_1.py",
+                "CWE-117_codeql_1.py",
+                "CWE-117_sonar_1.py"
+              ]
+            },
+            "CWE-193": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-193_author_1.py"
+              ]
+            },
+            "CWE-200": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-200_author_1.py"
+              ]
+            },
+            "CWE-209": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-209_codeql_1.py"
+              ]
+            },
+            "CWE-215": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-215_codeql_1.py"
+              ]
+            },
+            "CWE-250": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-250_mitre_1.py"
+              ]
+            },
+            "CWE-252": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-252_author_1.py"
+              ]
+            },
+            "CWE-259": {
+              "samples": 2,
+              "detected": 2,
+              "recall": 1.0,
+              "missed": []
+            },
+            "CWE-269": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-269_mitre_1.py"
+              ]
+            },
+            "CWE-283": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-283_mitre_1.py"
+              ]
+            },
+            "CWE-285": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-285_codeql_1.py"
+              ]
+            },
+            "CWE-295": {
+              "samples": 3,
+              "detected": 1,
+              "recall": 0.3333,
+              "missed": [
+                "CWE-295_author_1.py",
+                "CWE-295_author_2.py"
+              ]
+            },
+            "CWE-306": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-306_pearce_1.py"
+              ]
+            },
+            "CWE-319": {
+              "samples": 2,
+              "detected": 1,
+              "recall": 0.5,
+              "missed": [
+                "CWE-319_author_1.py"
+              ]
+            },
+            "CWE-321": {
+              "samples": 2,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-321_author_1.py",
+                "CWE-321_author_2.py"
+              ]
+            },
+            "CWE-326": {
+              "samples": 2,
+              "detected": 2,
+              "recall": 1.0,
+              "missed": []
+            },
+            "CWE-327": {
+              "samples": 4,
+              "detected": 3,
+              "recall": 0.75,
+              "missed": [
+                "CWE-327_codeql_4.py"
+              ]
+            },
+            "CWE-329": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-329_sonar_1.py"
+              ]
+            },
+            "CWE-330": {
+              "samples": 1,
+              "detected": 1,
+              "recall": 1.0,
+              "missed": []
+            },
+            "CWE-331": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-331_author_1.py"
+              ]
+            },
+            "CWE-339": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-339_mitre_1.py"
+              ]
+            },
+            "CWE-347": {
+              "samples": 3,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-347_sonar_1.py",
+                "CWE-347_sonar_2.py",
+                "CWE-347_sonar_3.py"
+              ]
+            },
+            "CWE-367": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-367_author_1.py"
+              ]
+            },
+            "CWE-377": {
+              "samples": 1,
+              "detected": 1,
+              "recall": 1.0,
+              "missed": []
+            },
+            "CWE-379": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-379_sonar_1.py"
+              ]
+            },
+            "CWE-385": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-385_mitre_1.py"
+              ]
+            },
+            "CWE-400": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-400_sonar_1.py"
+              ]
+            },
+            "CWE-406": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-406_mitre_1.py"
+              ]
+            },
+            "CWE-414": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-414_author_1.py"
+              ]
+            },
+            "CWE-425": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-425_author_1.py"
+              ]
+            },
+            "CWE-434": {
+              "samples": 2,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-434_pearce_1.py",
+                "CWE-434_pearce_2.py"
+              ]
+            },
+            "CWE-454": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-454_author_1.py"
+              ]
+            },
+            "CWE-462": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-462_mitre_1.py"
+              ]
+            },
+            "CWE-477": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-477_author_1.py"
+              ]
+            },
+            "CWE-502": {
+              "samples": 4,
+              "detected": 2,
+              "recall": 0.5,
+              "missed": [
+                "CWE-502_mitre_1.py",
+                "CWE-502_sonar_1.py"
+              ]
+            },
+            "CWE-521": {
+              "samples": 2,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-521_sonar_1.py",
+                "CWE-521_sonar_2.py"
+              ]
+            },
+            "CWE-522": {
+              "samples": 2,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-522_author_1.py",
+                "CWE-522_pearce_1.py"
+              ]
+            },
+            "CWE-595": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-595_author_1.py"
+              ]
+            },
+            "CWE-601": {
+              "samples": 5,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-601_codeql_1.py",
+                "CWE-601_sonar_1.py",
+                "CWE-601_sonar_2.py",
+                "CWE-601_sonar_3.py",
+                "CWE-601_sonar_4.py"
+              ]
+            },
+            "CWE-605": {
+              "samples": 1,
+              "detected": 1,
+              "recall": 1.0,
+              "missed": []
+            },
+            "CWE-611": {
+              "samples": 6,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-611_author_1.py",
+                "CWE-611_codeql_1.py",
+                "CWE-611_sonar_1.py",
+                "CWE-611_sonar_2.py",
+                "CWE-611_sonar_3.py",
+                "CWE-611_sonar_4.py"
+              ]
+            },
+            "CWE-641": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-641_sonar_1.py"
+              ]
+            },
+            "CWE-643": {
+              "samples": 2,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-643_codeql_1.py",
+                "CWE-643_sonar_1.py"
+              ]
+            },
+            "CWE-703": {
+              "samples": 3,
+              "detected": 1,
+              "recall": 0.3333,
+              "missed": [
+                "CWE-703_author_1.py",
+                "CWE-703_author_2.py"
+              ]
+            },
+            "CWE-730": {
+              "samples": 3,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-730_author_1.py",
+                "CWE-730_codeql_1.py",
+                "CWE-730_codeql_2.py"
+              ]
+            },
+            "CWE-732": {
+              "samples": 1,
+              "detected": 1,
+              "recall": 1.0,
+              "missed": []
+            },
+            "CWE-759": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-759_mitre_1.py"
+              ]
+            },
+            "CWE-760": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-760_sonar_1.py"
+              ]
+            },
+            "CWE-776": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-776_codeql_1.py"
+              ]
+            },
+            "CWE-798": {
+              "samples": 2,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-798_author_1.py",
+                "CWE-798_codeql_1.py"
+              ]
+            },
+            "CWE-827": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-827_sonar_1.py"
+              ]
+            },
+            "CWE-835": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-835_author_1.py"
+              ]
+            },
+            "CWE-841": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-841_mitre_1.py"
+              ]
+            },
+            "CWE-918": {
+              "samples": 2,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-918_codeql_1.py",
+                "CWE-918_codeql_2.py"
+              ]
+            },
+            "CWE-941": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-941_mitre_1.py"
+              ]
+            },
+            "CWE-943": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-943_sonar_1.py"
+              ]
+            },
+            "CWE-1204": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-1204_sonar_1.py"
+              ]
+            }
+          },
+          "overall": {
+            "samples": 121,
+            "detected": 23,
+            "recall": 0.1901,
+            "cwe_average_recall": 0.1594,
+            "cwes": 69,
+            "cwes_with_any_detection": 15
+          }
+        },
+        "mapped": {
+          "per_cwe": {
+            "CWE-20": {
+              "samples": 6,
+              "detected": 2,
+              "recall": 0.3333,
+              "missed": [
+                "CWE-020_codeql_1.py",
+                "CWE-020_codeql_2.py",
+                "CWE-020_codeql_3.py",
+                "CWE-020_codeql_4.py"
+              ]
+            },
+            "CWE-22": {
+              "samples": 4,
+              "detected": 1,
+              "recall": 0.25,
+              "missed": [
+                "CWE-022_author_1.py",
+                "CWE-022_codeql_1.py",
+                "CWE-022_codeql_2.py"
+              ]
+            },
+            "CWE-78": {
+              "samples": 2,
+              "detected": 2,
+              "recall": 1.0,
+              "missed": []
+            },
+            "CWE-79": {
+              "samples": 3,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-079_codeql_1.py",
+                "CWE-079_codeql_2.py",
+                "CWE-079_sonar_1.py"
+              ]
+            },
+            "CWE-80": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-080_author_1.py"
+              ]
+            },
+            "CWE-89": {
+              "samples": 2,
+              "detected": 2,
+              "recall": 1.0,
+              "missed": []
+            },
+            "CWE-90": {
+              "samples": 2,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-090_codeql_1.py",
+                "CWE-090_codeql_2.py"
+              ]
+            },
+            "CWE-94": {
+              "samples": 3,
+              "detected": 2,
+              "recall": 0.6667,
+              "missed": [
+                "CWE-094_author_1.py"
+              ]
+            },
+            "CWE-95": {
+              "samples": 1,
+              "detected": 1,
+              "recall": 1.0,
+              "missed": []
+            },
+            "CWE-99": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-099_sonar_1.py"
+              ]
+            },
+            "CWE-113": {
+              "samples": 2,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-113_sonar_1.py",
+                "CWE-113_sonar_2.py"
+              ]
+            },
+            "CWE-116": {
+              "samples": 2,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-116_author_1.py",
+                "CWE-116_codeql_1.py"
+              ]
+            },
+            "CWE-117": {
+              "samples": 3,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-117_author_1.py",
+                "CWE-117_codeql_1.py",
+                "CWE-117_sonar_1.py"
+              ]
+            },
+            "CWE-193": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-193_author_1.py"
+              ]
+            },
+            "CWE-200": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-200_author_1.py"
+              ]
+            },
+            "CWE-209": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-209_codeql_1.py"
+              ]
+            },
+            "CWE-215": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-215_codeql_1.py"
+              ]
+            },
+            "CWE-250": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-250_mitre_1.py"
+              ]
+            },
+            "CWE-252": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-252_author_1.py"
+              ]
+            },
+            "CWE-259": {
+              "samples": 2,
+              "detected": 2,
+              "recall": 1.0,
+              "missed": []
+            },
+            "CWE-269": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-269_mitre_1.py"
+              ]
+            },
+            "CWE-283": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-283_mitre_1.py"
+              ]
+            },
+            "CWE-285": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-285_codeql_1.py"
+              ]
+            },
+            "CWE-295": {
+              "samples": 3,
+              "detected": 1,
+              "recall": 0.3333,
+              "missed": [
+                "CWE-295_author_1.py",
+                "CWE-295_author_2.py"
+              ]
+            },
+            "CWE-306": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-306_pearce_1.py"
+              ]
+            },
+            "CWE-319": {
+              "samples": 2,
+              "detected": 1,
+              "recall": 0.5,
+              "missed": [
+                "CWE-319_author_1.py"
+              ]
+            },
+            "CWE-321": {
+              "samples": 2,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-321_author_1.py",
+                "CWE-321_author_2.py"
+              ]
+            },
+            "CWE-326": {
+              "samples": 2,
+              "detected": 2,
+              "recall": 1.0,
+              "missed": []
+            },
+            "CWE-327": {
+              "samples": 4,
+              "detected": 3,
+              "recall": 0.75,
+              "missed": [
+                "CWE-327_codeql_4.py"
+              ]
+            },
+            "CWE-329": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-329_sonar_1.py"
+              ]
+            },
+            "CWE-330": {
+              "samples": 1,
+              "detected": 1,
+              "recall": 1.0,
+              "missed": []
+            },
+            "CWE-331": {
+              "samples": 1,
+              "detected": 1,
+              "recall": 1.0,
+              "missed": []
+            },
+            "CWE-339": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-339_mitre_1.py"
+              ]
+            },
+            "CWE-347": {
+              "samples": 3,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-347_sonar_1.py",
+                "CWE-347_sonar_2.py",
+                "CWE-347_sonar_3.py"
+              ]
+            },
+            "CWE-367": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-367_author_1.py"
+              ]
+            },
+            "CWE-377": {
+              "samples": 1,
+              "detected": 1,
+              "recall": 1.0,
+              "missed": []
+            },
+            "CWE-379": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-379_sonar_1.py"
+              ]
+            },
+            "CWE-385": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-385_mitre_1.py"
+              ]
+            },
+            "CWE-400": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-400_sonar_1.py"
+              ]
+            },
+            "CWE-406": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-406_mitre_1.py"
+              ]
+            },
+            "CWE-414": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-414_author_1.py"
+              ]
+            },
+            "CWE-425": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-425_author_1.py"
+              ]
+            },
+            "CWE-434": {
+              "samples": 2,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-434_pearce_1.py",
+                "CWE-434_pearce_2.py"
+              ]
+            },
+            "CWE-454": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-454_author_1.py"
+              ]
+            },
+            "CWE-462": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-462_mitre_1.py"
+              ]
+            },
+            "CWE-477": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-477_author_1.py"
+              ]
+            },
+            "CWE-502": {
+              "samples": 4,
+              "detected": 3,
+              "recall": 0.75,
+              "missed": [
+                "CWE-502_mitre_1.py"
+              ]
+            },
+            "CWE-521": {
+              "samples": 2,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-521_sonar_1.py",
+                "CWE-521_sonar_2.py"
+              ]
+            },
+            "CWE-522": {
+              "samples": 2,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-522_author_1.py",
+                "CWE-522_pearce_1.py"
+              ]
+            },
+            "CWE-595": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-595_author_1.py"
+              ]
+            },
+            "CWE-601": {
+              "samples": 5,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-601_codeql_1.py",
+                "CWE-601_sonar_1.py",
+                "CWE-601_sonar_2.py",
+                "CWE-601_sonar_3.py",
+                "CWE-601_sonar_4.py"
+              ]
+            },
+            "CWE-605": {
+              "samples": 1,
+              "detected": 1,
+              "recall": 1.0,
+              "missed": []
+            },
+            "CWE-611": {
+              "samples": 6,
+              "detected": 1,
+              "recall": 0.1667,
+              "missed": [
+                "CWE-611_author_1.py",
+                "CWE-611_codeql_1.py",
+                "CWE-611_sonar_1.py",
+                "CWE-611_sonar_2.py",
+                "CWE-611_sonar_3.py"
+              ]
+            },
+            "CWE-641": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-641_sonar_1.py"
+              ]
+            },
+            "CWE-643": {
+              "samples": 2,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-643_codeql_1.py",
+                "CWE-643_sonar_1.py"
+              ]
+            },
+            "CWE-703": {
+              "samples": 3,
+              "detected": 1,
+              "recall": 0.3333,
+              "missed": [
+                "CWE-703_author_1.py",
+                "CWE-703_author_2.py"
+              ]
+            },
+            "CWE-730": {
+              "samples": 3,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-730_author_1.py",
+                "CWE-730_codeql_1.py",
+                "CWE-730_codeql_2.py"
+              ]
+            },
+            "CWE-732": {
+              "samples": 1,
+              "detected": 1,
+              "recall": 1.0,
+              "missed": []
+            },
+            "CWE-759": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-759_mitre_1.py"
+              ]
+            },
+            "CWE-760": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-760_sonar_1.py"
+              ]
+            },
+            "CWE-776": {
+              "samples": 1,
+              "detected": 1,
+              "recall": 1.0,
+              "missed": []
+            },
+            "CWE-798": {
+              "samples": 2,
+              "detected": 2,
+              "recall": 1.0,
+              "missed": []
+            },
+            "CWE-827": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-827_sonar_1.py"
+              ]
+            },
+            "CWE-835": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-835_author_1.py"
+              ]
+            },
+            "CWE-841": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-841_mitre_1.py"
+              ]
+            },
+            "CWE-918": {
+              "samples": 2,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-918_codeql_1.py",
+                "CWE-918_codeql_2.py"
+              ]
+            },
+            "CWE-941": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-941_mitre_1.py"
+              ]
+            },
+            "CWE-943": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-943_sonar_1.py"
+              ]
+            },
+            "CWE-1204": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-1204_sonar_1.py"
+              ]
+            }
+          },
+          "overall": {
+            "samples": 121,
+            "detected": 32,
+            "recall": 0.2645,
+            "cwe_average_recall": 0.2331,
+            "cwes": 69,
+            "cwes_with_any_detection": 21
+          }
+        },
+        "any": {
+          "per_cwe": {
+            "CWE-20": {
+              "samples": 6,
+              "detected": 3,
+              "recall": 0.5,
+              "missed": [
+                "CWE-020_codeql_1.py",
+                "CWE-020_codeql_3.py",
+                "CWE-020_codeql_4.py"
+              ]
+            },
+            "CWE-22": {
+              "samples": 4,
+              "detected": 2,
+              "recall": 0.5,
+              "missed": [
+                "CWE-022_author_1.py",
+                "CWE-022_codeql_1.py"
+              ]
+            },
+            "CWE-78": {
+              "samples": 2,
+              "detected": 2,
+              "recall": 1.0,
+              "missed": []
+            },
+            "CWE-79": {
+              "samples": 3,
+              "detected": 1,
+              "recall": 0.3333,
+              "missed": [
+                "CWE-079_codeql_2.py",
+                "CWE-079_sonar_1.py"
+              ]
+            },
+            "CWE-80": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-080_author_1.py"
+              ]
+            },
+            "CWE-89": {
+              "samples": 2,
+              "detected": 2,
+              "recall": 1.0,
+              "missed": []
+            },
+            "CWE-90": {
+              "samples": 2,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-090_codeql_1.py",
+                "CWE-090_codeql_2.py"
+              ]
+            },
+            "CWE-94": {
+              "samples": 3,
+              "detected": 2,
+              "recall": 0.6667,
+              "missed": [
+                "CWE-094_author_1.py"
+              ]
+            },
+            "CWE-95": {
+              "samples": 1,
+              "detected": 1,
+              "recall": 1.0,
+              "missed": []
+            },
+            "CWE-99": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-099_sonar_1.py"
+              ]
+            },
+            "CWE-113": {
+              "samples": 2,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-113_sonar_1.py",
+                "CWE-113_sonar_2.py"
+              ]
+            },
+            "CWE-116": {
+              "samples": 2,
+              "detected": 1,
+              "recall": 0.5,
+              "missed": [
+                "CWE-116_codeql_1.py"
+              ]
+            },
+            "CWE-117": {
+              "samples": 3,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-117_author_1.py",
+                "CWE-117_codeql_1.py",
+                "CWE-117_sonar_1.py"
+              ]
+            },
+            "CWE-193": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-193_author_1.py"
+              ]
+            },
+            "CWE-200": {
+              "samples": 1,
+              "detected": 1,
+              "recall": 1.0,
+              "missed": []
+            },
+            "CWE-209": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-209_codeql_1.py"
+              ]
+            },
+            "CWE-215": {
+              "samples": 1,
+              "detected": 1,
+              "recall": 1.0,
+              "missed": []
+            },
+            "CWE-250": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-250_mitre_1.py"
+              ]
+            },
+            "CWE-252": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-252_author_1.py"
+              ]
+            },
+            "CWE-259": {
+              "samples": 2,
+              "detected": 2,
+              "recall": 1.0,
+              "missed": []
+            },
+            "CWE-269": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-269_mitre_1.py"
+              ]
+            },
+            "CWE-283": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-283_mitre_1.py"
+              ]
+            },
+            "CWE-285": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-285_codeql_1.py"
+              ]
+            },
+            "CWE-295": {
+              "samples": 3,
+              "detected": 1,
+              "recall": 0.3333,
+              "missed": [
+                "CWE-295_author_1.py",
+                "CWE-295_author_2.py"
+              ]
+            },
+            "CWE-306": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-306_pearce_1.py"
+              ]
+            },
+            "CWE-319": {
+              "samples": 2,
+              "detected": 1,
+              "recall": 0.5,
+              "missed": [
+                "CWE-319_author_1.py"
+              ]
+            },
+            "CWE-321": {
+              "samples": 2,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-321_author_1.py",
+                "CWE-321_author_2.py"
+              ]
+            },
+            "CWE-326": {
+              "samples": 2,
+              "detected": 2,
+              "recall": 1.0,
+              "missed": []
+            },
+            "CWE-327": {
+              "samples": 4,
+              "detected": 3,
+              "recall": 0.75,
+              "missed": [
+                "CWE-327_codeql_4.py"
+              ]
+            },
+            "CWE-329": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-329_sonar_1.py"
+              ]
+            },
+            "CWE-330": {
+              "samples": 1,
+              "detected": 1,
+              "recall": 1.0,
+              "missed": []
+            },
+            "CWE-331": {
+              "samples": 1,
+              "detected": 1,
+              "recall": 1.0,
+              "missed": []
+            },
+            "CWE-339": {
+              "samples": 1,
+              "detected": 1,
+              "recall": 1.0,
+              "missed": []
+            },
+            "CWE-347": {
+              "samples": 3,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-347_sonar_1.py",
+                "CWE-347_sonar_2.py",
+                "CWE-347_sonar_3.py"
+              ]
+            },
+            "CWE-367": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-367_author_1.py"
+              ]
+            },
+            "CWE-377": {
+              "samples": 1,
+              "detected": 1,
+              "recall": 1.0,
+              "missed": []
+            },
+            "CWE-379": {
+              "samples": 1,
+              "detected": 1,
+              "recall": 1.0,
+              "missed": []
+            },
+            "CWE-385": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-385_mitre_1.py"
+              ]
+            },
+            "CWE-400": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-400_sonar_1.py"
+              ]
+            },
+            "CWE-406": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-406_mitre_1.py"
+              ]
+            },
+            "CWE-414": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-414_author_1.py"
+              ]
+            },
+            "CWE-425": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-425_author_1.py"
+              ]
+            },
+            "CWE-434": {
+              "samples": 2,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-434_pearce_1.py",
+                "CWE-434_pearce_2.py"
+              ]
+            },
+            "CWE-454": {
+              "samples": 1,
+              "detected": 1,
+              "recall": 1.0,
+              "missed": []
+            },
+            "CWE-462": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-462_mitre_1.py"
+              ]
+            },
+            "CWE-477": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-477_author_1.py"
+              ]
+            },
+            "CWE-502": {
+              "samples": 4,
+              "detected": 3,
+              "recall": 0.75,
+              "missed": [
+                "CWE-502_mitre_1.py"
+              ]
+            },
+            "CWE-521": {
+              "samples": 2,
+              "detected": 1,
+              "recall": 0.5,
+              "missed": [
+                "CWE-521_sonar_1.py"
+              ]
+            },
+            "CWE-522": {
+              "samples": 2,
+              "detected": 2,
+              "recall": 1.0,
+              "missed": []
+            },
+            "CWE-595": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-595_author_1.py"
+              ]
+            },
+            "CWE-601": {
+              "samples": 5,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-601_codeql_1.py",
+                "CWE-601_sonar_1.py",
+                "CWE-601_sonar_2.py",
+                "CWE-601_sonar_3.py",
+                "CWE-601_sonar_4.py"
+              ]
+            },
+            "CWE-605": {
+              "samples": 1,
+              "detected": 1,
+              "recall": 1.0,
+              "missed": []
+            },
+            "CWE-611": {
+              "samples": 6,
+              "detected": 1,
+              "recall": 0.1667,
+              "missed": [
+                "CWE-611_author_1.py",
+                "CWE-611_codeql_1.py",
+                "CWE-611_sonar_1.py",
+                "CWE-611_sonar_2.py",
+                "CWE-611_sonar_3.py"
+              ]
+            },
+            "CWE-641": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-641_sonar_1.py"
+              ]
+            },
+            "CWE-643": {
+              "samples": 2,
+              "detected": 1,
+              "recall": 0.5,
+              "missed": [
+                "CWE-643_codeql_1.py"
+              ]
+            },
+            "CWE-703": {
+              "samples": 3,
+              "detected": 1,
+              "recall": 0.3333,
+              "missed": [
+                "CWE-703_author_1.py",
+                "CWE-703_author_2.py"
+              ]
+            },
+            "CWE-730": {
+              "samples": 3,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-730_author_1.py",
+                "CWE-730_codeql_1.py",
+                "CWE-730_codeql_2.py"
+              ]
+            },
+            "CWE-732": {
+              "samples": 1,
+              "detected": 1,
+              "recall": 1.0,
+              "missed": []
+            },
+            "CWE-759": {
+              "samples": 1,
+              "detected": 1,
+              "recall": 1.0,
+              "missed": []
+            },
+            "CWE-760": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-760_sonar_1.py"
+              ]
+            },
+            "CWE-776": {
+              "samples": 1,
+              "detected": 1,
+              "recall": 1.0,
+              "missed": []
+            },
+            "CWE-798": {
+              "samples": 2,
+              "detected": 2,
+              "recall": 1.0,
+              "missed": []
+            },
+            "CWE-827": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-827_sonar_1.py"
+              ]
+            },
+            "CWE-835": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-835_author_1.py"
+              ]
+            },
+            "CWE-841": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-841_mitre_1.py"
+              ]
+            },
+            "CWE-918": {
+              "samples": 2,
+              "detected": 2,
+              "recall": 1.0,
+              "missed": []
+            },
+            "CWE-941": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-941_mitre_1.py"
+              ]
+            },
+            "CWE-943": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-943_sonar_1.py"
+              ]
+            },
+            "CWE-1204": {
+              "samples": 1,
+              "detected": 1,
+              "recall": 1.0,
+              "missed": []
+            }
+          },
+          "overall": {
+            "samples": 121,
+            "detected": 49,
+            "recall": 0.405,
+            "cwe_average_recall": 0.3961,
+            "cwes": 69,
+            "cwes_with_any_detection": 34
+          }
+        }
+      }
+    },
+    "semgrep": {
+      "status": "ok",
+      "run": {
+        "tool": "semgrep",
+        "started_at": "2026-10-22T13:09:35+00:00",
+        "raw_sha256": "8e7d8a9ec5b2664be8623f29a10fac1c0b72ae161fc8c42d94460b6af891a08c",
+        "version": "1.182.1",
+        "command": [
+          "semgrep",
+          "scan",
+          "--config",
+          "p/python",
+          "--metrics=off",
+          "--disable-version-check",
+          "--no-git-ignore",
+          "--json",
+          "-o",
+          "<raw_output>",
+          "--quiet",
+          "<dataset_root>"
+        ],
+        "exit_code": 0,
+        "seconds": 26.8,
+        "semgrep_errors": 0,
+        "notes": "registry ruleset cached locally; Semgrep CE engine; default settings",
+        "ruleset": "p/python",
+        "ruleset_sha256": "de5bc79d074c3b4146338a0bf95830406f169bd91ac590a2f1ef111f162e23f5",
+        "ruleset_rules": 151,
+        "ruleset_fetched_at": "2026-10-22T12:44:11+00:00"
+      },
+      "inventory": {
+        "findings_total": 32,
+        "findings_in_scored_files": 32,
+        "findings_in_scored_files_without_cwe": 0,
+        "rules": [
+          {
+            "rule_id": "python.django.security.injection.command.command-injection-os-system.command-injection-os-system",
+            "cwes": [
+              78
+            ],
+            "count": 2
+          },
+          {
+            "rule_id": "python.flask.security.injection.os-system-injection.os-system-injection",
+            "cwes": [
+              78
+            ],
+            "count": 2
+          },
+          {
+            "rule_id": "python.flask.security.injection.user-exec.exec-injection",
+            "cwes": [
+              95
+            ],
+            "count": 2
+          },
+          {
+            "rule_id": "python.lang.security.dangerous-system-call.dangerous-system-call",
+            "cwes": [
+              78
+            ],
+            "count": 2
+          },
+          {
+            "rule_id": "python.lang.security.insecure-hash-algorithms-md5.insecure-hash-algorithm-md5",
+            "cwes": [
+              327
+            ],
+            "count": 2
+          },
+          {
+            "rule_id": "python.cryptography.security.mode-without-authentication.crypto-mode-without-authentication",
+            "cwes": [
+              327
+            ],
+            "count": 1
+          },
+          {
+            "rule_id": "python.django.security.injection.code.user-exec-format-string.user-exec-format-string",
+            "cwes": [
+              95
+            ],
+            "count": 1
+          },
+          {
+            "rule_id": "python.django.security.injection.open-redirect.open-redirect",
+            "cwes": [
+              601
+            ],
+            "count": 1
+          },
+          {
+            "rule_id": "python.django.security.injection.path-traversal.path-traversal-open.path-traversal-open",
+            "cwes": [
+              22
+            ],
+            "count": 1
+          },
+          {
+            "rule_id": "python.django.security.injection.raw-html-format.raw-html-format",
+            "cwes": [
+              79
+            ],
+            "count": 1
+          },
+          {
+            "rule_id": "python.django.security.injection.ssrf.ssrf-injection-requests.ssrf-injection-requests",
+            "cwes": [
+              918
+            ],
+            "count": 1
+          },
+          {
+            "rule_id": "python.flask.security.audit.app-run-security-config.avoid_using_app_run_directly",
+            "cwes": [
+              668
+            ],
+            "count": 1
+          },
+          {
+            "rule_id": "python.flask.security.audit.debug-enabled.debug-enabled",
+            "cwes": [
+              489
+            ],
+            "count": 1
+          },
+          {
+            "rule_id": "python.flask.security.injection.path-traversal-open.path-traversal-open",
+            "cwes": [
+              22
+            ],
+            "count": 1
+          },
+          {
+            "rule_id": "python.flask.security.injection.raw-html-concat.raw-html-format",
+            "cwes": [
+              79
+            ],
+            "count": 1
+          },
+          {
+            "rule_id": "python.flask.security.injection.tainted-url-host.tainted-url-host",
+            "cwes": [
+              918
+            ],
+            "count": 1
+          },
+          {
+            "rule_id": "python.jinja2.security.audit.missing-autoescape-disabled.missing-autoescape-disabled",
+            "cwes": [
+              116
+            ],
+            "count": 1
+          },
+          {
+            "rule_id": "python.jwt.security.unverified-jwt-decode.unverified-jwt-decode",
+            "cwes": [
+              287
+            ],
+            "count": 1
+          },
+          {
+            "rule_id": "python.lang.security.audit.insecure-file-permissions.insecure-file-permissions",
+            "cwes": [
+              276
+            ],
+            "count": 1
+          },
+          {
+            "rule_id": "python.lang.security.audit.md5-used-as-password.md5-used-as-password",
+            "cwes": [
+              327
+            ],
+            "count": 1
+          },
+          {
+            "rule_id": "python.lang.security.audit.network.bind.avoid-bind-to-all-interfaces",
+            "cwes": [
+              200
+            ],
+            "count": 1
+          },
+          {
+            "rule_id": "python.lang.security.audit.ssl-wrap-socket-is-deprecated.ssl-wrap-socket-is-deprecated",
+            "cwes": [
+              326
+            ],
+            "count": 1
+          },
+          {
+            "rule_id": "python.lang.security.audit.subprocess-shell-true.subprocess-shell-true",
+            "cwes": [
+              78
+            ],
+            "count": 1
+          },
+          {
+            "rule_id": "python.lang.security.insecure-hash-function.insecure-hash-function",
+            "cwes": [
+              327
+            ],
+            "count": 1
+          },
+          {
+            "rule_id": "python.pycryptodome.security.insecure-cipher-algorithm-des.insecure-cipher-algorithm-des",
+            "cwes": [
+              327
+            ],
+            "count": 1
+          },
+          {
+            "rule_id": "python.pycryptodome.security.insufficient-dsa-key-size.insufficient-dsa-key-size",
+            "cwes": [
+              326
+            ],
+            "count": 1
+          },
+          {
+            "rule_id": "python.pycryptodome.security.insufficient-rsa-key-size.insufficient-rsa-key-size",
+            "cwes": [
+              326
+            ],
+            "count": 1
+          }
+        ]
+      },
+      "metrics": {
+        "strict": {
+          "per_cwe": {
+            "CWE-20": {
+              "samples": 6,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-020_author_1.py",
+                "CWE-020_author_2.py",
+                "CWE-020_codeql_1.py",
+                "CWE-020_codeql_2.py",
+                "CWE-020_codeql_3.py",
+                "CWE-020_codeql_4.py"
+              ]
+            },
+            "CWE-22": {
+              "samples": 4,
+              "detected": 1,
+              "recall": 0.25,
+              "missed": [
+                "CWE-022_author_1.py",
+                "CWE-022_author_2.py",
+                "CWE-022_codeql_2.py"
+              ]
+            },
+            "CWE-78": {
+              "samples": 2,
+              "detected": 2,
+              "recall": 1.0,
+              "missed": []
+            },
+            "CWE-79": {
+              "samples": 3,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-079_codeql_1.py",
+                "CWE-079_codeql_2.py",
+                "CWE-079_sonar_1.py"
+              ]
+            },
+            "CWE-80": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-080_author_1.py"
+              ]
+            },
+            "CWE-89": {
+              "samples": 2,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-089_author_1.py",
+                "CWE-089_codeql_1.py"
+              ]
+            },
+            "CWE-90": {
+              "samples": 2,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-090_codeql_1.py",
+                "CWE-090_codeql_2.py"
+              ]
+            },
+            "CWE-94": {
+              "samples": 3,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-094_author_1.py",
+                "CWE-094_codeql_1.py",
+                "CWE-094_sonar_1.py"
+              ]
+            },
+            "CWE-95": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-095_author_1.py"
+              ]
+            },
+            "CWE-99": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-099_sonar_1.py"
+              ]
+            },
+            "CWE-113": {
+              "samples": 2,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-113_sonar_1.py",
+                "CWE-113_sonar_2.py"
+              ]
+            },
+            "CWE-116": {
+              "samples": 2,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-116_author_1.py",
+                "CWE-116_codeql_1.py"
+              ]
+            },
+            "CWE-117": {
+              "samples": 3,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-117_author_1.py",
+                "CWE-117_codeql_1.py",
+                "CWE-117_sonar_1.py"
+              ]
+            },
+            "CWE-193": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-193_author_1.py"
+              ]
+            },
+            "CWE-200": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-200_author_1.py"
+              ]
+            },
+            "CWE-209": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-209_codeql_1.py"
+              ]
+            },
+            "CWE-215": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-215_codeql_1.py"
+              ]
+            },
+            "CWE-250": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-250_mitre_1.py"
+              ]
+            },
+            "CWE-252": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-252_author_1.py"
+              ]
+            },
+            "CWE-259": {
+              "samples": 2,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-259_author_1.py",
+                "CWE-259_author_2.py"
+              ]
+            },
+            "CWE-269": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-269_mitre_1.py"
+              ]
+            },
+            "CWE-283": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-283_mitre_1.py"
+              ]
+            },
+            "CWE-285": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-285_codeql_1.py"
+              ]
+            },
+            "CWE-295": {
+              "samples": 3,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-295_author_1.py",
+                "CWE-295_author_2.py",
+                "CWE-295_codeql_1.py"
+              ]
+            },
+            "CWE-306": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-306_pearce_1.py"
+              ]
+            },
+            "CWE-319": {
+              "samples": 2,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-319_author_1.py",
+                "CWE-319_author_2.py"
+              ]
+            },
+            "CWE-321": {
+              "samples": 2,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-321_author_1.py",
+                "CWE-321_author_2.py"
+              ]
+            },
+            "CWE-326": {
+              "samples": 2,
+              "detected": 2,
+              "recall": 1.0,
+              "missed": []
+            },
+            "CWE-327": {
+              "samples": 4,
+              "detected": 2,
+              "recall": 0.5,
+              "missed": [
+                "CWE-327_codeql_2.py",
+                "CWE-327_codeql_4.py"
+              ]
+            },
+            "CWE-329": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-329_sonar_1.py"
+              ]
+            },
+            "CWE-330": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-330_author_1.py"
+              ]
+            },
+            "CWE-331": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-331_author_1.py"
+              ]
+            },
+            "CWE-339": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-339_mitre_1.py"
+              ]
+            },
+            "CWE-347": {
+              "samples": 3,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-347_sonar_1.py",
+                "CWE-347_sonar_2.py",
+                "CWE-347_sonar_3.py"
+              ]
+            },
+            "CWE-367": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-367_author_1.py"
+              ]
+            },
+            "CWE-377": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-377_codeql_1.py"
+              ]
+            },
+            "CWE-379": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-379_sonar_1.py"
+              ]
+            },
+            "CWE-385": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-385_mitre_1.py"
+              ]
+            },
+            "CWE-400": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-400_sonar_1.py"
+              ]
+            },
+            "CWE-406": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-406_mitre_1.py"
+              ]
+            },
+            "CWE-414": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-414_author_1.py"
+              ]
+            },
+            "CWE-425": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-425_author_1.py"
+              ]
+            },
+            "CWE-434": {
+              "samples": 2,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-434_pearce_1.py",
+                "CWE-434_pearce_2.py"
+              ]
+            },
+            "CWE-454": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-454_author_1.py"
+              ]
+            },
+            "CWE-462": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-462_mitre_1.py"
+              ]
+            },
+            "CWE-477": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-477_author_1.py"
+              ]
+            },
+            "CWE-502": {
+              "samples": 4,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-502_author_1.py",
+                "CWE-502_codeql_1.py",
+                "CWE-502_mitre_1.py",
+                "CWE-502_sonar_1.py"
+              ]
+            },
+            "CWE-521": {
+              "samples": 2,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-521_sonar_1.py",
+                "CWE-521_sonar_2.py"
+              ]
+            },
+            "CWE-522": {
+              "samples": 2,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-522_author_1.py",
+                "CWE-522_pearce_1.py"
+              ]
+            },
+            "CWE-595": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-595_author_1.py"
+              ]
+            },
+            "CWE-601": {
+              "samples": 5,
+              "detected": 1,
+              "recall": 0.2,
+              "missed": [
+                "CWE-601_codeql_1.py",
+                "CWE-601_sonar_2.py",
+                "CWE-601_sonar_3.py",
+                "CWE-601_sonar_4.py"
+              ]
+            },
+            "CWE-605": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-605_author_1.py"
+              ]
+            },
+            "CWE-611": {
+              "samples": 6,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-611_author_1.py",
+                "CWE-611_codeql_1.py",
+                "CWE-611_sonar_1.py",
+                "CWE-611_sonar_2.py",
+                "CWE-611_sonar_3.py",
+                "CWE-611_sonar_4.py"
+              ]
+            },
+            "CWE-641": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-641_sonar_1.py"
+              ]
+            },
+            "CWE-643": {
+              "samples": 2,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-643_codeql_1.py",
+                "CWE-643_sonar_1.py"
+              ]
+            },
+            "CWE-703": {
+              "samples": 3,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-703_author_1.py",
+                "CWE-703_author_2.py",
+                "CWE-703_author_3.py"
+              ]
+            },
+            "CWE-730": {
+              "samples": 3,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-730_author_1.py",
+                "CWE-730_codeql_1.py",
+                "CWE-730_codeql_2.py"
+              ]
+            },
+            "CWE-732": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-732_author_1.py"
+              ]
+            },
+            "CWE-759": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-759_mitre_1.py"
+              ]
+            },
+            "CWE-760": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-760_sonar_1.py"
+              ]
+            },
+            "CWE-776": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-776_codeql_1.py"
+              ]
+            },
+            "CWE-798": {
+              "samples": 2,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-798_author_1.py",
+                "CWE-798_codeql_1.py"
+              ]
+            },
+            "CWE-827": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-827_sonar_1.py"
+              ]
+            },
+            "CWE-835": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-835_author_1.py"
+              ]
+            },
+            "CWE-841": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-841_mitre_1.py"
+              ]
+            },
+            "CWE-918": {
+              "samples": 2,
+              "detected": 2,
+              "recall": 1.0,
+              "missed": []
+            },
+            "CWE-941": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-941_mitre_1.py"
+              ]
+            },
+            "CWE-943": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-943_sonar_1.py"
+              ]
+            },
+            "CWE-1204": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-1204_sonar_1.py"
+              ]
+            }
+          },
+          "overall": {
+            "samples": 121,
+            "detected": 10,
+            "recall": 0.0826,
+            "cwe_average_recall": 0.0572,
+            "cwes": 69,
+            "cwes_with_any_detection": 6
+          }
+        },
+        "mapped": {
+          "per_cwe": {
+            "CWE-20": {
+              "samples": 6,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-020_author_1.py",
+                "CWE-020_author_2.py",
+                "CWE-020_codeql_1.py",
+                "CWE-020_codeql_2.py",
+                "CWE-020_codeql_3.py",
+                "CWE-020_codeql_4.py"
+              ]
+            },
+            "CWE-22": {
+              "samples": 4,
+              "detected": 1,
+              "recall": 0.25,
+              "missed": [
+                "CWE-022_author_1.py",
+                "CWE-022_author_2.py",
+                "CWE-022_codeql_2.py"
+              ]
+            },
+            "CWE-78": {
+              "samples": 2,
+              "detected": 2,
+              "recall": 1.0,
+              "missed": []
+            },
+            "CWE-79": {
+              "samples": 3,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-079_codeql_1.py",
+                "CWE-079_codeql_2.py",
+                "CWE-079_sonar_1.py"
+              ]
+            },
+            "CWE-80": {
+              "samples": 1,
+              "detected": 1,
+              "recall": 1.0,
+              "missed": []
+            },
+            "CWE-89": {
+              "samples": 2,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-089_author_1.py",
+                "CWE-089_codeql_1.py"
+              ]
+            },
+            "CWE-90": {
+              "samples": 2,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-090_codeql_1.py",
+                "CWE-090_codeql_2.py"
+              ]
+            },
+            "CWE-94": {
+              "samples": 3,
+              "detected": 2,
+              "recall": 0.6667,
+              "missed": [
+                "CWE-094_author_1.py"
+              ]
+            },
+            "CWE-95": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-095_author_1.py"
+              ]
+            },
+            "CWE-99": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-099_sonar_1.py"
+              ]
+            },
+            "CWE-113": {
+              "samples": 2,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-113_sonar_1.py",
+                "CWE-113_sonar_2.py"
+              ]
+            },
+            "CWE-116": {
+              "samples": 2,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-116_author_1.py",
+                "CWE-116_codeql_1.py"
+              ]
+            },
+            "CWE-117": {
+              "samples": 3,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-117_author_1.py",
+                "CWE-117_codeql_1.py",
+                "CWE-117_sonar_1.py"
+              ]
+            },
+            "CWE-193": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-193_author_1.py"
+              ]
+            },
+            "CWE-200": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-200_author_1.py"
+              ]
+            },
+            "CWE-209": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-209_codeql_1.py"
+              ]
+            },
+            "CWE-215": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-215_codeql_1.py"
+              ]
+            },
+            "CWE-250": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-250_mitre_1.py"
+              ]
+            },
+            "CWE-252": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-252_author_1.py"
+              ]
+            },
+            "CWE-259": {
+              "samples": 2,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-259_author_1.py",
+                "CWE-259_author_2.py"
+              ]
+            },
+            "CWE-269": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-269_mitre_1.py"
+              ]
+            },
+            "CWE-283": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-283_mitre_1.py"
+              ]
+            },
+            "CWE-285": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-285_codeql_1.py"
+              ]
+            },
+            "CWE-295": {
+              "samples": 3,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-295_author_1.py",
+                "CWE-295_author_2.py",
+                "CWE-295_codeql_1.py"
+              ]
+            },
+            "CWE-306": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-306_pearce_1.py"
+              ]
+            },
+            "CWE-319": {
+              "samples": 2,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-319_author_1.py",
+                "CWE-319_author_2.py"
+              ]
+            },
+            "CWE-321": {
+              "samples": 2,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-321_author_1.py",
+                "CWE-321_author_2.py"
+              ]
+            },
+            "CWE-326": {
+              "samples": 2,
+              "detected": 2,
+              "recall": 1.0,
+              "missed": []
+            },
+            "CWE-327": {
+              "samples": 4,
+              "detected": 2,
+              "recall": 0.5,
+              "missed": [
+                "CWE-327_codeql_2.py",
+                "CWE-327_codeql_4.py"
+              ]
+            },
+            "CWE-329": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-329_sonar_1.py"
+              ]
+            },
+            "CWE-330": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-330_author_1.py"
+              ]
+            },
+            "CWE-331": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-331_author_1.py"
+              ]
+            },
+            "CWE-339": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-339_mitre_1.py"
+              ]
+            },
+            "CWE-347": {
+              "samples": 3,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-347_sonar_1.py",
+                "CWE-347_sonar_2.py",
+                "CWE-347_sonar_3.py"
+              ]
+            },
+            "CWE-367": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-367_author_1.py"
+              ]
+            },
+            "CWE-377": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-377_codeql_1.py"
+              ]
+            },
+            "CWE-379": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-379_sonar_1.py"
+              ]
+            },
+            "CWE-385": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-385_mitre_1.py"
+              ]
+            },
+            "CWE-400": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-400_sonar_1.py"
+              ]
+            },
+            "CWE-406": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-406_mitre_1.py"
+              ]
+            },
+            "CWE-414": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-414_author_1.py"
+              ]
+            },
+            "CWE-425": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-425_author_1.py"
+              ]
+            },
+            "CWE-434": {
+              "samples": 2,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-434_pearce_1.py",
+                "CWE-434_pearce_2.py"
+              ]
+            },
+            "CWE-454": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-454_author_1.py"
+              ]
+            },
+            "CWE-462": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-462_mitre_1.py"
+              ]
+            },
+            "CWE-477": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-477_author_1.py"
+              ]
+            },
+            "CWE-502": {
+              "samples": 4,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-502_author_1.py",
+                "CWE-502_codeql_1.py",
+                "CWE-502_mitre_1.py",
+                "CWE-502_sonar_1.py"
+              ]
+            },
+            "CWE-521": {
+              "samples": 2,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-521_sonar_1.py",
+                "CWE-521_sonar_2.py"
+              ]
+            },
+            "CWE-522": {
+              "samples": 2,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-522_author_1.py",
+                "CWE-522_pearce_1.py"
+              ]
+            },
+            "CWE-595": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-595_author_1.py"
+              ]
+            },
+            "CWE-601": {
+              "samples": 5,
+              "detected": 1,
+              "recall": 0.2,
+              "missed": [
+                "CWE-601_codeql_1.py",
+                "CWE-601_sonar_2.py",
+                "CWE-601_sonar_3.py",
+                "CWE-601_sonar_4.py"
+              ]
+            },
+            "CWE-605": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-605_author_1.py"
+              ]
+            },
+            "CWE-611": {
+              "samples": 6,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-611_author_1.py",
+                "CWE-611_codeql_1.py",
+                "CWE-611_sonar_1.py",
+                "CWE-611_sonar_2.py",
+                "CWE-611_sonar_3.py",
+                "CWE-611_sonar_4.py"
+              ]
+            },
+            "CWE-641": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-641_sonar_1.py"
+              ]
+            },
+            "CWE-643": {
+              "samples": 2,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-643_codeql_1.py",
+                "CWE-643_sonar_1.py"
+              ]
+            },
+            "CWE-703": {
+              "samples": 3,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-703_author_1.py",
+                "CWE-703_author_2.py",
+                "CWE-703_author_3.py"
+              ]
+            },
+            "CWE-730": {
+              "samples": 3,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-730_author_1.py",
+                "CWE-730_codeql_1.py",
+                "CWE-730_codeql_2.py"
+              ]
+            },
+            "CWE-732": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-732_author_1.py"
+              ]
+            },
+            "CWE-759": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-759_mitre_1.py"
+              ]
+            },
+            "CWE-760": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-760_sonar_1.py"
+              ]
+            },
+            "CWE-776": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-776_codeql_1.py"
+              ]
+            },
+            "CWE-798": {
+              "samples": 2,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-798_author_1.py",
+                "CWE-798_codeql_1.py"
+              ]
+            },
+            "CWE-827": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-827_sonar_1.py"
+              ]
+            },
+            "CWE-835": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-835_author_1.py"
+              ]
+            },
+            "CWE-841": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-841_mitre_1.py"
+              ]
+            },
+            "CWE-918": {
+              "samples": 2,
+              "detected": 2,
+              "recall": 1.0,
+              "missed": []
+            },
+            "CWE-941": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-941_mitre_1.py"
+              ]
+            },
+            "CWE-943": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-943_sonar_1.py"
+              ]
+            },
+            "CWE-1204": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-1204_sonar_1.py"
+              ]
+            }
+          },
+          "overall": {
+            "samples": 121,
+            "detected": 13,
+            "recall": 0.1074,
+            "cwe_average_recall": 0.0814,
+            "cwes": 69,
+            "cwes_with_any_detection": 8
+          }
+        },
+        "any": {
+          "per_cwe": {
+            "CWE-20": {
+              "samples": 6,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-020_author_1.py",
+                "CWE-020_author_2.py",
+                "CWE-020_codeql_1.py",
+                "CWE-020_codeql_2.py",
+                "CWE-020_codeql_3.py",
+                "CWE-020_codeql_4.py"
+              ]
+            },
+            "CWE-22": {
+              "samples": 4,
+              "detected": 1,
+              "recall": 0.25,
+              "missed": [
+                "CWE-022_author_1.py",
+                "CWE-022_author_2.py",
+                "CWE-022_codeql_2.py"
+              ]
+            },
+            "CWE-78": {
+              "samples": 2,
+              "detected": 2,
+              "recall": 1.0,
+              "missed": []
+            },
+            "CWE-79": {
+              "samples": 3,
+              "detected": 1,
+              "recall": 0.3333,
+              "missed": [
+                "CWE-079_codeql_2.py",
+                "CWE-079_sonar_1.py"
+              ]
+            },
+            "CWE-80": {
+              "samples": 1,
+              "detected": 1,
+              "recall": 1.0,
+              "missed": []
+            },
+            "CWE-89": {
+              "samples": 2,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-089_author_1.py",
+                "CWE-089_codeql_1.py"
+              ]
+            },
+            "CWE-90": {
+              "samples": 2,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-090_codeql_1.py",
+                "CWE-090_codeql_2.py"
+              ]
+            },
+            "CWE-94": {
+              "samples": 3,
+              "detected": 2,
+              "recall": 0.6667,
+              "missed": [
+                "CWE-094_author_1.py"
+              ]
+            },
+            "CWE-95": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-095_author_1.py"
+              ]
+            },
+            "CWE-99": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-099_sonar_1.py"
+              ]
+            },
+            "CWE-113": {
+              "samples": 2,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-113_sonar_1.py",
+                "CWE-113_sonar_2.py"
+              ]
+            },
+            "CWE-116": {
+              "samples": 2,
+              "detected": 1,
+              "recall": 0.5,
+              "missed": [
+                "CWE-116_codeql_1.py"
+              ]
+            },
+            "CWE-117": {
+              "samples": 3,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-117_author_1.py",
+                "CWE-117_codeql_1.py",
+                "CWE-117_sonar_1.py"
+              ]
+            },
+            "CWE-193": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-193_author_1.py"
+              ]
+            },
+            "CWE-200": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-200_author_1.py"
+              ]
+            },
+            "CWE-209": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-209_codeql_1.py"
+              ]
+            },
+            "CWE-215": {
+              "samples": 1,
+              "detected": 1,
+              "recall": 1.0,
+              "missed": []
+            },
+            "CWE-250": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-250_mitre_1.py"
+              ]
+            },
+            "CWE-252": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-252_author_1.py"
+              ]
+            },
+            "CWE-259": {
+              "samples": 2,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-259_author_1.py",
+                "CWE-259_author_2.py"
+              ]
+            },
+            "CWE-269": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-269_mitre_1.py"
+              ]
+            },
+            "CWE-283": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-283_mitre_1.py"
+              ]
+            },
+            "CWE-285": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-285_codeql_1.py"
+              ]
+            },
+            "CWE-295": {
+              "samples": 3,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-295_author_1.py",
+                "CWE-295_author_2.py",
+                "CWE-295_codeql_1.py"
+              ]
+            },
+            "CWE-306": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-306_pearce_1.py"
+              ]
+            },
+            "CWE-319": {
+              "samples": 2,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-319_author_1.py",
+                "CWE-319_author_2.py"
+              ]
+            },
+            "CWE-321": {
+              "samples": 2,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-321_author_1.py",
+                "CWE-321_author_2.py"
+              ]
+            },
+            "CWE-326": {
+              "samples": 2,
+              "detected": 2,
+              "recall": 1.0,
+              "missed": []
+            },
+            "CWE-327": {
+              "samples": 4,
+              "detected": 3,
+              "recall": 0.75,
+              "missed": [
+                "CWE-327_codeql_4.py"
+              ]
+            },
+            "CWE-329": {
+              "samples": 1,
+              "detected": 1,
+              "recall": 1.0,
+              "missed": []
+            },
+            "CWE-330": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-330_author_1.py"
+              ]
+            },
+            "CWE-331": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-331_author_1.py"
+              ]
+            },
+            "CWE-339": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-339_mitre_1.py"
+              ]
+            },
+            "CWE-347": {
+              "samples": 3,
+              "detected": 1,
+              "recall": 0.3333,
+              "missed": [
+                "CWE-347_sonar_1.py",
+                "CWE-347_sonar_3.py"
+              ]
+            },
+            "CWE-367": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-367_author_1.py"
+              ]
+            },
+            "CWE-377": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-377_codeql_1.py"
+              ]
+            },
+            "CWE-379": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-379_sonar_1.py"
+              ]
+            },
+            "CWE-385": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-385_mitre_1.py"
+              ]
+            },
+            "CWE-400": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-400_sonar_1.py"
+              ]
+            },
+            "CWE-406": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-406_mitre_1.py"
+              ]
+            },
+            "CWE-414": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-414_author_1.py"
+              ]
+            },
+            "CWE-425": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-425_author_1.py"
+              ]
+            },
+            "CWE-434": {
+              "samples": 2,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-434_pearce_1.py",
+                "CWE-434_pearce_2.py"
+              ]
+            },
+            "CWE-454": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-454_author_1.py"
+              ]
+            },
+            "CWE-462": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-462_mitre_1.py"
+              ]
+            },
+            "CWE-477": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-477_author_1.py"
+              ]
+            },
+            "CWE-502": {
+              "samples": 4,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-502_author_1.py",
+                "CWE-502_codeql_1.py",
+                "CWE-502_mitre_1.py",
+                "CWE-502_sonar_1.py"
+              ]
+            },
+            "CWE-521": {
+              "samples": 2,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-521_sonar_1.py",
+                "CWE-521_sonar_2.py"
+              ]
+            },
+            "CWE-522": {
+              "samples": 2,
+              "detected": 1,
+              "recall": 0.5,
+              "missed": [
+                "CWE-522_author_1.py"
+              ]
+            },
+            "CWE-595": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-595_author_1.py"
+              ]
+            },
+            "CWE-601": {
+              "samples": 5,
+              "detected": 1,
+              "recall": 0.2,
+              "missed": [
+                "CWE-601_codeql_1.py",
+                "CWE-601_sonar_2.py",
+                "CWE-601_sonar_3.py",
+                "CWE-601_sonar_4.py"
+              ]
+            },
+            "CWE-605": {
+              "samples": 1,
+              "detected": 1,
+              "recall": 1.0,
+              "missed": []
+            },
+            "CWE-611": {
+              "samples": 6,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-611_author_1.py",
+                "CWE-611_codeql_1.py",
+                "CWE-611_sonar_1.py",
+                "CWE-611_sonar_2.py",
+                "CWE-611_sonar_3.py",
+                "CWE-611_sonar_4.py"
+              ]
+            },
+            "CWE-641": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-641_sonar_1.py"
+              ]
+            },
+            "CWE-643": {
+              "samples": 2,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-643_codeql_1.py",
+                "CWE-643_sonar_1.py"
+              ]
+            },
+            "CWE-703": {
+              "samples": 3,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-703_author_1.py",
+                "CWE-703_author_2.py",
+                "CWE-703_author_3.py"
+              ]
+            },
+            "CWE-730": {
+              "samples": 3,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-730_author_1.py",
+                "CWE-730_codeql_1.py",
+                "CWE-730_codeql_2.py"
+              ]
+            },
+            "CWE-732": {
+              "samples": 1,
+              "detected": 1,
+              "recall": 1.0,
+              "missed": []
+            },
+            "CWE-759": {
+              "samples": 1,
+              "detected": 1,
+              "recall": 1.0,
+              "missed": []
+            },
+            "CWE-760": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-760_sonar_1.py"
+              ]
+            },
+            "CWE-776": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-776_codeql_1.py"
+              ]
+            },
+            "CWE-798": {
+              "samples": 2,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-798_author_1.py",
+                "CWE-798_codeql_1.py"
+              ]
+            },
+            "CWE-827": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-827_sonar_1.py"
+              ]
+            },
+            "CWE-835": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-835_author_1.py"
+              ]
+            },
+            "CWE-841": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-841_mitre_1.py"
+              ]
+            },
+            "CWE-918": {
+              "samples": 2,
+              "detected": 2,
+              "recall": 1.0,
+              "missed": []
+            },
+            "CWE-941": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-941_mitre_1.py"
+              ]
+            },
+            "CWE-943": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-943_sonar_1.py"
+              ]
+            },
+            "CWE-1204": {
+              "samples": 1,
+              "detected": 0,
+              "recall": 0.0,
+              "missed": [
+                "CWE-1204_sonar_1.py"
+              ]
+            }
+          },
+          "overall": {
+            "samples": 121,
+            "detected": 23,
+            "recall": 0.1901,
+            "cwe_average_recall": 0.1816,
+            "cwes": 69,
+            "cwes_with_any_detection": 17
+          }
+        }
+      }
+    }
+  }
+}
