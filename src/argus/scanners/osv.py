@@ -43,10 +43,10 @@ log = logging.getLogger("argus.scanners.osv")
 OSV_API = "https://api.osv.dev"
 
 # OSV's querybatch accepts up to 1000 queries per request; chunk to stay within it.
+# There is deliberately no ceiling on the number of packages: batching already
+# bounds each request, and a cap let a lockfile padded with junk entries push
+# real dependencies past the limit so they were never checked.
 _BATCH_SIZE = 1000
-# Runaway guard only. Below this, every package is scanned; above it we log and cap
-# rather than silently sending an unbounded request.
-_MAX_PACKAGES = 5000
 # Cap concurrent record fetches so a large transitive tree stays polite to the API.
 _MAX_FETCH_WORKERS = 8
 # Retry policy for transient failures.
@@ -172,13 +172,6 @@ def query(ecosystem: str,
             items.append(pair)
     if not items:
         return {}
-    if len(items) > _MAX_PACKAGES:
-        log.warning(
-            "OSV: %d packages exceed the %d-package ceiling; scanning the first %d. "
-            "Findings for the rest are NOT included in this run.",
-            len(items), _MAX_PACKAGES, _MAX_PACKAGES,
-        )
-        items = items[:_MAX_PACKAGES]
 
     own_client = client is None
     client = client or httpx.Client(timeout=timeout)
