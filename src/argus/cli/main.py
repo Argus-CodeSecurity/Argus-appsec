@@ -424,9 +424,11 @@ def sbom(
             if output:
                 output.write_text(text, encoding="utf-8")
             else:
-                console.print(text, end="")
+                _write_stdout(text)
             s = doc["summary"]
-            console.print(
+            # The summary goes to stderr when the JSON is on stdout, so the
+            # stream stays parseable.
+            (console if output else err_console).print(
                 f"[green]SBOM diff:[/green] +{s['added']} ~{s['changed']} -{s['removed']}"
             )
             return
@@ -467,7 +469,7 @@ def sbom(
             output.write_text(text, encoding="utf-8")
             console.print(f"[green]SBOM written:[/green] {output} ({count} components)")
         else:
-            console.print(text, end="")
+            _write_stdout(text)
     finally:
         resolved.cleanup()
 
@@ -820,7 +822,7 @@ def inventory(
             output.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
             console.print(f"[green]Inventory:[/green] {output}")
         else:
-            console.print(json.dumps(payload, indent=2))
+            _write_stdout(json.dumps(payload, indent=2) + "\n")
         if not quiet:
             c = payload["counts"]
             err_console.print(
@@ -1704,6 +1706,19 @@ def _cli_severity(value: str, option: str) -> Severity:
         return Severity.parse(value)
     except ValueError as exc:
         raise typer.BadParameter(str(exc), param_hint=option) from exc
+
+
+def _write_stdout(text: str) -> None:
+    """Write machine-readable output (JSON) to stdout verbatim.
+
+    Rich's console.print soft-wraps long lines to the terminal width and
+    treats ``[...]`` as markup, which corrupts JSON. Use this for anything a
+    caller may pipe into a parser.
+    """
+    sys.stdout.write(text)
+    if not text.endswith("\n"):
+        sys.stdout.write("\n")
+    sys.stdout.flush()
 
 
 def _print_scanner_failure(result: ScanResult, *, details: bool = True) -> None:
