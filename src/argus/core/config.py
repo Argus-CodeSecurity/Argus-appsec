@@ -185,6 +185,12 @@ class Config:
     # CLI: --include-ignored.
     include_ignored: bool = False
 
+    # Honour inline `argus-ignore` comments on trusted projects. Set only from
+    # operator input (`argus check --no-inline-ignores`, which the AI
+    # assistant hooks use so an agent cannot silence a finding by adding a
+    # comment); config files never change it.
+    inline_ignores: bool = True
+
     @classmethod
     def load(cls, path: str | Path | None = None, project_root: str | Path | None = None) -> Config:
         """Load config from an explicit path or by discovery in the project root."""

@@ -82,10 +82,12 @@ CLAUDE_MCP_SERVER: JSONDict = {"type": "stdio", "command": "argus", "args": ["mc
 # hook gets the event JSON (tool_input.file_path) on stdin; on exit 0 a JSON
 # {"decision": "block", "reason"} or hookSpecificOutput.additionalContext is
 # shown to Claude next to the tool result. `argus check --hook claude` speaks
-# exactly that protocol.
+# exactly that protocol. --no-inline-ignores keeps the agent from silencing a
+# finding by adding an argus-ignore comment.
+CLAUDE_HOOK_COMMAND = "argus check --hook claude --no-inline-ignores"
 CLAUDE_HOOK_GROUP: JSONDict = {
     "matcher": "Edit|Write",
-    "hooks": [{"type": "command", "command": "argus check --hook claude", "timeout": 30}],
+    "hooks": [{"type": "command", "command": CLAUDE_HOOK_COMMAND, "timeout": 30}],
 }
 
 
@@ -126,7 +128,7 @@ CURSOR_MCP_SERVER: JSONDict = {
 # "workspace_roots", ...} on stdin. afterFileEdit has no output the agent
 # reads, so the rule file below tells the agent to call the MCP tools; the
 # hook's findings appear in Cursor's hook output.
-CURSOR_HOOK: JSONDict = {"command": "argus check --hook cursor", "timeout": 30}
+CURSOR_HOOK: JSONDict = {"command": "argus check --hook cursor --no-inline-ignores", "timeout": 30}
 
 
 def _merge_cursor_hooks(existing: JSONDict) -> JSONDict:

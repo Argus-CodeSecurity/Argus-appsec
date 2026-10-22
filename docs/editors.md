@@ -50,6 +50,25 @@ Exit status: 0 when nothing is at or above `--fail-on` (default `high`), 1
 when something is or a scanner crashed (set `fail_on_error: false` to ignore
 crashes), 2 for usage errors.
 
+### Strict mode for AI assistants
+
+An inline `argus-ignore` comment hides a finding on its line, which is what
+a developer wants after reviewing it. An AI assistant that is told about a
+finding can add the same comment to make the hook go quiet instead of fixing
+the code. `--no-inline-ignores` ignores those comments for the run, so every
+finding in the file is reported whatever comments it carries:
+
+```bash
+argus check src/app.py --no-inline-ignores
+```
+
+The hooks that `argus init --editor claude` and `argus init --editor cursor`
+write use it. Suppressions kept outside the source (`allow:` entries in
+`.argus.yml` and `.argus/exceptions.yml`) still apply, and a full
+`argus scan` still honours inline comments, so a comment a reviewer accepted
+keeps working in CI. Put those files under `CODEOWNERS` if an assistant
+must not change them either.
+
 ### The hook format
 
 ```text
@@ -112,7 +131,7 @@ Write tools:
         "hooks": [
           {
             "type": "command",
-            "command": "argus check --hook claude",
+            "command": "argus check --hook claude --no-inline-ignores",
             "timeout": 30
           }
         ]
@@ -128,9 +147,11 @@ findings at or above `--fail-on` (default high), it answers with
 and Claude Code shows the reason, one hook-format line per finding, to
 Claude next to the tool result so it fixes the code. Lower findings are
 passed as `additionalContext` instead. A clean file produces no output.
+`--no-inline-ignores` makes the hook report findings even where Claude added
+an `argus-ignore` comment (see [Strict mode](#strict-mode-for-ai-assistants)).
 
 To gate on a different severity, edit the command, for example
-`argus check --hook claude --fail-on medium`.
+`argus check --hook claude --no-inline-ignores --fail-on medium`.
 
 Claude Code asks you to approve a project MCP server from `.mcp.json` the
 first time; approve `argus`.
@@ -142,7 +163,7 @@ first time; approve `argus`.
 2. Start Claude Code in the project and approve the `argus` server. Run
    `/mcp` and check that `argus` is connected with five tools.
 3. Run `/hooks` and check that a PostToolUse hook with matcher `Edit|Write`
-   runs `argus check --hook claude`.
+   runs `argus check --hook claude --no-inline-ignores`.
 4. Ask: "Create demo_argus.py with a function that loads YAML using
    yaml.load". After the write, Claude should mention the Argus finding
    (`patterns.python-yaml-load`) and switch to `yaml.safe_load` on its own.
@@ -185,7 +206,7 @@ not say which directory it starts the server in.
   "version": 1,
   "hooks": {
     "afterFileEdit": [
-      {"command": "argus check --hook cursor", "timeout": 30}
+      {"command": "argus check --hook cursor --no-inline-ignores", "timeout": 30}
     ]
   }
 }

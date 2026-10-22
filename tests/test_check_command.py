@@ -277,3 +277,42 @@ def test_cursor_hook_reports_on_stderr(project: Path) -> None:
 
 def test_unknown_hook_editor_is_a_usage_error(project: Path) -> None:
     assert runner.invoke(app, ["check", "--hook", "vim"], input="{}").exit_code == 2
+
+
+# --- strict mode: --no-inline-ignores ------------------------------------------------
+SILENCED = (
+    "import yaml\n\n\ndef load(raw):\n"
+    '    return yaml.load(raw)  # argus-ignore: python-yaml-load reason="trust me"\n'
+)
+
+
+def test_inline_ignore_hides_a_finding_by_default(project: Path) -> None:
+    (project / "app.py").write_text(SILENCED, encoding="utf-8")
+    res = runner.invoke(app, ["check", "app.py"])
+    assert res.exit_code == 0, res.output
+    assert "No findings" in res.stdout
+
+
+def test_no_inline_ignores_reports_silenced_findings(project: Path) -> None:
+    (project / "app.py").write_text(SILENCED, encoding="utf-8")
+    res = runner.invoke(app, ["check", "app.py", "--no-inline-ignores", "-f", "hook"])
+    assert res.exit_code == 1, res.output
+    assert "patterns.python-yaml-load" in res.stdout
+    # Nothing was suppressed, so nothing is recorded as suppressed either.
+    assert not (project / ".argus" / "audit.log").exists()
+
+
+def test_claude_hook_with_no_inline_ignores_still_blocks(project: Path, monkeypatch) -> None:
+    (project / "app.py").write_text(SILENCED, encoding="utf-8")
+    monkeypatch.setenv("CLAUDE_PROJECT_DIR", str(project))
+    event = _claude_event(str(project / "app.py"))
+    quiet = runner.invoke(app, ["check", "--hook", "claude"], input=event)
+    assert quiet.exit_code == 0 and quiet.stdout == ""
+    strict = runner.invoke(app, ["check", "--hook", "claude", "--no-inline-ignores"], input=event)
+    assert strict.exit_code == 0, strict.output
+    assert json.loads(strict.stdout)["decision"] == "block"
+
+
+def test_inline_ignores_is_not_a_config_file_key() -> None:
+    # A config file in the tree must not be able to switch strict mode off or on.
+    assert Config.from_dict({"inline_ignores": False}).inline_ignores is True

@@ -48,7 +48,13 @@ def test_claude_files(tmp_path: Path) -> None:
     assert groups == [
         {
             "matcher": "Edit|Write",
-            "hooks": [{"type": "command", "command": "argus check --hook claude", "timeout": 30}],
+            "hooks": [
+                {
+                    "type": "command",
+                    "command": "argus check --hook claude --no-inline-ignores",
+                    "timeout": 30,
+                }
+            ],
         }
     ]
 
@@ -62,7 +68,7 @@ def test_cursor_files(tmp_path: Path) -> None:
     hooks = _load(tmp_path, ".cursor/hooks.json")
     assert hooks["version"] == 1
     assert hooks["hooks"]["afterFileEdit"] == [
-        {"command": "argus check --hook cursor", "timeout": 30}
+        {"command": "argus check --hook cursor --no-inline-ignores", "timeout": 30}
     ]
     rule = (tmp_path / ".cursor/rules/argus.mdc").read_text(encoding="utf-8")
     assert rule.startswith("---\ndescription: ")

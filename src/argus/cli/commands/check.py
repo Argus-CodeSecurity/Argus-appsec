@@ -72,6 +72,13 @@ def check(
         help="Read a claude or cursor hook event from stdin, check the edited "
         "file and answer in that editor's hook protocol (see docs/editors.md).",
     ),
+    no_inline_ignores: bool = typer.Option(
+        False,
+        "--no-inline-ignores",
+        help="Report findings even where an argus-ignore comment suppresses them. "
+        "The hooks written by `argus init --editor` use it, so an AI assistant "
+        "cannot silence a finding by adding a comment.",
+    ),
     quiet: bool = typer.Option(False, "--quiet", "-q", help="No notes on stderr."),
 ) -> None:
     """Check just the given files, fast (for editors and AI-assistant hooks)."""
@@ -96,6 +103,7 @@ def check(
                 root=root,
                 no_cache=no_cache,
                 ai=ai,
+                inline_ignores=not no_inline_ignores,
                 quiet=quiet,
             )
         )
@@ -107,7 +115,15 @@ def check(
     from argus.integrations.filecheck import find_project_root, run_check, select_files
 
     project_root = _project_root(root, find_project_root(Path.cwd()))
-    cfg = _config(project_root, config, threshold=threshold, floor=floor, no_cache=no_cache, ai=ai)
+    cfg = _config(
+        project_root,
+        config,
+        threshold=threshold,
+        floor=floor,
+        no_cache=no_cache,
+        ai=ai,
+        inline_ignores=not no_inline_ignores,
+    )
     files, skipped = select_files(project_root, paths, exclude_paths=cfg.exclude_paths)
     refused = [s for s in skipped if s.refused]
     if refused:
@@ -163,6 +179,7 @@ def _config(
     floor: Severity | None,
     no_cache: bool,
     ai: bool,
+    inline_ignores: bool = True,
 ) -> Config:
     """The project config (trusted, as for ``argus scan`` on a local path),
     narrowed to a file-level check."""
@@ -170,6 +187,7 @@ def _config(
 
     base = load_project_config(Project(root=root, name=root.name), explicit)
     cfg = check_config(base, ai=ai, cache=not no_cache)
+    cfg.inline_ignores = inline_ignores
     cfg.fail_on = threshold
     if floor is not None:
         cfg.min_severity = floor
@@ -214,6 +232,7 @@ def _run_hook(
     root: Path | None,
     no_cache: bool,
     ai: bool,
+    inline_ignores: bool,
     quiet: bool,
 ) -> int:
     """Answer one editor hook event; returns the exit status.
@@ -259,7 +278,13 @@ def _run_hook(
         project_root = find_project_root(event_root(editor, event) or Path.cwd())
     try:
         cfg = _config(
-            project_root, config, threshold=threshold, floor=floor, no_cache=no_cache, ai=ai
+            project_root,
+            config,
+            threshold=threshold,
+            floor=floor,
+            no_cache=no_cache,
+            ai=ai,
+            inline_ignores=inline_ignores,
         )
     except ConfigError as exc:
         err_console.print(f"argus check --hook: configuration error: {escape(str(exc))}")

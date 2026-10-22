@@ -204,7 +204,7 @@ class ScanEngine:
         # controls that tree. Honor them only when the project is trusted;
         # otherwise a hostile repository could suppress its own findings.
         trusted = self.config.trust_project_config
-        if trusted:
+        if trusted and self.config.inline_ignores:
             result.findings = self._apply_inline_suppressions(
                 result.findings, project, events=audit_events
             )
