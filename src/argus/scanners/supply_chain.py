@@ -31,7 +31,12 @@ from argus.core.models import (
 from argus.core.plugin import Scanner, ScannerContext, scanner
 from argus.scanners._text import MAX_SCAN_LINE
 from argus.scanners.dependencies import _PARSERS, _loads, collect_packages
-from argus.supply_chain.intel import is_malicious, load_malicious_packages
+from argus.supply_chain.intel import (
+    is_malicious,
+    levenshtein,
+    load_malicious_packages,
+    normalize_name,
+)
 from argus.supply_chain.scripts import LIFECYCLE_HOOKS, SUSPICIOUS_INSTALL_SCRIPT
 
 
@@ -43,31 +48,17 @@ def _load_popular() -> dict:
         return json.load(fh).get("popular", {})
 
 
-def _levenshtein(a: str, b: str) -> int:
-    if a == b:
-        return 0
-    if not a:
-        return len(b)
-    if not b:
-        return len(a)
-    prev = list(range(len(b) + 1))
-    for i, ca in enumerate(a, 1):
-        curr = [i]
-        for j, cb in enumerate(b, 1):
-            cost = 0 if ca == cb else 1
-            curr.append(min(curr[j - 1] + 1, prev[j] + 1, prev[j - 1] + cost))
-        prev = curr
-    return prev[-1]
-
-
 def _typosquat_candidates(name: str, ecosystem: str) -> list[str]:
     popular = _load_popular().get(ecosystem, [])
     hits: list[str] = []
-    lower = name.lower()
+    # Compare normalized names, so a PyPI spelling variant of a popular package
+    # (python_dateutil for python-dateutil) is not mistaken for a typosquat.
+    _, norm = normalize_name(ecosystem, name)
     for pkg in popular:
-        if lower == pkg.lower():
+        _, other = normalize_name(ecosystem, pkg)
+        if norm == other:
             continue
-        if _levenshtein(lower, pkg.lower()) <= 1:
+        if levenshtein(norm, other) <= 1:
             hits.append(pkg)
     return hits
 

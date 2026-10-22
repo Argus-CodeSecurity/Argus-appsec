@@ -5,6 +5,7 @@ from __future__ import annotations
 import contextlib
 import json
 import logging
+import re
 import time
 from functools import lru_cache
 from importlib import resources
@@ -22,13 +23,25 @@ _DEFAULT_FEEDS = (
 _CACHE_TTL = 24 * 3600
 
 
+def normalize_name(ecosystem: str, name: str) -> tuple[str, str]:
+    """The ``(ecosystem, name)`` key used for every malicious-package lookup.
+
+    PyPI treats runs of ``-``, ``_`` and ``.`` as equivalent and ignores case
+    (PEP 503), so ``Evil_Pkg``, ``evil.pkg`` and ``evil-pkg`` are one package and
+    must match the same intel entry. Other ecosystems are only lowercased.
+    """
+    if ecosystem.lower() == "pypi":
+        return ecosystem, re.sub(r"[-_.]+", "-", name).lower()
+    return ecosystem, name.lower()
+
+
 def _bundled() -> set[tuple[str, str]]:
     with resources.files("argus.scanners.data").joinpath("supply_chain.json").open(
         encoding="utf-8"
     ) as fh:
         data = json.load(fh)
     return {
-        (str(e["ecosystem"]), str(e["name"]).lower())
+        normalize_name(str(e["ecosystem"]), str(e["name"]))
         for e in data.get("packages", [])
         if e.get("ecosystem") and e.get("name")
     }
@@ -49,7 +62,7 @@ def _read_cache() -> set[tuple[str, str]] | None:
             return None
         data = json.loads(path.read_text(encoding="utf-8"))
         return {
-            (str(e["ecosystem"]), str(e["name"]).lower())
+            normalize_name(str(e["ecosystem"]), str(e["name"]))
             for e in data.get("packages", [])
             if e.get("ecosystem") and e.get("name")
         }
@@ -83,12 +96,12 @@ def _parse_feed_payload(data: object) -> set[tuple[str, str]]:
                 pkg = aff.get("package") or {}
                 eco, name = pkg.get("ecosystem"), pkg.get("name")
                 if eco and name:
-                    out.add((str(eco), str(name).lower()))
+                    out.add(normalize_name(str(eco), str(name)))
             continue
         eco = e.get("ecosystem")
         name = e.get("name")
         if eco and name:
-            out.add((str(eco), str(name).lower()))
+            out.add(normalize_name(str(eco), str(name)))
     return out
 
 
@@ -130,7 +143,7 @@ def merge_intel(bundled_only: bool = False, **kwargs) -> frozenset[tuple[str, st
 
 
 def is_malicious(ecosystem: str, name: str, *, online: bool = True) -> bool:
-    key = (ecosystem, name.lower())
+    key = normalize_name(ecosystem, name)
     return key in load_malicious_packages(online=online)
 
 
@@ -143,7 +156,8 @@ _POPULAR_PACKAGES = frozenset({
 })
 
 
-def _levenshtein(a: str, b: str) -> int:
+def levenshtein(a: str, b: str) -> int:
+    """Edit distance between two names (shared by both typosquat checks)."""
     if a == b:
         return 0
     if not a:
@@ -169,7 +183,7 @@ def typosquat_risk(name: str, *, popular: frozenset[str] | None = None) -> tuple
     for pkg in pool:
         if abs(len(n) - len(pkg)) > 2:
             continue
-        dist = _levenshtein(n, pkg)
+        dist = levenshtein(n, pkg)
         if 0 < dist <= 2:
             return True, pkg
         if n.replace("-", "").replace("_", "") == pkg.replace("-", ""):

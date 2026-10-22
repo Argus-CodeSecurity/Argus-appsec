@@ -1,0 +1,44 @@
+"""PyPI names are compared after PEP 503 normalization.
+
+PyPI treats `Evil_Pkg`, `evil.pkg` and `evil-pkg` as the same project, so a
+malicious-package entry must match every spelling, and a spelling variant of a
+popular package must not be reported as a typosquat of it.
+"""
+
+from __future__ import annotations
+
+from argus.scanners import supply_chain
+from argus.supply_chain import intel
+
+
+def test_normalize_name():
+    assert intel.normalize_name("PyPI", "Evil__Pkg.Name") == ("PyPI", "evil-pkg-name")
+    assert intel.normalize_name("npm", "Evil_Pkg") == ("npm", "evil_pkg")
+
+
+def test_feed_entries_are_normalized():
+    parsed = intel._parse_feed_payload([{"ecosystem": "PyPI", "name": "Evil_Pkg"}])
+    assert parsed == {("PyPI", "evil-pkg")}
+
+
+def test_malicious_lookup_matches_every_pypi_spelling(monkeypatch):
+    monkeypatch.setattr(intel, "load_malicious_packages",
+                        lambda **kw: frozenset({("PyPI", "evil-pkg"), ("npm", "evil-pkg")}))
+    for spelling in ("evil-pkg", "Evil_Pkg", "evil.pkg", "EVIL__PKG"):
+        assert intel.is_malicious("PyPI", spelling), spelling
+    assert not intel.is_malicious("npm", "evil_pkg")
+
+
+def test_spelling_variant_is_not_a_typosquat(monkeypatch):
+    monkeypatch.setattr(supply_chain, "_load_popular",
+                        lambda: {"PyPI": ["python-dateutil"], "npm": ["lodash"]})
+    assert supply_chain._typosquat_candidates("python_dateutil", "PyPI") == []
+    assert supply_chain._typosquat_candidates("Python.DateUtil", "PyPI") == []
+    assert supply_chain._typosquat_candidates("python-dateutll", "PyPI") == ["python-dateutil"]
+    assert supply_chain._typosquat_candidates("lodahs", "npm") == []
+    assert supply_chain._typosquat_candidates("lodas", "npm") == ["lodash"]
+
+
+def test_levenshtein_is_shared():
+    assert intel.levenshtein("kitten", "sitting") == 3
+    assert intel.levenshtein("", "abc") == 3
