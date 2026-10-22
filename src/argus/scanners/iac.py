@@ -21,7 +21,13 @@ from argus.core.models import (
     Severity,
 )
 from argus.core.plugin import Scanner, ScannerContext, scanner
-from argus.scanners._text import CURL_PIPE_SHELL_RE, iter_scan_lines
+from argus.scanners._text import (
+    CURL_PIPE_SHELL_RE,
+    iter_scan_lines,
+    iter_scan_windows,
+    match_columns,
+    snippet_line,
+)
 
 
 @dataclass
@@ -192,11 +198,21 @@ class IaCScanner(Scanner):
                         yield self._finding(rule, counter, f.rel_path, 1, "(directive absent)")
                     continue
                 reported: set[int] = set()
-                for lineno, line in iter_scan_lines(lines):
-                    if lineno not in reported and rule.pattern.search(line):
+                for lineno, offset, line in iter_scan_windows(lines):
+                    if lineno in reported:
+                        continue
+                    m = rule.pattern.search(line)
+                    if m:
                         reported.add(lineno)
                         counter += 1
-                        yield self._finding(rule, counter, f.rel_path, lineno, line.strip()[:200])
+                        yield self._finding(
+                            rule,
+                            counter,
+                            f.rel_path,
+                            lineno,
+                            snippet_line(line, 200),
+                            match_columns(m, offset),
+                        )
 
     @staticmethod
     def _classify(f) -> str | None:
@@ -210,14 +226,29 @@ class IaCScanner(Scanner):
                 return "kubernetes"
         return None
 
-    def _finding(self, rule: IaCRule, index: int, path: str, lineno: int, snippet: str) -> Finding:
+    def _finding(
+        self,
+        rule: IaCRule,
+        index: int,
+        path: str,
+        lineno: int,
+        snippet: str,
+        cols: tuple[int, int] | None = None,
+    ) -> Finding:
         return Finding(
             id=f"{self.name}:{rule.id}:{index}",
             rule_id=f"{self.name}.{rule.id}",
             scanner=self.name,
             title=rule.title,
             description=rule.why,
-            location=Location(path=path, start_line=lineno, snippet=snippet),
+            location=Location(
+                path=path,
+                start_line=lineno,
+                end_line=lineno if cols else None,
+                start_column=cols[0] if cols else None,
+                end_column=cols[1] if cols else None,
+                snippet=snippet,
+            ),
             severity=rule.severity,
             confidence=rule.confidence,
             likelihood=Likelihood.POSSIBLE,

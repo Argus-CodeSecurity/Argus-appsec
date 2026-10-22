@@ -24,7 +24,15 @@ import re
 from typing import Any
 
 from argus.core.models import Confidence, Finding
-from argus.scanners.llm_ast import LLM01, LLM05, Src, line_of, make_finding, walk
+from argus.scanners.llm_ast import (
+    LLM01,
+    LLM05,
+    Src,
+    end_line_of,
+    line_of,
+    make_finding,
+    walk,
+)
 from argus.scanners.llm_taint import ALL_KINDS, SINK_SPECS
 
 _LLM_PACKAGES = re.compile(
@@ -704,6 +712,8 @@ class JsTaint:
                 ),
                 path=self.path,
                 line=line,
+                end_line=end_line_of(node),
+                columns=self.src.columns(node),
                 snippet=self.src.line_text(line),
                 severity=spec.severity,
                 confidence=Confidence.HIGH,

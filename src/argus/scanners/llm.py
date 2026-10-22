@@ -43,7 +43,7 @@ from argus.core.models import (
 )
 from argus.core.plugin import Scanner, ScannerContext, scanner
 from argus.scanners import llm_ast
-from argus.scanners._text import iter_scan_lines
+from argus.scanners._text import iter_scan_lines, iter_scan_windows, match_columns, snippet_line
 from argus.scanners.llm_ast import LLM01, LLM02, LLM03, LLM05, LLM06
 
 # Files worth scanning: those that import or reference a known LLM/agent stack.
@@ -315,15 +315,23 @@ class LLMScanner(Scanner):
                 if rule.ast_superseded and analyzed and f.language == "Python":
                     continue
                 reported: set[int] = set()
-                for lineno, segment in iter_scan_lines(lines):
-                    if lineno in reported or not rule.pattern.search(segment):
+                for lineno, offset, segment in iter_scan_windows(lines):
+                    if lineno in reported:
                         continue
-                    if rule.suppress and rule.suppress.search(segment):
+                    m = rule.pattern.search(segment)
+                    if not m or (rule.suppress and rule.suppress.search(segment)):
                         continue
                     reported.add(lineno)
                     counter += 1
                     regex.append(
-                        self._rule_finding(rule, counter, f.rel_path, lineno, lines[lineno - 1])
+                        self._rule_finding(
+                            rule,
+                            counter,
+                            f.rel_path,
+                            lineno,
+                            lines[lineno - 1],
+                            match_columns(m, offset),
+                        )
                     )
             if not analyzed:
                 regex.extend(self._scan_output_handling(f, lines))
@@ -387,17 +395,24 @@ class LLMScanner(Scanner):
         uses = re.compile(r"\b(?:" + "|".join(re.escape(v) for v in sorted(tainted)) + r")\b")
         out: list[Finding] = []
         reported: set[int] = set()
-        for lineno, segment in iter_scan_lines(lines):
+        for lineno, offset, segment in iter_scan_windows(lines):
             if lineno in reported or _OUTPUT_SANITIZER.search(segment):
                 continue
             if not uses.search(segment) or _LLM_OUTPUT_ASSIGN.match(segment):
                 continue
             for sink_id, sink_re, cwe, phrase in _OUTPUT_SINKS:
-                if sink_re.search(segment):
+                m = sink_re.search(segment)
+                if m:
                     reported.add(lineno)
                     out.append(
                         self._output_finding(
-                            f.rel_path, lineno, lines[lineno - 1], sink_id, cwe, phrase
+                            f.rel_path,
+                            lineno,
+                            lines[lineno - 1],
+                            sink_id,
+                            cwe,
+                            phrase,
+                            match_columns(m, offset),
                         )
                     )
                     break
@@ -415,12 +430,13 @@ class LLMScanner(Scanner):
     def _scan_prompt_injection(self, f, lines) -> list[Finding]:
         out: list[Finding] = []
         reported: set[int] = set()
-        for lineno, segment in iter_scan_lines(lines):
+        for lineno, offset, segment in iter_scan_windows(lines):
             if lineno in reported:
                 continue
+            src = self._INPUT_SRC.search(segment)
             if (
-                self._PROMPT_CTX.search(segment)
-                and self._INPUT_SRC.search(segment)
+                src
+                and self._PROMPT_CTX.search(segment)
                 and (
                     "+" in segment
                     or "f'" in segment
@@ -430,26 +446,36 @@ class LLMScanner(Scanner):
                 )
             ):
                 reported.add(lineno)
-                out.append(self._prompt_injection_finding(f.rel_path, lineno, lines[lineno - 1]))
+                out.append(
+                    self._prompt_injection_finding(
+                        f.rel_path, lineno, lines[lineno - 1], match_columns(src, offset)
+                    )
+                )
         return out
 
     # --- finding builders --------------------------------------------------
     def _rule_finding(
-        self, rule: LLMRule, index: int, path: str, lineno: int, line: str
+        self,
+        rule: LLMRule,
+        index: int,
+        path: str,
+        lineno: int,
+        line: str,
+        cols: tuple[int, int],
     ) -> Finding:
-        snippet = line.strip()
+        snippet = line.rstrip("\r\n")
         if rule.redact:
             from argus.scanners.llm_prompt import _secret_spans, mask
 
             spans = [(m.start(2), m.end(2), "credential") for m in rule.pattern.finditer(line)]
-            snippet = mask(line, spans + _secret_spans(line)).strip()
+            snippet = mask(line, spans + _secret_spans(line)).rstrip("\r\n")
         return Finding(
             id=f"{self.name}:{rule.id}:{index}",
             rule_id=f"{self.name}.{rule.id}",
             scanner=self.name,
             title=rule.title,
             description=rule.why,
-            location=Location(path=path, start_line=lineno, snippet=snippet[:240]),
+            location=_location(path, lineno, cols, snippet[:240]),
             severity=rule.severity,
             confidence=rule.confidence,
             likelihood=Likelihood.POSSIBLE,
@@ -465,14 +491,14 @@ class LLMScanner(Scanner):
             metadata={"owasp_llm": rule.llm_category},
         )
 
-    def _output_finding(self, path, lineno, line, sink_id, cwe, phrase) -> Finding:
+    def _output_finding(self, path, lineno, line, sink_id, cwe, phrase, cols) -> Finding:
         return Finding(
             id=f"{self.name}:insecure-output-{sink_id}:{path}:{lineno}",
             rule_id=f"{self.name}.insecure-output-handling",
             scanner=self.name,
             title="Insecure handling of LLM output",
             description=f"A model response is {phrase} without validation.",
-            location=Location(path=path, start_line=lineno, snippet=line.strip()[:240]),
+            location=_location(path, lineno, cols, snippet_line(line)),
             severity=Severity.HIGH,
             confidence=Confidence.MEDIUM,
             likelihood=Likelihood.POSSIBLE,
@@ -502,7 +528,7 @@ class LLMScanner(Scanner):
             metadata={"owasp_llm": LLM05, "analysis": "regex-fallback"},
         )
 
-    def _prompt_injection_finding(self, path, lineno, line) -> Finding:
+    def _prompt_injection_finding(self, path, lineno, line, cols) -> Finding:
         return Finding(
             id=f"{self.name}:prompt-injection:{path}:{lineno}",
             rule_id=f"{self.name}.prompt-injection",
@@ -510,7 +536,7 @@ class LLMScanner(Scanner):
             title="Untrusted input concatenated into a prompt",
             description="User-controlled input is interpolated directly into a prompt "
             "or system message.",
-            location=Location(path=path, start_line=lineno, snippet=line.strip()[:240]),
+            location=_location(path, lineno, cols, snippet_line(line)),
             severity=Severity.MEDIUM,
             confidence=Confidence.LOW,
             likelihood=Likelihood.POSSIBLE,
@@ -538,3 +564,14 @@ class LLMScanner(Scanner):
             tags=["llm", "ai-security", "prompt", "LLM01"],
             metadata={"owasp_llm": LLM01},
         )
+
+
+def _location(path: str, lineno: int, cols: tuple[int, int], snippet: str) -> Location:
+    return Location(
+        path=path,
+        start_line=lineno,
+        end_line=lineno,
+        start_column=cols[0],
+        end_column=cols[1],
+        snippet=snippet,
+    )

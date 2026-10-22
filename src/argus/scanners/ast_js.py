@@ -42,6 +42,7 @@ from argus.scanners.ast_python import (
     language_context,
     make_parser,
     marker,
+    node_location,
     run_with_context,
 )
 from argus.scanners.patterns import _is_test_file  # shared test-path helper
@@ -294,7 +295,7 @@ class _JsAnalyzer:
         self._path = path
         self._in_test = in_test
         self._seen: set[tuple[str, int]] = set()
-        self._lines: list[str] | None = None
+        self._lines: list[bytes] | None = None
         # Project context (trusted config only); see ast_python._Analyzer.
         self._ctx = context
         self._ctx_cwes: tuple[str, ...] = tuple(sorted(context.cwes)) if context else ()
@@ -472,13 +473,10 @@ class _JsAnalyzer:
     def _text(self, node) -> str:
         return self._src[node.start_byte : node.end_byte].decode("utf-8", "ignore")
 
-    def _line_text(self, line: int) -> str:
+    def _location(self, node) -> Location:
         if self._lines is None:  # split once per file, not once per finding
-            self._lines = self._src.decode("utf-8", "ignore").splitlines()
-        try:
-            return self._lines[line - 1].strip()
-        except IndexError:  # pragma: no cover
-            return ""
+            self._lines = self._src.splitlines()
+        return node_location(self._path, self._src, node, self._lines)
 
     def _finding(self, sink: Sink, line: int, node) -> Finding | None:
         key = (sink.id, line)
@@ -498,9 +496,7 @@ class _JsAnalyzer:
             scanner=ASTJsScanner.name,
             title=sink.title,
             description=sink.why,
-            location=Location(
-                path=self._path, start_line=line, snippet=self._line_text(line)[:240]
-            ),
+            location=self._location(node),
             severity=severity,
             confidence=confidence,
             likelihood=Likelihood.LIKELY,

@@ -26,7 +26,7 @@ from argus.core.models import (
     Severity,
 )
 from argus.core.plugin import Scanner, ScannerContext, scanner
-from argus.scanners._text import iter_scan_lines
+from argus.scanners._text import iter_scan_windows
 
 log = logging.getLogger("argus.scanners.secrets")
 
@@ -86,6 +86,12 @@ def _secret_span(m: re.Match[str]) -> tuple[int, int]:
     if "val" in m.re.groupindex and m.group("val") is not None:
         return m.span("val")
     return m.span()
+
+
+def _columns(span: tuple[int, int], offset: int) -> tuple[int, int]:
+    """1-based ``(start_column, end_column)`` of a span in a window, end exclusive."""
+    start, end = span
+    return offset + start + 1, offset + max(end, start + 1) + 1
 
 
 def redact_line(line: str) -> str:
@@ -207,7 +213,7 @@ class SecretsScanner(Scanner):
             # Every match is reported, not just the first per rule and line, and a
             # value seen in two overlapping windows of a long line only once.
             seen: set[tuple[str, int, str]] = set()
-            for lineno, line in iter_scan_lines(f.lines()):
+            for lineno, offset, line in iter_scan_windows(f.lines()):
                 for rule, pattern in _SIGNATURES.items():
                     for m in pattern.finditer(line):
                         key = (rule, lineno, m.group(0))
@@ -221,6 +227,7 @@ class SecretsScanner(Scanner):
                             path=f.rel_path,
                             lineno=lineno,
                             line=line,
+                            span=_columns(_secret_span(m), offset),
                             severity=Severity.LOW if is_example else Severity.CRITICAL,
                             confidence=Confidence.LOW if is_example else Confidence.HIGH,
                             title=f"Hardcoded credential: {rule.replace('-', ' ')}",
@@ -247,6 +254,7 @@ class SecretsScanner(Scanner):
                             path=f.rel_path,
                             lineno=lineno,
                             line=line,
+                            span=_columns(am.span("val"), offset),
                             severity=Severity.LOW if is_example else Severity.HIGH,
                             confidence=Confidence.LOW if is_example else Confidence.MEDIUM,
                             title=f"Possible hardcoded secret in '{am.group('key')}'",
@@ -375,11 +383,13 @@ class SecretsScanner(Scanner):
         severity: Severity,
         confidence: Confidence,
         title: str,
+        span: tuple[int, int] | None = None,
     ) -> Finding:
         # Mask every secret on the line, not only the one this finding is about:
         # a second token or an AWS secret next to its key id would otherwise
         # stay in clear in the snippet.
-        snippet = redact_line(line).strip()
+        # The indentation is kept so the snippet lines up with the columns.
+        snippet = redact_line(line).rstrip("\r\n")
         return Finding(
             id=f"{self.name}:{rule_id}:{index}",
             rule_id=f"{self.name}.{rule_id}",
@@ -390,7 +400,14 @@ class SecretsScanner(Scanner):
                 f"source. Secrets in version control are exposed to everyone with "
                 f"repository access and remain in history even after removal."
             ),
-            location=Location(path=path, start_line=lineno, snippet=snippet),
+            location=Location(
+                path=path,
+                start_line=lineno,
+                end_line=lineno if span else None,
+                start_column=span[0] if span else None,
+                end_column=span[1] if span else None,
+                snippet=snippet,
+            ),
             severity=severity,
             confidence=confidence,
             likelihood=Likelihood.LIKELY,

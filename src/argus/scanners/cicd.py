@@ -14,7 +14,12 @@ from argus.core.models import (
     Severity,
 )
 from argus.core.plugin import Scanner, ScannerContext, scanner
-from argus.scanners._text import CURL_PIPE_SHELL_RE, MAX_SCAN_LINE, iter_scan_lines
+from argus.scanners._text import (
+    CURL_PIPE_SHELL_RE,
+    MAX_SCAN_LINE,
+    iter_scan_windows,
+    match_columns,
+)
 from argus.scanners.secrets import redact_line
 
 _WORKFLOW_PATH = re.compile(
@@ -118,6 +123,12 @@ def _permission_block_lines(lines: list[str]) -> list[int]:
     return out
 
 
+def _key_columns(line: str) -> tuple[int, int]:
+    """Columns of the ``permissions:`` key on a line matched by ``_PERMISSIONS_KEY``."""
+    start = len(line) - len(line.lstrip()) + 1
+    return start, start + len("permissions:")
+
+
 @scanner
 class CicdScanner(Scanner):
     name = "cicd"
@@ -139,11 +150,18 @@ class CicdScanner(Scanner):
             lines = f.lines()
             for rule_id, title, pattern, severity, why, fix in _RULES:
                 reported: set[int] = set()
-                hits = [(n, seg) for n, seg in iter_scan_lines(lines) if pattern.search(seg)]
+                hits: list[tuple[int, str, tuple[int, int]]] = []
+                for n, offset, seg in iter_scan_windows(lines):
+                    m = pattern.search(seg)
+                    if m:
+                        hits.append((n, seg, match_columns(m, offset)))
                 if rule_id == "cicd.excessive-permissions":
-                    hits += [(n, lines[n - 1]) for n in _permission_block_lines(lines)]
+                    hits += [
+                        (n, lines[n - 1], _key_columns(lines[n - 1]))
+                        for n in _permission_block_lines(lines)
+                    ]
                     hits.sort(key=lambda h: h[0])
-                for lineno, line in hits:
+                for lineno, line, (start_col, end_col) in hits:
                     if lineno in reported:
                         continue
                     reported.add(lineno)
@@ -157,7 +175,10 @@ class CicdScanner(Scanner):
                         location=Location(
                             path=f.rel_path,
                             start_line=lineno,
-                            snippet=redact_line(line).strip()[:200],
+                            end_line=lineno,
+                            start_column=start_col,
+                            end_column=end_col,
+                            snippet=redact_line(line).rstrip("\r\n")[:200],
                         ),
                         severity=severity,
                         confidence=Confidence.MEDIUM,

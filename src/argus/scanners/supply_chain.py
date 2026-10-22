@@ -29,7 +29,7 @@ from argus.core.models import (
     Severity,
 )
 from argus.core.plugin import Scanner, ScannerContext, scanner
-from argus.scanners._text import MAX_SCAN_LINE
+from argus.scanners._text import iter_scan_windows, match_columns
 from argus.scanners.dependencies import _PARSERS, _loads, collect_packages
 from argus.supply_chain.intel import (
     is_malicious,
@@ -69,12 +69,13 @@ def _known_malicious(ecosystem: str, name: str, *, online: bool = True) -> bool:
     return is_malicious(ecosystem, name, online=online)
 
 
-def _hook_line(f, hook: str) -> int | None:
-    """Line of the ``"hook":`` key in a package.json, if it can be found."""
+def _hook_position(f, hook: str) -> tuple[int, int, int] | None:
+    """``(line, start_column, end_column)`` of the ``"hook":`` key in a package.json."""
     key = re.compile(rf'"{re.escape(hook)}"\s*:')
-    for lineno, line in enumerate(f.lines(), start=1):
-        if len(line) <= MAX_SCAN_LINE and key.search(line):
-            return lineno
+    for lineno, offset, seg in iter_scan_windows(f.lines()):
+        m = key.search(seg)
+        if m:
+            return (lineno, *match_columns(m, offset))
     return None
 
 
@@ -91,6 +92,7 @@ def _scan_npm_scripts(project, counter: int) -> Iterable[Finding]:
             if not isinstance(body, str) or not SUSPICIOUS_INSTALL_SCRIPT.search(body):
                 continue
             counter += 1
+            pos = _hook_position(f, hook)
             yield Finding(
                 id=f"supply-chain:npm-script:{counter}",
                 rule_id="supply-chain.npm-lifecycle-script",
@@ -103,7 +105,12 @@ def _scan_npm_scripts(project, counter: int) -> Iterable[Finding]:
                 # The line number lets the engine merge this with the malware
                 # scanner's finding for the same script (same file, line, CWE).
                 location=Location(
-                    path=f.rel_path, start_line=_hook_line(f, hook), snippet=body[:200]
+                    path=f.rel_path,
+                    start_line=pos[0] if pos else None,
+                    end_line=pos[0] if pos else None,
+                    start_column=pos[1] if pos else None,
+                    end_column=pos[2] if pos else None,
+                    snippet=body[:200],
                 ),
                 severity=Severity.HIGH,
                 confidence=Confidence.MEDIUM,

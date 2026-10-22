@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import re
-from collections.abc import Iterable
+from collections.abc import Iterable, Iterator
 
 from argus.core.models import (
     Confidence,
@@ -14,7 +14,7 @@ from argus.core.models import (
     Severity,
 )
 from argus.core.plugin import Scanner, ScannerContext, scanner
-from argus.scanners._text import MAX_SCAN_LINE, search_line
+from argus.scanners._text import MAX_SCAN_LINE, iter_scan_windows, match_columns
 from argus.scanners.secrets import redact_line
 
 _COMPOSE = re.compile(r"(?i)docker-compose\.(ya?ml)$|compose\.ya?ml$")
@@ -62,6 +62,26 @@ def _sys_admin_cap_lines(lines: list[str]) -> list[int]:
                 out.append(idx + 1)
                 break
     return out
+
+
+def _line_matches(
+    pattern: re.Pattern[str], lines: list[str]
+) -> Iterator[tuple[int, str, tuple[int, int]]]:
+    """``(lineno, segment, columns)`` of the first match of ``pattern`` on each line."""
+    done: set[int] = set()
+    for lineno, offset, seg in iter_scan_windows(lines):
+        if lineno in done:
+            continue
+        m = pattern.search(seg)
+        if m:
+            done.add(lineno)
+            yield lineno, seg, match_columns(m, offset)
+
+
+def _key_columns(line: str, key: str) -> tuple[int, int]:
+    """Columns of a YAML ``key`` that starts the line after its indentation."""
+    start = len(line) - len(line.lstrip()) + 1
+    return start, start + len(key)
 
 
 def _is_k8s_manifest(f) -> bool:
@@ -153,18 +173,19 @@ class ContainerScanner(Scanner):
                 lineno,
                 "cap_add: SYS_ADMIN",
                 0,
+                _key_columns(lines[lineno - 1], "cap_add:"),
             )
         for pattern, rule, sev, title, fix in checks:
-            for lineno, line in enumerate(lines, start=1):
-                m = search_line(pattern, line)
-                if m:
-                    yield self._finding(f.rel_path, rule, title, sev, fix, lineno, m.string, 0)
+            for lineno, seg, cols in _line_matches(pattern, lines):
+                yield self._finding(f.rel_path, rule, title, sev, fix, lineno, seg, 0, cols)
 
     def _iter_k8s(self, f) -> Iterable[Finding]:
         for lineno, line in enumerate(f.lines(), start=1):
             if len(line) > MAX_SCAN_LINE:
                 continue  # an image reference is never this long
-            if _IMAGE_LATEST.search(line):
+            m = _IMAGE_LATEST.search(line)
+            nd = None if m else _IMAGE_NO_DIGEST.search(line)
+            if m:
                 yield self._finding(
                     f.rel_path,
                     "container.k8s-image-latest",
@@ -174,8 +195,9 @@ class ContainerScanner(Scanner):
                     lineno,
                     line,
                     0,
+                    match_columns(m),
                 )
-            elif _IMAGE_NO_DIGEST.search(line) and "@" not in line:
+            elif nd and "@" not in line:
                 yield self._finding(
                     f.rel_path,
                     "container.k8s-image-no-digest",
@@ -185,40 +207,39 @@ class ContainerScanner(Scanner):
                     lineno,
                     line,
                     0,
+                    match_columns(nd),
                 )
 
     def _iter_helm_values(self, f) -> Iterable[Finding]:
-        for lineno, line in enumerate(f.lines(), start=1):
-            m = search_line(_SECRET_ENV, line)
-            if m:
-                yield self._finding(
-                    f.rel_path,
-                    "container.helm-values-secret",
-                    "Secret-like value in Helm values",
-                    Severity.HIGH,
-                    "Use Kubernetes secrets or external secret stores, not plain values.",
-                    lineno,
-                    m.string,
-                    0,
-                )
+        for lineno, seg, cols in _line_matches(_SECRET_ENV, f.lines()):
+            yield self._finding(
+                f.rel_path,
+                "container.helm-values-secret",
+                "Secret-like value in Helm values",
+                Severity.HIGH,
+                "Use Kubernetes secrets or external secret stores, not plain values.",
+                lineno,
+                seg,
+                0,
+                cols,
+            )
 
     def _iter_dockerfile_extra(self, f) -> Iterable[Finding]:
-        for lineno, line in enumerate(f.lines(), start=1):
-            m = search_line(_DOCKERFILE_ENV_SECRET, line)
-            if m:
-                yield self._finding(
-                    f.rel_path,
-                    "container.dockerfile-env-secret",
-                    "Secret-like ENV in Dockerfile",
-                    Severity.HIGH,
-                    "Use runtime secrets or build-args from CI, not committed ENV.",
-                    lineno,
-                    m.string,
-                    0,
-                )
+        for lineno, seg, cols in _line_matches(_DOCKERFILE_ENV_SECRET, f.lines()):
+            yield self._finding(
+                f.rel_path,
+                "container.dockerfile-env-secret",
+                "Secret-like ENV in Dockerfile",
+                Severity.HIGH,
+                "Use runtime secrets or build-args from CI, not committed ENV.",
+                lineno,
+                seg,
+                0,
+                cols,
+            )
 
     @staticmethod
-    def _finding(path, rule, title, severity, fix, lineno, line, counter) -> Finding:
+    def _finding(path, rule, title, severity, fix, lineno, line, counter, cols) -> Finding:
         return Finding(
             id=f"container:{rule}:{counter}",
             rule_id=rule,
@@ -226,7 +247,12 @@ class ContainerScanner(Scanner):
             title=title,
             description=fix,
             location=Location(
-                path=path, start_line=lineno, snippet=redact_line(line).strip()[:200]
+                path=path,
+                start_line=lineno,
+                end_line=lineno,
+                start_column=cols[0],
+                end_column=cols[1],
+                snippet=redact_line(line).rstrip("\r\n")[:200],
             ),
             severity=severity,
             confidence=Confidence.MEDIUM,

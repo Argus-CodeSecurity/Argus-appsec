@@ -7,7 +7,12 @@ from collections.abc import Iterable
 
 from argus.core.models import Confidence, Finding, Likelihood, Location, Remediation, Severity
 from argus.core.plugin import Scanner, ScannerContext, scanner
-from argus.scanners._text import CURL_PIPE_SHELL_RE, iter_scan_lines
+from argus.scanners._text import (
+    CURL_PIPE_SHELL_RE,
+    iter_scan_windows,
+    match_columns,
+    snippet_line,
+)
 
 _RULES: dict[str, list[tuple[str, re.Pattern, str, Severity, str]]] = {
     ".java": [
@@ -192,10 +197,14 @@ class LangSastScanner(Scanner):
             if not rules:
                 continue
             reported: set[tuple[str, int]] = set()
-            for i, line in iter_scan_lines(f.text()):
+            for i, offset, line in iter_scan_windows(f.text()):
                 for rule_id, pattern, title, sev, cwe in rules:
-                    if (rule_id, i) not in reported and pattern.search(line):
+                    if (rule_id, i) in reported:
+                        continue
+                    m = pattern.search(line)
+                    if m:
                         reported.add((rule_id, i))
+                        start_col, end_col = match_columns(m, offset)
                         yield Finding(
                             id=f"lang-sast:{rule_id}:{f.rel_path}:{i}",
                             rule_id=rule_id,
@@ -203,7 +212,12 @@ class LangSastScanner(Scanner):
                             title=title,
                             description=f"Pattern match in {f.rel_path}",
                             location=Location(
-                                path=f.rel_path, start_line=i, snippet=line.strip()[:200]
+                                path=f.rel_path,
+                                start_line=i,
+                                end_line=i,
+                                start_column=start_col,
+                                end_column=end_col,
+                                snippet=snippet_line(line, 200),
                             ),
                             severity=sev,
                             confidence=Confidence.MEDIUM,

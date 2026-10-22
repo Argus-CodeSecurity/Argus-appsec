@@ -15,7 +15,7 @@ from argus.core.models import (
     Severity,
 )
 from argus.core.plugin import Scanner, ScannerContext, scanner
-from argus.scanners._text import iter_scan_lines
+from argus.scanners._text import iter_scan_windows, match_columns, snippet_line
 
 _CLOUD_FILES = re.compile(
     r"\.(tf|tfvars|hcl)$|cloudformation\.(ya?ml|json)$|/template\.(ya?ml|json)$",
@@ -37,21 +37,24 @@ _IAM_RESOURCE = re.compile(r'Resource\s*=\s*"\*"')
 _IAM_STATEMENT_LINES = 20
 
 
-def _iam_wildcard_lines(lines: list[str]) -> list[int]:
-    """Line numbers of `Action = "*"` lines followed closely by `Resource = "*"`."""
-    actions: list[int] = []
+def _iam_wildcard_lines(lines: list[str]) -> list[tuple[int, tuple[int, int]]]:
+    """`Action = "*"` lines followed closely by `Resource = "*"`.
+
+    Each item is the line number and the columns of the `Action` match.
+    """
+    actions: list[tuple[int, tuple[int, int]]] = []
     resources: list[int] = []
-    for lineno, seg in iter_scan_lines(lines):
+    for lineno, offset, seg in iter_scan_windows(lines):
         m = _IAM_ACTION.search(seg)
-        if m and (not actions or actions[-1] != lineno):
-            actions.append(lineno)
+        if m and (not actions or actions[-1][0] != lineno):
+            actions.append((lineno, match_columns(m, offset)))
         if _IAM_RESOURCE.search(seg) and (not resources or resources[-1] != lineno):
             resources.append(lineno)
-    out: list[int] = []
-    for lineno in actions:
+    out: list[tuple[int, tuple[int, int]]] = []
+    for lineno, cols in actions:
         i = bisect.bisect_left(resources, lineno)
         if i < len(resources) and resources[i] <= lineno + _IAM_STATEMENT_LINES:
-            out.append(lineno)
+            out.append((lineno, cols))
     return out
 
 
@@ -138,7 +141,7 @@ class CloudScanner(Scanner):
             lines = f.lines()
             for rule_id, title, pattern, severity, why, fix in _RULES:
                 if rule_id == "cloud.iam-wildcard":
-                    for lineno in _iam_wildcard_lines(lines):
+                    for lineno, cols in _iam_wildcard_lines(lines):
                         counter += 1
                         yield self._mk(
                             f.rel_path,
@@ -150,27 +153,47 @@ class CloudScanner(Scanner):
                             lineno,
                             lines[lineno - 1][:2000],
                             counter,
+                            cols,
                         )
                     continue
                 reported: set[int] = set()
-                for lineno, line in iter_scan_lines(lines):
-                    if lineno not in reported and pattern.search(line):
+                for lineno, offset, line in iter_scan_windows(lines):
+                    if lineno in reported:
+                        continue
+                    m = pattern.search(line)
+                    if m:
                         reported.add(lineno)
                         counter += 1
                         yield self._mk(
-                            f.rel_path, rule_id, title, severity, why, fix, lineno, line, counter
+                            f.rel_path,
+                            rule_id,
+                            title,
+                            severity,
+                            why,
+                            fix,
+                            lineno,
+                            line,
+                            counter,
+                            match_columns(m, offset),
                         )
 
     @staticmethod
-    def _mk(path, rule, title, severity, why, fix, lineno, line, counter) -> Finding:
-        snippet = line.strip()[:200] if isinstance(line, str) else "(policy block)"
+    def _mk(path, rule, title, severity, why, fix, lineno, line, counter, cols) -> Finding:
+        snippet = snippet_line(line, 200) if isinstance(line, str) else "(policy block)"
         return Finding(
             id=f"cloud:{rule}:{counter}",
             rule_id=rule,
             scanner="cloud",
             title=title,
             description=why,
-            location=Location(path=path, start_line=lineno, snippet=snippet),
+            location=Location(
+                path=path,
+                start_line=lineno,
+                end_line=lineno,
+                start_column=cols[0],
+                end_column=cols[1],
+                snippet=snippet,
+            ),
             severity=severity,
             confidence=Confidence.MEDIUM,
             likelihood=Likelihood.POSSIBLE,

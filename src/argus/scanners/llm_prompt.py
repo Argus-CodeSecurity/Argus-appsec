@@ -27,7 +27,7 @@ from collections.abc import Iterator
 from typing import Any
 
 from argus.core.models import Confidence, Finding, Severity
-from argus.scanners._text import iter_scan_lines
+from argus.scanners._text import iter_scan_windows
 from argus.scanners.llm_ast import (
     LLM07,
     Src,
@@ -166,31 +166,46 @@ def mask(text: str, spans: list[tuple[int, int, str]]) -> str:
     return redact_line("".join(out))
 
 
-def literal_strings(
-    expr, src: Src, consts: dict[str, list[tuple[str, int]]]
-) -> list[tuple[str, int]]:
-    """Bounded line segments of the string literals in ``expr``, with line numbers.
+#: A piece of string literal text, the line it starts on, and the 0-based
+#: character column it starts at on that line.
+Literal = tuple[str, int, int]
+
+
+def _literal(node, src: Src) -> Literal:
+    return src.text(node), line_of(node), src.columns(node)[0] - 1
+
+
+def literal_strings(expr, src: Src, consts: dict[str, list[Literal]]) -> list[Literal]:
+    """Bounded line segments of the string literals in ``expr``, with positions.
 
     Constants that ``expr`` names are included. Every segment goes through
-    :func:`argus.scanners._text.iter_scan_lines`, so a huge literal is searched
-    in bounded windows like any other scanned line.
+    :func:`argus.scanners._text.iter_scan_windows`, so a huge literal is
+    searched in bounded windows like any other scanned line. Each item is
+    ``(segment, line, column)`` with ``column`` the 0-based character column of
+    the segment's first character in the source line.
     """
-    raw: list[tuple[str, int]] = []
+    raw: list[Literal] = []
     for node in walk(expr):
         if node.type == "string_content":
-            raw.append((src.text(node), line_of(node)))
+            raw.append(_literal(node, src))
         elif node.type == "identifier":
             raw.extend(consts.get(src.text(node), ()))
-    out: list[tuple[str, int]] = []
-    for text, first_line in raw:
-        for offset, segment in iter_scan_lines(text):
-            out.append((segment, first_line + offset - 1))
+    out: list[Literal] = []
+    for text, first_line, first_col in raw:
+        for lineno, offset, segment in iter_scan_windows(text):
+            base = (first_col if lineno == 1 else 0) + offset
+            out.append((segment, first_line + lineno - 1, base))
     return out
 
 
-def constant_strings(root, src: Src) -> dict[str, list[tuple[str, int]]]:
+def _span_columns(base: int, start: int, end: int) -> tuple[int, int]:
+    """1-based, end-exclusive columns of ``[start, end)`` in a segment at ``base``."""
+    return base + start + 1, base + max(end, start + 1) + 1
+
+
+def constant_strings(root, src: Src) -> dict[str, list[Literal]]:
     """Module-level ``NAME = "..."`` string text, keyed by name (with its line)."""
-    consts: dict[str, list[tuple[str, int]]] = {}
+    consts: dict[str, list[Literal]] = {}
     for stmt in root.named_children:
         if stmt.type != "expression_statement" or not stmt.named_children:
             continue
@@ -201,7 +216,7 @@ def constant_strings(root, src: Src) -> dict[str, list[tuple[str, int]]]:
         right = node.child_by_field_name("right")
         if left is None or right is None or left.type != "identifier":
             continue
-        parts = [(src.text(n), line_of(n)) for n in walk(right) if n.type == "string_content"]
+        parts = [_literal(n, src) for n in walk(right) if n.type == "string_content"]
         if parts:
             consts[src.text(left)] = parts
     return consts
@@ -211,13 +226,13 @@ def leak_findings(
     expr,
     label: str,
     src: Src,
-    consts: dict[str, list[tuple[str, int]]],
+    consts: dict[str, list[Literal]],
     path: str,
     in_test: bool,
     seen: set[tuple[str, int]],
 ) -> Iterator[Finding]:
     """LLM07 findings for secrets / internal URLs in one system prompt."""
-    for text, line in literal_strings(expr, src, consts):
+    for text, line, base in literal_strings(expr, src, consts):
         spans = _secret_spans(text)
         if spans and ("secret-in-system-prompt", line) not in seen:
             seen.add(("secret-in-system-prompt", line))
@@ -233,6 +248,7 @@ def leak_findings(
                 ),
                 path=path,
                 line=line,
+                columns=_span_columns(base, *min(spans)[:2]),
                 snippet=mask(src.line_text(line), _secret_spans(src.line_text(line))),
                 severity=Severity.HIGH,
                 confidence=Confidence.HIGH,
@@ -265,6 +281,7 @@ def leak_findings(
                 ),
                 path=path,
                 line=line,
+                columns=_span_columns(base, *m.span()),
                 snippet=src.line_text(line),
                 severity=Severity.LOW,
                 confidence=Confidence.MEDIUM,

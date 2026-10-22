@@ -109,21 +109,49 @@ class Src:
 
     def __init__(self, data: bytes) -> None:
         self.data = data
-        self._lines: list[str] | None = None
+        self._lines: list[bytes] | None = None
 
     def text(self, node) -> str:
         return self.data[node.start_byte : node.end_byte].decode("utf-8", "ignore")
 
-    def line_text(self, line: int) -> str:
+    def _byte_lines(self) -> list[bytes]:
+        # Split on "\n" only, the way tree-sitter counts rows, so line numbers
+        # and columns agree with node positions.
         if self._lines is None:
-            self._lines = self.data.decode("utf-8", "ignore").splitlines()
-        if 1 <= line <= len(self._lines):
-            return self._lines[line - 1].strip()
+            self._lines = self.data.split(b"\n")
+        return self._lines
+
+    def line_text(self, line: int) -> str:
+        """Source line ``line`` (1-based) with its indentation, line ending dropped."""
+        lines = self._byte_lines()
+        if 1 <= line <= len(lines):
+            return lines[line - 1].decode("utf-8", "ignore").rstrip("\r\n")
         return ""
+
+    def columns(self, node) -> tuple[int, int]:
+        """1-based ``(start_column, end_column)`` of ``node`` in characters.
+
+        ``start_column`` is on the node's first line and ``end_column`` on its
+        last line (``end_line_of``), just past the last character (SARIF).
+        """
+        lines = self._byte_lines()
+        srow, scol = node.start_point
+        erow, ecol = node.end_point
+        first = lines[srow] if srow < len(lines) else b""
+        last = lines[erow] if erow < len(lines) else b""
+        start = len(first[:scol].decode("utf-8", "ignore")) + 1
+        end = len(last[:ecol].decode("utf-8", "ignore")) + 1
+        if erow == srow:
+            end = max(end, start + 1)
+        return start, end
 
 
 def line_of(node) -> int:
     return int(node.start_point[0]) + 1
+
+
+def end_line_of(node) -> int:
+    return int(node.end_point[0]) + 1
 
 
 def walk(root) -> Iterator[Any]:
@@ -357,8 +385,14 @@ def make_finding(
     likelihood: Likelihood = Likelihood.LIKELY,
     scanner_name: str = SCANNER_NAME,
     references: list[str] | None = None,
+    columns: tuple[int, int] | None = None,
+    end_line: int | None = None,
 ) -> Finding:
-    """One finding for an LLM/agent rule, with the OWASP LLM id attached."""
+    """One finding for an LLM/agent rule, with the OWASP LLM id attached.
+
+    ``columns`` is ``(start_column, end_column)`` as from :meth:`Src.columns`;
+    ``end_line`` is the line ``end_column`` is on and defaults to ``line``.
+    """
     severity, low_conf = downgrade_for_tests(severity, in_test)
     all_tags = list(dict.fromkeys(["ai-security", *tags, owasp_llm.split(":", 1)[0]]))
     if low_conf is not None:
@@ -374,7 +408,14 @@ def make_finding(
         scanner=scanner_name,
         title=title,
         description=description,
-        location=Location(path=path, start_line=line, snippet=snippet[:240]),
+        location=Location(
+            path=path,
+            start_line=line,
+            end_line=(end_line or line) if columns else None,
+            start_column=columns[0] if columns else None,
+            end_column=columns[1] if columns else None,
+            snippet=snippet[:240],
+        ),
         severity=severity,
         confidence=confidence,
         likelihood=likelihood,

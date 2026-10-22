@@ -62,7 +62,7 @@ from __future__ import annotations
 import json
 import math
 import re
-from collections.abc import Iterable, Iterator
+from collections.abc import Iterable, Iterator, Sequence
 from dataclasses import dataclass
 from typing import Any
 from urllib.parse import urlsplit
@@ -486,9 +486,26 @@ class _Lines:
         return None
 
     def text(self, line: int | None) -> str:
+        """Line ``line`` with its indentation kept."""
         if line is None or not 1 <= line <= len(self.lines):
             return ""
-        return self.lines[line - 1].strip()
+        return self.lines[line - 1]
+
+    def columns(self, line: int | None, needles: Sequence[str]) -> tuple[int, int] | None:
+        """Columns of the first of ``needles`` found on ``line`` as a JSON string.
+
+        1-based, end exclusive, covering the string's content without its quotes.
+        """
+        if line is None or not 1 <= line <= len(self.lines):
+            return None
+        text = self.lines[line - 1]
+        for needle in needles:
+            quoted = json.dumps(needle)
+            idx = text.find(quoted)
+            if idx >= 0:
+                start = idx + 2
+                return start, max(idx + len(quoted), start + 1)
+        return None
 
 
 @scanner
@@ -546,7 +563,9 @@ class _FileCheck:
                 if isinstance(server, dict):
                     yield str(name), server, self.lines.find(str(name)) or 1
 
-    def _add(self, rule: str, key: str, line: int | None, **kw: Any) -> None:
+    def _add(
+        self, rule: str, key: str, line: int | None, *, needles: Sequence[str] = (), **kw: Any
+    ) -> None:
         snippet = kw.pop("snippet", None)
         self.findings.append(
             make_finding(
@@ -554,6 +573,7 @@ class _FileCheck:
                 key=key,
                 path=self.path,
                 line=line,
+                columns=self.lines.columns(line, needles),
                 snippet=snippet if snippet is not None else self.lines.text(line),
                 scanner_name=SCANNER_NAME,
                 in_test=self.in_test,
@@ -608,6 +628,7 @@ class _FileCheck:
                 "mcp-hardcoded-secret",
                 f"{name}:{key}",
                 at,
+                needles=(value, key, name),
                 snippet=snippet,
                 title=f"Hardcoded credential in MCP server '{name}' {where}",
                 description=(
@@ -647,6 +668,7 @@ class _FileCheck:
             "mcp-unpinned-package",
             f"{name}:{launch.spec}",
             at,
+            needles=(launch.spec, name),
             title=f"MCP server '{name}' runs an unpinned "
             + ("container image" if launch.runner == "docker run" else f"{launch.runner} package"),
             description=(
@@ -682,6 +704,7 @@ class _FileCheck:
             "mcp-plaintext-http",
             f"{name}:{key}",
             at,
+            needles=(url, name),
             title=f"Remote MCP server '{name}' uses plaintext HTTP",
             description=(
                 f"{self.client} connects to MCP server '{name}' at http://{host}, so tool "
@@ -709,6 +732,7 @@ class _FileCheck:
                 "mcp-broad-filesystem-root",
                 f"{name}:{path}",
                 at,
+                needles=(path, name),
                 title=f"Filesystem MCP server '{name}' is granted {why}",
                 description=(
                     f"{self.client} lets the filesystem server '{name}' read and write "
@@ -741,6 +765,7 @@ class _FileCheck:
                 self._auto(
                     f"{name}:{key}",
                     self.lines.find(key, line) or line,
+                    (key, name),
                     f"MCP server '{name}' tools run without confirmation",
                     f"{label} lists {names} for server '{name}', so those tools run with no "
                     "human confirmation.",
@@ -751,6 +776,7 @@ class _FileCheck:
             self._auto(
                 f"{name}:trust",
                 self.lines.find("trust", line) or line,
+                ("trust", name),
                 f"MCP server '{name}' is trusted: every tool call skips confirmation",
                 f"Gemini CLI trust: true bypasses all tool call confirmations for server '{name}'.",
                 Severity.MEDIUM,
@@ -758,12 +784,20 @@ class _FileCheck:
             )
 
     def _auto(
-        self, key: str, line: int, title: str, desc: str, severity: Severity, meta: dict
+        self,
+        key: str,
+        line: int,
+        needles: Sequence[str],
+        title: str,
+        desc: str,
+        severity: Severity,
+        meta: dict,
     ) -> None:
         self._add(
             "agent-auto-approve",
             key,
             line,
+            needles=needles,
             title=title,
             description=desc,
             severity=severity,
@@ -786,6 +820,7 @@ class _FileCheck:
             self._auto(
                 "enableAllProjectMcpServers",
                 self.lines.find("enableAllProjectMcpServers") or 1,
+                ("enableAllProjectMcpServers",),
                 "Every project MCP server is approved without a prompt",
                 "enableAllProjectMcpServers: true approves every server in the project's "
                 ".mcp.json, including servers a later commit or pull request adds.",
@@ -807,6 +842,7 @@ class _FileCheck:
                     self._auto(
                         f"allow:{rule}",
                         self.lines.find(rule) or 1,
+                        (rule,),
                         f"Allow rule {rule} runs every shell command without asking",
                         f'permissions.allow contains "{rule}", which matches all shell '
                         "commands, so the agent runs any command with no confirmation.",
@@ -818,6 +854,7 @@ class _FileCheck:
             self._auto(
                 "defaultMode",
                 self.lines.find("bypassPermissions") or 1,
+                ("bypassPermissions",),
                 "Permission mode bypassPermissions skips every prompt",
                 'permissions.defaultMode is "bypassPermissions", which skips permission '
                 "prompts. Claude Code v2.1.257 and later ignore it in project and local "
@@ -835,6 +872,7 @@ class _FileCheck:
                         "mcp-broad-filesystem-root",
                         f"additionalDirectories:{d}",
                         at,
+                        needles=(d,),
                         title=f"Agent workspace extended to {why}",
                         description=(
                             f"permissions.additionalDirectories adds {d} ({why}) to the "
