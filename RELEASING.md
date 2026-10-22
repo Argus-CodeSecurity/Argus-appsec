@@ -65,6 +65,11 @@ Argus follows [Semantic Versioning](https://semver.org/) and PEP 440:
 4. Update the version shown in usage examples: `action.yml` (header comment),
    `.pre-commit-hooks.yaml` (header comment), and `docs/ci-cd.md`.
 5. Open a pull request titled `release: vX.Y.Z`, get it reviewed, and merge.
+   **Do not create the release until this PR is merged.** The tag is made from
+   `main` as it is at that moment; tagged early, it captures the previous
+   version. Both release workflows refuse a tag that does not match
+   `__version__`, but the tag itself is protected and cannot be moved, so a
+   mistaken tag costs a version number.
 6. On GitHub, **Releases, Draft a new release**: tag `vX.Y.Z` on `main`, title
    `vX.Y.Z`, and paste the changelog section as the description. Mark
    pre-releases as such. Publish.
