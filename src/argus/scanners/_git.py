@@ -20,11 +20,14 @@ from __future__ import annotations
 import os
 import shutil
 import subprocess
+import threading
 from dataclasses import dataclass
 from pathlib import Path
 
 #: Default wall-clock limit for one git invocation, in seconds.
 DEFAULT_TIMEOUT = 60.0
+#: Default cap on stdout kept from one git invocation, in bytes.
+DEFAULT_MAX_OUTPUT = 50_000_000
 
 # Pinned on the command line; these override anything in the repo's config.
 # An empty core.fsmonitor/diff.external disables them. gpg programs point at the
@@ -129,14 +132,15 @@ def run_git(
     root: Path,
     *args: str,
     timeout: float = DEFAULT_TIMEOUT,
-    max_output: int | None = None,
+    max_output: int = DEFAULT_MAX_OUTPUT,
 ) -> GitResult | None:
     """Run a read-only git command in ``root`` with repo config neutralised.
 
     Returns ``None`` if git is missing, times out, or cannot be started.
-    ``max_output`` bounds how many characters of stdout are kept; past it the
-    process is killed and the result is marked ``truncated`` so an enormous
-    history cannot exhaust memory.
+    Output is streamed and at most ``max_output`` bytes are kept; past that the
+    process is killed and the result is marked ``truncated``, so an enormous
+    history cannot exhaust memory. Bytes are decoded as UTF-8 with invalid
+    sequences replaced, since commit contents can be in any encoding.
     """
     if not git_available():
         return None
@@ -147,25 +151,11 @@ def run_git(
             stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL,
             env=hardened_env(),
-            text=True,
-            encoding="utf-8",
-            errors="replace",
         )
     except OSError:
         return None
 
-    if max_output is None:
-        try:
-            out, _ = proc.communicate(timeout=timeout)
-        except subprocess.TimeoutExpired:
-            proc.kill()
-            proc.communicate()
-            return None
-        return GitResult(proc.returncode, out or "")
-
-    import threading
-
-    chunks: list[str] = []
+    chunks: list[bytes] = []
     size = 0
     truncated = False
     timed_out = threading.Event()
@@ -195,9 +185,9 @@ def run_git(
             proc.stdout.close()
     if timed_out.is_set():
         return None
-    text = "".join(chunks)
+    text = b"".join(chunks)[:max_output].decode("utf-8", errors="replace")
     if truncated:
-        return GitResult(0, text[:max_output], truncated=True)
+        return GitResult(0, text, truncated=True)
     return GitResult(proc.returncode, text)
 
 

@@ -117,3 +117,53 @@ def test_run_git_bounds_output(tmp_path):
     repo, _ = _hostile_repo(tmp_path)
     res = _git.run_git(repo, "log", "-p", "--all", max_output=10)
     assert res is not None and res.truncated and len(res.stdout) == 10
+
+
+def _plain_repo(tmp_path: Path) -> Path:
+    repo = tmp_path / "plain"
+    repo.mkdir()
+    _git_plain(repo, "init", "-q")
+    _git_plain(repo, "config", "user.email", "t@example.com")
+    _git_plain(repo, "config", "user.name", "Test")
+    return repo
+
+
+def test_history_keeps_distinct_secrets_with_same_prefix(tmp_path):
+    from argus.scanners.secrets_history import find_history_secrets
+
+    repo = _plain_repo(tmp_path)
+    (repo / "a.py").write_text('K1 = "AKIAIOSFODNN7EXAMPLE"\nK2 = "AKIAJ2345678ABCDEFGH"\n',
+                               encoding="utf-8")
+    _git_plain(repo, "add", "-A")
+    _git_plain(repo, "commit", "-q", "-m", "keys")
+    found, truncated = find_history_secrets(repo)
+    aws = [s for s in found if s.rule == "aws-access-key-id"]
+    assert len(aws) == 2
+    assert len({s.fingerprint for s in aws}) == 2
+    assert not truncated
+
+
+def test_history_survives_non_utf8_content(tmp_path):
+    from argus.scanners.secrets_history import find_history_secrets
+
+    repo = _plain_repo(tmp_path)
+    (repo / "latin1.txt").write_bytes(b"caf\xe9 \xff\xfe\n")
+    (repo / "a.py").write_text('K = "AKIAIOSFODNN7EXAMPLE"\n', encoding="utf-8")
+    _git_plain(repo, "add", "-A")
+    _git_plain(repo, "commit", "-q", "-m", "mixed encodings")
+    found, _ = find_history_secrets(repo)
+    assert any(s.rule == "aws-access-key-id" for s in found)
+
+
+def test_history_reports_truncation(tmp_path, monkeypatch, caplog):
+    from argus.scanners import secrets_history
+
+    repo = _plain_repo(tmp_path)
+    (repo / "a.py").write_text("x = 1\n" * 200, encoding="utf-8")
+    _git_plain(repo, "add", "-A")
+    _git_plain(repo, "commit", "-q", "-m", "big")
+    monkeypatch.setattr(secrets_history, "_MAX_OUTPUT_BYTES", 100)
+    with caplog.at_level("WARNING", logger="argus.scanners.secrets_history"):
+        _, truncated = secrets_history.find_history_secrets(repo)
+    assert truncated
+    assert "only the newest commits" in caplog.text
