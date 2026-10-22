@@ -14,6 +14,7 @@ archives are pruned to the newest ``keep_snapshots``.
 from __future__ import annotations
 
 import contextlib
+import hashlib
 import logging
 import os
 import time
@@ -42,8 +43,17 @@ class WatchCycleResult:
 
 
 def state_dir_for(target: str, base: Path) -> Path:
-    safe = "".join(c if c.isalnum() or c in "-_." else "_" for c in target)[:120]
-    return base / safe
+    """A per-target directory under ``base``.
+
+    The readable prefix is sanitised and the name ends with a short sha256 of
+    the full target, so distinct targets never share a directory (even when
+    their sanitised forms collide or are truncated) and names like ``..``
+    cannot step outside ``base``.
+    """
+    digest = hashlib.sha256(target.encode("utf-8")).hexdigest()[:12]
+    safe = "".join(c if c.isalnum() or c in "-_." else "_" for c in target)[:100]
+    safe = safe.strip(".") or "target"
+    return base / f"{safe}-{digest}"
 
 
 def latest_snapshot_path(state_dir: Path) -> Path:

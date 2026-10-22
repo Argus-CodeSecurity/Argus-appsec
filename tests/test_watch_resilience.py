@@ -17,6 +17,7 @@ from argus.watch.scheduler import (
     prune_snapshots,
     run_watch_cycle,
     run_watch_loop,
+    state_dir_for,
 )
 
 
@@ -115,6 +116,17 @@ def test_keep_snapshots_env(tmp_path: Path, monkeypatch):
     for _ in range(4):
         run_watch_cycle(scan_fn=lambda: _scan(), state_dir=tmp_path)
     assert len(list(tmp_path.glob("scan-*.json"))) == 2
+
+
+def test_state_dir_names_are_unique_and_contained(tmp_path: Path):
+    a = state_dir_for("org/repo", tmp_path)
+    b = state_dir_for("org_repo", tmp_path)
+    assert a != b  # sanitised forms collide; the hash suffix keeps them apart
+    for hostile in ("..", ".", "../../etc", ""):
+        d = state_dir_for(hostile, tmp_path)
+        assert d.parent == tmp_path
+        assert d.resolve().is_relative_to(tmp_path.resolve())
+        assert d.name not in (".", "..")
 
 
 @pytest.mark.skipif(os.name == "nt", reason="POSIX permissions")
