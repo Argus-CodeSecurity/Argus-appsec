@@ -261,10 +261,12 @@ exclude_paths:
 ```
 
 !!! warning "Local secrets vs repository secrets"
-    Argus scans **files on disk**, including gitignored files like `.env` if
-    they exist locally. A Critical finding in `.env` on your laptop is **not**
-    the same as a secret committed to git. Exclude local-only files in
-    `.argus.yml`, or scan in CI where `.env` does not exist:
+    In a git work tree Argus skips untracked files that git ignores, so a
+    gitignored `.env` on your laptop is not scanned. Outside a git work tree,
+    or with `--include-ignored`, Argus scans **every file on disk**, and a
+    Critical finding in a local `.env` is **not** the same as a secret
+    committed to git. Exclude local-only files in `.argus.yml`, or scan in CI
+    where `.env` does not exist:
 
     ```yaml
     exclude_paths:

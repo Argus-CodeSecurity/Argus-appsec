@@ -179,6 +179,12 @@ class Config:
     # disables it). See docs/audit-log.md.
     audit_log: bool = True
 
+    # Also scan untracked files that git ignores. Off by default: in a git
+    # work tree, untracked ignored files (build output, local virtual
+    # environments) are skipped, and tracked files are always scanned.
+    # CLI: --include-ignored.
+    include_ignored: bool = False
+
     @classmethod
     def load(cls, path: str | Path | None = None, project_root: str | Path | None = None) -> Config:
         """Load config from an explicit path or by discovery in the project root."""
@@ -239,6 +245,7 @@ class Config:
         cfg.cache = _bool(data, "cache", cfg.cache)
         cfg.parallel = _bool(data, "parallel", cfg.parallel)
         cfg.audit_log = _bool(data, "audit_log", cfg.audit_log)
+        cfg.include_ignored = _bool(data, "include_ignored", cfg.include_ignored)
         if data.get("fail_on_error") is not None:
             cfg.fail_on_error = _bool(data, "fail_on_error", False)
 

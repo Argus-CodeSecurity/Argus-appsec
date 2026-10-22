@@ -203,6 +203,13 @@ def run_check(
             argus_version=__version__,
             project_summary={"name": root.name, "root": str(root), "file_count": 0},
         )
-    project = Project(root=root, name=root.name, extra_ignores=tuple(cfg.exclude_paths))
+    project = Project(
+        root=root,
+        name=root.name,
+        extra_ignores=tuple(cfg.exclude_paths),
+        include_ignored=cfg.include_ignored,
+    )
+    # The engine keeps this file list because the project already carries the
+    # config's ignore settings; it never walks the rest of the tree.
     project._files_cache = tuple(files)
     return FileCheckEngine(cfg, progress=progress).scan(project)

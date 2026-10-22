@@ -73,6 +73,13 @@ def scan(
         "--no-cache",
         help="Re-analyze every file instead of reusing cached findings for unchanged files.",
     ),
+    include_ignored: bool = typer.Option(
+        False,
+        "--include-ignored",
+        help="Also scan untracked files that git ignores (build output, local "
+        "virtual environments). By default a git work tree is scanned as git "
+        "sees it: tracked files plus untracked files that are not ignored.",
+    ),
     verify_secrets: bool = typer.Option(
         False,
         "--verify-secrets",
@@ -251,6 +258,7 @@ def scan(
             verify_secrets=verify_secrets,
             secrets_history=secrets_history,
             diff_ref=diff_ref,
+            include_ignored=include_ignored,
         )
 
         if live_target:

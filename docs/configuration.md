@@ -22,6 +22,11 @@ exclude_scanners: []    # e.g. ["iac"]
 # (.git, node_modules, venv, build artifacts, etc.).
 exclude_paths: []       # e.g. ["tests/fixtures/*", "*.min.js"]
 
+# In a git work tree, untracked files that .gitignore (or .git/info/exclude)
+# ignores are skipped; tracked files are always scanned. true scans the
+# ignored files too. CLI: --include-ignored. See "Files that are scanned".
+include_ignored: false
+
 # Minimum severity to report: info | low | medium | high | critical
 min_severity: info
 
@@ -81,6 +86,31 @@ scanner_options:
 # Security policies - see docs/policy.md
 policies: []
 ```
+
+## Files that are scanned
+
+Argus walks the target directory and skips the directories that are noise for
+security analysis (`.git`, `node_modules`, `vendor`, `dist`, `build`, virtual
+environments, caches) and anything matching `exclude_paths`.
+
+When the target is inside a git work tree, Argus also asks git which
+untracked files it ignores (`git ls-files --others --ignored
+--exclude-standard`, run with the same hardening as every other git call) and
+skips them: build output, local virtual environments, editor and assistant
+folders such as `.claude/`, a local `.env`. What is scanned matches what git
+would commit:
+
+- **Tracked files are always scanned**, even when a `.gitignore` pattern
+  matches them. Ignore rules only apply to untracked files, so a pull request
+  cannot hide committed code by adding a pattern to `.gitignore`.
+- Untracked files that are not ignored (new files you have not added yet)
+  are scanned.
+- Outside a git work tree, when git is not installed, or when the target
+  directory is itself ignored, every file is walked as before.
+
+`--include-ignored` (or `include_ignored: true`) scans the ignored files too,
+as earlier releases did. Files over 2 MB and symlinks that
+point outside the project are skipped either way.
 
 ## Secret verification (opt-in)
 
@@ -238,6 +268,7 @@ argus scan TARGET
       --ai-provider NAME    heuristic | anthropic | openai | ollama
       --ai-model ID         model override
       --no-ai               disable AI enrichment
+      --include-ignored     also scan untracked files that git ignores
       --attack-sim          enable Attack Simulation Mode
       --patches             generate/verify fix patches
       --min-severity SEV    report findings at/above this severity

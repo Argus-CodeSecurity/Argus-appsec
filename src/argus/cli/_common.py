@@ -179,6 +179,7 @@ def build_config(
     verify_secrets=False,
     secrets_history=False,
     diff_ref: str | None = None,
+    include_ignored: bool = False,
 ) -> Config:
     """Load the project config and apply the ``argus scan`` flags on top of it."""
     cfg = load_project_config(
@@ -207,6 +208,8 @@ def build_config(
             cfg.scanners = [*cfg.scanners, "dependency-diff"]
     if no_cache:
         cfg.cache = False
+    if include_ignored:
+        cfg.include_ignored = True
     if verify_secrets:
         cfg.scanner_options.setdefault("secrets", {})["verify"] = True
     if secrets_history:

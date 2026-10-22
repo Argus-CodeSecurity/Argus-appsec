@@ -338,13 +338,16 @@ class ScanEngine:
         on the caller's object would leak one scan's config into the next use
         of the same Project (another engine, another config), so the engine
         works on a copy. Mutable containers are copied too, and the cached file
-        list is reused only when the ignore globs are unchanged.
+        list is reused only when the ignore globs and ``include_ignored`` are
+        unchanged.
         """
         ignores = tuple(self.config.exclude_paths)
-        keep_files = ignores == project.extra_ignores
+        include_ignored = self.config.include_ignored
+        keep_files = ignores == project.extra_ignores and include_ignored == project.include_ignored
         return dataclasses.replace(
             project,
             extra_ignores=ignores,
+            include_ignored=include_ignored,
             languages=dict(project.languages),
             frameworks=list(project.frameworks),
             architecture=dict(project.architecture),

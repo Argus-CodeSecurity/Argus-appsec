@@ -49,6 +49,81 @@ DEFAULT_IGNORES: tuple[str, ...] = (
 MAX_TEXT_BYTES = 2_000_000
 # Leading bytes inspected for a NUL to decide whether a file is binary.
 _SNIFF_BYTES = 2048
+# Wall-clock limit for listing the files git ignores, in seconds.
+_GIT_LIST_TIMEOUT = 30.0
+
+
+@dataclass(frozen=True)
+class GitIgnored:
+    """Untracked paths git ignores under a project root (POSIX, root-relative)."""
+
+    files: frozenset[str]
+    #: Whole directories git ignores; nothing below them is tracked.
+    dirs: frozenset[str]
+
+    def covers_dir(self, rel_dir: str) -> bool:
+        return rel_dir in self.dirs
+
+    def covers_file(self, rel_path: str) -> bool:
+        return rel_path in self.files
+
+
+def _inside_git_work_tree(root: Path) -> bool:
+    """Cheap pre-check: is there a ``.git`` entry at or above ``root``?
+
+    Saves starting git for the common case of a directory that is not a
+    repository at all.
+    """
+    return any((d / ".git").exists() for d in (root, *root.parents))
+
+
+def git_ignored_paths(root: Path) -> GitIgnored | None:
+    """The untracked files and directories git ignores under ``root``.
+
+    Runs ``git ls-files --others --ignored --exclude-standard --directory``
+    through :mod:`argus.core.gitexec` with the untrusted profile, because the
+    repository being scanned may be hostile. The listing only ever names
+    *untracked* paths, so a tracked file is never in it, whatever the
+    repository's ``.gitignore`` says: a pull request cannot hide committed
+    code by adding an ignore pattern. Anything git does not name (a path it
+    spells differently, a nested repository) is still scanned.
+
+    Returns None when ``root`` is not in a git work tree, git is missing or
+    fails, or ``root`` itself is ignored (the caller named it explicitly);
+    callers then walk every file as before.
+    """
+    if not _inside_git_work_tree(root):
+        return None
+    from argus.core import gitexec
+
+    try:
+        res = gitexec.run(
+            root,
+            "ls-files",
+            "--others",
+            "--ignored",
+            "--exclude-standard",
+            "--directory",
+            "-z",
+            profile=gitexec.UNTRUSTED,
+            timeout=_GIT_LIST_TIMEOUT,
+        )
+    except gitexec.GitExecError:
+        return None
+    if res.returncode != 0 or res.truncated:
+        return None
+    files: set[str] = set()
+    dirs: set[str] = set()
+    for entry in res.stdout.split("\0"):
+        if not entry:
+            continue
+        if entry in ("./", "."):
+            return None  # the project root itself is ignored
+        if entry.endswith("/"):
+            dirs.add(entry.rstrip("/"))
+        else:
+            files.add(entry)
+    return GitIgnored(frozenset(files), frozenset(dirs))
 
 
 @dataclass
@@ -147,6 +222,10 @@ class Project:
     metadata: dict[str, Any] = field(default_factory=dict)
 
     extra_ignores: tuple[str, ...] = ()
+    # Also scan untracked files that git ignores (build output, local virtual
+    # environments). Off by default: in a git work tree only tracked files and
+    # untracked files that are not ignored are scanned.
+    include_ignored: bool = False
 
     # Materialized file list, computed on first access. Not part of equality.
     _files_cache: tuple[FileRef, ...] | None = field(default=None, repr=False, compare=False)
@@ -186,22 +265,34 @@ class Project:
         Directories and files are traversed in sorted order so that the file list,
         and therefore finding ids and report ordering, is deterministic and
         reproducible across machines and filesystems.
+
+        In a git work tree, untracked files that git ignores are skipped
+        (see :func:`git_ignored_paths`) unless ``include_ignored`` is set.
+        Tracked files are always walked.
         """
         ignores = self._ignored()
+        git_ignored = None if self.include_ignored else git_ignored_paths(self.root)
         for dirpath, dirnames, filenames in os.walk(self.root):
             base_rel = Path(dirpath).relative_to(self.root).as_posix()
             # Sorting dirnames in place also fixes os.walk's traversal order.
-            # Prune by built-in basename ignores and by exclude-glob (which lets
-            # us skip descending into an excluded subtree entirely).
-            dirnames[:] = sorted(
-                d
-                for d in dirnames
-                if d not in ignores and not self._excluded(f"{base_rel}/{d}".lstrip("/"))
-            )
+            # Prune by built-in basename ignores, by exclude-glob and by
+            # directories git ignores (which lets us skip descending into an
+            # excluded subtree entirely).
+            kept_dirs = []
+            for d in dirnames:
+                rel_dir = f"{base_rel}/{d}".lstrip("/").removeprefix("./")
+                if d in ignores or self._excluded(rel_dir):
+                    continue
+                if git_ignored is not None and git_ignored.covers_dir(rel_dir):
+                    continue
+                kept_dirs.append(d)
+            dirnames[:] = sorted(kept_dirs)
             for filename in sorted(filenames):
                 abs_path = Path(dirpath) / filename
                 rel = abs_path.relative_to(self.root).as_posix()
                 if self._excluded(rel):
+                    continue
+                if git_ignored is not None and git_ignored.covers_file(rel):
                     continue
                 # Symlink escape guard: a hostile repository can point a symlink at
                 # a file outside the scan root (e.g. /etc/passwd or an SSH key) to
