@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import fnmatch
 import os
+import stat
 import threading
 from collections.abc import Iterator
 from dataclasses import dataclass, field
@@ -26,6 +27,8 @@ DEFAULT_IGNORES: tuple[str, ...] = (
 
 # Files above this size are treated as assets/blobs and not read as source.
 MAX_TEXT_BYTES = 2_000_000
+# Leading bytes inspected for a NUL to decide whether a file is binary.
+_SNIFF_BYTES = 2048
 
 
 @dataclass
@@ -57,10 +60,31 @@ class FileRef:
         if self.size > MAX_TEXT_BYTES:
             return True
         try:
-            chunk = self.path.read_bytes()[:2048]
+            # Only the sniff window is read, not the whole file.
+            with open(self.path, "rb") as fh:
+                chunk = fh.read(_SNIFF_BYTES)
         except OSError:
             return True
         return b"\x00" in chunk
+
+    def _read_text(self) -> str:
+        """Read the file as text with a hard size bound, or "" if binary/too big.
+
+        The size recorded during the walk can be stale (the file may have grown
+        since), so the read itself is capped instead of trusting it.
+        """
+        if self.size > MAX_TEXT_BYTES:
+            return ""
+        try:
+            with open(self.path, "rb") as fh:
+                data = fh.read(MAX_TEXT_BYTES + 1)
+        except OSError:
+            return ""
+        if len(data) > MAX_TEXT_BYTES or b"\x00" in data[:_SNIFF_BYTES]:
+            return ""
+        # Same newline handling as Path.read_text (universal newlines).
+        text = data.decode("utf-8", errors="replace")
+        return text.replace("\r\n", "\n").replace("\r", "\n")
 
     def text(self) -> str:
         """Return file contents as text, or "" if unreadable/binary. Cached.
@@ -77,13 +101,7 @@ class FileRef:
             # were waiting for the lock.
             if self._read_attempted:
                 return self._text or ""
-            if self.is_probably_binary():
-                text = ""
-            else:
-                try:
-                    text = self.path.read_text(encoding="utf-8", errors="replace")
-                except OSError:
-                    text = ""
+            text = self._read_text()
             self._text = text          # publish content first...
             self._read_attempted = True  # ...then the flag readers gate on.
             return self._text or ""
@@ -179,10 +197,14 @@ class Project:
                     if not real.is_relative_to(self.root):
                         continue
                 try:
-                    size = abs_path.stat().st_size
+                    st = abs_path.stat()
                 except OSError:
                     continue
-                yield FileRef(path=abs_path, rel_path=rel, size=size)
+                # Only regular files: opening a FIFO (which a repository can
+                # contain) blocks forever, and device nodes are never source.
+                if not stat.S_ISREG(st.st_mode):
+                    continue
+                yield FileRef(path=abs_path, rel_path=rel, size=st.st_size)
 
     def files(self) -> tuple[FileRef, ...]:
         """All project files, materialized and cached on first access."""
