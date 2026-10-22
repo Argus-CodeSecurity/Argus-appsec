@@ -51,7 +51,8 @@ def state_dir_for(target: str, base: Path) -> Path:
     cannot step outside ``base``.
     """
     digest = hashlib.sha256(target.encode("utf-8")).hexdigest()[:12]
-    safe = "".join(c if c.isalnum() or c in "-_." else "_" for c in target)[:100]
+    # Keep the readable part short: Windows paths are still limited to 260 chars.
+    safe = "".join(c if c.isalnum() or c in "-_." else "_" for c in target)[-60:]
     safe = safe.strip(".") or "target"
     return base / f"{safe}-{digest}"
 
