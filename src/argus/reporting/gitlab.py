@@ -47,9 +47,32 @@ class GitLabReporter(Reporter):
                 "end_time": self._ts(result.finished_at or result.started_at),
                 "status": "success",
             },
-            "vulnerabilities": [self._vuln(f) for f in result.sorted_findings()],
+            "vulnerabilities": self._vulns(result),
         }
         return json.dumps(doc, indent=2)
+
+    def _vulns(self, result: ScanResult) -> list[dict]:
+        """One entry per finding with a unique ``id``.
+
+        The fingerprint is content-based, so identical lines in one file share
+        it; GitLab requires unique ids. Repeats get an occurrence suffix
+        ("<fingerprint>#2"), numbered in line order, while the first keeps the
+        plain fingerprint so existing ids stay stable.
+        """
+        seen: dict[str, int] = {}
+        out: list[dict] = []
+        ordered = sorted(result.sorted_findings(),
+                         key=lambda f: (f.fingerprint(), f.location.start_line or 0))
+        ids: dict[int, str] = {}
+        for f in ordered:
+            fp = f.fingerprint()
+            seen[fp] = seen.get(fp, 0) + 1
+            ids[id(f)] = fp if seen[fp] == 1 else f"{fp}#{seen[fp]}"
+        for f in result.sorted_findings():
+            vuln = self._vuln(f)
+            vuln["id"] = ids[id(f)]
+            out.append(vuln)
+        return out
 
     @staticmethod
     def _ts(dt) -> str:
