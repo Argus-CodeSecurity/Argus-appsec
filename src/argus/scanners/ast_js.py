@@ -26,6 +26,7 @@ import re
 from collections.abc import Iterable
 from dataclasses import dataclass, field
 from functools import lru_cache
+from typing import Any
 
 from argus.core.models import (
     Confidence,
@@ -36,6 +37,7 @@ from argus.core.models import (
     Severity,
 )
 from argus.core.plugin import Scanner, ScannerContext, scanner
+from argus.scanners.ast_python import analysis_skipped_finding, make_parser
 from argus.scanners.patterns import _is_test_file  # shared test-path helper
 
 # File extension -> tree-sitter language module + factory attribute.
@@ -53,7 +55,7 @@ def _load_parsers():
     try:
         import importlib
 
-        from tree_sitter import Language, Parser
+        from tree_sitter import Language
     except ImportError:
         return None
     parsers = {}
@@ -61,7 +63,7 @@ def _load_parsers():
         try:
             mod = importlib.import_module(module)
             lang = Language(getattr(mod, factory)())
-            parsers[name] = Parser(lang)
+            parsers[name] = make_parser(lang)
         except Exception:  # a missing grammar shouldn't disable the others
             continue
     return parsers or None
@@ -213,12 +215,16 @@ class ASTJsScanner(Scanner):
             src = f.text().encode("utf-8", "replace")
             if not src.strip():
                 continue
+            # Per-file isolation: one hostile file is skipped and noted, it does
+            # not take the findings for every other file down with it.
             try:
                 tree = parsers[lang].parse(src)
-            except Exception:
+                analyzer = _JsAnalyzer(src, f.rel_path, _is_test_file(f.rel_path))
+                findings = list(analyzer.run(tree.root_node))
+            except Exception as exc:
+                yield analysis_skipped_finding(self.name, f.rel_path, exc)
                 continue
-            analyzer = _JsAnalyzer(src, f.rel_path, _is_test_file(f.rel_path))
-            yield from analyzer.run(tree.root_node)
+            yield from findings
 
 
 _FUNCTION_NODES = {
@@ -233,37 +239,43 @@ class _JsAnalyzer:
         self._path = path
         self._in_test = in_test
         self._seen: set[tuple[str, int]] = set()
+        self._lines: list[str] | None = None
 
     def run(self, root) -> Iterable[Finding]:
         yield from self._walk(root, set())
 
-    def _walk(self, node, tainted: set[str]) -> Iterable[Finding]:
-        t = node.type
-        if t in _FUNCTION_NODES:
-            body = node.child_by_field_name("body")
-            if body is not None:
-                yield from self._walk(body, set())   # fresh per-function scope
-            return
-        if t == "variable_declarator":
-            self._handle_decl(node, tainted)
-            value = node.child_by_field_name("value")
-            if value is not None:
-                yield from self._walk(value, tainted)
-            return
-        if t == "assignment_expression":
-            finding = self._handle_assignment(node, tainted)
-            if finding is not None:
-                yield finding
-            right = node.child_by_field_name("right")
-            if right is not None:
-                yield from self._walk(right, tainted)
-            return
-        if t == "call_expression":
-            finding = self._check_call_sink(node, tainted)
-            if finding is not None:
-                yield finding
-        for child in node.children:
-            yield from self._walk(child, tainted)
+    def _walk(self, root, tainted: set[str]) -> Iterable[Finding]:
+        # Explicit stack instead of recursion (deeply nested input would raise
+        # RecursionError); children are pushed in reverse to keep the pre-order
+        # the taint updates depend on.
+        stack: list[tuple[Any, set[str]]] = [(root, tainted)]
+        while stack:
+            node, scope = stack.pop()
+            t = node.type
+            if t in _FUNCTION_NODES:
+                body = node.child_by_field_name("body")
+                if body is not None:
+                    stack.append((body, set()))   # fresh per-function scope
+                continue
+            if t == "variable_declarator":
+                self._handle_decl(node, scope)
+                value = node.child_by_field_name("value")
+                if value is not None:
+                    stack.append((value, scope))
+                continue
+            if t == "assignment_expression":
+                finding = self._handle_assignment(node, scope)
+                if finding is not None:
+                    yield finding
+                right = node.child_by_field_name("right")
+                if right is not None:
+                    stack.append((right, scope))
+                continue
+            if t == "call_expression":
+                finding = self._check_call_sink(node, scope)
+                if finding is not None:
+                    yield finding
+            stack.extend((child, scope) for child in reversed(node.children))
 
     # --- taint propagation --------------------------------------------------
     def _handle_decl(self, node, tainted: set[str]) -> None:
@@ -303,9 +315,20 @@ class _JsAnalyzer:
         text = self._text(node)
         if _SOURCE_RE.search(text):
             return True
-        if node.type == "identifier" and text in tainted:
-            return True
-        return any(self._tainted(c, tainted) for c in node.children)
+        if node.type == "identifier":
+            return text in tainted
+        # Below the root only tainted identifiers can still match (a
+        # descendant's text is a token-aligned slice of the text just checked),
+        # so walk for those alone; see ast_python._Analyzer._tainted.
+        stack = list(node.children)
+        while stack:
+            child = stack.pop()
+            if child.type == "call_expression" and self._is_sanitizer(child):
+                continue
+            if child.type == "identifier" and self._text(child) in tainted:
+                return True
+            stack.extend(child.children)
+        return False
 
     # --- sinks --------------------------------------------------------------
     def _check_call_sink(self, call, tainted: set[str]) -> Finding | None:
@@ -366,8 +389,10 @@ class _JsAnalyzer:
         return self._src[node.start_byte:node.end_byte].decode("utf-8", "ignore")
 
     def _line_text(self, line: int) -> str:
+        if self._lines is None:  # split once per file, not once per finding
+            self._lines = self._src.decode("utf-8", "ignore").splitlines()
         try:
-            return self._src.decode("utf-8", "ignore").splitlines()[line - 1].strip()
+            return self._lines[line - 1].strip()
         except IndexError:  # pragma: no cover
             return ""
 

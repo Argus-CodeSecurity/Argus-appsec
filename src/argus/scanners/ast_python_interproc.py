@@ -48,6 +48,7 @@ from argus.scanners.ast_python import (
     _SOURCE_RE,
     SINKS,
     _Analyzer,
+    analysis_skipped_finding,
     is_available,
     new_parser,
 )
@@ -98,6 +99,9 @@ class ASTPythonInterprocScanner(Scanner):
         if parser is None:
             return
 
+        # Every per-file step is isolated: a file that breaks the parser or the
+        # analysis is skipped and noted instead of failing the whole scanner.
+        skipped: list[Finding] = []
         parses: list[_FileParse] = []
         for f in ctx.project.files():
             if f.language != "Python" or f.is_probably_binary():
@@ -107,22 +111,36 @@ class ASTPythonInterprocScanner(Scanner):
                 continue
             try:
                 tree = parser.parse(src)
-            except Exception:
+            except Exception as exc:
+                skipped.append(analysis_skipped_finding(self.name, f.rel_path, exc))
                 continue
             parses.append(_FileParse(f.rel_path, src, tree.root_node))
 
         # Pass 1: summarize dangerous parameters across every function.
         dangerous: dict[str, list[_DangerousParam]] = {}
+        usable: list[_FileParse] = []
         for fp in parses:
-            for summary in self._summarize_file(fp):
+            try:
+                summaries = list(self._summarize_file(fp))
+            except Exception as exc:
+                skipped.append(analysis_skipped_finding(self.name, fp.path, exc))
+                continue
+            usable.append(fp)
+            for summary in summaries:
                 dangerous.setdefault(summary.func_name, []).append(summary)
+        yield from skipped
         if not dangerous:
             return
 
         # Pass 2: find call sites that pass a direct source into a dangerous param.
         seen: set[tuple[str, int, str]] = set()
-        for fp in parses:
-            yield from self._scan_calls(fp, dangerous, seen)
+        for fp in usable:
+            try:
+                found = list(self._scan_calls(fp, dangerous, seen))
+            except Exception as exc:
+                yield analysis_skipped_finding(self.name, fp.path, exc)
+                continue
+            yield from found
 
     # --- pass 1 -------------------------------------------------------------
     def _summarize_file(self, fp: _FileParse) -> Iterable[_DangerousParam]:
@@ -144,11 +162,18 @@ class ASTPythonInterprocScanner(Scanner):
                     yield _DangerousParam(func_name, index, pname, sink_id,
                                           sink_line, fp.path)
 
+    @staticmethod
+    def _iter_nodes(root, node_type: str):
+        """Pre-order walk yielding nodes of ``node_type``, without recursion."""
+        stack = [root]
+        while stack:
+            node = stack.pop()
+            if node.type == node_type:
+                yield node
+            stack.extend(reversed(node.children))
+
     def _iter_functions(self, node):
-        if node.type == "function_definition":
-            yield node
-        for child in node.children:
-            yield from self._iter_functions(child)
+        return self._iter_nodes(node, "function_definition")
 
     def _param_names(self, fp: _FileParse, params_node):
         """Ordered (index, name) for positional params; stops at *args/**kwargs.
@@ -207,10 +232,7 @@ class ASTPythonInterprocScanner(Scanner):
                 yield self._finding(fp, call, line, summary)
 
     def _iter_calls(self, node):
-        if node.type == "call":
-            yield node
-        for child in node.children:
-            yield from self._iter_calls(child)
+        return self._iter_nodes(node, "call")
 
     def _call_args(self, fp: _FileParse, args_node):
         positional: list = []

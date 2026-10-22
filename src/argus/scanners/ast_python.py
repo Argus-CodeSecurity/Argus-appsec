@@ -20,10 +20,12 @@ whole-program flow remains future work.
 
 from __future__ import annotations
 
+import logging
 import re
 from collections.abc import Iterable
 from dataclasses import dataclass, field
 from functools import lru_cache
+from typing import Any
 
 from argus.core.models import (
     Confidence,
@@ -34,6 +36,8 @@ from argus.core.models import (
     Severity,
 )
 from argus.core.plugin import Scanner, ScannerContext, scanner
+
+log = logging.getLogger("argus.scanners.ast")
 
 
 def new_parser():
@@ -46,16 +50,61 @@ def new_parser():
     """
     try:
         import tree_sitter_python as tspython
-        from tree_sitter import Language, Parser
+        from tree_sitter import Language
     except ImportError:
         return None
-    lang = Language(tspython.language())
+    return make_parser(Language(tspython.language()))
+
+
+def make_parser(lang):
+    """A tree-sitter ``Parser`` for ``lang`` on any supported binding version.
+
+    tree-sitter >= 0.22 takes the language in the constructor. Older bindings
+    construct an empty parser and set the language afterwards, through
+    ``set_language()`` (removed in 0.22) or the ``language`` property.
+    """
+    from tree_sitter import Parser
+
     try:
-        return Parser(lang)                      # tree-sitter >= 0.22
-    except TypeError:                            # pragma: no cover - old API
+        return Parser(lang)
+    except TypeError:  # pragma: no cover - bindings older than 0.22
         parser = Parser()
-        parser.set_language(lang)
+        setter = getattr(parser, "set_language", None)
+        if setter is not None:
+            setter(lang)
+        else:
+            parser.language = lang
         return parser
+
+
+def analysis_skipped_finding(scanner_name: str, path: str, exc: BaseException) -> Finding:
+    """An INFO note that one file could not be analyzed.
+
+    A file that breaks the parser or the analysis (e.g. pathologically deep
+    nesting) is skipped on its own instead of failing the whole scanner, and
+    this note keeps the gap visible in the report rather than silent.
+    """
+    log.warning("%s: skipped %s (%s)", scanner_name, path, type(exc).__name__)
+    return Finding(
+        id=f"{scanner_name}:analysis-skipped:{path}",
+        rule_id=f"{scanner_name}.analysis-skipped",
+        scanner=scanner_name,
+        title="File skipped by AST analysis",
+        description=(
+            f"{scanner_name} could not analyze this file ({type(exc).__name__}), so "
+            "data-flow issues in it are not covered by this scan. The regex tier "
+            "still ran on it. Unusually deep nesting is a common cause."
+        ),
+        location=Location(path=path),
+        severity=Severity.INFO,
+        confidence=Confidence.LOW,
+        likelihood=Likelihood.UNLIKELY,
+        remediation=Remediation(
+            summary="Review this file manually or simplify its structure.",
+        ),
+        tags=["sast", "ast", "analysis-gap"],
+        metadata={"error": type(exc).__name__},
+    )
 
 
 @lru_cache(maxsize=1)
@@ -180,12 +229,16 @@ class ASTPythonScanner(Scanner):
             src = f.text().encode("utf-8", "replace")
             if not src.strip():
                 continue
+            # One hostile or unparseable file must never sink the whole scanner:
+            # analyze each file in isolation and note the ones that fail.
             try:
                 tree = parser.parse(src)
-            except Exception:  # never let one unparseable file sink the scan
+                analyzer = _Analyzer(src, f.rel_path, _is_test_file(f.rel_path))
+                findings = list(analyzer.run(tree.root_node))
+            except Exception as exc:
+                yield analysis_skipped_finding(self.name, f.rel_path, exc)
                 continue
-            analyzer = _Analyzer(src, f.rel_path, _is_test_file(f.rel_path))
-            yield from analyzer.run(tree.root_node)
+            yield from findings
 
 
 class _Analyzer:
@@ -196,6 +249,7 @@ class _Analyzer:
         self._path = path
         self._in_test = in_test
         self._seen: set[tuple[str, int]] = set()  # (sink_id, line) de-dup within file
+        self._lines: list[str] | None = None
 
     def run(self, root) -> Iterable[Finding]:
         yield from self._walk(root, set())
@@ -217,25 +271,31 @@ class _Analyzer:
         return found
 
     # --- traversal ----------------------------------------------------------
-    def _walk(self, node, tainted: set[str]) -> Iterable[Finding]:
-        t = node.type
-        if t == "function_definition":
-            body = node.child_by_field_name("body")
-            if body is not None:
-                yield from self._walk(body, set())   # fresh scope per function
-            return
-        if t in ("assignment", "augmented_assignment"):
-            self._apply_assignment(node, tainted, augmented=(t == "augmented_assignment"))
-            right = node.child_by_field_name("right")
-            if right is not None:
-                yield from self._walk(right, tainted)  # catch sinks on the RHS too
-            return
-        if t == "call":
-            finding = self._check_sink(node, tainted)
-            if finding is not None:
-                yield finding
-        for child in node.children:
-            yield from self._walk(child, tainted)
+    # All walks use an explicit stack, not recursion: a file with a few thousand
+    # levels of nesting would otherwise raise RecursionError. Children are pushed
+    # in reverse so nodes are visited in the same pre-order as a recursive walk,
+    # which matters because assignments update the shared taint set as they go.
+    def _walk(self, root, tainted: set[str]) -> Iterable[Finding]:
+        stack: list[tuple[Any, set[str]]] = [(root, tainted)]
+        while stack:
+            node, scope = stack.pop()
+            t = node.type
+            if t == "function_definition":
+                body = node.child_by_field_name("body")
+                if body is not None:
+                    stack.append((body, set()))   # fresh scope per function
+                continue
+            if t in ("assignment", "augmented_assignment"):
+                self._apply_assignment(node, scope, augmented=(t == "augmented_assignment"))
+                right = node.child_by_field_name("right")
+                if right is not None:
+                    stack.append((right, scope))  # catch sinks on the RHS too
+                continue
+            if t == "call":
+                finding = self._check_sink(node, scope)
+                if finding is not None:
+                    yield finding
+            stack.extend((child, scope) for child in reversed(node.children))
 
     # --- taint rules --------------------------------------------------------
     def _apply_assignment(self, node, tainted: set[str], *, augmented: bool) -> None:
@@ -255,9 +315,22 @@ class _Analyzer:
         text = self._text(node)
         if _SOURCE_RE.search(text):
             return True
-        if node.type == "identifier" and text in tainted:
-            return True
-        return any(self._tainted(c, tainted) for c in node.children)
+        if node.type == "identifier":
+            return text in tainted
+        # The source pattern was just checked against the whole subtree's text,
+        # and a descendant's text is a token-aligned slice of it, so below this
+        # point only tainted identifiers can still match. Checking just those
+        # keeps this linear in the subtree; re-running the regex on every
+        # descendant was quadratic in the nesting depth.
+        stack = list(node.children)
+        while stack:
+            child = stack.pop()
+            if child.type == "call" and self._is_sanitizer(child):
+                continue
+            if child.type == "identifier" and self._text(child) in tainted:
+                return True
+            stack.extend(child.children)
+        return False
 
     def _check_sink(self, call, tainted: set[str]) -> Finding | None:
         fn_node = call.child_by_field_name("function")
@@ -295,19 +368,23 @@ class _Analyzer:
     def _target_names(self, left) -> set[str]:
         """Identifier names assigned by an LHS (handles simple and tuple targets)."""
         names: set[str] = set()
-        if left.type == "identifier":
-            names.add(self._text(left))
-        else:
-            for c in left.children:
-                names |= self._target_names(c)
+        stack = [left]
+        while stack:
+            node = stack.pop()
+            if node.type == "identifier":
+                names.add(self._text(node))
+            else:
+                stack.extend(node.children)
         return names
 
     def _text(self, node) -> str:
         return self._src[node.start_byte:node.end_byte].decode("utf-8", "ignore")
 
     def _line_text(self, line: int) -> str:
+        if self._lines is None:  # split once per file, not once per finding
+            self._lines = self._src.decode("utf-8", "ignore").splitlines()
         try:
-            return self._src.decode("utf-8", "ignore").splitlines()[line - 1].strip()
+            return self._lines[line - 1].strip()
         except IndexError:  # pragma: no cover
             return ""
 

@@ -12,6 +12,7 @@ Finds committed credentials two ways:
 
 from __future__ import annotations
 
+import logging
 import math
 import re
 from collections.abc import Iterable, Iterator
@@ -26,6 +27,8 @@ from argus.core.models import (
 )
 from argus.core.plugin import Scanner, ScannerContext, scanner
 from argus.scanners._text import iter_scan_lines
+
+log = logging.getLogger("argus.scanners.secrets")
 
 # name -> compiled pattern. Ordered most to least specific. A `val` group, when
 # present, marks the secret part of the match (what redact_line masks).
@@ -226,7 +229,16 @@ class SecretsScanner(Scanner):
                         )
 
         if opts.get("history"):
-            yield from self._scan_history(ctx.project.root)
+            # The history pass runs git and parses its output. If it fails, the
+            # working-tree findings already produced must survive: an exception
+            # escaping this generator makes the engine drop all of them.
+            try:
+                history = list(self._scan_history(ctx.project.root))
+            except Exception as exc:
+                log.warning("secrets: git history scan failed (%s); reporting "
+                            "working-tree findings only", type(exc).__name__)
+                history = [self._history_failed_finding(exc)]
+            yield from history
 
     def _scan_history(self, root) -> Iterable[Finding]:
         """Report secrets found anywhere in git history (including deleted ones)."""
@@ -235,6 +247,27 @@ class SecretsScanner(Scanner):
         secrets, truncated = secrets_history.find_history_secrets(root)
         for i, hs in enumerate(secrets, start=1):
             yield self._history_finding(hs, i, truncated)
+
+    def _history_failed_finding(self, exc: BaseException) -> Finding:
+        """An INFO note that the history pass did not complete."""
+        return Finding(
+            id=f"{self.name}:history-failed:1",
+            rule_id=f"{self.name}.history-scan-failed",
+            scanner=self.name,
+            title="Git history secret scan did not complete",
+            description=(
+                f"The git history pass failed ({type(exc).__name__}), so secrets "
+                "that exist only in history are not covered by this scan. "
+                "Working-tree findings are unaffected."
+            ),
+            location=Location(path="(git history)"),
+            severity=Severity.INFO,
+            confidence=Confidence.LOW,
+            likelihood=Likelihood.UNLIKELY,
+            remediation=Remediation(summary="Re-run the history scan or run it locally."),
+            tags=["secret", "history", "analysis-gap"],
+            metadata={"error": type(exc).__name__},
+        )
 
     def _history_finding(self, hs, index: int, truncated: bool) -> Finding:
         note = (" (history scan was truncated at the size cap; some older commits "
