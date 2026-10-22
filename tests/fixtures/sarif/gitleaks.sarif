@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "gitleaks",
+          "semanticVersion": "v8.18.4",
+          "informationUri": "https://github.com/gitleaks/gitleaks",
+          "rules": [
+            {
+              "id": "aws-access-token",
+              "name": "AWS Access Token",
+              "shortDescription": {
+                "text": "Identified a pattern that may indicate AWS credentials, risking unauthorized cloud resource access and data breaches on AWS platforms."
+              }
+            },
+            {
+              "id": "generic-api-key",
+              "name": "Generic API Key",
+              "shortDescription": {
+                "text": "Detected a Generic API Key, potentially exposing access to various services and sensitive operations."
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "message": {
+            "text": "aws-access-token has detected secret for file app.py."
+          },
+          "ruleId": "aws-access-token",
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app.py"
+                },
+                "region": {
+                  "startLine": 4,
+                  "startColumn": 22,
+                  "endLine": 4,
+                  "endColumn": 42,
+                  "snippet": {
+                    "text": "AKIAIOSFODNN7EXAMPLE"
+                  }
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "commitSha": "",
+            "email": "",
+            "author": "",
+            "date": "",
+            "commitMessage": ""
+          }
+        },
+        {
+          "message": {
+            "text": "generic-api-key has detected secret for file config/settings.py."
+          },
+          "ruleId": "generic-api-key",
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "config/settings.py"
+                },
+                "region": {
+                  "startLine": 12,
+                  "startColumn": 18,
+                  "endLine": 12,
+                  "endColumn": 50,
+                  "snippet": {
+                    "text": "f3c9a1e7b2d84a60c5e19b7d3a2f8e41"
+                  }
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "commitSha": "8d1f0c2b7a9e4d3c6b5a8f7e0d9c2b1a4f3e6d5c",
+            "email": "dev@example.com",
+            "author": "dev",
+            "date": "2024-05-02T10:11:12Z",
+            "commitMessage": "add settings"
+          }
+        }
+      ]
+    }
+  ]
+}

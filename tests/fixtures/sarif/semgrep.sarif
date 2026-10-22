@@ -1,0 +1,197 @@
+{
+  "$schema": "https://docs.oasis-open.org/sarif/sarif/v2.1.0/os/schemas/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "invocations": [
+        {
+          "executionSuccessful": true,
+          "toolExecutionNotifications": []
+        }
+      ],
+      "results": [
+        {
+          "fingerprints": {
+            "matchBasedId/v1": "5e7a0c3f1b9d2e8a6c4f0b1d3e5a7c9f2b4d6e8a0c1e3f5a7b9d1f3e5a7c9b1d_0"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "endColumn": 64,
+                  "endLine": 8,
+                  "snippet": {
+                    "text": "    cursor.execute(\"SELECT * FROM users WHERE id = '%s'\" % uid)"
+                  },
+                  "startColumn": 5,
+                  "startLine": 8
+                }
+              }
+            }
+          ],
+          "message": {
+            "text": "Detected possible formatted SQL query. Use parameterized queries instead."
+          },
+          "properties": {},
+          "ruleId": "python.lang.security.audit.formatted-sql-query.formatted-sql-query"
+        },
+        {
+          "fingerprints": {
+            "matchBasedId/v1": "9c1e3a5b7d9f1a3c5e7b9d1f3a5c7e9b1d3f5a7c9e1b3d5f7a9c1e3b5d7f9a1c_0"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "endColumn": 67,
+                  "endLine": 11,
+                  "snippet": {
+                    "text": "    subprocess.run(\"ping \" + request.args.get(\"host\"), shell=True)"
+                  },
+                  "startColumn": 5,
+                  "startLine": 11
+                }
+              }
+            }
+          ],
+          "message": {
+            "text": "Found 'subprocess' function 'run' with 'shell=True'. This is dangerous because this call will spawn the command using a shell process."
+          },
+          "properties": {},
+          "ruleId": "python.lang.security.audit.subprocess-shell-true.subprocess-shell-true"
+        },
+        {
+          "fingerprints": {
+            "matchBasedId/v1": "2a4c6e8a0c2e4a6c8e0a2c4e6a8c0e2a4c6e8a0c2e4a6c8e0a2c4e6a8c0e2a4c_0"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "endColumn": 26,
+                  "endLine": 13,
+                  "snippet": {
+                    "text": "    return yaml.load(raw)"
+                  },
+                  "startColumn": 12,
+                  "startLine": 13
+                }
+              }
+            }
+          ],
+          "message": {
+            "text": "Detected a possible YAML deserialization vulnerability."
+          },
+          "properties": {},
+          "ruleId": "python.lang.security.deserialization.avoid-pyyaml-load.avoid-pyyaml-load",
+          "suppressions": [
+            {
+              "kind": "inSource"
+            }
+          ]
+        }
+      ],
+      "tool": {
+        "driver": {
+          "name": "Semgrep OSS",
+          "semanticVersion": "1.85.0",
+          "rules": [
+            {
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "fullDescription": {
+                "text": "Detected possible formatted SQL query. Use parameterized queries instead."
+              },
+              "help": {
+                "markdown": "Detected possible formatted SQL query. Use parameterized queries instead.\n\n<b>References:</b>\n - [Semgrep Rule](https://semgrep.dev/r/python.lang.security.audit.formatted-sql-query.formatted-sql-query)\n",
+                "text": "Detected possible formatted SQL query. Use parameterized queries instead."
+              },
+              "helpUri": "https://semgrep.dev/r/python.lang.security.audit.formatted-sql-query.formatted-sql-query",
+              "id": "python.lang.security.audit.formatted-sql-query.formatted-sql-query",
+              "name": "python.lang.security.audit.formatted-sql-query.formatted-sql-query",
+              "properties": {
+                "precision": "very-high",
+                "tags": [
+                  "CWE-89: Improper Neutralization of Special Elements used in an SQL Command ('SQL Injection')",
+                  "LOW CONFIDENCE",
+                  "OWASP-A01:2017 - Injection",
+                  "OWASP-A03:2021 - Injection",
+                  "security"
+                ]
+              },
+              "shortDescription": {
+                "text": "Semgrep Finding: python.lang.security.audit.formatted-sql-query.formatted-sql-query"
+              }
+            },
+            {
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "fullDescription": {
+                "text": "Found 'subprocess' function with 'shell=True'. This is dangerous because this call will spawn the command using a shell process. Doing so propagates current shell settings and variables, which makes it much easier for a malicious actor to execute commands."
+              },
+              "help": {
+                "text": "Use 'shell=False' instead and pass the command as a list of arguments."
+              },
+              "helpUri": "https://semgrep.dev/r/python.lang.security.audit.subprocess-shell-true.subprocess-shell-true",
+              "id": "python.lang.security.audit.subprocess-shell-true.subprocess-shell-true",
+              "name": "python.lang.security.audit.subprocess-shell-true.subprocess-shell-true",
+              "properties": {
+                "precision": "very-high",
+                "security-severity": "7.3",
+                "tags": [
+                  "CWE-78: Improper Neutralization of Special Elements used in an OS Command ('OS Command Injection')",
+                  "HIGH CONFIDENCE",
+                  "OWASP-A03:2021 - Injection",
+                  "security"
+                ]
+              },
+              "shortDescription": {
+                "text": "Semgrep Finding: python.lang.security.audit.subprocess-shell-true.subprocess-shell-true"
+              }
+            },
+            {
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "fullDescription": {
+                "text": "Detected a possible YAML deserialization vulnerability. `yaml.unsafe_load`, `yaml.Loader`, `yaml.CLoader`, and `yaml.UnsafeLoader` are all known to be unsafe methods of deserializing YAML."
+              },
+              "help": {
+                "text": "Use yaml.safe_load instead."
+              },
+              "helpUri": "https://semgrep.dev/r/python.lang.security.deserialization.avoid-pyyaml-load.avoid-pyyaml-load",
+              "id": "python.lang.security.deserialization.avoid-pyyaml-load.avoid-pyyaml-load",
+              "name": "python.lang.security.deserialization.avoid-pyyaml-load.avoid-pyyaml-load",
+              "properties": {
+                "precision": "very-high",
+                "tags": [
+                  "CWE-502: Deserialization of Untrusted Data",
+                  "MEDIUM CONFIDENCE",
+                  "OWASP-A08:2021 - Software and Data Integrity Failures",
+                  "security"
+                ]
+              },
+              "shortDescription": {
+                "text": "Semgrep Finding: python.lang.security.deserialization.avoid-pyyaml-load.avoid-pyyaml-load"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

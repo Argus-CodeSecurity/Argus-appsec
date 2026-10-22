@@ -1,0 +1,264 @@
+{
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "Edge Case Scanner",
+          "version": "0.1",
+          "rules": [
+            {
+              "id": "EC001",
+              "name": "path-traversal",
+              "shortDescription": {
+                "text": "Uncontrolled data used in a path expression"
+              },
+              "helpUri": "javascript:alert(document.domain)",
+              "relationships": [
+                {
+                  "target": {
+                    "id": "22",
+                    "toolComponent": {
+                      "name": "CWE"
+                    }
+                  },
+                  "kinds": [
+                    "superset"
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "EC002",
+              "name": "hardcoded-password",
+              "shortDescription": {
+                "text": "Hard-coded password"
+              },
+              "properties": {
+                "tags": [
+                  "CWE-259"
+                ],
+                "security-severity": "9.1"
+              }
+            },
+            {
+              "id": "EC003",
+              "shortDescription": {
+                "text": "Missing authorization check \u001b[31mRED\u001b[0m"
+              },
+              "properties": {
+                "problem": {
+                  "severity": "warning"
+                }
+              }
+            }
+          ]
+        }
+      },
+      "taxonomies": [
+        {
+          "name": "CWE",
+          "taxa": [
+            {
+              "id": "862"
+            }
+          ]
+        }
+      ],
+      "results": [
+        {
+          "ruleId": "EC001",
+          "message": {
+            "text": "File-level result without a region."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app.py"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "EC001",
+          "message": {
+            "text": "Absolute URI outside the project root."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "file:///etc/passwd"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "EC001",
+          "message": {
+            "text": "Windows absolute URI outside the project root."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "file:///C:/Windows/win.ini"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "EC001",
+          "message": {
+            "text": "Relative path that climbs out of the root."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "../../../../etc/shadow",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "EC001",
+          "message": {
+            "text": "Percent-encoded traversal."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/%2e%2e/%2e%2e/%2e%2e/secrets.txt"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "EC001",
+          "message": {
+            "text": "Percent-encoded file name with a space."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/my%20file.py"
+                },
+                "region": {
+                  "startLine": 2,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "EC001",
+          "message": {
+            "text": "Windows separators in a relative path."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src\\win\\path.py"
+                },
+                "region": {
+                  "startLine": "3"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "EC002",
+          "message": {
+            "text": "Hard-coded password Tr0ub4dor-3xampleP4ss found in db.py."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "db.py"
+                },
+                "region": {
+                  "startLine": 3,
+                  "snippet": {
+                    "text": "db_password = \"Tr0ub4dor-3xampleP4ss\""
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleIndex": 2,
+          "level": 5,
+          "message": {
+            "text": "Logical location only."
+          },
+          "taxa": [
+            {
+              "index": 0,
+              "toolComponent": {
+                "index": 0
+              }
+            }
+          ],
+          "locations": [
+            {
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "com.example.Billing.charge",
+                  "kind": "function"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "EC001",
+          "kind": "pass",
+          "message": {
+            "text": "A passing check is not a finding."
+          },
+          "locations": []
+        },
+        {
+          "ruleId": "EC001",
+          "baselineState": "absent",
+          "message": {
+            "text": "Fixed since the baseline."
+          }
+        },
+        {
+          "ruleId": "EC001",
+          "message": "a message that is not an object",
+          "locations": "not a list"
+        },
+        42
+      ]
+    }
+  ]
+}

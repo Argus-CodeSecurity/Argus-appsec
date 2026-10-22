@@ -1,0 +1,278 @@
+{
+  "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "CodeQL",
+          "organization": "GitHub",
+          "semanticVersion": "2.18.4",
+          "notifications": [],
+          "rules": []
+        },
+        "extensions": [
+          {
+            "name": "codeql/python-queries",
+            "semanticVersion": "1.2.0",
+            "rules": [
+              {
+                "id": "py/sql-injection",
+                "name": "py/sql-injection",
+                "shortDescription": {
+                  "text": "SQL query built from user-controlled sources"
+                },
+                "fullDescription": {
+                  "text": "Building a SQL query from user-controlled sources is vulnerable to insertion of malicious SQL code by the user."
+                },
+                "defaultConfiguration": {
+                  "enabled": true,
+                  "level": "error"
+                },
+                "help": {
+                  "text": "# SQL query built from user-controlled sources\nIf a database query (such as a SQL or NoSQL query) is built from user-provided data without sufficient sanitization, a user may be able to run malicious database queries.\n\n## Recommendation\nMost database connector libraries offer a way of safely embedding untrusted data into a query by means of query parameters or prepared statements.\n",
+                  "markdown": "# SQL query built from user-controlled sources\nIf a database query is built from user-provided data without sufficient sanitization, a user may be able to run malicious database queries.\n"
+                },
+                "properties": {
+                  "tags": [
+                    "security",
+                    "external/cwe/cwe-089"
+                  ],
+                  "description": "Building a SQL query from user-controlled sources is vulnerable to insertion of malicious SQL code by the user.",
+                  "id": "py/sql-injection",
+                  "kind": "path-problem",
+                  "name": "SQL query built from user-controlled sources",
+                  "precision": "high",
+                  "problem.severity": "error",
+                  "security-severity": "8.8"
+                }
+              },
+              {
+                "id": "py/weak-sensitive-data-hashing",
+                "name": "py/weak-sensitive-data-hashing",
+                "shortDescription": {
+                  "text": "Use of a broken or weak cryptographic hashing algorithm on sensitive data"
+                },
+                "fullDescription": {
+                  "text": "Using broken or weak cryptographic hashing algorithms can compromise security."
+                },
+                "defaultConfiguration": {
+                  "enabled": true,
+                  "level": "warning"
+                },
+                "properties": {
+                  "tags": [
+                    "security",
+                    "external/cwe/cwe-327",
+                    "external/cwe/cwe-328",
+                    "external/cwe/cwe-916"
+                  ],
+                  "kind": "path-problem",
+                  "precision": "high",
+                  "problem.severity": "warning",
+                  "security-severity": "7.5"
+                }
+              },
+              {
+                "id": "py/unused-import",
+                "name": "py/unused-import",
+                "shortDescription": {
+                  "text": "Unused import"
+                },
+                "fullDescription": {
+                  "text": "Import is not required as it is not used"
+                },
+                "defaultConfiguration": {
+                  "enabled": true,
+                  "level": "note"
+                },
+                "properties": {
+                  "tags": [
+                    "maintainability",
+                    "useless-code"
+                  ],
+                  "kind": "problem",
+                  "precision": "very-high",
+                  "problem.severity": "recommendation"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "invocations": [
+        {
+          "toolExecutionNotifications": [],
+          "executionSuccessful": true
+        }
+      ],
+      "artifacts": [
+        {
+          "location": {
+            "uri": "app.py",
+            "uriBaseId": "%SRCROOT%",
+            "index": 0
+          }
+        }
+      ],
+      "originalUriBaseIds": {
+        "%SRCROOT%": {
+          "uri": "file:///home/runner/work/shop/shop/"
+        }
+      },
+      "results": [
+        {
+          "ruleId": "py/sql-injection",
+          "ruleIndex": 0,
+          "rule": {
+            "id": "py/sql-injection",
+            "index": 0,
+            "toolComponent": {
+              "index": 0
+            }
+          },
+          "message": {
+            "text": "This SQL query depends on a [user-provided value](1)."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app.py",
+                  "uriBaseId": "%SRCROOT%",
+                  "index": 0
+                },
+                "region": {
+                  "startLine": 8,
+                  "startColumn": 20,
+                  "endColumn": 64
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "4f8e2a1b9c3d7e60:1",
+            "primaryLocationStartColumnFingerprint": "15"
+          },
+          "codeFlows": [
+            {
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app.py",
+                            "uriBaseId": "%SRCROOT%",
+                            "index": 0
+                          },
+                          "region": {
+                            "startLine": 7,
+                            "startColumn": 11,
+                            "endColumn": 23
+                          }
+                        },
+                        "message": {
+                          "text": "ControlFlowNode for request"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "relatedLocations": [
+            {
+              "id": 1,
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app.py",
+                  "uriBaseId": "%SRCROOT%",
+                  "index": 0
+                },
+                "region": {
+                  "startLine": 7,
+                  "startColumn": 11,
+                  "endColumn": 23
+                }
+              },
+              "message": {
+                "text": "user-provided value"
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "py/weak-sensitive-data-hashing",
+          "ruleIndex": 1,
+          "rule": {
+            "id": "py/weak-sensitive-data-hashing",
+            "index": 1,
+            "toolComponent": {
+              "index": 0
+            }
+          },
+          "message": {
+            "text": "[Sensitive data (password)](1) is used in a hashing algorithm (MD5) that is insecure for password hashing, since it is not a computationally expensive hash function."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app.py",
+                  "uriBaseId": "%SRCROOT%",
+                  "index": 0
+                },
+                "region": {
+                  "startLine": 15,
+                  "startColumn": 24,
+                  "endColumn": 34
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "a17c3e9d05b2f468:1",
+            "primaryLocationStartColumnFingerprint": "19"
+          }
+        },
+        {
+          "ruleId": "py/unused-import",
+          "rule": {
+            "id": "py/unused-import",
+            "index": 2,
+            "toolComponent": {
+              "index": 0
+            }
+          },
+          "message": {
+            "text": "Import of 'subprocess' is not used."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "index": 0
+                },
+                "region": {
+                  "startLine": 1,
+                  "startColumn": 1,
+                  "endColumn": 33
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "c0ffee1234abcd00:1"
+          }
+        }
+      ],
+      "columnKind": "unicodeCodePoints",
+      "properties": {
+        "semmle.formatSpecifier": "sarif-latest"
+      }
+    }
+  ]
+}
