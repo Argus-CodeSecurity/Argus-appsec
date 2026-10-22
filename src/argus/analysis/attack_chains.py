@@ -138,18 +138,31 @@ def _file_local_chains(findings: list[Finding]) -> list[Chain]:
 
 
 _SSRF_CWE = {"CWE-918"}
-_CLOUD_SECRET = re.compile(r"(AWS_|AKIA|aws_secret|gcp|azure|metadata\.google)", re.I)
+# Secret rules whose value is itself a cloud credential. Matching the snippet
+# for "AKIA" never worked: the secrets scanner redacts the value to its first
+# three characters before it reaches the snippet.
+_CLOUD_SECRET_RULES = frozenset({
+    "aws-access-key-id", "aws-secret-access-key", "google-api-key",
+})
+# For generic rules (high-entropy assignments) the variable name, which is not
+# redacted, still says what the value is for.
+_CLOUD_KEY_HINT = re.compile(r"(AWS_|aws_secret|gcp|azure|metadata\.google)", re.I)
+
+
+def _is_cloud_secret(f: Finding) -> bool:
+    if f.scanner != "secrets":
+        return False
+    rule = f.rule_id.rsplit(".", 1)[-1]  # secrets.<rule> / secrets.history.<rule>
+    if rule in _CLOUD_SECRET_RULES or _CLOUD_SECRET_RULES & set(f.tags):
+        return True
+    return bool(_CLOUD_KEY_HINT.search(f"{f.title} {f.location.snippet or ''}"))
 
 
 def _cross_file_chains(findings: list[Finding]) -> list[Chain]:
     """Correlate findings across files into multi-step attack paths."""
     chains: list[Chain] = []
     ssrf = [f for f in findings if _SSRF_CWE & set(f.cwe)]
-    cloud_secrets = [
-        f for f in findings
-        if f.scanner == "secrets" and f.location.snippet
-        and _CLOUD_SECRET.search(f.location.snippet)
-    ]
+    cloud_secrets = [f for f in findings if _is_cloud_secret(f)]
     if ssrf and cloud_secrets:
         chains.append(Chain(
             id="ssrf-to-cloud-credentials",
