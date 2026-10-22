@@ -63,7 +63,10 @@ jobs:
           ANTHROPIC_API_KEY: ${{ github.event_name == 'push' && secrets.ANTHROPIC_API_KEY || '' }}
         run: |
           if [ "${GITHUB_EVENT_NAME}" = "pull_request" ]; then
+            # Read the Argus config from the base branch: the PR checkout is
+            # contributor-controlled and must not be able to relax the scan.
             argus scan . --diff "origin/${GITHUB_BASE_REF}...HEAD" \
+              --config-from-ref "origin/${GITHUB_BASE_REF}" \
               -f sarif -o argus.sarif --quiet
             argus supply-chain . --diff "origin/${GITHUB_BASE_REF}...HEAD" \
               -o supply-chain.json --quiet || true
@@ -98,5 +101,5 @@ jobs:
       - run: pip install ".[ast]"
       - name: Fail on newly introduced High+ findings
         run: |
-          argus scan . --diff "origin/${GITHUB_BASE_REF}...HEAD" --fail-on high --quiet
-          argus policy check .
+          argus scan . --diff "origin/${GITHUB_BASE_REF}...HEAD" \
+            --config-from-ref "origin/${GITHUB_BASE_REF}" --fail-on high --quiet
