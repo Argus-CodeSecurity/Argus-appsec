@@ -7,7 +7,7 @@ include breaking changes, noted explicitly).
 
 ## [Unreleased]
 
-## [0.8.1], 2026-09-07
+## [0.8.1] - 2026-09-07
 
 ### Added
 - **`malware` scanner**: backdoors, webshells, obfuscated exec, reverse shells,
@@ -19,10 +19,10 @@ include breaking changes, noted explicitly).
 - **Authz precision**: skip test files and public auth routes; detect router-level
   `Depends()`; reduce false positives on token-in-URL heuristics.
 
-## [0.8.0], 2026-09-07
+## [0.8.0] - 2026-09-07
 
 Platform expansion: supply chain, policy engine, SBOM, infrastructure scanning,
-and plugin CLI commands for commercial add-ons.
+and the `argus.commands` entry point for add-on CLI commands.
 
 ### Added
 - **Supply chain**: malicious package intel, typosquat detection, npm behavior
@@ -34,12 +34,24 @@ and plugin CLI commands for commercial add-ons.
   focused CLI commands `argus cicd`, `argus container`, `argus cloud`.
 - **Additional scanners**: authz, API security (OpenAPI), provenance, dependency-diff.
 - **Reachability**: npm import reachability and Python symbol-level tier.
-- **Docs**: repository split, project layout, infrastructure scanning, publishing checklist.
+- **Docs**: infrastructure scanning guide.
+- **Plugin CLI commands**: third-party packages can add `argus` subcommands
+  through the `argus.commands` entry point.
 
-### Changed
-- Version **0.8.0** is the minimum core release for `argus-k8s` plugin commands.
+### Fixed
+- `os.system` with a constant command (`"df -h"`, `"find ."`) no longer reported
+  as command injection.
+- `--config` pointing at a missing file is now an error (exit 2) instead of
+  silently falling back to defaults and disabling `fail_on` gating.
+- JavaScript `eval`/`Function` sink no longer matches names that merely end in
+  those words (`retrieval`, `myFunction`); `toString()` is no longer treated as
+  a sanitizer.
+- OSV advisories that carry only a CVSS v3 vector are scored from the vector
+  instead of defaulting to Medium.
+- Secret verification treats HTTP 403 as unknown rather than invalid, so a live
+  but rate-limited or forbidden credential is never downgraded.
 
-## [0.7.0], 2026-07-14
+## [0.7.0] - 2026-07-14
 
 The largest release so far: AI-era security coverage, deeper code analysis,
 signal-quality features, and frictionless distribution. It also folds in the
@@ -116,12 +128,12 @@ never released.
 - Published scan-time numbers in `docs/performance.md`.
 - Bitbucket Pipelines and expanded GitLab CI documentation.
 
-## [0.6.1]
+## [0.6.1] - 2026-07-05
 
 ### Fixed
 - Rich markup no longer eats bracketed text in CLI tables (e.g. `[ast]`).
 
-## [0.6.0]
+## [0.6.0] - 2026-07-05
 
 ### Added
 - **AST data-flow (taint) scanner for Python** via tree-sitter (optional extra
@@ -132,7 +144,7 @@ never released.
   disk, retries transient failures.
 - Top-level `--version` / `-V` flag.
 
-## [0.5.0]
+## [0.5.0] - 2026-07-04
 
 ### Added
 - Baseline / diff-aware scanning: report only findings not present in a
@@ -143,22 +155,31 @@ never released.
 - Remote-config hardening: `.argus.yml` inside a cloned remote repo is ignored
   unless `--trust-remote-config` is passed.
 
-## [0.2.0]
+## [0.2.0] - 2026-07-04
 
 ### Added
 - Live vulnerability data from [OSV.dev](https://osv.dev) in the dependency
   scanner, with a bundled offline advisory seed as fallback.
 
-## [0.1.1]
+## [0.1.1] - 2026-07-04
 
 ### Fixed
 - False positives found by scanning real-world repositories.
 
-## [0.1.0]
+## [0.1.0] - 2026-07-04
 
-Initial release: five-stage pipeline (resolve → analyze → scan → enrich →
+Initial release: five-stage pipeline (resolve, analyze, scan, enrich,
 report); secrets, dependency, SAST-pattern, and IaC scanners; AI enrichment
 with heuristic (offline), Anthropic, OpenAI, and Ollama providers; Attack
 Simulation Mode; deterministic verified auto-fix with branch + pull-request
 creation (`argus fix`); JSON, SARIF, Markdown, HTML, and CSV reporters; plugin
 entry-point system for scanners, reporters, and providers.
+
+[Unreleased]: https://github.com/Argus-CodeSecurity/Argus-appsec/compare/v0.8.1...HEAD
+[0.8.1]: https://github.com/Argus-CodeSecurity/Argus-appsec/compare/v0.8.0...v0.8.1
+[0.8.0]: https://github.com/Argus-CodeSecurity/Argus-appsec/compare/v0.7.0...v0.8.0
+[0.7.0]: https://github.com/Argus-CodeSecurity/Argus-appsec/compare/v0.6.1...v0.7.0
+[0.6.1]: https://github.com/Argus-CodeSecurity/Argus-appsec/compare/v0.6.0...v0.6.1
+[0.6.0]: https://github.com/Argus-CodeSecurity/Argus-appsec/compare/v0.5.1...v0.6.0
+[0.2.0]: https://github.com/Argus-CodeSecurity/Argus-appsec/releases/tag/v0.2.0
+[0.1.0]: https://github.com/Argus-CodeSecurity/Argus-appsec/releases/tag/v0.1.0

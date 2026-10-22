@@ -4,7 +4,7 @@
 #
 #   repos:
 #     - repo: https://github.com/Argus-CodeSecurity/Argus-appsec
-#       rev: v0.7.0
+#       rev: v0.8.1
 #       hooks:
 #         - id: argus-secrets          # fast: secrets only, ideal for every commit
 #         # - id: argus                # fuller static scan; heavier, better in CI

@@ -1,89 +1,93 @@
-# Releasing Argus to PyPI
+# Releasing Argus
 
-Argus publishes to PyPI automatically when you publish a GitHub Release. Publishing
-uses **PyPI Trusted Publishing (OIDC)**, so no API token is ever stored in the
-repository. You do a one-time setup, then every release is a few clicks.
+This is the maintainer runbook for cutting a release. A release produces, from
+one git tag, all of the following with the same version number:
 
-The package is published as **`argus-appsec`** (the installed command is `argus`).
+| Artifact | Where | Version form |
+|---|---|---|
+| Python package `argus-appsec` | PyPI | `0.9.0` |
+| Git tag and GitHub Release | GitHub | `v0.9.0` |
+| Container image | `ghcr.io/argus-codesecurity/argus` | `0.9.0`, `0.9`, `latest` |
+| GitHub Action | `Argus-CodeSecurity/Argus-appsec@v0.9.0` | `v0.9.0` |
+| pre-commit hooks | `rev: v0.9.0` | `v0.9.0` |
+| SBOM and attestations | Release assets, Sigstore | tied to the built files |
 
----
+## How the version stays consistent
 
-## One-time setup (do this once)
+- **One source of truth.** The version lives only in `src/argus/__init__.py`
+  (`__version__`). `pyproject.toml` reads it from there
+  (`[tool.hatch.version]`), so the package metadata cannot drift.
+- **The tag must match.** The publish workflow refuses to release when the tag
+  (`v0.9.0`) does not equal `v` + `__version__`. A mismatched release fails
+  before anything is uploaded.
+- **PyPI versions are permanent.** A version number can be uploaded only once,
+  even if the release is later deleted. Never reuse a number; if a release is
+  broken, publish the next patch version.
+- **Tags are immutable.** Never move or delete a published tag. Users pin to
+  them (the Action, pre-commit, Docker).
 
-### 1. Create a PyPI account
+## Version numbers
 
-- Go to <https://pypi.org/account/register/> and create an account.
-- Enable two-factor authentication when prompted (PyPI requires it for publishing).
+Argus follows [Semantic Versioning](https://semver.org/) and PEP 440:
 
-### 2. Add a "pending" trusted publisher
+- **Patch** (`0.9.1`): bug fixes only, no behaviour change.
+- **Minor** (`0.10.0`): new features. While Argus is pre-1.0, a minor release may
+  also contain breaking changes, which must be listed under a **Breaking
+  changes** heading in the changelog.
+- **Major** (`1.0.0`): from 1.0 onward, breaking changes to the CLI, exit codes,
+  report schemas, configuration, or plugin API require a major version. See
+  [COMPATIBILITY.md](COMPATIBILITY.md).
+- **Pre-releases**: `0.9.0rc1` (tag `v0.9.0rc1`). PyPI does not install
+  pre-releases unless asked (`pip install --pre`), so they are safe for testing.
 
-This tells PyPI to trust releases coming from your GitHub repo, before the
-project even exists on PyPI.
+## One-time setup
 
-- Go to <https://pypi.org/manage/account/publishing/>.
-- Under **Add a new pending publisher**, fill in exactly:
-  - **PyPI Project Name:** `argus-appsec`
-  - **Owner:** `Argus-CodeSecurity`
-  - **Repository name:** `Argus-appsec`
-  - **Workflow name:** `publish.yml`
-  - **Environment name:** `pypi`
-- Click **Add**.
+1. **PyPI trusted publisher.** On <https://pypi.org/manage/project/argus-appsec/settings/publishing/>
+   add a GitHub publisher: owner `Argus-CodeSecurity`, repository
+   `Argus-appsec`, workflow `publish.yml`, environment `pypi`. No API token is
+   stored anywhere.
+2. **GitHub environment.** Settings, Environments, create `pypi`. Add required
+   reviewers so a release needs a second person's approval before upload.
+3. **Branch protection on `main`.** Require pull requests, at least one
+   approving review from a code owner, passing status checks (CI, CodeQL,
+   Dependency review, Docs), signed-off commits (DCO app), and linear history.
+   Disallow force pushes and deletion.
+4. **Tag protection.** Add a ruleset for tags matching `v*` so only maintainers
+   can create them and nobody can update or delete them.
 
-### 3. Create the GitHub environment
+## Cutting a release
 
-- In your repo: **Settings → Environments → New environment**.
-- Name it exactly `pypi` and save. (No secrets needed, OIDC handles auth.)
+1. Create a branch `release/vX.Y.Z` from an up-to-date `main`.
+2. Set `__version__ = "X.Y.Z"` in `src/argus/__init__.py`.
+3. In `CHANGELOG.md`, rename `## [Unreleased]` to `## [X.Y.Z] - YYYY-MM-DD`, add
+   a new empty `## [Unreleased]` above it, and update the link references at
+   the bottom of the file.
+4. Update the version shown in usage examples: `action.yml` (header comment),
+   `.pre-commit-hooks.yaml` (header comment), and `docs/ci-cd.md`.
+5. Open a pull request titled `release: vX.Y.Z`, get it reviewed, and merge.
+6. On GitHub, **Releases, Draft a new release**: tag `vX.Y.Z` on `main`, title
+   `vX.Y.Z`, and paste the changelog section as the description. Mark
+   pre-releases as such. Publish.
+7. Publishing the release triggers:
+   - **Publish to PyPI**: verifies the tag, runs the tests, builds, attests
+     provenance and the SBOM, waits for `pypi` environment approval, uploads,
+     and attaches the SBOM to the release.
+   - **Publish Docker image**: builds multi-arch images, pushes them with SBOM
+     and provenance attestations.
+8. Verify:
 
-That's it for setup.
+   ```bash
+   pip install "argus-appsec==X.Y.Z" && argus --version
+   docker run --rm ghcr.io/argus-codesecurity/argus:X.Y.Z --version
+   gh attestation verify oci://ghcr.io/argus-codesecurity/argus:X.Y.Z --owner Argus-CodeSecurity
+   ```
 
----
+## Rehearsing on TestPyPI
 
-## Cutting a release (each time)
+Register the same trusted publisher on <https://test.pypi.org>, temporarily add
+`repository-url: https://test.pypi.org/legacy/` to the publish step on a branch,
+publish a pre-release such as `vX.Y.Zrc1`, then install it with
+`pip install -i https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ argus-appsec==X.Y.Zrc1`.
 
-1. **Bump the version** in `pyproject.toml` (e.g. `version = "0.5.2"`) and in
-   `src/argus/__init__.py` (`__version__`). Keep them in sync. Commit and push.
-2. On GitHub: **Releases → Draft a new release**.
-3. **Choose a tag** like `v0.5.2` (create it on publish), targeting `main`.
-4. Write a short changelog in the description, then **Publish release**.
-5. The **Publish to PyPI** workflow runs automatically, builds the package, and
-   uploads it. Watch it under the **Actions** tab.
-6. When it's green, `pip install argus-appsec` installs your new version.
-
----
-
-## Versioning
-
-Argus follows [Semantic Versioning](https://semver.org):
-
-- **PATCH** (`0.5.2`), bug fixes, no behavior change.
-- **MINOR** (`0.2.0`), new features, backward compatible (new scanner, format).
-- **MAJOR** (`1.0.0`), breaking changes to the CLI or plugin API.
-
-During alpha (`0.x`) minor versions may still change behavior; call it out in the
-release notes.
-
----
-
-## Testing a release first (optional but recommended)
-
-To rehearse without touching real PyPI, publish to **TestPyPI**:
-
-1. Register the same pending publisher at <https://test.pypi.org/manage/account/publishing/>.
-2. Temporarily add `repository-url: https://test.pypi.org/legacy/` to the publish
-   step, cut a pre-release, confirm it works, then revert.
-3. Install from TestPyPI to verify:
-   `pip install -i https://test.pypi.org/simple/ argus-appsec`
-
----
-
-## Manual publish (fallback)
-
-If you ever need to publish from your machine instead of CI:
-
-```bash
-python -m build
-python -m twine upload dist/*        # prompts for a PyPI API token
-```
-
-Create the token at <https://pypi.org/manage/account/token/>. Prefer the automated
-trusted-publishing flow above for normal releases.
+Manual uploads from a laptop are not part of the process: they bypass the
+tests, the provenance attestation, and the second-person approval.
