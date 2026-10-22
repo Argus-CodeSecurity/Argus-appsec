@@ -27,7 +27,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0     # full history enables diff-aware PR scanning
-      - uses: Argus-CodeSecurity/Argus-appsec@v0.8.1
+      - uses: Argus-CodeSecurity/Argus-appsec@v0.9.0
         with:
           fail-on: high      # block merges on newly introduced High+ findings
 ```
@@ -169,7 +169,7 @@ catching a secret **before it enters git history** takes three lines:
 # .pre-commit-config.yaml
 repos:
   - repo: https://github.com/Argus-CodeSecurity/Argus-appsec
-    rev: v0.8.1
+    rev: v0.9.0
     hooks:
       - id: argus-secrets        # fast, secrets-only, made for every commit
       # - id: argus              # full static scan, heavier; consider pre-push

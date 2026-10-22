@@ -7,6 +7,8 @@ include breaking changes, noted explicitly).
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-10-22
+
 This release is a security hardening release. Argus runs on untrusted code (pull
 requests from forks, cloned repositories), and a full review found ways a
 hostile repository could execute code, read outside the scan root, hang a
@@ -306,7 +308,8 @@ Simulation Mode; deterministic verified auto-fix with branch + pull-request
 creation (`argus fix`); JSON, SARIF, Markdown, HTML, and CSV reporters; plugin
 entry-point system for scanners, reporters, and providers.
 
-[Unreleased]: https://github.com/Argus-CodeSecurity/Argus-appsec/compare/v0.8.1...HEAD
+[Unreleased]: https://github.com/Argus-CodeSecurity/Argus-appsec/compare/v0.9.0...HEAD
+[0.9.0]: https://github.com/Argus-CodeSecurity/Argus-appsec/compare/v0.8.1...v0.9.0
 [0.8.1]: https://github.com/Argus-CodeSecurity/Argus-appsec/compare/v0.8.0...v0.8.1
 [0.8.0]: https://github.com/Argus-CodeSecurity/Argus-appsec/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/Argus-CodeSecurity/Argus-appsec/compare/v0.6.1...v0.7.0
