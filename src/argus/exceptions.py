@@ -3,12 +3,16 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import date, datetime, timezone
 from pathlib import Path
+from typing import Any
 
 import yaml
 
+from argus.core.config import ConfigError
 from argus.core.models import Finding
+
+VALID_STATUSES = ("accept", "false_positive", "suppress")
 
 
 @dataclass
@@ -17,35 +21,81 @@ class FindingException:
     status: str  # accept | false_positive | suppress
     reason: str
     owner: str
-    expires_at: str | None = None
+    # A date, or an ISO ``YYYY-MM-DD`` string. Unquoted dates in YAML load as
+    # ``datetime.date``; quoted ones as strings. Both are accepted.
+    expires_at: date | str | None = None
+
+
+def _as_date(value: Any) -> date | None:
+    """Parse an expiry value, or return None if it is not a valid date."""
+    if isinstance(value, datetime):
+        return value.date()
+    if isinstance(value, date):
+        return value
+    try:
+        return date.fromisoformat(str(value).strip())
+    except ValueError:
+        return None
 
 
 def load_exceptions(path: Path) -> list[FindingException]:
+    """Load ``.argus/exceptions.yml``.
+
+    A malformed file is a :class:`ConfigError` rather than a crash (or a
+    silent partial load), so the user sees exactly which entry is wrong.
+    """
     if not path.is_file():
         return []
-    data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    try:
+        data = yaml.safe_load(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, yaml.YAMLError) as exc:
+        raise ConfigError(f"{path}: cannot read exceptions file: {exc}") from exc
+    if data is None:
+        return []
+    if not isinstance(data, dict):
+        raise ConfigError(f"{path}: expected a mapping with an 'exceptions:' list")
     raw = data.get("exceptions") or []
+    if not isinstance(raw, list):
+        raise ConfigError(f"{path}: 'exceptions' must be a list")
     out: list[FindingException] = []
-    for e in raw:
-        if isinstance(e, dict) and e.get("fingerprint"):
-            out.append(FindingException(
-                fingerprint=str(e["fingerprint"]),
-                status=str(e.get("status", "accept")),
-                reason=str(e.get("reason", "")),
-                owner=str(e.get("owner", "")),
-                expires_at=e.get("expires_at"),
-            ))
+    for i, e in enumerate(raw, start=1):
+        where = f"{path}: exception #{i}"
+        if not isinstance(e, dict):
+            raise ConfigError(f"{where}: expected a mapping, got {type(e).__name__}")
+        fingerprint = e.get("fingerprint")
+        if not isinstance(fingerprint, str) or not fingerprint.strip():
+            raise ConfigError(f"{where}: 'fingerprint' is required")
+        status = str(e.get("status", "accept"))
+        if status not in VALID_STATUSES:
+            raise ConfigError(
+                f"{where}: unknown status {status!r} "
+                f"(choose from: {', '.join(VALID_STATUSES)})"
+            )
+        expires = e.get("expires_at")
+        if expires is not None and _as_date(expires) is None:
+            raise ConfigError(f"{where}: expires_at {expires!r} is not a YYYY-MM-DD date")
+        out.append(FindingException(
+            fingerprint=fingerprint.strip(),
+            status=status,
+            reason=str(e.get("reason", "")),
+            owner=str(e.get("owner", "")),
+            expires_at=_as_date(expires) if expires is not None else None,
+        ))
     return out
 
 
 def apply_exceptions(findings: list[Finding], exceptions: list[FindingException]) -> tuple[list[Finding], int]:
     if not exceptions:
         return findings, 0
-    now = datetime.utcnow().date().isoformat()
+    today = datetime.now(timezone.utc).date()
     active: dict[str, FindingException] = {}
     for ex in exceptions:
-        if ex.expires_at and ex.expires_at < now:
-            continue
+        if ex.expires_at is not None:
+            expires = _as_date(ex.expires_at)
+            # An unparseable expiry never suppresses (fail closed), and an
+            # expired one lets the finding resurface.
+            if expires is None or expires < today:
+                continue
         active[ex.fingerprint] = ex
 
     kept: list[Finding] = []
