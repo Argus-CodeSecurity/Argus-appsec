@@ -6,7 +6,7 @@ from the vulnerable line to a committed fix and a re-scan. It was chosen
 because the untrusted input and the dangerous call are both visible, Nephilex
 uses data flow to grade it, and Nephilex has a deterministic fix for it.
 
-Everything below was produced by Nephilex 0.10.0 on 2026-10-23 with
+Everything below was produced by Nephilex 0.11.0 on 2026-10-23 with
 `--no-ai` (no AI provider, no API key). The commands are the ones from the
 [Quickstart](quickstart.md); outputs are pasted as printed, trimmed only where
 marked.
@@ -238,7 +238,7 @@ see [Fixing & pull requests](fixing.md) and [Audit log](audit-log.md).
 
 ## Verification status
 
-"Verified" has a narrow, checkable meaning in Nephilex 0.10.0:
+"Verified" has a narrow, checkable meaning in Nephilex 0.11.0:
 
 1. The rewritten line no longer matches the rule (or matches the rule's
    recognized safe form). This check runs both for `--patches` and for

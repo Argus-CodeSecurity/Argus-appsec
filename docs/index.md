@@ -39,7 +39,7 @@ git clone --depth 1 https://github.com/nephilex/nephilex.git
 nephilex scan nephilex/examples/vulnerable-app --no-ai
 ```
 
-Real output from Nephilex 0.10.0 on 2026-10-23 (trimmed: the progress lines and
+Real output from Nephilex 0.11.0 on 2026-10-23 (trimmed: the progress lines and
 12 of the 20 table rows are left out):
 
 ```text
