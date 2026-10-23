@@ -14,8 +14,9 @@ the fix and checks that the fix actually works.
 
 !!! note "Status: early alpha (0.x)"
     The architecture and full pipeline are in place: a working CLI, built-in
-    scanners across six exposure domains, a multi-provider AI layer, cross-file
-    taint analysis, and eight report formats. Detection accuracy is still being
+    scanners (secrets, dependencies, SAST, IaC, CI/CD, containers, cloud, supply
+    chain, LLM and agent configuration), a multi-provider AI layer, cross-file
+    taint analysis, and nine report formats. Detection accuracy is still being
     benchmarked. Treat findings as a strong signal to review, not gospel.
 
 ## What Nephilex does
@@ -38,13 +39,17 @@ the fix and checks that the fix actually works.
 
 Security engineers trust tools that state their limits. Nephilex is honest about its:
 
-- **No DAST / runtime testing.** Nephilex is static analysis. It does not run your
-  app, fuzz endpoints, or perform authenticated crawling.
+- **No full DAST.** Nephilex is static analysis first. With `--live-target` it
+  runs safe, read-only posture checks against a URL you own (security headers,
+  cookies, TLS, exposed paths), but it does not crawl, fuzz endpoints, or test
+  authenticated flows.
 - **Taint depth varies by language.** Cross-file data-flow is strongest for
   Python and JavaScript/TypeScript. Other languages get pattern and
   lightweight-taint coverage, not full interprocedural analysis.
-- **Not a full enterprise ASPM.** No ticketing, no SSO, no policy-as-code engine.
-  It is a scanner and a fixer, not a platform.
+- **Not a full enterprise ASPM.** No ticketing and no SSO. Policies
+  (`nephilex policy check`, see [Policy](policy.md)) gate a scan in CI; they
+  are not organization-wide governance. It is a scanner and a fixer, not a
+  platform.
 - **Dependency coverage follows OSV.** A vulnerability absent from OSV is absent
   from Nephilex. Reachability lowers noise but is heuristic, not a proof.
 - **Not a replacement for a human review or a pen test.** A clean scan means
@@ -69,7 +74,7 @@ Explore what is available:
 
 ```bash
 nephilex scanners     # list scanners
-nephilex reporters    # list report formats (json, sarif, html, markdown, csv, gitlab, vex, badge)
+nephilex reporters    # list report formats (json, sarif, html, markdown, csv, gitlab, junit, vex, badge)
 nephilex providers    # list AI providers and whether each is usable right now
 nephilex init         # write a starter .nephilex.yml
 ```
