@@ -1,6 +1,4 @@
 {
-  "scope": "labeled_corpus_v1",
-  "disclaimer": "Scores reflect a small in-repo labeled corpus used for regression detection only. They are not a claim of real-world accuracy on arbitrary production codebases.",
   "domains": {
     "iac": {
       "recall": 1.0,
@@ -11,13 +9,19 @@
     "llm": {
       "recall": 1.0,
       "precision": 1.0,
-      "vulnerable_cases": 6,
+      "vulnerable_cases": 17,
+      "false_positives": 0
+    },
+    "mcp": {
+      "recall": 1.0,
+      "precision": 1.0,
+      "vulnerable_cases": 7,
       "false_positives": 0
     },
     "sast": {
       "recall": 1.0,
       "precision": 1.0,
-      "vulnerable_cases": 3,
+      "vulnerable_cases": 6,
       "false_positives": 0
     },
     "secrets": {
@@ -29,15 +33,17 @@
     "taint": {
       "recall": 1.0,
       "precision": 1.0,
-      "vulnerable_cases": 1,
+      "vulnerable_cases": 11,
       "false_positives": 0
     }
   },
   "min_severity": "Low",
+  "scope": "labeled_corpus_v1",
+  "disclaimer": "Scores reflect a small in-repo labeled corpus used for regression detection only. They are not a claim of real-world accuracy on arbitrary production codebases.",
   "overall": {
     "recall": 1.0,
     "precision": 1.0,
-    "vulnerable_cases": 12,
+    "vulnerable_cases": 43,
     "false_positives": 0
   }
 }

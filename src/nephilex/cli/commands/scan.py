@@ -37,7 +37,7 @@ def scan(
         "--format",
         "-f",
         help="Output format(s): table, json, sarif, gitlab, markdown, html, csv, "
-        "badge, vex. Repeatable.",
+        "junit, badge, vex. Repeatable.",
     ),
     output: Path | None = typer.Option(
         None,
@@ -145,7 +145,7 @@ def scan(
         None,
         "--live-target",
         help="Also run safe, read-only runtime posture checks against this URL "
-        "(security headers, cookie flags, TLS, exposed paths). Non-intrusive; "
+        "(security headers, cookie flags, HTTPS redirect, exposed paths). Non-intrusive; "
         "only assess systems you are authorized to test.",
     ),
     audience: str | None = typer.Option(

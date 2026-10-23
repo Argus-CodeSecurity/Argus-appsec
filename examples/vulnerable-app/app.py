@@ -22,7 +22,7 @@ API_TOKEN = "s3cr3t-pr0duction-token-9f8a7b6c5d4e3f2a1b0c9d8e7f6a5b4c"
 
 @app.route("/user")
 def get_user():
-    # SQL injection via string formatting (patterns scanner: CWE-89).
+    # SQL injection via string formatting (CWE-89: ast-python, or patterns without [ast]).
     user_id = request.args.get("id")
     conn = sqlite3.connect("app.db")
     cursor = conn.cursor()
@@ -32,7 +32,7 @@ def get_user():
 
 @app.route("/ping")
 def ping():
-    # Command injection via shell=True (patterns scanner: CWE-78).
+    # Command injection via shell=True (CWE-78: ast-python, or patterns without [ast]).
     host = request.args.get("host")
     output = subprocess.run("ping -c 1 " + host, shell=True, capture_output=True)
     return output.stdout
@@ -40,7 +40,7 @@ def ping():
 
 @app.route("/config")
 def load_config():
-    # Unsafe deserialization (patterns scanner: CWE-502).
+    # Unsafe deserialization (CWE-502: patterns; ast-python also traces request data here).
     raw = request.args.get("data")
     return str(yaml.load(raw))
 

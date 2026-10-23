@@ -228,7 +228,8 @@ nephilex fix ./my-app --open-pr      # also push and open a PR (needs GITHUB_TOK
 ```
 
 Only deterministic, self-verified fixes are applied by default. Examples: unsafe
-`yaml.load` becomes `yaml.safe_load`, weak hashes become SHA-256, `shell=True` is
+`yaml.load` becomes `yaml.safe_load`, weak hashes become SHA-256 (except for
+passwords, which need a key-derivation function and get guidance instead), `shell=True` is
 removed, `debug=True` becomes `debug=False`, and `torch.load` gains
 `weights_only=True`. See [docs/fixing.md](docs/fixing.md).
 
@@ -300,7 +301,7 @@ scanner you cannot trust is worse than none:
 
 - **Primarily static analysis.** It reads code rather than running your app. The
   `--live-target` posture layer adds safe, read-only runtime checks (headers,
-  cookies, TLS, exposed paths), but it is not full DAST. There is no crawling,
+  cookies, HTTPS redirect, exposed paths), but it is not full DAST. There is no crawling,
   fuzzing, or exploitation.
 - **Deepest for Python and JavaScript/TypeScript.** Other languages are detected and
   covered by the secrets, dependency, LLM, and IaC scanners, and Go has SAST rules,

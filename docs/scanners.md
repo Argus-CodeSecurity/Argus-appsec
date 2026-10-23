@@ -32,8 +32,8 @@ a bounded amount of diff text (and says so if it truncates on a very large repo)
 
 **Detects.** Known-vulnerable dependencies using live [OSV](https://osv.dev)
 data, including transitive packages resolved from lockfiles across PyPI, npm, Go,
-Rust, Ruby, and PHP. Findings are ranked by reachability: a CVE in a package your
-code never imports is marked lower priority.
+Rust, Ruby, and PHP. With `--reachability` (experimental, off by default), a CVE
+in a Python or npm package your code never imports is marked lower priority.
 
 **Prioritizes with exploit signals.** Each CVE finding is enriched, best-effort,
 with two free feeds: **EPSS** (FIRST.org, the probability the CVE is exploited in
@@ -43,11 +43,11 @@ the top, without ever changing the severity your `--fail-on` gate depends on.
 Disable with `exploit_signals: false` under the `dependencies` scanner options.
 
 **Machine-readable exploitability (VEX).** Export an OpenVEX document with
-`nephilex scan ... -f vex`: reachable CVEs are `affected` with the fix, and a CVE in a
-package your code never imports is `not_affected` with the standard
-`vulnerable_code_not_in_execute_path` justification. It is the formal expression of
-the reachability analysis, and pairs with an SBOM for the exposure story
-enterprises increasingly request.
+`nephilex scan ... -f vex`. CVEs are `affected` with the fix. When the scan ran with
+`--reachability`, a CVE in a package your code never imports is `not_affected`
+with the standard `vulnerable_code_not_in_execute_path` justification; without it,
+every CVE is `affected`. It pairs with an SBOM for the exposure story enterprises
+increasingly request.
 
 **Does not.** Prove exploitability. Reachability is an import-level heuristic, not
 a call-graph proof, and EPSS is a probability, not a guarantee.

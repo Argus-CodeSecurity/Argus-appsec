@@ -45,3 +45,14 @@ def test_docs_homepage_lists_every_report_format() -> None:
     line = next(ln for ln in text.splitlines() if ln.startswith("nephilex reporters"))
     listed = set(re.findall(r"[a-z]+", line.split("(", 1)[1]))
     assert listed == set(_reporters())
+
+
+def test_format_help_lists_every_report_format() -> None:
+    from nephilex.cli.commands import imports, scan
+
+    for module in (scan, imports):
+        text = Path(module.__file__).read_text(encoding="utf-8")
+        listed_part = text.split("Output format(s):", 1)[1].split("Repeatable", 1)[0]
+        listed = set(re.findall(r"[a-z]+", listed_part)) - {"table"}
+        missing = set(_reporters()) - listed
+        assert not missing, f"{module.__name__} --format help omits {sorted(missing)}"
