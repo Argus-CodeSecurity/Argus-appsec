@@ -1,19 +1,19 @@
 # Fixing findings and opening pull requests
 
-`argus fix` turns Argus from an advisor into a fixer. It scans a repository,
+`nephilex fix` turns Nephilex from an advisor into a fixer. It scans a repository,
 applies the fixes it can verify locally to a new branch, commits them, and, on
 request, pushes the branch and opens a pull request.
 
 ```bash
-argus fix ./my-app --dry-run      # preview only; writes nothing
-argus fix ./my-app                # apply fixes to a branch and commit locally
-argus fix ./my-app --open-pr      # also push and open a pull request
+nephilex fix ./my-app --dry-run      # preview only; writes nothing
+nephilex fix ./my-app                # apply fixes to a branch and commit locally
+nephilex fix ./my-app --open-pr      # also push and open a pull request
 ```
 
 ## What gets fixed
 
 Only **deterministic, self-verified** rewrites are applied by default. These are
-fixes where Argus can transform the exact offending line and then re-check that
+fixes where Nephilex can transform the exact offending line and then re-check that
 the detection no longer fires. Current rewrites:
 
 | Rule | Change |
@@ -34,7 +34,7 @@ snippet.
 ## Safety model
 
 - **Nothing is written in `--dry-run`.** You see the exact table of changes first.
-- **Changes land on a new branch** (`argus/security-fixes` by default), never on
+- **Changes land on a new branch** (`nephilex/security-fixes` by default), never on
   your working branch, so they are trivial to discard.
 - **Nothing is pushed or opened** unless you pass `--open-pr`.
 - **Only verified fixes** are applied unless you explicitly pass
@@ -52,7 +52,7 @@ token in the environment:
 
 ```bash
 export GITHUB_TOKEN=ghp_...
-argus fix . --open-pr --base main
+nephilex fix . --open-pr --base main
 ```
 
 The PR description lists every change with its file, line, rule, and whether it
@@ -61,10 +61,10 @@ was verified, plus the diffs in a collapsible section.
 ## Options
 
 ```
-argus fix [TARGET]
+nephilex fix [TARGET]
       --dry-run              preview changes without writing
       --open-pr              push the branch and open a pull request
-      --branch NAME          branch to create (default: argus/security-fixes)
+      --branch NAME          branch to create (default: nephilex/security-fixes)
       --base NAME            base branch for the PR (default: repo's default branch)
       --include-unverified   also apply fixes that did not self-verify
       --force-branch         reuse/overwrite the branch if it already exists
@@ -83,6 +83,6 @@ argus fix [TARGET]
 
 ## In CI
 
-You can wire `argus fix --open-pr` into a scheduled job so Argus proposes fix PRs
+You can wire `nephilex fix --open-pr` into a scheduled job so Nephilex proposes fix PRs
 automatically. Give the job a token with permission to push branches and open pull
 requests, and pin `--base` to your default branch.

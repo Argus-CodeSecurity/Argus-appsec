@@ -12,11 +12,11 @@ import pytest
 pytest.importorskip("tree_sitter")
 pytest.importorskip("tree_sitter_python")
 
-from argus.analysis.repository import RepositoryAnalyzer  # noqa: E402
-from argus.core.config import Config  # noqa: E402
-from argus.core.models import Confidence, Severity  # noqa: E402
-from argus.core.plugin import ScannerContext, registry  # noqa: E402
-from argus.core.project import Project  # noqa: E402
+from nephilex.analysis.repository import RepositoryAnalyzer  # noqa: E402
+from nephilex.core.config import Config  # noqa: E402
+from nephilex.core.models import Confidence, Severity  # noqa: E402
+from nephilex.core.plugin import ScannerContext, registry  # noqa: E402
+from nephilex.core.project import Project  # noqa: E402
 
 FLASK = "from flask import request, redirect, session, Flask\napp = Flask(__name__)\n"
 

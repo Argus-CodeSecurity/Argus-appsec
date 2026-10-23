@@ -223,15 +223,15 @@
     }
   },
   "tools": {
-    "argus": {
+    "nephilex": {
       "status": "ok",
       "run": {
-        "tool": "argus",
+        "tool": "nephilex",
         "started_at": "2026-10-22T17:40:17+00:00",
         "raw_sha256": "14b259c6815bc22ccff971484f0de5a2b641b90c63fc18e4e0f31d9c34456424",
         "version": "0.9.2",
         "command": [
-          "argus",
+          "nephilex",
           "scan",
           "<dataset_root>",
           "--no-ai",

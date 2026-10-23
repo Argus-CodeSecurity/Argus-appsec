@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-from argus.analysis.attack_chains import find_chains
-from argus.core.config import Config
-from argus.core.engine import ScanEngine
-from argus.core.models import Finding, Location, Severity
-from argus.core.project import Project
+from nephilex.analysis.attack_chains import find_chains
+from nephilex.core.config import Config
+from nephilex.core.engine import ScanEngine
+from nephilex.core.models import Finding, Location, Severity
+from nephilex.core.project import Project
 
 
 def _f(rule_id, *, path="a.py", cwe=None, scanner="x", line=1) -> Finding:

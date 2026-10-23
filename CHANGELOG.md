@@ -1,26 +1,49 @@
 # Changelog
 
-All notable changes to Argus are documented here. The format follows
+All notable changes to Nephilex are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres
 to [Semantic Versioning](https://semver.org/) (pre-1.0: minor versions may
 include breaking changes, noted explicitly).
 
 ## [Unreleased]
 
+### Breaking changes
+- **The project is now Nephilex.** Everything that carries the product name
+  changed with it, with no aliases for the earlier names:
+  - the PyPI package and the command are `nephilex`, and the import package
+    is `nephilex` (plugins import `nephilex.plugin_api` and register under the
+    `nephilex.commands` entry-point group);
+  - repository config is `.nephilex.yml` and `.nephilex/` (rules, exceptions,
+    context, audit log), and the inline suppression comment is
+    `nephilex-ignore`;
+  - environment variables use the `NEPHILEX_` prefix (for example
+    `NEPHILEX_CACHE_DIR`, `NEPHILEX_MCP_ROOTS`, `NEPHILEX_DASHBOARD_TOKEN`);
+  - the MCP server is registered as `nephilex`, and its tools are
+    `nephilex_scan`, `nephilex_check_files` and so on;
+  - SARIF output carries the fingerprint as `nephilexFingerprint`, so baselines
+    and code-scanning alerts made by earlier versions need to be regenerated;
+  - the GitHub repository is `nephilex/nephilex`, the Action is
+    `nephilex/nephilex@<tag>`, and the container image is
+    `ghcr.io/nephilex/nephilex`.
+
+  To upgrade, install `nephilex`, rename the config file and directory,
+  update inline suppression comments, CI workflows and environment variables,
+  and rerun `nephilex init --editor` for editor integrations.
+
 ### Added
-- **SARIF import.** `argus import <file.sarif>` and `argus scan --import-sarif`
+- **SARIF import.** `nephilex import <file.sarif>` and `nephilex scan --import-sarif`
   read SARIF 2.1.0 from other scanners (CodeQL, Semgrep, Bandit and others),
-  map their results onto Argus findings, and run them through the same
+  map their results onto Nephilex findings, and run them through the same
   baseline, suppression, policy and reporting steps as native findings. The
   input is treated as untrusted: file size, nesting and result count are
   capped, locations outside the project root are dropped, and snippets are
   redacted before anything is stored.
-- **Project context file.** `.argus/context.yml` declares the project's own
+- **Project context file.** `.nephilex/context.yml` declares the project's own
   sanitizers and trusted sources (used by the taint engines), internal-only
   paths, exposure levels and data classification, so findings are ranked
   against how the code is really deployed. Validation is strict, and like the
   rest of repository config it is read only from trusted projects.
-- **Audit log.** `.argus/audit.log` is an append-only, hash-chained record of
+- **Audit log.** `.nephilex/audit.log` is an append-only, hash-chained record of
   scans, suppressions (including findings hidden by `--baseline`) and fixes.
   Set `audit_log: false` to turn it off.
 - **LLM and agent data flow.** The LLM scanner parses Python with tree-sitter
@@ -32,14 +55,14 @@ include breaking changes, noted explicitly).
   launched from unpinned packages, remote servers over plain HTTP, filesystem
   access to `/` or a home directory, and settings that run tools without
   confirmation. It runs in the `deep` profile.
-- **`argus check`.** A fast, file-level check for editors and AI assistant
+- **`nephilex check`.** A fast, file-level check for editors and AI assistant
   hooks, with `--hook` output for Claude Code and Cursor and
   `--no-inline-ignores` for strict mode.
-- **MCP tools.** The MCP server adds `argus_check_files`, `argus_check_snippet`,
-  `argus_check_package` and `argus_fix` next to `argus_scan`.
-- **`argus init --editor claude|cursor|vscode`** writes that editor's MCP and
+- **MCP tools.** The MCP server adds `nephilex_check_files`, `nephilex_check_snippet`,
+  `nephilex_check_package` and `nephilex_fix` next to `nephilex_scan`.
+- **`nephilex init --editor claude|cursor|vscode`** writes that editor's MCP and
   hook configuration into the project.
-- **Public benchmarks.** `benchmarks/public/` runs Argus, Bandit and Semgrep
+- **Public benchmarks.** `benchmarks/public/` runs Nephilex, Bandit and Semgrep
   on OWASP BenchmarkPython and SecurityEval and publishes the raw findings and
   scores; see `docs/benchmarks.md`.
 - **Flow-sensitive Python taint engine.** Branches, loops, `match` and `try`
@@ -55,7 +78,7 @@ include breaking changes, noted explicitly).
 ### Changed
 - A scan of a git work tree skips untracked files that git ignores (build
   output, virtual environments, local `.env` files).
-- Inline `argus-ignore` comments are recognised in `--`, `<!-- -->` and `;`
+- Inline `nephilex-ignore` comments are recognised in `--`, `<!-- -->` and `;`
   comment styles as well as `#` and `//`.
 - Deterministic fix patches are attached when AI is off.
 - Reporters, model clients and HTTP libraries are imported on first use, so
@@ -66,8 +89,8 @@ include breaking changes, noted explicitly).
 ### Fixed
 - Imported SARIF findings keep the tool's own fingerprints, so baselines stay
   stable across runs.
-- `argus mcp --help` lists every MCP tool.
-- A fresh `import argus.inventory` no longer fails on a circular import.
+- `nephilex mcp --help` lists every MCP tool.
+- A fresh `import nephilex.inventory` no longer fails on a circular import.
 
 ## [0.9.2] - 2026-10-22
 
@@ -84,7 +107,7 @@ these fixes.
   pattern (for example "avoid `curl | bash`" in documentation or a rule's own
   explanation); a real download-and-execute always has an argument between
   the command and the pipe.
-- The scan cache now includes a fingerprint of the installed Argus code, so
+- The scan cache now includes a fingerprint of the installed Nephilex code, so
   changing a rule in a source checkout no longer returns stale cached findings.
 - The container release workflow refuses to publish when the release tag does
   not match the package version, as the PyPI workflow already did.
@@ -97,7 +120,7 @@ publish it, so it is not on PyPI; its container image contains 0.9.0. Use
 
 ## [0.9.0] - 2026-10-22
 
-This release is a security hardening release. Argus runs on untrusted code (pull
+This release is a security hardening release. Nephilex runs on untrusted code (pull
 requests from forks, cloned repositories), and a full review found ways a
 hostile repository could execute code, read outside the scan root, hang a
 scan, hide its own findings, or make a CI gate pass. All of them are fixed.
@@ -105,29 +128,29 @@ Upgrading is recommended for every user.
 
 ### Breaking changes
 - **Repository config is untrusted by default.** `Config()` now defaults to
-  `trust_project_config=False`. A cloned remote's `.argus.yml`,
-  `.argus/rules`, `.argus/exceptions.yml` and inline `argus-ignore` comments
+  `trust_project_config=False`. A cloned remote's `.nephilex.yml`,
+  `.nephilex/rules`, `.nephilex/exceptions.yml` and inline `nephilex-ignore` comments
   are ignored unless you pass `--trust-remote-config`. Library code that builds
   `Config()` directly must set `trust_project_config=True` to honour them.
 - **Scanner crashes fail the gate.** When a `fail_on` threshold is set, a
   scanner error now fails the run (a crashed scanner reports nothing, which a
   gate must not read as a pass). Opt out with `--no-fail-on-error` or
   `fail_on_error: false`. `policy check` always fails on scanner errors.
-- **Configuration mistakes exit 2.** Wrong types in `.argus.yml` (for example
+- **Configuration mistakes exit 2.** Wrong types in `.nephilex.yml` (for example
   `exclude_paths: "dist/*"`), unknown `--scanners` names, a selection that
   leaves no scanner, an unknown profile, an invalid severity, invalid policies,
   a malformed `exceptions.yml`, and `policy check` with no policies configured
   now exit 2 instead of being coerced or ignored.
 - **Dashboard requests are restricted.** Only loopback Host headers are
-  accepted (add names with `ARGUS_DASHBOARD_ALLOWED_HOSTS`); `/api/scans`
+  accepted (add names with `NEPHILEX_DASHBOARD_ALLOWED_HOSTS`); `/api/scans`
   requires `Content-Type: application/json`; the upload form requires its CSRF
-  token; binding to a non-loopback address requires `ARGUS_DASHBOARD_TOKEN`.
-- **`argus push` refuses `http://`** except for loopback hosts.
+  token; binding to a non-loopback address requires `NEPHILEX_DASHBOARD_TOKEN`.
+- **`nephilex push` refuses `http://`** except for loopback hosts.
 - **The MCP server only scans inside its working directory** (or
-  `ARGUS_MCP_ROOTS`).
-- **A DAST URL in the scanned project's own `.argus.yml` is ignored.** Use
-  `--live-target` or `ARGUS_DAST_URL`.
-- **`argus fix` runs your git commit hooks** and commits with your own git
+  `NEPHILEX_MCP_ROOTS`).
+- **A DAST URL in the scanned project's own `.nephilex.yml` is ignored.** Use
+  `--live-target` or `NEPHILEX_DAST_URL`.
+- **`nephilex fix` runs your git commit hooks** and commits with your own git
   identity. It refuses to run when `HEAD` is not the base branch.
 - **`watch` state directory names changed**, so the first cycle after
   upgrading records a fresh baseline.
@@ -138,7 +161,7 @@ Upgrading is recommended for every user.
   runs with hardened config overrides, timeouts and bounded output.
 - GitHub Action inputs are passed to the shell through the environment instead
   of being interpolated, closing a command-injection path for workflows that
-  forward untrusted event data. On pull requests the Action now reads Argus
+  forward untrusted event data. On pull requests the Action now reads Nephilex
   config from the base branch (`pr-config-from-base`).
 - Regular expressions that a crafted file could drive into minutes of
   backtracking were rewritten to linear forms, and every line-based search is
@@ -159,14 +182,14 @@ Upgrading is recommended for every user.
 
 ### Added
 - `--config-from-ref REF` on `scan`, `review`, `policy check` and
-  `baseline create`: read Argus config from a git ref (the base branch) and
+  `baseline create`: read Nephilex config from a git ref (the base branch) and
   treat the checked-out tree as untrusted.
 - `fix --no-verify` to skip commit hooks explicitly.
 - `ai.max_findings` (default 25): only the highest-risk findings are sent to a
   model; the rest get offline reasoning.
-- `ARGUS_AI_TIMEOUT`, `ARGUS_AI_MAX_RETRIES`, `ARGUS_GIT_TIMEOUT`,
-  `ARGUS_MCP_SCAN_TIMEOUT`, `ARGUS_DASHBOARD_MAX_SCANS`,
-  `ARGUS_WATCH_KEEP_SNAPSHOTS` and `ARGUS_DAST_URL`.
+- `NEPHILEX_AI_TIMEOUT`, `NEPHILEX_AI_MAX_RETRIES`, `NEPHILEX_GIT_TIMEOUT`,
+  `NEPHILEX_MCP_SCAN_TIMEOUT`, `NEPHILEX_DASHBOARD_MAX_SCANS`,
+  `NEPHILEX_WATCH_KEEP_SNAPSHOTS` and `NEPHILEX_DAST_URL`.
 - New informational findings when part of an analysis could not run:
   `<scanner>.analysis-skipped`, `secrets.history-scan-failed`,
   `secrets.history-scan-incomplete`, `agent.step-failed`, `fim.file-created`,
@@ -175,7 +198,7 @@ Upgrading is recommended for every user.
   provenance and SBOM attestations for releases and the container image.
 - Governance: `GOVERNANCE.md`, `MAINTAINERS.md`, `SUPPORT.md`, a complete
   security policy, the full Contributor Covenant, and DCO sign-off.
-- **Versioned plugin API**: `argus.plugin_api` is the public import surface for
+- **Versioned plugin API**: `nephilex.plugin_api` is the public import surface for
   scanners, reporters and AI providers, versioned by `PLUGIN_API_VERSION` (1).
   Plugin base classes carry `api_version`; a plugin built for a different
   version is skipped with a logged warning instead of being loaded. See
@@ -185,16 +208,16 @@ Upgrading is recommended for every user.
 - `ScannerContext` is now a dataclass. Construction and attribute access are
   unchanged.
 - The CLI is split into one module per command group under
-  `argus.cli.commands`; commands, options, help text and exit codes are
-  unchanged. `argus.cli.main:app` remains the entry point.
-- All git calls go through one hardened runner, `argus.core.gitexec`. The fix
+  `nephilex.cli.commands`; commands, options, help text and exit codes are
+  unchanged. `nephilex.cli.main:app` remains the entry point.
+- All git calls go through one hardened runner, `nephilex.core.gitexec`. The fix
   and review workflow, the dependency diff and `--config-from-ref` now get the
   same config pins, timeouts and output caps as the git-based scanners. Git
   never prompts for credentials (`GIT_TERMINAL_PROMPT=0`).
 - The default Anthropic model is `claude-sonnet-5-5` (override with
-  `ARGUS_AI_MODEL`, `ai.model` or `--ai-model`); model calls default to a 60 s
+  `NEPHILEX_AI_MODEL`, `ai.model` or `--ai-model`); model calls default to a 60 s
   timeout and 2 retries; the default `max_tokens` is 4096.
-- `argus watch` re-reads the target every cycle, keeps running after a failed
+- `nephilex watch` re-reads the target every cycle, keeps running after a failed
   cycle, and prunes old snapshots. The host agent keeps monitoring when a step
   or push fails, and reports the failure.
 - The `ci` profile disables the scan cache.
@@ -209,7 +232,7 @@ Upgrading is recommended for every user.
 
 ### Fixed
 - `sbom` and `inventory` JSON on stdout is no longer wrapped or stripped.
-- `argus watch` saw only the first cycle's files.
+- `nephilex watch` saw only the first cycle's files.
 - The host agent never detected listening ports on Linux and crashed on
   unreadable `sshd_config`; file integrity monitoring missed new files,
   directory contents and unreadable files.
@@ -223,7 +246,7 @@ Upgrading is recommended for every user.
   unique.
 - The fix applier keeps original line endings, skips non-UTF-8 files, and
   restores the working tree and branch on failure.
-- `argus dependencies`, `argus supply-chain` and `argus sbom` exit 2 with a
+- `nephilex dependencies`, `nephilex supply-chain` and `nephilex sbom` exit 2 with a
   message for an unknown or option-like `--diff` ref instead of a traceback.
 - `ScanEngine.scan` no longer modifies the `Project` passed in, so its
   `exclude_paths` no longer carry over to a later scan of the same object.
@@ -243,21 +266,21 @@ Upgrading is recommended for every user.
 ## [0.8.0] - 2026-09-07
 
 Platform expansion: supply chain, policy engine, SBOM, infrastructure scanning,
-and the `argus.commands` entry point for add-on CLI commands.
+and the `nephilex.commands` entry point for add-on CLI commands.
 
 ### Added
 - **Supply chain**: malicious package intel, typosquat detection, npm behavior
-  metadata, `argus supply-chain` command.
-- **SBOM**: CycloneDX and SPDX output, SBOM diff via `argus sbom --diff`.
-- **Policy engine**: `argus policy check` with YAML policies.
-- **Dependency diff**: `argus dependencies --diff` for pull-request review.
+  metadata, `nephilex supply-chain` command.
+- **SBOM**: CycloneDX and SPDX output, SBOM diff via `nephilex sbom --diff`.
+- **Policy engine**: `nephilex policy check` with YAML policies.
+- **Dependency diff**: `nephilex dependencies --diff` for pull-request review.
 - **Infrastructure scanning**: `cicd`, `container`, and `cloud` scanners;
-  focused CLI commands `argus cicd`, `argus container`, `argus cloud`.
+  focused CLI commands `nephilex cicd`, `nephilex container`, `nephilex cloud`.
 - **Additional scanners**: authz, API security (OpenAPI), provenance, dependency-diff.
 - **Reachability**: npm import reachability and Python symbol-level tier.
 - **Docs**: infrastructure scanning guide.
-- **Plugin CLI commands**: third-party packages can add `argus` subcommands
-  through the `argus.commands` entry point.
+- **Plugin CLI commands**: third-party packages can add `nephilex` subcommands
+  through the `nephilex.commands` entry point.
 
 ### Fixed
 - `os.system` with a constant command (`"df -h"`, `"find ."`) no longer reported
@@ -284,7 +307,7 @@ never released.
   follows untrusted input through multiple hops into sinks, and treats
   parameterized queries and sanitized values as safe.
 - **Web dashboard** (optional extra `[dashboard]`): a FastAPI and SQLModel app
-  with scan history and risk trends, started with `argus dashboard`.
+  with scan history and risk trends, started with `nephilex dashboard`.
 - **LLM / AI-application security scanner** (`llm`), mapped to the OWASP Top 10
   for LLM Apps: insecure handling of model output (taint pass into
   `eval`/`exec`/shell/SQL/HTML sinks), prompt injection, secrets in prompts,
@@ -296,7 +319,7 @@ never released.
   OpenAI, Google), escalating confirmed ones to Critical and clearing format
   false positives. Local targets only, never in CI templates; the secret is
   never stored in a finding, cache, or report.
-- **Live-target posture checks** (`--live-target <url>`, and `argus scan <url>`):
+- **Live-target posture checks** (`--live-target <url>`, and `nephilex scan <url>`):
   safe, read-only, non-intrusive runtime checks, security headers, cookie
   flags, HTTP-vs-HTTPS transport, version disclosure, and a short allowlist of
   exposed sensitive paths (`/.env`, `/.git/config`, …). A pre-DAST layer, not a
@@ -310,7 +333,7 @@ never released.
 - **Go SAST rules**: SQL injection via `fmt.Sprintf`, command injection via a
   shell, weak hashes (MD5/SHA-1), and SSRF from a dynamic URL.
 - **Community rules in YAML** (`scanner_options.patterns.rules`, and the
-  convention dir `.argus/rules/*.yml`): add SAST rules with only regex + a few
+  convention dir `.nephilex/rules/*.yml`): add SAST rules with only regex + a few
   fields, no Python. Invalid rules are skipped, not fatal. Example in
   `examples/custom-rules/`.
 - **GitLab SAST reporter** (`-f gitlab`): emits a GitLab Secure SAST report so
@@ -319,7 +342,7 @@ never released.
   `torch.load(...)` (adds `weights_only=True`), and an explicit **AI-proposed fix
   tier**, model-drafted patches are verified when possible and labeled
   `human-review-required`; only deterministic fixes are ever auto-applied.
-- Argus now ships its own `.argus.yml` and scans itself clean in CI (dogfooding).
+- Nephilex now ships its own `.nephilex.yml` and scans itself clean in CI (dogfooding).
 
 ### Fixed
 - `exclude_paths` now honors real glob patterns (`examples/**`, `*.min.js`, a
@@ -330,9 +353,9 @@ never released.
 - **Official GitHub Action** (`action.yml`): one-block CI setup with SARIF
   upload to GitHub Code Scanning and automatic diff-aware baseline scanning on
   pull requests.
-- **pre-commit hooks** (`.pre-commit-hooks.yaml`): `argus-secrets` (fast,
-  secrets-only, made for every commit) and `argus` (full static scan).
-- **Official Docker image** published to `ghcr.io/argus-codesecurity/argus`
+- **pre-commit hooks** (`.pre-commit-hooks.yaml`): `nephilex-secrets` (fast,
+  secrets-only, made for every commit) and `nephilex` (full static scan).
+- **Official Docker image** published to `ghcr.io/nephilex/nephilex`
   (linux/amd64 + linux/arm64) on every release.
 - **Reachability analysis (experimental, `--reachability`)**: dependency
   findings for Python projects gain an *imported / not imported* verdict, so a
@@ -373,7 +396,7 @@ never released.
 - Multi-ecosystem SCA via lockfiles: PyPI (`poetry.lock`, `Pipfile.lock`), npm
   (`package-lock.json`, `yarn.lock`), Go (`go.mod`), Rust (`Cargo.lock`), Ruby
   (`Gemfile.lock`), PHP (`composer.lock`), transitive dependencies included.
-- Remote-config hardening: `.argus.yml` inside a cloned remote repo is ignored
+- Remote-config hardening: `.nephilex.yml` inside a cloned remote repo is ignored
   unless `--trust-remote-config` is passed.
 
 ## [0.2.0] - 2026-07-04
@@ -393,17 +416,17 @@ Initial release: five-stage pipeline (resolve, analyze, scan, enrich,
 report); secrets, dependency, SAST-pattern, and IaC scanners; AI enrichment
 with heuristic (offline), Anthropic, OpenAI, and Ollama providers; Attack
 Simulation Mode; deterministic verified auto-fix with branch + pull-request
-creation (`argus fix`); JSON, SARIF, Markdown, HTML, and CSV reporters; plugin
+creation (`nephilex fix`); JSON, SARIF, Markdown, HTML, and CSV reporters; plugin
 entry-point system for scanners, reporters, and providers.
 
-[Unreleased]: https://github.com/Argus-CodeSecurity/Argus-appsec/compare/v0.9.2...HEAD
-[0.9.2]: https://github.com/Argus-CodeSecurity/Argus-appsec/compare/v0.9.0...v0.9.2
-[0.9.1]: https://github.com/Argus-CodeSecurity/Argus-appsec/compare/v0.9.0...v0.9.1
-[0.9.0]: https://github.com/Argus-CodeSecurity/Argus-appsec/compare/v0.8.1...v0.9.0
-[0.8.1]: https://github.com/Argus-CodeSecurity/Argus-appsec/compare/v0.8.0...v0.8.1
-[0.8.0]: https://github.com/Argus-CodeSecurity/Argus-appsec/compare/v0.7.0...v0.8.0
-[0.7.0]: https://github.com/Argus-CodeSecurity/Argus-appsec/compare/v0.6.1...v0.7.0
-[0.6.1]: https://github.com/Argus-CodeSecurity/Argus-appsec/compare/v0.6.0...v0.6.1
-[0.6.0]: https://github.com/Argus-CodeSecurity/Argus-appsec/compare/v0.5.1...v0.6.0
-[0.2.0]: https://github.com/Argus-CodeSecurity/Argus-appsec/releases/tag/v0.2.0
-[0.1.0]: https://github.com/Argus-CodeSecurity/Argus-appsec/releases/tag/v0.1.0
+[Unreleased]: https://github.com/nephilex/nephilex/compare/v0.9.2...HEAD
+[0.9.2]: https://github.com/nephilex/nephilex/compare/v0.9.0...v0.9.2
+[0.9.1]: https://github.com/nephilex/nephilex/compare/v0.9.0...v0.9.1
+[0.9.0]: https://github.com/nephilex/nephilex/compare/v0.8.1...v0.9.0
+[0.8.1]: https://github.com/nephilex/nephilex/compare/v0.8.0...v0.8.1
+[0.8.0]: https://github.com/nephilex/nephilex/compare/v0.7.0...v0.8.0
+[0.7.0]: https://github.com/nephilex/nephilex/compare/v0.6.1...v0.7.0
+[0.6.1]: https://github.com/nephilex/nephilex/compare/v0.6.0...v0.6.1
+[0.6.0]: https://github.com/nephilex/nephilex/compare/v0.5.1...v0.6.0
+[0.2.0]: https://github.com/nephilex/nephilex/releases/tag/v0.2.0
+[0.1.0]: https://github.com/nephilex/nephilex/releases/tag/v0.1.0

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Public labeled-dataset accuracy benchmark: Argus vs Bandit vs Semgrep.
+"""Public labeled-dataset accuracy benchmark: Nephilex vs Bandit vs Semgrep.
 
     python benchmarks/public/run.py                                   # everything
-    python benchmarks/public/run.py --dataset owasp-python --tools argus,bandit,semgrep
+    python benchmarks/public/run.py --dataset owasp-python --tools nephilex,bandit,semgrep
     python benchmarks/public/run.py --offline                         # re-score only
 
 Datasets are pinned to exact commits (``datasets.py``) and downloaded into

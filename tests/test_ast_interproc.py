@@ -4,10 +4,10 @@ from __future__ import annotations
 
 import pytest
 
-from argus.core.config import Config
-from argus.core.plugin import ScannerContext, registry
-from argus.core.project import Project
-from argus.scanners.ast_python import is_available
+from nephilex.core.config import Config
+from nephilex.core.plugin import ScannerContext, registry
+from nephilex.core.project import Project
+from nephilex.scanners.ast_python import is_available
 
 pytestmark = pytest.mark.skipif(
     not is_available(), reason="tree-sitter (the [ast] extra) is not installed"
@@ -15,7 +15,7 @@ pytestmark = pytest.mark.skipif(
 
 
 def _scan(tmp_path) -> list:
-    from argus.analysis.repository import RepositoryAnalyzer
+    from nephilex.analysis.repository import RepositoryAnalyzer
 
     project = Project.from_path(tmp_path)
     RepositoryAnalyzer().analyze(project)

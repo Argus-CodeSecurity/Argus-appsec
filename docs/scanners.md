@@ -1,8 +1,8 @@
 # Scanners & coverage
 
-Argus runs a set of scanners over one project view in a single pass. They share a
+Nephilex runs a set of scanners over one project view in a single pass. They share a
 severity model and a report, so you get one prioritized list, not six. Run
-`argus scanners` to see which are active in your install.
+`nephilex scanners` to see which are active in your install.
 
 Each scanner below lists what it detects, what it deliberately does not, and its
 current limitations. Stating the limits is intentional: it is how you know where
@@ -43,7 +43,7 @@ the top, without ever changing the severity your `--fail-on` gate depends on.
 Disable with `exploit_signals: false` under the `dependencies` scanner options.
 
 **Machine-readable exploitability (VEX).** Export an OpenVEX document with
-`argus scan ... -f vex`: reachable CVEs are `affected` with the fix, and a CVE in a
+`nephilex scan ... -f vex`: reachable CVEs are `affected` with the fix, and a CVE in a
 package your code never imports is `not_affected` with the standard
 `vulnerable_code_not_in_execute_path` justification. It is the formal expression of
 the reachability analysis, and pairs with an SBOM for the exposure story
@@ -94,7 +94,7 @@ file boundaries (injection, SSRF, path traversal, command execution), using
 tree-sitter for Python and JavaScript/TypeScript.
 
 **Does not.** Cover every language at this depth. Requires the `ast` extra
-(`pip install "argus-appsec[ast]"`); without it, Argus falls back to the
+(`pip install "nephilex[ast]"`); without it, Nephilex falls back to the
 lightweight-taint code scanner and says so.
 
 **Python sinks and rule ids** (`ast-python.*`, and `ast-python-xfile.*` when the
@@ -153,7 +153,7 @@ levels, falls back to a conservative flat scan or is reported as skipped.
 manifests: running as root, privileged containers, exposed services, weak
 defaults.
 
-**Does not.** Assess a live cluster (that is the commercial `argus-k8s` add-on).
+**Does not.** Assess a live cluster (that is the commercial `nephilex-k8s` add-on).
 
 **Limits.** Static file analysis only; it evaluates the declared config, not the
 running state.
@@ -212,8 +212,8 @@ different layout is not covered until it is added.
 
 ## Custom rules
 
-**Detects.** Whatever you define. Drop YAML rules in `.argus/rules/*.yml` or point
-Argus at a rules file; no code needed. See [Writing plugins](plugins.md).
+**Detects.** Whatever you define. Drop YAML rules in `.nephilex/rules/*.yml` or point
+Nephilex at a rules file; no code needed. See [Writing plugins](plugins.md).
 
 **Limits.** Custom rules loaded from a scanned repository are ignored for remote
 targets by default, so an untrusted repo cannot define rules that reconfigure the

@@ -2,7 +2,7 @@
 
 A scanner's most important number is how accurate it is, and the most honest thing
 a young scanner can do is publish that number with its methodology, and republish
-it when it gets worse. Argus AppSec measures accuracy three ways: a small in-repo
+it when it gets worse. Nephilex measures accuracy three ways: a small in-repo
 labeled corpus, public labeled datasets scored side by side with Bandit and
 Semgrep, and finding inventories on large reference apps.
 
@@ -15,8 +15,8 @@ any machine with one command and no downloads:
 python benchmarks/accuracy.py
 ```
 
-Every case is a single file that is either **vulnerable** (Argus must raise at
-least one actionable finding) or **safe** (Argus must raise none). From that:
+Every case is a single file that is either **vulnerable** (Nephilex must raise at
+least one actionable finding) or **safe** (Nephilex must raise none). From that:
 
 - **Recall** = caught vulnerable cases / all vulnerable cases (did we miss a bug?)
 - **Precision** = caught / (caught + findings on safe cases) (did we cry wolf?)
@@ -35,7 +35,7 @@ Current results:
 
 !!! warning "Read this number honestly"
     This is a **small sanity-and-regression corpus** (43 vulnerable, 44 safe cases),
-    not a claim of 100% real-world accuracy. 100% here means Argus classifies
+    not a claim of 100% real-world accuracy. 100% here means Nephilex classifies
     every case in this set correctly, and the run **exits non-zero if it does
     not**, so a regression fails CI. On independent public datasets the
     numbers are far lower; see the next section.
@@ -44,7 +44,7 @@ The **llm** rows are worth calling out: there is no standard public benchmark fo
 LLM/AI-application vulnerability classes (prompt injection, insecure model-output
 handling, unsafe model loading, secrets in prompts, excessive agency). This
 labeled set covers OWASP LLM01/02/05/06/08 with a vulnerable and a safe case each,
-so the accuracy claim in Argus's strongest and least-crowded domain is measurable
+so the accuracy claim in Nephilex's strongest and least-crowded domain is measurable
 and reproducible rather than asserted.
 
 This corpus already earned its keep: building it surfaced two real bugs, both now
@@ -58,17 +58,17 @@ fixed and covered by regression tests:
   in the bound-parameters argument counted. Bound parameters are now recognized as
   the safe form.
 
-## Public labeled datasets (Argus, Bandit, Semgrep)
+## Public labeled datasets (Nephilex, Bandit, Semgrep)
 
 The in-repo corpus is written by the same people who write the rules, so it
-cannot tell you how Argus does on code it was not tuned for. For that, Argus is
+cannot tell you how Nephilex does on code it was not tuned for. For that, Nephilex is
 scored on two independent, public, labeled Python datasets, next to Bandit and
 Semgrep run on the same files and scored by the same code.
 
 ### Reproduce
 
 ```bash
-pip install -e ".[ast]"                    # Argus with the AST tier
+pip install -e ".[ast]"                    # Nephilex with the AST tier
 pip install bandit semgrep                 # ideally in a separate virtualenv
 python benchmarks/public/run.py            # both datasets, all three tools
 ```
@@ -76,12 +76,12 @@ python benchmarks/public/run.py            # both datasets, all three tools
 Useful variations:
 
 ```bash
-python benchmarks/public/run.py --dataset owasp-python --tools argus,bandit,semgrep
+python benchmarks/public/run.py --dataset owasp-python --tools nephilex,bandit,semgrep
 python benchmarks/public/run.py --offline  # re-score cached outputs, no network, no tool runs
 python benchmarks/public/run.py --bandit /path/to/bandit --semgrep /path/to/semgrep
 ```
 
-`--bandit` and `--semgrep` (or the `ARGUS_BENCH_BANDIT` and `ARGUS_BENCH_SEMGREP`
+`--bandit` and `--semgrep` (or the `NEPHILEX_BENCH_BANDIT` and `NEPHILEX_BENCH_SEMGREP`
 environment variables) point at tools installed outside the current environment.
 A tool that cannot be found is recorded as `not_run` with the reason; no numbers
 are produced for it.
@@ -114,7 +114,7 @@ change is reported as a warning while the commit pin fixes the content.
 
 | Tool | Version measured | Configuration |
 | --- | --- | --- |
-| Argus | 0.9.2 plus the accuracy changes described below (the version string is unchanged until the next release) | `argus scan <root> --no-ai --no-cache -f json`: offline heuristic provider, default scanner set; the harness refuses to run if the `ast-python` tier is missing |
+| Nephilex | 0.9.2 plus the accuracy changes described below (the version string is unchanged until the next release) | `nephilex scan <root> --no-ai --no-cache -f json`: offline heuristic provider, default scanner set; the harness refuses to run if the `ast-python` tier is missing |
 | Bandit | 1.9.4 | `bandit -r <root> -f json`: default plugins, all severities and confidences |
 | Semgrep | 1.182.1 (Community Edition) | `semgrep scan --config p/python --metrics=off --no-git-ignore --json`: registry ruleset `p/python`, 151 rules, cached locally with its SHA-256 recorded because registry rulesets are not version-pinned |
 
@@ -157,7 +157,7 @@ the overrides are: Bandit's XML blacklist rules B313 to B320 and B405 to B410
 (reported as CWE-20, mapped to CWE-611), B506 `yaml_load` (CWE-20 to CWE-502),
 B102 `exec_used` and B307 `eval` (reported as CWE-78, mapped to CWE-95), and
 Semgrep's `python.flask.security.injection.tainted-sql-string` (registry
-metadata says CWE-704, mapped to CWE-89). No Argus rule needed an override.
+metadata says CWE-704, mapped to CWE-89). No Nephilex rule needed an override.
 Overrides only add CWEs. Note that they cut both ways: Bandit's mapped OWASP
 score is *lower* than its strict one, because the overrides credit rules that
 also fire on safe cases.
@@ -168,11 +168,11 @@ Measured on 2026-10-22 after the changes listed under "What changed since
 0.9.2". Bandit, Semgrep, the datasets and the Semgrep ruleset (same SHA-256) are
 unchanged from the 0.9.2 run, and their numbers are identical to it.
 
-!!! warning "How these Argus numbers were produced"
-    Argus's Python rules were revised **with OWASP BenchmarkPython visible**:
-    the cases Argus got wrong in 0.9.2 were read, and general rules were
+!!! warning "How these Nephilex numbers were produced"
+    Nephilex's Python rules were revised **with OWASP BenchmarkPython visible**:
+    the cases Nephilex got wrong in 0.9.2 were read, and general rules were
     written for the idioms behind them. No OWASP case was held out, so the
-    OWASP rows below measure Argus on code it was developed against, not on
+    OWASP rows below measure Nephilex on code it was developed against, not on
     unseen code. The checks under "Methodology checks" are the evidence on
     generalisation; read them before quoting a number.
 
@@ -180,10 +180,10 @@ OWASP Benchmark for Python v0.1, all 1230 cases:
 
 | Tool | Mode | TP | FP | TN | FN | TPR | FPR | Precision | F1 | Score (pooled) | Score (category avg) |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Argus | mapped | 447 | 74 | 704 | 5 | 98.9% | 9.5% | 85.8% | 91.9% | +89.4 | +91.3 |
-| Argus | strict | 356 | 62 | 716 | 96 | 78.8% | 8.0% | 85.2% | 81.8% | +70.8 | +79.6 |
-| Argus 0.9.2 | mapped | 78 | 30 | 748 | 374 | 17.3% | 3.9% | 72.2% | 27.9% | +13.4 | +6.3 |
-| Argus 0.9.2 | strict | 37 | 24 | 754 | 415 | 8.2% | 3.1% | 60.7% | 14.4% | +5.1 | +2.4 |
+| Nephilex | mapped | 447 | 74 | 704 | 5 | 98.9% | 9.5% | 85.8% | 91.9% | +89.4 | +91.3 |
+| Nephilex | strict | 356 | 62 | 716 | 96 | 78.8% | 8.0% | 85.2% | 81.8% | +70.8 | +79.6 |
+| Nephilex 0.9.2 | mapped | 78 | 30 | 748 | 374 | 17.3% | 3.9% | 72.2% | 27.9% | +13.4 | +6.3 |
+| Nephilex 0.9.2 | strict | 37 | 24 | 754 | 415 | 8.2% | 3.1% | 60.7% | 14.4% | +5.1 | +2.4 |
 | Bandit | mapped | 130 | 79 | 699 | 322 | 28.8% | 10.2% | 62.2% | 39.3% | +18.6 | +7.5 |
 | Bandit | strict | 101 | 25 | 753 | 351 | 22.4% | 3.2% | 80.2% | 34.9% | +19.1 | +8.2 |
 | Semgrep | mapped | 73 | 15 | 763 | 379 | 16.2% | 1.9% | 83.0% | 27.0% | +14.2 | +6.0 |
@@ -191,7 +191,7 @@ OWASP Benchmark for Python v0.1, all 1230 cases:
 
 Per category, mapped mode, as TPR / FPR (score):
 
-| Category | CWE | Cases (vuln/safe) | Argus | Argus 0.9.2 | Bandit | Semgrep |
+| Category | CWE | Cases (vuln/safe) | Nephilex | Nephilex 0.9.2 | Bandit | Semgrep |
 | --- | --- | --- | --- | --- | --- | --- |
 | cmdi | 78 | 13/7 | 100.0% / 14.3% (+85.7) | 53.8% / 100.0% (-46.2) | 100.0% / 100.0% (+0.0) | 53.8% / 100.0% (-46.2) |
 | codeinj | 94 | 20/33 | 100.0% / 36.4% (+63.6) | 20.0% / 18.2% (+1.8) | 95.0% / 90.9% (+4.1) | 0.0% / 0.0% (+0.0) |
@@ -212,12 +212,12 @@ SecurityEval v2.1, 121 samples, recall only:
 
 | Tool | Mode | Detected | Recall | CWE-average recall | CWEs with a detection |
 | --- | --- | --- | --- | --- | --- |
-| Argus | mapped | 32/121 | 26.5% | 18.4% | 17/69 |
-| Argus | strict | 26/121 | 21.5% | 13.4% | 13/69 |
-| Argus | any | 51/121 | 42.1% | 34.4% | 30/69 |
-| Argus 0.9.2 | mapped | 12/121 | 9.9% | 7.0% | 9/69 |
-| Argus 0.9.2 | strict | 8/121 | 6.6% | 3.9% | 6/69 |
-| Argus 0.9.2 | any | 22/121 | 18.2% | 15.5% | 18/69 |
+| Nephilex | mapped | 32/121 | 26.5% | 18.4% | 17/69 |
+| Nephilex | strict | 26/121 | 21.5% | 13.4% | 13/69 |
+| Nephilex | any | 51/121 | 42.1% | 34.4% | 30/69 |
+| Nephilex 0.9.2 | mapped | 12/121 | 9.9% | 7.0% | 9/69 |
+| Nephilex 0.9.2 | strict | 8/121 | 6.6% | 3.9% | 6/69 |
+| Nephilex 0.9.2 | any | 22/121 | 18.2% | 15.5% | 18/69 |
 | Bandit | mapped | 32/121 | 26.5% | 23.3% | 21/69 |
 | Bandit | strict | 23/121 | 19.0% | 15.9% | 15/69 |
 | Bandit | any | 49/121 | 40.5% | 39.6% | 34/69 |
@@ -287,7 +287,7 @@ these changes:
 | typer | 0 | 0 | |
 
 The two new findings come from treating `sys.argv`
-as an untrusted source, which Argus already did in 0.9.2; the new
+as an untrusted source, which Nephilex already did in 0.9.2; the new
 engine simply follows those flows further. Earlier drafts of this change were
 noisier on these projects (`eval`/`exec` of a function parameter in template
 engines, `os.path.exists` on environment paths, `x.open()` on test clients,
@@ -326,26 +326,26 @@ are in [Scanners](scanners.md).
 
 ### What the numbers say
 
-- **On OWASP BenchmarkPython Argus now scores +89.4 pooled and +91.3 by
+- **On OWASP BenchmarkPython Nephilex now scores +89.4 pooled and +91.3 by
   category average (mapped)**, against +18.6 and +7.5 for Bandit and +14.2 and
   +6.0 for Semgrep. Because the rules were developed with this dataset visible
-  and it is generated from a small set of templates, read this as "Argus
+  and it is generated from a small set of templates, read this as "Nephilex
   handles the idioms in this benchmark", not as a real-world detection rate.
 - **The 74 false positives** are 66 cases guarded only by blocklist checks that
-  Argus deliberately does not trust (see above), 5 `yaml.load(...,
+  Nephilex deliberately does not trust (see above), 5 `yaml.load(...,
   Loader=yaml.Loader)` calls on a constant document (an unsafe loader is still
   reported, at low severity, because it is wrong code even when today's input
   is constant), and 3 payloads that come from a wrapper method in another file
   returning a constant, which the regex tier, grading one file at a time,
   cannot see.
-- **Strict mode** (+70.8) is lower mainly because Argus reports MD5/SHA-1 as
+- **Strict mode** (+70.8) is lower mainly because Nephilex reports MD5/SHA-1 as
   CWE-327 against the benchmark's CWE-328 label (71 cases) and `eval`/`exec`
   as CWE-95 against its parent CWE-94 (20 cases); the other 5 misses are the
   path-traversal cases whose only sink is an existence check.
-- **On SecurityEval Argus ties Bandit on mapped recall (32 samples each)** but
+- **On SecurityEval Nephilex ties Bandit on mapped recall (32 samples each)** but
   trails it on CWE-average recall (18.4% vs 23.3%) and CWE breadth (17 vs 21
   CWEs). Without the detections from rules added after reading SecurityEval,
-  Argus is at 27 samples. SecurityEval covers many classes Argus has no Python
+  Nephilex is at 27 samples. SecurityEval covers many classes Nephilex has no Python
   rule for (hard-coded passwords as CWE-259, log injection, temporary files,
   regex DoS, SSRF), and most samples are helper functions with no web request.
 
@@ -360,26 +360,26 @@ are in [Scanners](scanners.md).
 - **SecurityEval has no negatives,** so it cannot measure false positives at all,
   and most CWEs have one to six samples. Many samples are snippets whose input
   is a function parameter rather than a web request, which penalizes tools that
-  require a proven untrusted source (the Argus taint tier) relative to tools
+  require a proven untrusted source (the Nephilex taint tier) relative to tools
   that flag sinks unconditionally (Bandit).
 - **CWE mapping caveats.** Tools pick different CWEs for the same issue (MD5 is
-  CWE-327 in Bandit, Semgrep and Argus, but the benchmark label is CWE-328), so
+  CWE-327 in Bandit, Semgrep and Nephilex, but the benchmark label is CWE-328), so
   `strict` understates every tool and `mapped` depends on the committed groups
   and overrides. Both are published; the mapping tables are embedded in each
   results file.
 - **Python only.** These datasets measure the Python SAST and taint tiers. They
-  say nothing about Argus's JavaScript/TypeScript tiers, secrets, dependency,
+  say nothing about Nephilex's JavaScript/TypeScript tiers, secrets, dependency,
   IaC, container or LLM-application scanners.
 - **Default configurations only.** Semgrep was run with the `p/python` registry
   ruleset on the Community Edition engine (no cross-file Pro analysis); another
   ruleset (for example `p/default`) or Semgrep Pro would give different numbers.
-  Argus was run without an AI provider (`--no-ai`), so AI triage is not measured.
-  Bandit and Semgrep were not tuned for these datasets. Argus's rules were
+  Nephilex was run without an AI provider (`--no-ai`), so AI triage is not measured.
+  Bandit and Semgrep were not tuned for these datasets. Nephilex's rules were
   revised after studying its OWASP misses, with no case held out (see
   "Methodology checks"); no rule refers to a benchmark file, test id,
   helper or generated name.
 - **Single run, single machine.** All three tools are deterministic for a fixed
-  input, but the runs were made once, on Windows. Argus's default scanner set
+  input, but the runs were made once, on Windows. Nephilex's default scanner set
   includes a dependency scanner that may query OSV for the dataset's
   `requirements.txt`; those findings fall outside the test cases and do not
   affect the scores.
@@ -398,7 +398,7 @@ time) for OWASP Juice Shop, DVWA, WebGoat, and (with a manual download) NIST
 SARD/Juliet. An inventory is not precision/recall, it needs a ground-truth
 mapping per corpus, which is tracked as a `ground_truth` hook and where
 contributions are welcome, but it shows coverage shape and catches per-release
-regressions in what Argus finds and how fast.
+regressions in what Nephilex finds and how fast.
 
 ## Methodology and honesty notes
 

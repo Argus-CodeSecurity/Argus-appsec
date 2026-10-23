@@ -6,9 +6,9 @@ import json
 import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
 
-from argus.core.models import Finding, Location, ScanResult, Severity
-from argus.reporting.junit import JUnitReporter
-from argus.reporting.sarif import SARIFReporter
+from nephilex.core.models import Finding, Location, ScanResult, Severity
+from nephilex.reporting.junit import JUnitReporter
+from nephilex.reporting.sarif import SARIFReporter
 
 
 def _result(*findings: Finding) -> ScanResult:

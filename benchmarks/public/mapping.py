@@ -1,6 +1,6 @@
 """Committed CWE mapping tables used by the public benchmark.
 
-Every tool in this benchmark reports its own CWE ids: Argus findings carry a
+Every tool in this benchmark reports its own CWE ids: Nephilex findings carry a
 ``cwe`` list, Bandit JSON carries ``issue_cwe``, and Semgrep registry rules carry
 ``metadata.cwe``. Scoring is done on those tool-reported CWEs. Two scoring modes
 are published side by side so the effect of this file is visible:
@@ -55,8 +55,8 @@ EQUIVALENCE_GROUPS: dict[str, frozenset[int]] = {
 # auditing the per-rule CWE inventory that every results file carries (the
 # ``inventory`` block): only rules seen firing on a dataset, plus the documented
 # siblings of a rule family, and only where the tool's own CWE is generic or
-# names a different weakness than the rule's documented purpose. No Argus rule
-# met that bar: every Argus rule that fired reported a specific, matching CWE.
+# names a different weakness than the rule's documented purpose. No Nephilex rule
+# met that bar: every Nephilex rule that fired reported a specific, matching CWE.
 _BANDIT_XML = (
     "Bandit XML blacklist, documented as XML attacks (XXE, entity expansion); Bandit reports CWE-20"
 )

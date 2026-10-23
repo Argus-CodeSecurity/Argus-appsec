@@ -1,4 +1,4 @@
-"""--patches attaches Argus's deterministic fixes even with --no-ai."""
+"""--patches attaches Nephilex's deterministic fixes even with --no-ai."""
 
 from __future__ import annotations
 
@@ -6,11 +6,11 @@ from pathlib import Path
 
 from typer.testing import CliRunner
 
-from argus.cli.main import app
-from argus.core.config import Config
-from argus.core.engine import ScanEngine
-from argus.core.models import ScanResult
-from argus.core.project import Project
+from nephilex.cli.main import app
+from nephilex.core.config import Config
+from nephilex.core.engine import ScanEngine
+from nephilex.core.models import ScanResult
+from nephilex.core.project import Project
 
 runner = CliRunner()
 CODE = "import hashlib\nimport yaml\n\n\ndef load(s):\n    return yaml.load(s)\n"

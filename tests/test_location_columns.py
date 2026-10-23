@@ -10,9 +10,9 @@ from pathlib import Path
 
 import pytest
 
-from argus.core.config import Config
-from argus.core.plugin import ScannerContext, registry
-from argus.core.project import Project
+from nephilex.core.config import Config
+from nephilex.core.plugin import ScannerContext, registry
+from nephilex.core.project import Project
 
 
 def _scan(tmp_path: Path, scanner: str, files: dict[str, str], analyze: bool = False) -> list:
@@ -22,7 +22,7 @@ def _scan(tmp_path: Path, scanner: str, files: dict[str, str], analyze: bool = F
         p.write_text(body, encoding="utf-8")
     project = Project.from_path(tmp_path)
     if analyze:
-        from argus.analysis.repository import RepositoryAnalyzer
+        from nephilex.analysis.repository import RepositoryAnalyzer
 
         RepositoryAnalyzer().analyze(project)
     ctx = ScannerContext(project=project, config=Config(), ai=None)

@@ -7,8 +7,8 @@ from pathlib import Path
 import pytest
 from typer.testing import CliRunner
 
-from argus.cli.main import app
-from argus.core.models import Severity
+from nephilex.cli.main import app
+from nephilex.core.models import Severity
 
 runner = CliRunner()
 
@@ -45,7 +45,7 @@ def test_focused_scan_bad_fail_on_is_usage_error(tmp_path: Path) -> None:
 @pytest.fixture
 def crashing_secrets(monkeypatch):
     """Make the secrets scanner crash, as a parser bug on hostile input would."""
-    from argus.core.plugin import registry
+    from nephilex.core.plugin import registry
 
     cls = registry.get_scanner("secrets")
 
@@ -57,7 +57,7 @@ def crashing_secrets(monkeypatch):
 
 
 def test_config_errors_fail_gate_defaults() -> None:
-    from argus.core.config import Config
+    from nephilex.core.config import Config
 
     assert Config().errors_fail_gate(gating=True) is True
     assert Config().errors_fail_gate(gating=False) is False
@@ -93,7 +93,7 @@ def test_focused_scan_fails_on_scanner_error(tmp_path: Path, crashing_secrets) -
 
 def test_policy_check_fails_on_scanner_error(tmp_path: Path, crashing_secrets) -> None:
     project = _clean_project(tmp_path)
-    (project / ".argus.yml").write_text(
+    (project / ".nephilex.yml").write_text(
         "policies:\n  - id: block-secrets\n    when:\n      scanner: secrets\n    action: block\n",
         encoding="utf-8",
     )

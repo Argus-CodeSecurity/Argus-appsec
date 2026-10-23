@@ -1,31 +1,31 @@
 # Importing SARIF from other scanners
 
 Most teams already run scanners they trust: Semgrep, CodeQL, gitleaks, Trivy,
-Bandit. Nearly all of them write SARIF 2.1.0. `argus import` reads that output
-and turns every result into an ordinary Argus finding, so the rest of Argus
+Bandit. Nearly all of them write SARIF 2.1.0. `nephilex import` reads that output
+and turns every result into an ordinary Nephilex finding, so the rest of Nephilex
 works on it unchanged: baselines, the allowlist and exceptions, policy, the
 severity gate, every report format, enrichment and patch generation.
 
-You keep your scanners. Argus adds triage, gating and reporting on top.
+You keep your scanners. Nephilex adds triage, gating and reporting on top.
 
 ## Quick start
 
 ```bash
 # Import one or more SARIF files for the project in the current directory
-argus import semgrep.sarif codeql.sarif
+nephilex import semgrep.sarif codeql.sarif
 
 # Gate CI on the imported results
-argus import semgrep.sarif --fail-on high
+nephilex import semgrep.sarif --fail-on high
 
 # Write any report format
-argus import trivy.sarif -f html -o report.html
-argus import *.sarif -f json -f sarif -o reports/
+nephilex import trivy.sarif -f html -o report.html
+nephilex import *.sarif -f json -f sarif -o reports/
 
-# Merge imported results into a full Argus scan
-argus scan . --import-sarif semgrep.sarif --import-sarif gitleaks.sarif
+# Merge imported results into a full Nephilex scan
+nephilex scan . --import-sarif semgrep.sarif --import-sarif gitleaks.sarif
 ```
 
-`argus import` takes the same reporting and gating options as `argus scan`:
+`nephilex import` takes the same reporting and gating options as `nephilex scan`:
 `-f/--format`, `-o/--output`, `--baseline`, `--diff`, `--fail-on`,
 `--min-severity`, `--config`, `--no-ai`, `--patches`, `--audience` and `-q`.
 `--project PATH` (default: the current directory) is the project root the
@@ -39,7 +39,7 @@ Run each tool from the project root so the paths it writes are relative to it.
 
 ```bash
 semgrep scan --config auto --sarif --output semgrep.sarif
-argus import semgrep.sarif
+nephilex import semgrep.sarif
 ```
 
 Results suppressed in the source with `nosemgrep` are marked as suppressed in
@@ -51,13 +51,13 @@ the SARIF and are not imported.
 codeql database create codeql-db --language=python --source-root .
 codeql database analyze codeql-db codeql/python-queries \
   --format=sarif-latest --output=codeql.sarif
-argus import codeql.sarif
+nephilex import codeql.sarif
 ```
 
 In GitHub Actions, `github/codeql-action/analyze` writes its SARIF to the
 directory given by its `output` input (default `../results`); pass that file
-to `argus import`. CodeQL's `%SRCROOT%` usually names the runner's checkout
-path. Argus reads paths relative to it as relative to `--project` and prints
+to `nephilex import`. CodeQL's `%SRCROOT%` usually names the runner's checkout
+path. Nephilex reads paths relative to it as relative to `--project` and prints
 a warning saying so.
 
 ### gitleaks
@@ -66,10 +66,10 @@ a warning saying so.
 gitleaks detect --source . --report-format sarif --report-path gitleaks.sarif
 # gitleaks 8.19 and later also accept:
 gitleaks dir . --report-format sarif --report-path gitleaks.sarif
-argus import gitleaks.sarif
+nephilex import gitleaks.sarif
 ```
 
-gitleaks puts the raw secret in the SARIF snippet. Argus masks it before the
+gitleaks puts the raw secret in the SARIF snippet. Nephilex masks it before the
 finding is stored (see [Secrets in imported files](#secrets-in-imported-files)),
 but the SARIF file itself still holds the secret: treat it as sensitive, or
 run gitleaks with `--redact`.
@@ -78,21 +78,21 @@ run gitleaks with `--redact`.
 
 ```bash
 trivy fs --format sarif --output trivy.sarif .
-argus import trivy.sarif
+nephilex import trivy.sarif
 
 # Container images: paths are inside the image, not the project
 trivy image --format sarif --output trivy-image.sarif myapp:1.4.2
-argus import trivy-image.sarif
+nephilex import trivy-image.sarif
 ```
 
-Trivy declares its base as `file:///`; Argus treats a base that is the
+Trivy declares its base as `file:///`; Nephilex treats a base that is the
 filesystem root as the project root.
 
 ### Bandit
 
 ```bash
 bandit -r . -f sarif -o bandit.sarif
-argus import bandit.sarif
+nephilex import bandit.sarif
 ```
 
 Recent Bandit releases include the SARIF formatter; older ones need the
@@ -100,13 +100,13 @@ Recent Bandit releases include the SARIF formatter; older ones need the
 
 ### Anything else
 
-Any tool that writes SARIF 2.1.0 works the same way. Argus reads the fields
+Any tool that writes SARIF 2.1.0 works the same way. Nephilex reads the fields
 the specification defines and the common extensions listed below; a field it
 does not understand is ignored.
 
 ## What is preserved
 
-| Argus finding | Taken from |
+| Nephilex finding | Taken from |
 |---------------|------------|
 | `scanner` | `sarif:<tool>`, from `tool.driver.name` (`sarif:codeql`, `sarif:semgrep-oss`, ...) |
 | `rule_id` | `<tool>.<ruleId>`, for example `codeql.py/sql-injection` |
@@ -146,7 +146,7 @@ The first of these that is present and valid wins:
 
 ### Confidence
 
-Argus has not verified an imported result, so confidence is one step below
+Nephilex has not verified an imported result, so confidence is one step below
 what the tool claims (`precision`, `confidence` or `issue_confidence`):
 `very-high` is high, `high` medium, `medium` and `low` low. A tool that says
 nothing gets low. Confidence affects the risk score and ordering, not the
@@ -157,12 +157,12 @@ nothing gets low. Confidence affects the risk score and ordering, not the
 Results are not imported when they are not a problem (`kind` of `pass`,
 `notApplicable` or `informational`), are `baselineState: absent`, or carry an
 accepted suppression (a `suppressions` entry with status `accepted` or no
-status). `argus import` prints how many were skipped and why.
+status). `nephilex import` prints how many were skipped and why.
 
 ## Paths and safety
 
 An imported file is untrusted input: it may come from a CI artifact or a pull
-request. Argus therefore:
+request. Nephilex therefore:
 
 - refuses files over 50 MB, JSON nested deeper than 64 levels, `NaN` or
   `Infinity` constants, SARIF versions other than 2.1.0, and more than 100,000
@@ -185,10 +185,10 @@ against it.
 
 ## Secrets in imported files
 
-Every snippet and message is run through the same redaction Argus's secrets
+Every snippet and message is run through the same redaction Nephilex's secrets
 scanner uses before the finding is stored. For a secret finding (from a
 secret scanner such as gitleaks, a credential CWE, or a rule or tag naming a
-secret, token, password or key) Argus also:
+secret, token, password or key) Nephilex also:
 
 - masks the exact column span the tool reported, even when the value matches
   no known pattern;
@@ -205,13 +205,13 @@ are the same issue when they come from different scanners, are in the same
 file, and either
 
 - both have a line, the lines are at most 2 apart, and they share a CWE; or
-- they name the same advisory (CVE or GHSA id), as Argus's dependency scanner
+- they name the same advisory (CVE or GHSA id), as Nephilex's dependency scanner
   and Trivy do for one vulnerable package.
 
 Which finding is kept:
 
-- with `argus scan --import-sarif`, Argus's own finding is kept, because it
-  carries Argus's reasoning, remediation and fix support;
+- with `nephilex scan --import-sarif`, Nephilex's own finding is kept, because it
+  carries Nephilex's reasoning, remediation and fix support;
 - between two imported findings, the one with the higher severity (then
   confidence) is kept, the first file given on a tie.
 
@@ -234,44 +234,44 @@ Semgrep and most others do), the fingerprint is rule id, path and the hash
 from the finding's id (`metadata.sarif.fingerprint`), which is computed from
 the tool's fingerprints: the tool designed them to survive edits, and they do
 not depend on the file being readable. Otherwise it is the same as
-for Argus's own findings: rule id, path and the whitespace-normalized
-snippet. Because Argus reads the snippet from the project file, such a
+for Nephilex's own findings: rule id, path and the whitespace-normalized
+snippet. Because Nephilex reads the snippet from the project file, such a
 finding keeps its identity when unrelated edits move it, as long as the file
 is available. Record and compare a baseline the usual way:
 
 ```bash
-argus import semgrep.sarif -f json -o baseline.json
+nephilex import semgrep.sarif -f json -o baseline.json
 # later, in CI: report and gate only on new results
-argus import semgrep.sarif --baseline baseline.json --fail-on high
+nephilex import semgrep.sarif --baseline baseline.json --fail-on high
 ```
 
 `--diff origin/main...HEAD` keeps only results on changed lines, as for
-`argus scan`.
+`nephilex scan`.
 
-## Using the rest of Argus
+## Using the rest of Nephilex
 
-Imported findings go through the same post-processing as Argus's own, in
+Imported findings go through the same post-processing as Nephilex's own, in
 the same order, so every setting below behaves exactly as it does for
-`argus scan`:
+`nephilex scan`:
 
-- **Allowlist and exceptions**: `allow:` entries in `.argus.yml` and
-  `.argus/exceptions.yml` apply to imported findings. Match a rule by its
+- **Allowlist and exceptions**: `allow:` entries in `.nephilex.yml` and
+  `.nephilex/exceptions.yml` apply to imported findings. Match a rule by its
   original id (`rule: py/sql-injection`) or the prefixed one.
-- **Inline suppressions**: `argus-ignore` comments apply on trusted projects,
+- **Inline suppressions**: `nephilex-ignore` comments apply on trusted projects,
   as for a scan.
 - **`exclude_paths`** from config also drops imported findings in those paths.
-- **Project context**: `.argus/context.yml` lowers findings under
+- **Project context**: `.nephilex/context.yml` lowers findings under
   `internal_paths`, raises those under `data_classification` and adjusts
   likelihood by `exposure`, recording each change in `metadata.context`. See
   [Project context](context.md).
 - **Audit log**: an allowlist entry, exception, inline comment or baseline
-  that hides an imported finding is recorded in `.argus/audit.log` on trusted
+  that hides an imported finding is recorded in `.nephilex/audit.log` on trusted
   local projects. See [Audit log](audit-log.md).
 - **Attack chains** are built from the imported findings as from scanner
   findings.
 - **Policy**: write a JSON report and check it:
-  `argus import *.sarif -f json -o results.json` then
-  `argus policy check --report results.json`.
+  `nephilex import *.sarif -f json -o results.json` then
+  `nephilex policy check --report results.json`.
 - **Enrichment and fixes**: imported findings go through the configured AI
   provider (offline heuristics by default; `--no-ai` turns it off) and,
   with `--patches`, patch generation. Deterministic fixes are attached with
@@ -279,7 +279,7 @@ the same order, so every setting below behaves exactly as it does for
 
 ## Exit codes
 
-The same as `argus scan`: 0 when the gate passes, 1 when a finding is at or
+The same as `nephilex scan`: 0 when the gate passes, 1 when a finding is at or
 above `--fail-on` (or `fail_on` in config), 2 for usage errors, including an
 unreadable or rejected SARIF file, a missing `--project` directory and an
 unknown severity. A result dropped for an unsafe path is a warning, not an
@@ -290,13 +290,13 @@ error.
 - Only SARIF 2.1.0. Other formats (Semgrep JSON, Trivy JSON) are not read.
 - Only the first location of a result is used. `codeFlows`,
   `relatedLocations` and `stacks` are not imported, and SARIF `fixes` are not
-  turned into Argus patches.
+  turned into Nephilex patches.
 - An absolute path outside the project root is dropped, not re-mapped. Use
   relative paths or `originalUriBaseIds` (most tools do by default), or run
-  `argus import` from a checkout at the same path the tool used.
+  `nephilex import` from a checkout at the same path the tool used.
 - If the tool gives no fingerprints, the project file is not available and
   the SARIF has no snippet, the baseline fingerprint falls back to the line
   number, so such a finding is reported again after it moves.
-- `argus-ignore: <rule>` cannot name rule ids that contain `/` (CodeQL);
-  use an `allow:` entry or a rule-less `argus-ignore` instead.
+- `nephilex-ignore: <rule>` cannot name rule ids that contain `/` (CodeQL);
+  use an `allow:` entry or a rule-less `nephilex-ignore` instead.
 - Markdown in messages is kept as text, not rendered.

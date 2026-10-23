@@ -1,4 +1,4 @@
-# Argus benchmarks
+# Nephilex benchmarks
 
 Reproducible scans of known-vulnerable reference applications. The goal is the
 credibility cornerstone every scanner should have: published numbers, honest
@@ -20,7 +20,7 @@ corpus commit recorded so every number is attributable.
 | `juice-shop` | OWASP Juice Shop, JS/TS SAST + taint tiers, secrets, npm deps |
 | `dvwa` | DVWA (PHP), secrets/dependency/IaC layers on an uncovered language |
 | `webgoat` | OWASP WebGoat (Java), same, JVM stack |
-| `sard-local` | NIST SARD/Juliet cases, set `ARGUS_BENCH_SARD_DIR` to the extracted suite (manual license click-through at samate.nist.gov) |
+| `sard-local` | NIST SARD/Juliet cases, set `NEPHILEX_BENCH_SARD_DIR` to the extracted suite (manual license click-through at samate.nist.gov) |
 
 ## Methodology and honesty notes
 

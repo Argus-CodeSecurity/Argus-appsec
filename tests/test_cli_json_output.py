@@ -7,7 +7,7 @@ from pathlib import Path
 
 from typer.testing import CliRunner
 
-from argus.cli.main import app
+from nephilex.cli.main import app
 
 runner = CliRunner()
 

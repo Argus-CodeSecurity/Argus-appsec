@@ -1,11 +1,11 @@
 # Audit log
 
-Every fix Argus applies and every suppression that hides or accepts a finding
-is recorded in `.argus/audit.log`, inside the repository. The file is meant to
+Every fix Nephilex applies and every suppression that hides or accepts a finding
+is recorded in `.nephilex/audit.log`, inside the repository. The file is meant to
 be committed: it gives reviewers and auditors one place to answer "who
 suppressed this, when, and why" and "what did the automated fixes change".
 
-Records are hash-chained, so `argus audit verify` detects a record that was
+Records are hash-chained, so `nephilex audit verify` detects a record that was
 edited, deleted, inserted or moved. Read [What it proves](#what-it-proves-and-what-it-does-not)
 before relying on it as evidence.
 
@@ -13,9 +13,9 @@ before relying on it as evidence.
 
 | Action | When |
 |---|---|
-| `fix.applied` | `argus fix` (or `apply_fixes`) wrote a deterministic fix to a file. One record per fix. |
-| `fix.pr_opened` | `argus fix --open-pr` opened a pull request for the fixes. One record per fix, with the PR URL. |
-| `suppression.added` | Argus saw a suppression definition for the first time: an allowlist entry, an `.argus/exceptions.yml` entry, an inline `argus-ignore` comment (when it first hides a finding), or a baseline file. |
+| `fix.applied` | `nephilex fix` (or `apply_fixes`) wrote a deterministic fix to a file. One record per fix. |
+| `fix.pr_opened` | `nephilex fix --open-pr` opened a pull request for the fixes. One record per fix, with the PR URL. |
+| `suppression.added` | Nephilex saw a suppression definition for the first time: an allowlist entry, a `.nephilex/exceptions.yml` entry, an inline `nephilex-ignore` comment (when it first hides a finding), or a baseline file. |
 | `suppression.matched` | A suppression hid or accepted a finding. `kind` is `allowlist`, `exception`, `inline` or `baseline`. |
 
 Suppression events are recorded **once per content**: a `suppression.matched`
@@ -28,20 +28,20 @@ Suppression events are written only when the project configuration is
 trusted and the target is a local directory, the same rule that decides
 whether inline comments and exceptions are honoured at all (see
 [Which configuration is trusted](configuration.md#which-configuration-is-trusted)).
-Scans of cloned remotes, `--config-from-ref` runs, `argus agent` and `argus mcp`
+Scans of cloned remotes, `--config-from-ref` runs, `nephilex agent` and `nephilex mcp`
 never write to the scanned tree.
 
-Baseline filtering (`--baseline` on `argus scan`, `argus import` and
-`argus review`) runs in the command after the scan and is recorded under the
+Baseline filtering (`--baseline` on `nephilex scan`, `nephilex import` and
+`nephilex review`) runs in the command after the scan and is recorded under the
 same rule: one `suppression.added` per baseline file content and one
 `suppression.matched` per finding it hid. Other callers can use the
-`argus.audit.record_baseline` helper.
+`nephilex.audit.record_baseline` helper.
 
 ### Turning it off
 
-Set `audit_log: false` in `.argus.yml`, or `ARGUS_AUDIT_LOG=off` in the
+Set `audit_log: false` in `.nephilex.yml`, or `NEPHILEX_AUDIT_LOG=off` in the
 environment (also `0`, `false`, `no`). Both also cover the `fix.applied`
-and `fix.pr_opened` records of `argus fix`.
+and `fix.pr_opened` records of `nephilex fix`.
 
 ## Format
 
@@ -96,7 +96,7 @@ count at that point.
 
 ### What is never written
 
-The log is committed, so it must not leak what the scanner found. Argus never
+The log is committed, so it must not leak what the scanner found. Nephilex never
 writes code lines or finding snippets to it (fixes record rule, path, line,
 fingerprint and verification state only). Every string field is passed
 through the same secret masking the secrets scanner uses for report snippets,
@@ -106,11 +106,11 @@ reason is masked. Fields are capped at 500 characters.
 ## Commands
 
 ```bash
-argus audit verify [PATH] [--anchor HASH] [--json]
-argus audit show   [PATH] [--action A] [--kind K] [--rule R] [--path GLOB]
+nephilex audit verify [PATH] [--anchor HASH] [--json]
+nephilex audit show   [PATH] [--action A] [--kind K] [--rule R] [--path GLOB]
                           [--actor TEXT] [--fingerprint FP] [--since DATE]
                           [--until DATE] [-n N] [--json]
-argus audit export [PATH] -f csv|json [-o FILE] [--action A] [--kind K]
+nephilex audit export [PATH] -f csv|json [-o FILE] [--action A] [--kind K]
                           [--since DATE] [--until DATE]
 ```
 
@@ -136,21 +136,21 @@ records in one write. Parallel scans and fixes therefore extend one chain
 instead of forking it. A writer waits up to 15 seconds for the lock.
 
 The audit log never fails a scan or a fix. If the log cannot be written (the
-directory is read-only, `.argus` is not a directory, the lock times out, or
-the log or `.argus` is a symlink, which is refused so a hostile repository
+directory is read-only, `.nephilex` is not a directory, the lock times out, or
+the log or `.nephilex` is a symlink, which is refused so a hostile repository
 cannot redirect the append), the run continues and the problem is reported
 as a warning and in the report's `project_summary.audit.warning`. If the last
 line is damaged (for example a crash mid-write), new records are still
 appended on a fresh line and `verify` points at the damaged line.
 
-## With `argus fix`
+## With `nephilex fix`
 
-`argus fix` refuses to run on a working tree with uncommitted changes, with
-one exception: `.argus/audit.log` itself, because the scan that produced the
+`nephilex fix` refuses to run on a working tree with uncommitted changes, with
+one exception: `.nephilex/audit.log` itself, because the scan that produced the
 findings may just have appended to it. The fix commit includes the log, so
-the `fix.applied` records travel with the fixes they describe. If `.argus/` is
+the `fix.applied` records travel with the fixes they describe. If `.nephilex/` is
 ignored by git, the log is left out of the commit and a note says so (add
-`!.argus/audit.log` to `.gitignore` to commit it). If the fix fails and is
+`!.nephilex/audit.log` to `.gitignore` to commit it). If the fix fails and is
 rolled back, the log is restored to its state before the run.
 
 `fix.pr_opened` is appended after the branch is pushed, so it is in the
@@ -181,12 +181,12 @@ It does not show, on its own:
   runs, and suppressions applied by other tools are not in it.
 
 To close the first two gaps, anchor the chain outside the repository: after
-each merge to the main branch, have CI run `argus audit verify --json` and
+each merge to the main branch, have CI run `nephilex audit verify --json` and
 store the `head` value somewhere the repository's writers cannot change (a CI
 artifact, a release note, a signed tag, a transparency log). Later,
-`argus audit verify --anchor <stored head>` fails unless that record is still
+`nephilex audit verify --anchor <stored head>` fails unless that record is still
 in the chain, which catches truncation and wholesale rewrites. Git history
-helps too: the log is committed, so `git log -p .argus/audit.log` shows every
+helps too: the log is committed, so `git log -p .nephilex/audit.log` shows every
 change to it, and protected branches with signed commits make rewriting it
 visible. For identity, rely on your forge's authenticated commit and review
 records, and treat `actor` as a convenience.

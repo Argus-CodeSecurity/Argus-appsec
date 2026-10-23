@@ -1,8 +1,8 @@
 # Responsible disclosure protocol (outbound)
 
-This document governs how the Argus maintainers handle vulnerabilities we discover
+This document governs how the Nephilex maintainers handle vulnerabilities we discover
 in **other people's** software, for example while researching the security of
-open-source AI applications. (To report a vulnerability **in Argus itself**, see
+open-source AI applications. (To report a vulnerability **in Nephilex itself**, see
 [SECURITY.md](SECURITY.md).)
 
 Running a scanner across the ecosystem will surface real, unfixed vulnerabilities

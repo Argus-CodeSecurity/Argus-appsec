@@ -7,11 +7,11 @@ from pathlib import Path
 
 import pytest
 
-from argus.core.config import Config
-from argus.core.engine import ScanEngine
-from argus.core.plugin import ScannerContext, registry
-from argus.core.project import Project
-from argus.scanners import agent_config
+from nephilex.core.config import Config
+from nephilex.core.engine import ScanEngine
+from nephilex.core.plugin import ScannerContext, registry
+from nephilex.core.project import Project
+from nephilex.scanners import agent_config
 
 TOKEN = "ghp_" + "aBcDeFgHiJkLmNoPqRsTuVwXyZ0123456789"
 

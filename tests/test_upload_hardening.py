@@ -1,11 +1,11 @@
-"""argus push: token only over HTTPS, one exception type, encoded job ids."""
+"""nephilex push: token only over HTTPS, one exception type, encoded job ids."""
 
 from __future__ import annotations
 
 import httpx
 import pytest
 
-from argus.upload import PushError, push_result, push_sbom
+from nephilex.upload import PushError, push_result, push_sbom
 
 
 def _client(handler) -> httpx.Client:

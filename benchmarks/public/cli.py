@@ -22,7 +22,7 @@ SCHEMA_VERSION = 1
 def _parse_args(argv: list[str] | None) -> argparse.Namespace:
     p = argparse.ArgumentParser(
         prog="python benchmarks/public/run.py",
-        description="Precision/recall of Argus, Bandit and Semgrep on public labeled datasets.",
+        description="Precision/recall of Nephilex, Bandit and Semgrep on public labeled datasets.",
     )
     p.add_argument(
         "--dataset",
@@ -37,8 +37,8 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
         "benchmarks/.corpora/raw, falling back to the committed normalized findings",
     )
     p.add_argument("--fetch-only", action="store_true", help="download datasets and exit")
-    p.add_argument("--bandit", help="path to the bandit executable (or ARGUS_BENCH_BANDIT)")
-    p.add_argument("--semgrep", help="path to the semgrep executable (or ARGUS_BENCH_SEMGREP)")
+    p.add_argument("--bandit", help="path to the bandit executable (or NEPHILEX_BENCH_BANDIT)")
+    p.add_argument("--semgrep", help="path to the semgrep executable (or NEPHILEX_BENCH_SEMGREP)")
     p.add_argument(
         "--semgrep-config",
         default=tools.SEMGREP_DEFAULT_CONFIG,

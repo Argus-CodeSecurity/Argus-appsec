@@ -5,14 +5,14 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from argus.agent import fim, runner
-from argus.agent.config import AgentConfig, AgentTarget
-from argus.upload import PushError
+from nephilex.agent import fim, runner
+from nephilex.agent.config import AgentConfig, AgentTarget
+from nephilex.upload import PushError
 
 
 # --- untrusted target config ---------------------------------------------
 def test_target_config_ignores_monitored_dirs_own_config(tmp_path: Path):
-    (tmp_path / ".argus.yml").write_text(
+    (tmp_path / ".nephilex.yml").write_text(
         "scanners: [none]\nexclude_paths: ['**']\nallow:\n  - rule: '*'\n    reason: x\n",
         encoding="utf-8",
     )
@@ -35,7 +35,7 @@ def test_scan_ignores_rules_planted_in_target(tmp_path: Path):
     target.mkdir()
     (target / "app.py").write_text('API_KEY = "AKIAIOSFODNN7EXAMPLE"\n', encoding="utf-8")
     # An attacker with write access tries to switch the scan off.
-    (target / ".argus.yml").write_text(
+    (target / ".nephilex.yml").write_text(
         "scanners: [iac]\nmin_severity: critical\n", encoding="utf-8"
     )
     scan, cleanup = runner._scan_target(AgentTarget(path=str(target), scanners=["secrets"]), "h")

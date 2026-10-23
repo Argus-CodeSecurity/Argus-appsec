@@ -11,10 +11,10 @@ from pathlib import Path
 
 import pytest
 
-from argus.analysis.repository import RepositoryAnalyzer
-from argus.core.config import Config
-from argus.core.plugin import ScannerContext, registry
-from argus.core.project import Project
+from nephilex.analysis.repository import RepositoryAnalyzer
+from nephilex.core.config import Config
+from nephilex.core.plugin import ScannerContext, registry
+from nephilex.core.project import Project
 
 pytest.importorskip("tree_sitter_python")
 pytest.importorskip("tree_sitter_javascript")
@@ -590,6 +590,6 @@ def slow_patterns(*modules) -> list[str]:
 
 
 def test_module_regexes_are_linear():
-    from argus.scanners import llm, llm_agency, llm_ast, llm_prompt, llm_taint, llm_taint_js
+    from nephilex.scanners import llm, llm_agency, llm_ast, llm_prompt, llm_taint, llm_taint_js
 
     assert not slow_patterns(llm, llm_agency, llm_ast, llm_prompt, llm_taint, llm_taint_js)

@@ -11,8 +11,8 @@ from pathlib import Path
 import pytest
 from typer.testing import CliRunner
 
-from argus.cli.main import app
-from argus.core.plugin import Registry, Scanner
+from nephilex.cli.main import app
+from nephilex.core.plugin import Registry, Scanner
 
 SRC = str(Path(__file__).resolve().parents[1] / "src")
 
@@ -38,31 +38,31 @@ def _env() -> dict[str, str]:
 
 
 def test_importing_the_cli_does_not_import_reporters_or_http_clients() -> None:
-    loaded = _modules_after("import argus.cli.app")
-    for heavy in ("httpx", "argus.reporting", "argus.ai.ollama_provider", "rich.table"):
+    loaded = _modules_after("import nephilex.cli.app")
+    for heavy in ("httpx", "nephilex.reporting", "nephilex.ai.ollama_provider", "rich.table"):
         assert heavy not in loaded, heavy
 
 
-def test_argus_check_does_not_import_http_clients_or_reporters(tmp_path: Path) -> None:
-    (tmp_path / ".argus.yml").write_text("{}\n", encoding="utf-8")
+def test_nephilex_check_does_not_import_http_clients_or_reporters(tmp_path: Path) -> None:
+    (tmp_path / ".nephilex.yml").write_text("{}\n", encoding="utf-8")
     (tmp_path / "app.py").write_text("import yaml\nyaml.load(s)\n", encoding="utf-8")
     loaded = _modules_after(
         """
         from typer.testing import CliRunner
-        from argus.cli.main import app
+        from nephilex.cli.main import app
         res = CliRunner().invoke(app, ["check", "app.py", "-q", "--no-cache"])
         assert res.exit_code == 1, res.output
         assert "python-yaml-load" in res.output
         """,
         cwd=tmp_path,
     )
-    assert "argus.scanners" in loaded
-    for heavy in ("httpx", "argus.reporting", "argus.ai.ollama_provider", "argus.agents"):
+    assert "nephilex.scanners" in loaded
+    for heavy in ("httpx", "nephilex.reporting", "nephilex.ai.ollama_provider", "nephilex.agents"):
         assert heavy not in loaded, heavy
 
 
-def test_argus_scanners_lists_every_builtin() -> None:
-    from argus.core.plugin import registry
+def test_nephilex_scanners_lists_every_builtin() -> None:
+    from nephilex.core.plugin import registry
 
     res = CliRunner().invoke(app, ["scanners"])
     assert res.exit_code == 0, res.output
@@ -75,7 +75,7 @@ def test_argus_scanners_lists_every_builtin() -> None:
 
 
 def test_reporters_and_providers_load_on_first_lookup() -> None:
-    from argus.core.plugin import registry
+    from nephilex.core.plugin import registry
 
     assert "json" in registry.reporters()
     assert registry.get_ai_provider("heuristic").name == "heuristic"
@@ -108,7 +108,7 @@ def test_a_builtin_keeps_its_name_when_a_plugin_registered_first() -> None:
     reg._loaded_entrypoints = True
     third_party = _scanner("patterns", "acme_plugin.scanners")
     reg.register_scanner(third_party)
-    builtin = _scanner("patterns", "argus.scanners.patterns_fake")
+    builtin = _scanner("patterns", "nephilex.scanners.patterns_fake")
     reg.add_loader("Scanner", lambda: reg.register_scanner(builtin))
     assert reg.get_scanner("patterns") is builtin
     assert ("Scanner", "patterns") in reg.rejected()
@@ -123,8 +123,8 @@ def test_two_third_party_plugins_with_one_name_still_clash() -> None:
 
 
 def test_disabled_ai_provider_is_built_on_first_use() -> None:
-    from argus.core.config import AIConfig
-    from argus.core.engine import _DeferredProvider
+    from nephilex.core.config import AIConfig
+    from nephilex.core.engine import _DeferredProvider
 
     deferred = _DeferredProvider(AIConfig())
     assert deferred._provider is None

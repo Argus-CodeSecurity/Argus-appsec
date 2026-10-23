@@ -1,10 +1,10 @@
-# Argus AppSec GitLab CI/CD component.
+# Nephilex GitLab CI/CD component.
 #
 # Adds a security scan that publishes findings as a GitLab SAST report, so they
 # appear in the merge-request security widget. Use it from your .gitlab-ci.yml:
 #
 #   include:
-#     - component: $CI_SERVER_FQDN/Argus-CodeSecurity/Argus-appsec/scan@main
+#     - component: $CI_SERVER_FQDN/nephilex/nephilex/scan@main
 #       inputs:
 #         fail-on: high
 #
@@ -23,13 +23,13 @@ spec:
       default: "low"
       description: "Only report findings at or above this severity."
 ---
-argus-scan:
+nephilex-scan:
   stage: $[[ inputs.stage ]]
   image: python:3.12-slim
   script:
-    - pip install --no-cache-dir argus-appsec
+    - pip install --no-cache-dir nephilex
     - >-
-      argus scan "$[[ inputs.path ]]"
+      nephilex scan "$[[ inputs.path ]]"
       -f gitlab -o gl-sast-report.json
       --min-severity "$[[ inputs.min-severity ]]"
       --fail-on "$[[ inputs.fail-on ]]"

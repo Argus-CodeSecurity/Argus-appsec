@@ -1,4 +1,4 @@
-# Publish Argus to PyPI when a GitHub Release is published.
+# Publish Nephilex to PyPI when a GitHub Release is published.
 #
 # Uses PyPI Trusted Publishing (OIDC), no API token or secret is stored in the
 # repo. You configure the trust relationship once on PyPI (see RELEASING.md).
@@ -38,7 +38,7 @@ jobs:
         env:
           TAG: ${{ github.event.release.tag_name }}
         run: |
-          version="$(python -c 'import argus; print(argus.__version__)')"
+          version="$(python -c 'import nephilex; print(nephilex.__version__)')"
           if [ "${TAG#v}" != "$version" ]; then
             echo "::error::Release tag '$TAG' does not match package version '$version'."
             exit 1
@@ -76,7 +76,7 @@ jobs:
           /tmp/sbomenv/bin/pip install --no-deps dist/*.whl
           python -m pip install "cyclonedx-bom==7.5.0"
           mkdir -p sbom
-          cyclonedx-py environment /tmp/sbomenv -o sbom/argus-appsec.cdx.json
+          cyclonedx-py environment /tmp/sbomenv -o sbom/nephilex.cdx.json
 
       - name: Attest build provenance for the distributions
         uses: actions/attest-build-provenance@520d128f165991a6c774bcb264f323e3d70747f4 # v2.2.0
@@ -87,7 +87,7 @@ jobs:
         uses: actions/attest-sbom@bd218ad0dbcb3e146bd073d1d9c6d78e08aa8a0b # v2.4.0
         with:
           subject-path: "dist/*"
-          sbom-path: sbom/argus-appsec.cdx.json
+          sbom-path: sbom/nephilex.cdx.json
 
       - name: Upload distributions
         uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
@@ -107,7 +107,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: pypi
-      url: https://pypi.org/project/argus-appsec/
+      url: https://pypi.org/project/nephilex/
     permissions:
       id-token: write # required for trusted publishing (OIDC)
     steps:
@@ -135,4 +135,4 @@ jobs:
           TAG: ${{ github.event.release.tag_name }}
           REPO: ${{ github.repository }}
         run: |
-          gh release upload "$TAG" sbom/argus-appsec.cdx.json --repo "$REPO" --clobber
+          gh release upload "$TAG" sbom/nephilex.cdx.json --repo "$REPO" --clobber

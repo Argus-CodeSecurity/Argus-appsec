@@ -14,7 +14,7 @@ format-check:
 	ruff format --check .
 
 typecheck:
-	mypy src/argus
+	mypy src/nephilex
 
 accuracy:
 	python benchmarks/accuracy.py
@@ -28,10 +28,10 @@ fmt:
 
 # Run a full scan on the bundled vulnerable example with all features on.
 scan-example:
-	argus scan examples/vulnerable-app --attack-sim --patches
+	nephilex scan examples/vulnerable-app --attack-sim --patches
 
 docker:
-	docker build -t argus:local .
+	docker build -t nephilex:local .
 
 docs:
 	mkdocs serve

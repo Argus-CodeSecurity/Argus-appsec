@@ -1,7 +1,7 @@
 # Triage & baselines
 
 A scanner lives or dies on noise. The first run should show signal, and a team
-should be able to accept known issues and get alerted only on new ones. Argus
+should be able to accept known issues and get alerted only on new ones. Nephilex
 gives you a few honest, working controls for that today.
 
 For how to read risk scores, severities, and pass/fail gates, see
@@ -13,10 +13,10 @@ Show only what matters first, then widen:
 
 ```bash
 # Only high and critical, the sensible first look
-argus scan ./app --min-severity high
+nephilex scan ./app --min-severity high
 
 # Widen once you trust it
-argus scan ./app --min-severity low
+nephilex scan ./app --min-severity low
 ```
 
 ## Gate a pipeline
@@ -24,7 +24,7 @@ argus scan ./app --min-severity low
 Fail the build only at or above a severity you choose. Empty means never fail.
 
 ```bash
-argus scan ./app --fail-on high
+nephilex scan ./app --fail-on high
 ```
 
 Exit codes are stable and documented for scripting; see
@@ -33,15 +33,15 @@ Exit codes are stable and documented for scripting; see
 ## Baseline: alert only on new findings
 
 Record the current state, then on later runs report only findings that are new
-relative to that baseline. This is how you adopt Argus on a large existing
+relative to that baseline. This is how you adopt Nephilex on a large existing
 codebase without drowning in day-one debt.
 
 ```bash
 # 1. Capture the current findings as a baseline
-argus scan ./app -f json -o baseline.json
+nephilex scan ./app -f json -o baseline.json
 
 # 2. On later runs, ignore anything already in the baseline
-argus scan ./app --baseline baseline.json
+nephilex scan ./app --baseline baseline.json
 ```
 
 Findings are matched by a stable fingerprint, so unrelated line moves do not
@@ -55,7 +55,7 @@ resurface an accepted issue.
 
 ## Exclude paths
 
-Skip vendored code, fixtures, or generated bundles from `.argus.yml`:
+Skip vendored code, fixtures, or generated bundles from `.nephilex.yml`:
 
 ```yaml
 exclude_paths:
@@ -70,14 +70,14 @@ are skipped automatically.
 
 ## Suppress a specific finding inline
 
-Accept one finding on one line with a documented reason, using an `argus-ignore`
+Accept one finding on one line with a documented reason, using a `nephilex-ignore`
 comment on the offending line. The reason is **required**, so every suppression
 explains itself:
 
 ```python
 subprocess.run(
     cmd, shell=True
-)  # argus-ignore: python-shell-true reason="fixed internal command, no user input"
+)  # nephilex-ignore: python-shell-true reason="fixed internal command, no user input"
 ```
 
 - Scope by rule id (full `patterns.python-shell-true`, short `python-shell-true`,
@@ -87,24 +87,24 @@ subprocess.run(
 
   | Comment | Files |
   |---|---|
-  | `-- argus-ignore ...` | SQL (`.sql`), Lua (`.lua`), Haskell (`.hs`) |
-  | `<!-- argus-ignore ... -->` | HTML (`.html`, `.htm`, `.xhtml`), XML (`.xml`), Markdown (`.md`, `.markdown`) |
-  | `; argus-ignore ...` | INI (`.ini`), Lisp (`.lisp`, `.lsp`, `.el`, `.clj`) |
+  | `-- nephilex-ignore ...` | SQL (`.sql`), Lua (`.lua`), Haskell (`.hs`) |
+  | `<!-- nephilex-ignore ... -->` | HTML (`.html`, `.htm`, `.xhtml`), XML (`.xml`), Markdown (`.md`, `.markdown`) |
+  | `; nephilex-ignore ...` | INI (`.ini`), Lisp (`.lisp`, `.lsp`, `.el`, `.clj`) |
 
   ```sql
-  INSERT INTO settings VALUES ('smtp_password', 'changeme');  -- argus-ignore reason="local dev seed data"
+  INSERT INTO settings VALUES ('smtp_password', 'changeme');  -- nephilex-ignore reason="local dev seed data"
   ```
 - **Expiring suppressions.** Add `until=YYYY-MM-DD` and the suppression lapses on
   that date, so accepted risk resurfaces instead of hiding forever:
 
 ```python
-eval(payload)  # argus-ignore: ast-code-injection reason="tracked in JIRA-123" until=2026-12-31
+eval(payload)  # nephilex-ignore: ast-code-injection reason="tracked in JIRA-123" until=2026-12-31
 ```
 
 ## Allowlist file (accepted risk in one place)
 
 When you would rather keep suppressions outside the source, list them under
-`allow:` in `.argus.yml`. Each entry needs a `reason`, scopes by `rule` and/or
+`allow:` in `.nephilex.yml`. Each entry needs a `reason`, scopes by `rule` and/or
 `path` (glob), and may `expire`:
 
 ```yaml
@@ -127,6 +127,6 @@ suppressions.
 For agents and CI, prefer structured output and keep logs on stderr:
 
 ```bash
-argus scan ./app -f sarif -o results.sarif   # GitHub Code Scanning
-argus scan ./app -f json                      # pipe to jq, dashboards, or an agent
+nephilex scan ./app -f sarif -o results.sarif   # GitHub Code Scanning
+nephilex scan ./app -f json                      # pipe to jq, dashboards, or an agent
 ```

@@ -8,9 +8,9 @@ import types
 import httpx
 import pytest
 
-from argus.ai.anthropic_provider import AnthropicProvider
-from argus.ai.ollama_provider import OllamaProvider
-from argus.ai.openai_provider import OpenAIProvider
+from nephilex.ai.anthropic_provider import AnthropicProvider
+from nephilex.ai.ollama_provider import OllamaProvider
+from nephilex.ai.openai_provider import OpenAIProvider
 
 
 class _Recorder:
@@ -43,21 +43,21 @@ def _fake_anthropic(monkeypatch) -> list[_Recorder]:
 
 
 def test_anthropic_default_model_is_current(monkeypatch):
-    monkeypatch.delenv("ARGUS_AI_MODEL", raising=False)
+    monkeypatch.delenv("NEPHILEX_AI_MODEL", raising=False)
     assert AnthropicProvider().model == "claude-sonnet-5-5"
 
 
 def test_model_overridable_by_env_and_config(monkeypatch):
-    monkeypatch.setenv("ARGUS_AI_MODEL", "claude-opus-5-5")
+    monkeypatch.setenv("NEPHILEX_AI_MODEL", "claude-opus-5-5")
     assert AnthropicProvider().model == "claude-opus-5-5"
     assert AnthropicProvider(model="claude-haiku-5-5").model == "claude-haiku-5-5"
 
 
 def test_anthropic_client_has_timeout_and_retries(monkeypatch):
     made = _fake_anthropic(monkeypatch)
-    monkeypatch.delenv("ARGUS_AI_MODEL", raising=False)
-    monkeypatch.setenv("ARGUS_AI_TIMEOUT", "30")
-    monkeypatch.setenv("ARGUS_AI_MAX_RETRIES", "4")
+    monkeypatch.delenv("NEPHILEX_AI_MODEL", raising=False)
+    monkeypatch.setenv("NEPHILEX_AI_TIMEOUT", "30")
+    monkeypatch.setenv("NEPHILEX_AI_MAX_RETRIES", "4")
     assert AnthropicProvider().complete("s", "u") == "ok"
     assert made[0].kwargs["timeout"] == 30.0
     assert made[0].kwargs["max_retries"] == 4
@@ -65,8 +65,8 @@ def test_anthropic_client_has_timeout_and_retries(monkeypatch):
 
 def test_anthropic_defaults_without_env(monkeypatch):
     made = _fake_anthropic(monkeypatch)
-    monkeypatch.delenv("ARGUS_AI_TIMEOUT", raising=False)
-    monkeypatch.delenv("ARGUS_AI_MAX_RETRIES", raising=False)
+    monkeypatch.delenv("NEPHILEX_AI_TIMEOUT", raising=False)
+    monkeypatch.delenv("NEPHILEX_AI_MAX_RETRIES", raising=False)
     AnthropicProvider().complete("s", "u")
     assert made[0].kwargs["timeout"] == 60.0
     assert made[0].kwargs["max_retries"] == 2
@@ -89,7 +89,7 @@ def test_openai_client_has_timeout_and_retries(monkeypatch):
 
     monkeypatch.setitem(sys.modules, "openai", types.SimpleNamespace(OpenAI=factory))
     monkeypatch.setenv("OPENAI_API_KEY", "k")
-    monkeypatch.delenv("ARGUS_AI_TIMEOUT", raising=False)
+    monkeypatch.delenv("NEPHILEX_AI_TIMEOUT", raising=False)
     OpenAIProvider()._get_client()
     assert seen["timeout"] == 60.0 and seen["max_retries"] == 2
 
@@ -126,8 +126,8 @@ def test_ollama_retries_transport_errors(monkeypatch):
             200, json={"message": {"content": " hi "}}, request=httpx.Request("POST", url)
         )
 
-    monkeypatch.delenv("ARGUS_AI_TIMEOUT", raising=False)
-    monkeypatch.delenv("ARGUS_AI_MAX_RETRIES", raising=False)
+    monkeypatch.delenv("NEPHILEX_AI_TIMEOUT", raising=False)
+    monkeypatch.delenv("NEPHILEX_AI_MAX_RETRIES", raising=False)
     monkeypatch.setattr(httpx, "post", flaky)
     assert OllamaProvider().complete("s", "u") == "hi"
     assert calls["n"] == 3

@@ -2,15 +2,15 @@
 
 from __future__ import annotations
 
-from argus.core.config import Config
-from argus.core.models import Severity
-from argus.core.plugin import ScannerContext, registry
-from argus.scanners.dependencies import _matches_range, _parse_requirements
-from argus.scanners.secrets import _shannon_entropy
+from nephilex.core.config import Config
+from nephilex.core.models import Severity
+from nephilex.core.plugin import ScannerContext, registry
+from nephilex.scanners.dependencies import _matches_range, _parse_requirements
+from nephilex.scanners.secrets import _shannon_entropy
 
 
 def _run(scanner_name: str, project, config: Config | None = None) -> list:
-    from argus.analysis.repository import RepositoryAnalyzer
+    from nephilex.analysis.repository import RepositoryAnalyzer
 
     RepositoryAnalyzer().analyze(project)
     cls = registry.get_scanner(scanner_name)
@@ -124,7 +124,7 @@ def test_dependencies_flags_known_cve(vulnerable_project):
 
 def test_dependencies_uses_osv_when_online(monkeypatch, vulnerable_project):
     """When online, findings come from OSV; failures fall back to the seed."""
-    from argus.scanners import osv
+    from nephilex.scanners import osv
 
     fake = {
         ("flask", "2.0.1"): [
@@ -150,7 +150,7 @@ def test_dependencies_uses_osv_when_online(monkeypatch, vulnerable_project):
 
 
 def test_dependencies_falls_back_when_osv_errors(monkeypatch, vulnerable_project):
-    from argus.scanners import osv
+    from nephilex.scanners import osv
 
     def boom(*a, **k):
         raise osv.OSVError("network down")
@@ -185,8 +185,8 @@ def test_entropy_distinguishes_random_from_words():
 
 # --- false-positive suppression (validated against real-world scans) ---------
 def _run_patterns(tmp_path, rel_path: str, content: str):
-    from argus.analysis.repository import RepositoryAnalyzer
-    from argus.core.project import Project
+    from nephilex.analysis.repository import RepositoryAnalyzer
+    from nephilex.core.project import Project
 
     target = tmp_path / rel_path
     target.parent.mkdir(parents=True, exist_ok=True)
@@ -235,7 +235,7 @@ def test_eval_exec_flags_builtins_not_method_calls(tmp_path):
 
 
 def test_test_file_findings_are_downgraded(tmp_path):
-    from argus.core.models import Confidence, Severity
+    from nephilex.core.models import Confidence, Severity
 
     findings = _run_patterns(tmp_path, "tests/test_x.py", "r = requests.get(url, verify=False)\n")
     tls = [f for f in findings if f.rule_id == "patterns.tls-verify-disabled"]
@@ -246,7 +246,7 @@ def test_test_file_findings_are_downgraded(tmp_path):
 
 
 def test_private_key_in_tests_dir_downgraded(clean_project, tmp_path):
-    from argus.core.models import Severity
+    from nephilex.core.models import Severity
 
     # A private key committed under a top-level tests/ dir is test material.
     key = tmp_path / "tests" / "certs" / "server.key"
@@ -254,7 +254,7 @@ def test_private_key_in_tests_dir_downgraded(clean_project, tmp_path):
     key.write_text(
         "-----BEGIN PRIVATE KEY-----\nMIIabc\n-----END PRIVATE KEY-----\n", encoding="utf-8"
     )
-    from argus.core.project import Project
+    from nephilex.core.project import Project
 
     project = Project.from_path(tmp_path)
     cls = registry.get_scanner("secrets")

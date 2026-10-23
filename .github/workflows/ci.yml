@@ -37,7 +37,7 @@ jobs:
         run: ruff format --check .
 
       - name: Type check
-        run: mypy src/argus
+        run: mypy src/nephilex
 
   test:
     name: Test (${{ matrix.os }}, Python ${{ matrix.python-version }})
@@ -71,7 +71,7 @@ jobs:
         run: pip install -e ".[dev,ast]"
 
       - name: Test
-        run: pytest -q --cov=argus --cov-report=term-missing
+        run: pytest -q --cov=nephilex --cov-report=term-missing
 
       - name: Accuracy benchmark (labeled corpus regression gate)
         run: python benchmarks/accuracy.py
@@ -104,6 +104,6 @@ jobs:
         with:
           persist-credentials: false
       - name: Build
-        run: docker build -t argus:ci .
+        run: docker build -t nephilex:ci .
       - name: Smoke test the image
-        run: docker run --rm -v "$PWD/examples/vulnerable-app:/work" argus:ci scan /work --min-severity high
+        run: docker run --rm -v "$PWD/examples/vulnerable-app:/work" nephilex:ci scan /work --min-severity high

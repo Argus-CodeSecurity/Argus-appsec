@@ -1,4 +1,4 @@
-"""Tests for argus agent."""
+"""Tests for nephilex agent."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from argus.agent.config import load_agent_config, write_default_agent_config
+from nephilex.agent.config import load_agent_config, write_default_agent_config
 
 
 def test_load_agent_config(tmp_path: Path):
@@ -30,7 +30,7 @@ def test_load_agent_config_requires_targets(tmp_path: Path):
 
 
 def test_write_default_agent_config(tmp_path: Path):
-    path = tmp_path / ".argus" / "agent.yml"
+    path = tmp_path / ".nephilex" / "agent.yml"
     write_default_agent_config(path)
     assert path.is_file()
     cfg = load_agent_config(path)
@@ -40,6 +40,6 @@ def test_write_default_agent_config(tmp_path: Path):
 def test_agent_cli_registered():
     import typer
 
-    from argus.cli.main import app
+    from nephilex.cli.main import app
 
     assert "agent" in typer.main.get_command(app).commands

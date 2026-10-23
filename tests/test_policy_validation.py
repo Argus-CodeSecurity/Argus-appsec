@@ -8,9 +8,9 @@ from pathlib import Path
 import pytest
 from typer.testing import CliRunner
 
-from argus.cli.main import app
-from argus.core.models import Finding, Location, ScanResult, Severity
-from argus.policy import PolicyError, evaluate, load_policies
+from nephilex.cli.main import app
+from nephilex.core.models import Finding, Location, ScanResult, Severity
+from nephilex.policy import PolicyError, evaluate, load_policies
 
 runner = CliRunner()
 
@@ -68,7 +68,7 @@ def test_valid_policies_load_from_list_or_config_mapping() -> None:
 
 def _project(tmp_path: Path, config: str) -> Path:
     (tmp_path / "app.py").write_text("x = 1\n", encoding="utf-8")
-    (tmp_path / ".argus.yml").write_text(config, encoding="utf-8")
+    (tmp_path / ".nephilex.yml").write_text(config, encoding="utf-8")
     return tmp_path
 
 

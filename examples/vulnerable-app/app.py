@@ -1,4 +1,4 @@
-"""An intentionally vulnerable Flask app used to demonstrate Argus.
+"""An intentionally vulnerable Flask app used to demonstrate Nephilex.
 
 DO NOT deploy this. Every issue here is deliberate so the scanners and the
 Attack Simulation Mode have something to find.

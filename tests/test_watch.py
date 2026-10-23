@@ -1,12 +1,12 @@
-"""Tests for argus watch scheduler."""
+"""Tests for nephilex watch scheduler."""
 
 from __future__ import annotations
 
 from datetime import datetime, timezone
 from pathlib import Path
 
-from argus.core.models import Finding, Location, ScanResult, Severity
-from argus.watch.scheduler import (
+from nephilex.core.models import Finding, Location, ScanResult, Severity
+from nephilex.watch.scheduler import (
     latest_snapshot_path,
     load_snapshot,
     run_watch_cycle,
@@ -19,7 +19,7 @@ def _scan(target: str, *findings: Finding) -> ScanResult:
     return ScanResult(
         target=target,
         started_at=datetime.now(timezone.utc),
-        argus_version="0.8.0",
+        nephilex_version="0.8.0",
         findings=list(findings),
     )
 
@@ -37,7 +37,7 @@ def _f(rule: str) -> Finding:
 
 
 def test_state_dir_sanitizes_target():
-    assert state_dir_for("https://github.com/org/repo", Path(".argus/watch")).name.startswith(
+    assert state_dir_for("https://github.com/org/repo", Path(".nephilex/watch")).name.startswith(
         "https"
     )
 
@@ -75,6 +75,6 @@ def test_watch_once_exits(tmp_path: Path):
 def test_watch_cli_registered():
     import typer
 
-    from argus.cli.main import app
+    from nephilex.cli.main import app
 
     assert "watch" in typer.main.get_command(app).commands

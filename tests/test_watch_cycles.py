@@ -1,4 +1,4 @@
-"""`argus watch` must see changes made between cycles."""
+"""`nephilex watch` must see changes made between cycles."""
 
 from __future__ import annotations
 
@@ -6,8 +6,8 @@ from pathlib import Path
 
 from typer.testing import CliRunner
 
-import argus.watch
-from argus.cli.main import app
+import nephilex.watch
+from nephilex.cli.main import app
 
 runner = CliRunner()
 
@@ -25,7 +25,7 @@ def test_each_watch_cycle_rescans_current_files(tmp_path: Path, monkeypatch) -> 
         results.append(scan_fn())
         return 0
 
-    monkeypatch.setattr(argus.watch, "run_watch_loop", fake_loop)
+    monkeypatch.setattr(nephilex.watch, "run_watch_loop", fake_loop)
     res = runner.invoke(
         app,
         [

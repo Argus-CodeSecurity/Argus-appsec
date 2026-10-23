@@ -2,13 +2,13 @@
 
 Codebases now embed LLM calls, agent frameworks, MCP servers and model loading,
 and that surface has its own vulnerability classes that generic SAST does not
-cover. Argus ships two scanners for it, with every finding mapped to an id in
+cover. Nephilex ships two scanners for it, with every finding mapped to an id in
 the [OWASP Top 10 for LLM Applications 2025](https://genai.owasp.org/llm-top-10/)
 and to a CWE:
 
 | Scanner | Reads | Needs |
 |---------|-------|-------|
-| `llm` | Python and JS/TS files that touch an LLM or agent stack (OpenAI, Anthropic, LangChain, LlamaIndex, LiteLLM, Ollama, Google GenAI, CrewAI, AutoGen, MCP SDKs, transformers) | The data-flow rules need the `[ast]` extra (`pip install "argus-appsec[ast]"`); the line rules always run |
+| `llm` | Python and JS/TS files that touch an LLM or agent stack (OpenAI, Anthropic, LangChain, LlamaIndex, LiteLLM, Ollama, Google GenAI, CrewAI, AutoGen, MCP SDKs, transformers) | The data-flow rules need the `[ast]` extra (`pip install "nephilex[ast]"`); the line rules always run |
 | `agent-config` | MCP and agent configuration files (`.mcp.json`, `.cursor/mcp.json`, `.vscode/mcp.json`, `claude_desktop_config.json`, `.claude/settings.json`, Windsurf `mcp_config.json`, Cline, Roo Code, Gemini CLI) | Nothing extra |
 
 Every finding carries `owasp` and `metadata.owasp_llm` (for example
@@ -17,7 +17,7 @@ Every finding carries `owasp` and `metadata.owasp_llm` (for example
 category.
 
 ```bash
-argus scan ./my-ai-app --scanners llm,agent-config
+nephilex scan ./my-ai-app --scanners llm,agent-config
 ```
 
 ## Rules

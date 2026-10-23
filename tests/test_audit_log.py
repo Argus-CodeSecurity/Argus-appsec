@@ -1,4 +1,4 @@
-"""Audit log (.argus/audit.log): hash chain, tamper detection, concurrency, redaction."""
+"""Audit log (.nephilex/audit.log): hash chain, tamper detection, concurrency, redaction."""
 
 from __future__ import annotations
 
@@ -12,8 +12,8 @@ from pathlib import Path
 import pytest
 from typer.testing import CliRunner
 
-import argus
-from argus.audit import (
+import nephilex
+from nephilex.audit import (
     AUDIT_PATH,
     GENESIS_HASH,
     AuditEvent,
@@ -22,13 +22,13 @@ from argus.audit import (
     record_hash,
     verify_log,
 )
-from argus.cli.main import app
-from argus.core.config import Config, load_project_config
-from argus.core.engine import ScanEngine
-from argus.core.models import Finding, Location, Severity
-from argus.core.project import Project
-from argus.remediation import git_ops
-from argus.remediation.applier import apply_fixes
+from nephilex.cli.main import app
+from nephilex.core.config import Config, load_project_config
+from nephilex.core.engine import ScanEngine
+from nephilex.core.models import Finding, Location, Severity
+from nephilex.core.project import Project
+from nephilex.remediation import git_ops
+from nephilex.remediation.applier import apply_fixes
 
 runner = CliRunner()
 ACTOR = "Test User <test@example.com>"
@@ -161,7 +161,7 @@ def test_concurrent_threads_do_not_fork_the_chain(tmp_path: Path) -> None:
 
 _WRITER = """
 import sys
-from argus.audit import AuditEvent, append_events
+from nephilex.audit import AuditEvent, append_events
 root, tag = sys.argv[1], sys.argv[2]
 for j in range(15):
     res = append_events(root, [AuditEvent(action="fix.applied", rule=f"{tag}.{j}", path="a.py")],
@@ -172,7 +172,7 @@ for j in range(15):
 
 def test_concurrent_processes_do_not_fork_the_chain(tmp_path: Path) -> None:
     env = dict(os.environ)
-    src = str(Path(argus.__file__).resolve().parents[1])
+    src = str(Path(nephilex.__file__).resolve().parents[1])
     env["PYTHONPATH"] = src + os.pathsep + env.get("PYTHONPATH", "")
     procs = [
         subprocess.Popen(
@@ -243,13 +243,13 @@ def test_dry_run_and_disabled_log_record_nothing(tmp_path: Path, monkeypatch) ->
     )
     apply_fixes(Project.from_path(tmp_path), [finding], dry_run=True)
     assert not (tmp_path / AUDIT_PATH).exists()
-    monkeypatch.setenv("ARGUS_AUDIT_LOG", "off")
+    monkeypatch.setenv("NEPHILEX_AUDIT_LOG", "off")
     apply_fixes(Project.from_path(tmp_path), [finding])
     assert not (tmp_path / AUDIT_PATH).exists()
 
 
 def test_unwritable_log_is_a_warning(tmp_path: Path) -> None:
-    (tmp_path / ".argus").write_text("not a directory", encoding="utf-8")
+    (tmp_path / ".nephilex").write_text("not a directory", encoding="utf-8")
     res = append_events(tmp_path, _events(1), actor=ACTOR)
     assert res.written == 0 and res.warning and "not written" in res.warning
 
@@ -258,7 +258,7 @@ def test_symlinked_log_is_refused(tmp_path: Path) -> None:
     outside = tmp_path / "outside.txt"
     outside.write_text("precious\n", encoding="utf-8")
     root = tmp_path / "repo"
-    (root / ".argus").mkdir(parents=True)
+    (root / ".nephilex").mkdir(parents=True)
     try:
         (root / AUDIT_PATH).symlink_to(outside)
     except OSError:
@@ -271,7 +271,7 @@ def test_symlinked_log_is_refused(tmp_path: Path) -> None:
 # --- suppression events from scans ---------------------------------------------------
 _IGNORED = (
     "import subprocess\n"
-    'subprocess.run(cmd, shell=True)  # argus-ignore: python-shell-true reason="{reason}"\n'
+    'subprocess.run(cmd, shell=True)  # nephilex-ignore: python-shell-true reason="{reason}"\n'
 )
 
 
@@ -312,7 +312,7 @@ def test_allowlist_and_exceptions_are_recorded(tmp_path: Path) -> None:
     (tmp_path / "h.py").write_text(
         "import hashlib\ndef h(p):\n    return hashlib.md5(p).hexdigest()\n", encoding="utf-8"
     )
-    (tmp_path / ".argus.yml").write_text(
+    (tmp_path / ".nephilex.yml").write_text(
         "allow:\n  - {rule: python-yaml-load, path: loader.py, reason: input is our own file}\n",
         encoding="utf-8",
     )
@@ -322,7 +322,7 @@ def test_allowlist_and_exceptions_are_recorded(tmp_path: Path) -> None:
     cfg.ai.enabled = False
     result = ScanEngine(cfg).scan(project)
     md5 = next(f for f in result.findings if f.location.path == "h.py")
-    (tmp_path / ".argus" / "exceptions.yml").write_text(
+    (tmp_path / ".nephilex" / "exceptions.yml").write_text(
         "exceptions:\n"
         f"  - {{fingerprint: '{md5.fingerprint()}', status: accept, reason: legacy checksum,"
         " owner: sec@example.com}\n",
@@ -341,7 +341,7 @@ def test_allowlist_and_exceptions_are_recorded(tmp_path: Path) -> None:
 
 
 def test_untrusted_or_disabled_scans_do_not_write(tmp_path: Path, monkeypatch) -> None:
-    (tmp_path / ".argus.yml").write_text(
+    (tmp_path / ".nephilex.yml").write_text(
         "allow:\n  - {rule: python-shell-true, reason: ok}\n", encoding="utf-8"
     )
     (tmp_path / "run.py").write_text(_IGNORED.format(reason="x"), encoding="utf-8")
@@ -349,7 +349,7 @@ def test_untrusted_or_disabled_scans_do_not_write(tmp_path: Path, monkeypatch) -
     assert not (tmp_path / AUDIT_PATH).exists()
     _scan(tmp_path, audit_log=False)
     assert not (tmp_path / AUDIT_PATH).exists()
-    monkeypatch.setenv("ARGUS_AUDIT_LOG", "0")
+    monkeypatch.setenv("NEPHILEX_AUDIT_LOG", "0")
     _scan(tmp_path)
     assert not (tmp_path / AUDIT_PATH).exists()
 
@@ -362,7 +362,7 @@ def test_audit_log_config_key_is_validated() -> None:
 
 def test_unwritable_log_never_fails_a_scan(tmp_path: Path) -> None:
     (tmp_path / "run.py").write_text(_IGNORED.format(reason="x"), encoding="utf-8")
-    (tmp_path / ".argus").write_text("a file, not a folder", encoding="utf-8")
+    (tmp_path / ".nephilex").write_text("a file, not a folder", encoding="utf-8")
     project = Project.from_path(tmp_path)
     cfg = load_project_config(project)
     cfg.scanners = ["patterns"]
@@ -377,15 +377,15 @@ def test_postprocess_applies_suppressions_and_context_to_external_findings(
 ) -> None:
     from datetime import datetime, timezone
 
-    from argus.core.models import ScanResult
+    from nephilex.core.models import ScanResult
 
     (tmp_path / "scripts").mkdir()
     (tmp_path / "scripts" / "a.py").write_text("x = 1\n", encoding="utf-8")
-    (tmp_path / ".argus").mkdir()
-    (tmp_path / ".argus" / "context.yml").write_text(
+    (tmp_path / ".nephilex").mkdir()
+    (tmp_path / ".nephilex" / "context.yml").write_text(
         "internal_paths: ['scripts/**']\n", encoding="utf-8"
     )
-    (tmp_path / ".argus.yml").write_text(
+    (tmp_path / ".nephilex.yml").write_text(
         "allow:\n  - {rule: ext.noisy, reason: tool is wrong here}\n", encoding="utf-8"
     )
 
@@ -502,7 +502,7 @@ def _git(root: Path, *args: str) -> str:
 
 @pytest.mark.skipif(not git_ops.git_available(), reason="git not installed")
 def test_fix_workflow_commits_the_audit_log_with_the_fix(tmp_path: Path, monkeypatch) -> None:
-    from argus.remediation.pullrequest import FixOptions, run_fix_workflow
+    from nephilex.remediation.pullrequest import FixOptions, run_fix_workflow
 
     empty = tmp_path / "empty.gitconfig"
     empty.write_text("", encoding="utf-8")
@@ -515,7 +515,7 @@ def test_fix_workflow_commits_the_audit_log_with_the_fix(tmp_path: Path, monkeyp
     _git(root, *ID, "add", "-A")
     _git(root, *ID, "commit", "-qm", "init")
     # A scan just recorded a suppression: the log is new and untracked. That
-    # alone must not make `argus fix` refuse the "dirty" tree.
+    # alone must not make `nephilex fix` refuse the "dirty" tree.
     append_events(root, _events(1, "scan"), actor=ACTOR)
 
     finding = Finding(

@@ -1,4 +1,4 @@
-"""Tests for `argus push` upload: payload building and the HTTP push."""
+"""Tests for `nephilex push` upload: payload building and the HTTP push."""
 
 from __future__ import annotations
 
@@ -8,8 +8,8 @@ from datetime import datetime, timezone
 import httpx
 import pytest
 
-from argus.core.models import Finding, Location, ScanResult, Severity
-from argus.upload import PushError, build_ingest_payload, push_result
+from nephilex.core.models import Finding, Location, ScanResult, Severity
+from nephilex.upload import PushError, build_ingest_payload, push_result
 
 
 def _finding(rule_id: str, sev: Severity, *, path="app.py", line=1, cwe=None) -> Finding:
@@ -26,7 +26,7 @@ def _finding(rule_id: str, sev: Severity, *, path="app.py", line=1, cwe=None) ->
 
 
 def _result() -> ScanResult:
-    r = ScanResult(target="myrepo", started_at=datetime.now(timezone.utc), argus_version="9.9.9")
+    r = ScanResult(target="myrepo", started_at=datetime.now(timezone.utc), nephilex_version="9.9.9")
     r.findings = [
         _finding("patterns.a", Severity.CRITICAL, line=1, cwe=["CWE-89"]),
         _finding("patterns.b", Severity.HIGH, line=2),
@@ -41,7 +41,7 @@ def _result() -> ScanResult:
 def test_build_ingest_payload_shape_and_counts():
     payload = build_ingest_payload(_result())
     assert payload["target"] == "myrepo"
-    assert payload["argus_version"] == "9.9.9"
+    assert payload["nephilex_version"] == "9.9.9"
     assert isinstance(payload["risk_score"], int)
     # INFO is dropped at the default floor (LOW); the other four remain.
     assert payload["counts"] == {"critical": 1, "high": 1, "medium": 1, "low": 1}

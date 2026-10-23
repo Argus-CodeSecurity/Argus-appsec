@@ -9,7 +9,7 @@ from pathlib import Path
 import pytest
 from typer.testing import CliRunner
 
-from argus.cli.main import app
+from nephilex.cli.main import app
 
 pytestmark = pytest.mark.skipif(shutil.which("git") is None, reason="git not installed")
 

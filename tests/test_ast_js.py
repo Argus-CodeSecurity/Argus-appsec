@@ -13,14 +13,14 @@ pytest.importorskip("tree_sitter")
 pytest.importorskip("tree_sitter_javascript")
 pytest.importorskip("tree_sitter_typescript")
 
-from argus.core.config import Config  # noqa: E402
-from argus.core.plugin import ScannerContext, registry  # noqa: E402
-from argus.scanners import ast_js  # noqa: E402
+from nephilex.core.config import Config  # noqa: E402
+from nephilex.core.plugin import ScannerContext, registry  # noqa: E402
+from nephilex.scanners import ast_js  # noqa: E402
 
 
 def _run(tmp_path, filename: str, code: str):
-    from argus.analysis.repository import RepositoryAnalyzer
-    from argus.core.project import Project
+    from nephilex.analysis.repository import RepositoryAnalyzer
+    from nephilex.core.project import Project
 
     (tmp_path / filename).write_text(code, encoding="utf-8")
     project = Project.from_path(tmp_path)
@@ -150,8 +150,8 @@ def test_taint_scoped_per_function(tmp_path):
 
 def test_ast_beats_regex_via_dedupe(tmp_path):
     """On a real SQLi, the AST (High) finding wins over the regex (Low) one."""
-    from argus.core.engine import ScanEngine
-    from argus.core.project import Project
+    from nephilex.core.engine import ScanEngine
+    from nephilex.core.project import Project
 
     (tmp_path / "app.js").write_text(
         "app.get('/u',(req,res)=>{\n"
@@ -169,8 +169,8 @@ def test_ast_beats_regex_via_dedupe(tmp_path):
 def test_ast_suppresses_regex_false_positive_on_sanitized_html(tmp_path):
     """When ast-js ran, the regex innerHTML guess is dropped for JS/TS files, so a
     sanitized assignment produces no finding at all (the key FP fix)."""
-    from argus.core.engine import ScanEngine
-    from argus.core.project import Project
+    from nephilex.core.engine import ScanEngine
+    from nephilex.core.project import Project
 
     (tmp_path / "ui.js").write_text(
         "app.get('/p',(req,res)=>{\n"

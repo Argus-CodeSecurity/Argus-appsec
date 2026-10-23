@@ -7,12 +7,12 @@ from pathlib import Path
 
 import pytest
 
-from argus.ai.base import AIProvider
-from argus.ai.heuristic import HeuristicProvider
-from argus.core.config import Config, ConfigError
-from argus.core.engine import ScanEngine
-from argus.core.models import Finding, Location, ScanResult, Severity
-from argus.core.project import Project
+from nephilex.ai.base import AIProvider
+from nephilex.ai.heuristic import HeuristicProvider
+from nephilex.core.config import Config, ConfigError
+from nephilex.core.engine import ScanEngine
+from nephilex.core.models import Finding, Location, ScanResult, Severity
+from nephilex.core.project import Project
 
 
 class _CountingModel(AIProvider):

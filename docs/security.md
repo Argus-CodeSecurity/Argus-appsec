@@ -1,18 +1,18 @@
 # Security & threat model
 
-A security tool is also an attack surface. Argus clones untrusted repositories,
+A security tool is also an attack surface. Nephilex clones untrusted repositories,
 parses hostile files with complex parsers, runs git, holds discovered credentials
 in memory, optionally sends code to an AI layer, and writes fixes back into a
 working tree. Every one of those is a classic scanner vulnerability class, so
-Argus is engineered to defend itself, and documents where it does and does not.
+Nephilex is engineered to defend itself, and documents where it does and does not.
 
 ## Threat model
 
 The full, honest threat model lives in the repository and is kept current with the
-code. It states what Argus defends against, how, with file references, and what
+code. It states what Nephilex defends against, how, with file references, and what
 residual risk remains:
 
-- [THREAT_MODEL.md](https://github.com/Argus-CodeSecurity/Argus-appsec/blob/main/THREAT_MODEL.md)
+- [THREAT_MODEL.md](https://github.com/nephilex/nephilex/blob/main/THREAT_MODEL.md)
 
 Highlights of what is already defended:
 
@@ -24,7 +24,7 @@ Highlights of what is already defended:
   escaping symlink.
 - **Parser safety.** Every YAML load is `yaml.safe_load`; oversized files are
   skipped; rule matching skips over-long lines to bound regex cost.
-- **Malicious repo config.** A scanned repository's own `.argus.yml` is ignored by
+- **Malicious repo config.** A scanned repository's own `.nephilex.yml` is ignored by
   default and is opt-in via `--trust-remote-config`.
 - **Secret handling.** Values are redacted to a prefix plus length everywhere;
   live verification is opt-in and read-only.
@@ -34,7 +34,7 @@ Highlights of what is already defended:
 
 Please report privately, not in a public issue:
 
-- [SECURITY.md](https://github.com/Argus-CodeSecurity/Argus-appsec/blob/main/SECURITY.md)
+- [SECURITY.md](https://github.com/nephilex/nephilex/blob/main/SECURITY.md)
 
 Scanner-escape bugs (reading, writing, executing, or leaking outside the scan
 boundary) are treated as high severity.
@@ -43,5 +43,5 @@ boundary) are treated as high severity.
 
 The default `heuristic` provider and the `ollama` provider keep your source on
 your machine. The `anthropic` and `openai` providers send code to those services;
-choose one appropriate to your confidentiality requirements. `argus providers`
+choose one appropriate to your confidentiality requirements. `nephilex providers`
 shows which are local and which are remote.

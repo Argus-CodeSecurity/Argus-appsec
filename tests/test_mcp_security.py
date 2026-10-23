@@ -9,7 +9,7 @@ import time
 
 import pytest
 
-from argus.mcp import server
+from nephilex.mcp import server
 
 
 def _call(path: str) -> dict:
@@ -18,7 +18,7 @@ def _call(path: str) -> dict:
             "jsonrpc": "2.0",
             "id": 1,
             "method": "tools/call",
-            "params": {"name": "argus_scan", "arguments": {"path": path}},
+            "params": {"name": "nephilex_scan", "arguments": {"path": path}},
         }
     )
     return resp["result"]
@@ -84,11 +84,11 @@ def test_scan_does_not_trust_project_config(root, monkeypatch):
         def scan(self, project):
             from datetime import datetime, timezone
 
-            from argus.core.models import ScanResult
+            from nephilex.core.models import ScanResult
 
             return ScanResult(target=str(project.root), started_at=datetime.now(timezone.utc))
 
-    monkeypatch.setattr("argus.core.engine.ScanEngine", FakeEngine)
+    monkeypatch.setattr("nephilex.core.engine.ScanEngine", FakeEngine)
     assert _call(".")["isError"] is False
     assert seen["trust"] is False
 
@@ -104,7 +104,7 @@ def test_scan_timeout_is_reported(root, monkeypatch):
         def scan(self, project):
             time.sleep(0.5)
 
-    monkeypatch.setattr("argus.core.engine.ScanEngine", SlowEngine)
+    monkeypatch.setattr("nephilex.core.engine.ScanEngine", SlowEngine)
     result = _call(".")
     assert result["isError"] is True
     assert "did not finish" in result["content"][0]["text"]

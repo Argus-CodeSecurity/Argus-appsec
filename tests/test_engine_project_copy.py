@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from argus.core.config import Config
-from argus.core.engine import ScanEngine
-from argus.core.project import Project
+from nephilex.core.config import Config
+from nephilex.core.engine import ScanEngine
+from nephilex.core.project import Project
 
 
 def _config(**kwargs) -> Config:

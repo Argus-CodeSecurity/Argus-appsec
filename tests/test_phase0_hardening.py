@@ -3,8 +3,8 @@
 Covers the fixes that continuous, unattended running would otherwise amplify:
 
 * the ``FileRef.text()`` data race under parallel scanning,
-* the ``git add -A`` hazard in ``argus fix`` (dirty tree + scoped staging),
-* untrusted-repo rule injection / ReDoS via the ``.argus/rules`` convention dir,
+* the ``git add -A`` hazard in ``nephilex fix`` (dirty tree + scoped staging),
+* untrusted-repo rule injection / ReDoS via the ``.nephilex/rules`` convention dir,
 * the ``torch.load`` / ``yaml.load`` rewrites that used to "verify" while broken.
 """
 
@@ -17,14 +17,14 @@ from pathlib import Path
 
 import pytest
 
-from argus.core.config import Config
-from argus.core.plugin import ScannerContext
-from argus.core.project import FileRef, Project
-from argus.remediation.pullrequest import FixOptions, run_fix_workflow
-from argus.remediation.rewrites import fix_line, verify_line_fixed
-from argus.scanners.custom_rules import _is_catastrophic, load_custom_rules
-from argus.scanners.patterns import RULES as BUILTIN_RULES
-from argus.scanners.patterns import PatternScanner
+from nephilex.core.config import Config
+from nephilex.core.plugin import ScannerContext
+from nephilex.core.project import FileRef, Project
+from nephilex.remediation.pullrequest import FixOptions, run_fix_workflow
+from nephilex.remediation.rewrites import fix_line, verify_line_fixed
+from nephilex.scanners.custom_rules import _is_catastrophic, load_custom_rules
+from nephilex.scanners.patterns import RULES as BUILTIN_RULES
+from nephilex.scanners.patterns import PatternScanner
 
 git_missing = shutil.which("git") is None
 
@@ -65,7 +65,7 @@ def test_catastrophic_pattern_detector():
 
 
 def test_redos_rule_is_rejected(tmp_path: Path):
-    rules = tmp_path / ".argus" / "rules"
+    rules = tmp_path / ".nephilex" / "rules"
     rules.mkdir(parents=True)
     (rules / "r.yml").write_text(
         "rules:\n"
@@ -80,7 +80,7 @@ def test_redos_rule_is_rejected(tmp_path: Path):
 # --- untrusted-repo rule injection gate ------------------------------------
 def test_untrusted_repo_ignores_convention_rules(tmp_path: Path):
     (tmp_path / "app.py").write_text("x = 1\n", encoding="utf-8")
-    rules = tmp_path / ".argus" / "rules"
+    rules = tmp_path / ".nephilex" / "rules"
     rules.mkdir(parents=True)
     (rules / "r.yml").write_text(
         "rules:\n  - id: benign\n    pattern: 'TODO'\n    severity: low\n",
@@ -149,7 +149,7 @@ def _init_repo(tmp_path: Path) -> Path:
 
 
 def _yaml_finding():
-    from argus.core.models import Finding, Location, Severity
+    from nephilex.core.models import Finding, Location, Severity
 
     return Finding(
         id="patterns:python-yaml-load:1",
@@ -186,4 +186,4 @@ def test_fix_workflow_stages_only_changed_files(tmp_path: Path):
         text=True,
     ).stdout.split()
     # unrelated.py is never swept in; the audit log of the fix is committed with it
-    assert [p for p in committed if p != ".argus/audit.log"] == ["a.py"]
+    assert [p for p in committed if p != ".nephilex/audit.log"] == ["a.py"]

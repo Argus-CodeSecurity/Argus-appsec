@@ -1,4 +1,4 @@
-"""Imported findings get the same post-processing as Argus's own (ScanEngine.postprocess)."""
+"""Imported findings get the same post-processing as Nephilex's own (ScanEngine.postprocess)."""
 
 from __future__ import annotations
 
@@ -7,11 +7,11 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 
-from argus.core.config import load_project_config
-from argus.core.models import Finding, Location, ScanResult, Severity
-from argus.core.project import Project
-from argus.importers import import_result, merge_into, parse_sarif, pipeline
-from argus.importers.sarif import SarifImport
+from nephilex.core.config import load_project_config
+from nephilex.core.models import Finding, Location, ScanResult, Severity
+from nephilex.core.project import Project
+from nephilex.importers import import_result, merge_into, parse_sarif, pipeline
+from nephilex.importers.sarif import SarifImport
 
 
 def _doc(results: list) -> dict:
@@ -34,7 +34,7 @@ def _imported(root: Path, results: list) -> SarifImport:
 
 
 def _records(root: Path) -> list[dict]:
-    log = root / ".argus" / "audit.log"
+    log = root / ".nephilex" / "audit.log"
     if not log.exists():
         return []
     return [json.loads(line) for line in log.read_text(encoding="utf-8").splitlines() if line]
@@ -56,14 +56,14 @@ def test_pipeline_uses_only_the_public_postprocess() -> None:
 def test_import_applies_context_and_records_suppressions(tmp_path: Path) -> None:
     (tmp_path / "scripts").mkdir()
     (tmp_path / "scripts" / "run.py").write_text(
-        'os.system(a)\nos.system(b)  # argus-ignore reason="constant input"\nos.system(c)\n',
+        'os.system(a)\nos.system(b)  # nephilex-ignore reason="constant input"\nos.system(c)\n',
         encoding="utf-8",
     )
-    (tmp_path / ".argus").mkdir()
-    (tmp_path / ".argus" / "context.yml").write_text(
+    (tmp_path / ".nephilex").mkdir()
+    (tmp_path / ".nephilex" / "context.yml").write_text(
         "internal_paths: ['scripts/**']\n", encoding="utf-8"
     )
-    (tmp_path / ".argus.yml").write_text(
+    (tmp_path / ".nephilex.yml").write_text(
         "allow:\n  - {rule: R3, reason: tool is wrong here}\n", encoding="utf-8"
     )
     project, cfg = _project(tmp_path)
@@ -96,7 +96,7 @@ def test_import_drops_findings_under_exclude_paths(tmp_path: Path) -> None:
     (tmp_path / "vendor_x").mkdir()
     (tmp_path / "vendor_x" / "a.py").write_text("x = 1\n", encoding="utf-8")
     (tmp_path / "app.py").write_text("x = 1\n", encoding="utf-8")
-    (tmp_path / ".argus.yml").write_text("exclude_paths: ['vendor_x/**']\n", encoding="utf-8")
+    (tmp_path / ".nephilex.yml").write_text("exclude_paths: ['vendor_x/**']\n", encoding="utf-8")
     project, cfg = _project(tmp_path)
     imported = _imported(tmp_path, [_result("vendor_x/a.py", 1), _result("app.py", 1)])
     result = import_result(imported, project, cfg)
@@ -119,7 +119,7 @@ def test_merge_into_folds_duplicates_and_keeps_scan_summary(tmp_path: Path) -> N
     scan = ScanResult(target=str(tmp_path), started_at=datetime.now(timezone.utc))
     scan.findings = [native]
     scan.scanners_run = ["patterns"]
-    scan.project_summary = {"audit": {"path": ".argus/audit.log", "recorded": 1}}
+    scan.project_summary = {"audit": {"path": ".nephilex/audit.log", "recorded": 1}}
     imported = _imported(
         tmp_path,
         [

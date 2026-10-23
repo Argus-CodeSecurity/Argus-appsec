@@ -1,7 +1,7 @@
-"""Self-defense tests: Argus must not be exploitable by a hostile repository.
+"""Self-defense tests: Nephilex must not be exploitable by a hostile repository.
 
 These cover the scanner-as-attack-surface cases where a malicious target tries to
-make Argus read or write files outside the scan root via symlinks or path
+make Nephilex read or write files outside the scan root via symlinks or path
 traversal. See THREAT_MODEL.md.
 """
 
@@ -11,9 +11,9 @@ from pathlib import Path
 
 import pytest
 
-from argus.core.models import Finding, Location, Severity
-from argus.core.project import Project
-from argus.remediation.applier import apply_fixes
+from nephilex.core.models import Finding, Location, Severity
+from nephilex.core.project import Project
+from nephilex.remediation.applier import apply_fixes
 
 
 def _symlink_or_skip(link: Path, target: Path) -> None:

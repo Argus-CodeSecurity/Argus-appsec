@@ -8,18 +8,18 @@ from pathlib import Path
 
 from typer.testing import CliRunner
 
-from argus.cli._common import apply_baseline
-from argus.cli.main import app
-from argus.core.config import Config
-from argus.core.models import Finding, Location, ScanResult
-from argus.core.project import Project
+from nephilex.cli._common import apply_baseline
+from nephilex.cli.main import app
+from nephilex.core.config import Config
+from nephilex.core.models import Finding, Location, ScanResult
+from nephilex.core.project import Project
 
 runner = CliRunner()
 _CODE = "import yaml\n\n\ndef load(s):\n    return yaml.load(s)\n"
 
 
 def _records(root: Path) -> list[dict]:
-    log = root / ".argus" / "audit.log"
+    log = root / ".nephilex" / "audit.log"
     if not log.exists():
         return []
     return [json.loads(line) for line in log.read_text(encoding="utf-8").splitlines() if line]
@@ -54,7 +54,7 @@ def test_scan_baseline_is_recorded(tmp_path: Path) -> None:
 
 def test_audit_log_false_disables_baseline_records(tmp_path: Path) -> None:
     (tmp_path / "app.py").write_text(_CODE, encoding="utf-8")
-    (tmp_path / ".argus.yml").write_text("audit_log: false\n", encoding="utf-8")
+    (tmp_path / ".nephilex.yml").write_text("audit_log: false\n", encoding="utf-8")
     report = tmp_path.parent / f"{tmp_path.name}-baseline.json"
     _scan(tmp_path, "-f", "json", "-o", str(report))
     res = _scan(tmp_path, "--baseline", str(report), "-f", "json")

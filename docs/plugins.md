@@ -1,13 +1,13 @@
 # Writing plugins
 
-Argus has three extension points, **scanners**, **reporters**, and **AI
+Nephilex has three extension points, **scanners**, **reporters**, and **AI
 providers**, and adding any of them requires no change to the core. Packages can
 also add **CLI commands**. This guide walks through each, then describes what the
 plugin API promises to keep stable (see
 [Stability and versioning](#stability-and-versioning)).
 
-Import everything a plugin needs from `argus.plugin_api`. Other modules in the
-`argus` package are internal and can change in any release.
+Import everything a plugin needs from `nephilex.plugin_api`. Other modules in the
+`nephilex` package are internal and can change in any release.
 
 ## Scanners
 
@@ -17,7 +17,7 @@ set the class attributes, and implement `scan`.
 ```python
 from collections.abc import Iterable
 
-from argus.plugin_api import (
+from nephilex.plugin_api import (
     Confidence,
     Finding,
     Location,
@@ -32,7 +32,7 @@ from argus.plugin_api import (
 @scanner  # registers the scanner with the global registry
 class TodoScanner(Scanner):
     name = "todo"  # unique id (used in config and finding ids)
-    category = "hygiene"  # grouping shown in `argus scanners`
+    category = "hygiene"  # grouping shown in `nephilex scanners`
     description = "Flags TODO/FIXME markers left in code."
 
     def applies_to(self, project) -> bool:
@@ -87,7 +87,7 @@ class TodoScanner(Scanner):
 A reporter turns a `ScanResult` into a string.
 
 ```python
-from argus.plugin_api import Reporter, ScanResult, reporter
+from nephilex.plugin_api import Reporter, ScanResult, reporter
 
 
 @reporter
@@ -103,14 +103,14 @@ class OneLineReporter(Reporter):
         )
 ```
 
-The new format is immediately available as `argus scan ... -f oneline`.
+The new format is immediately available as `nephilex scan ... -f oneline`.
 
 ## AI providers
 
 Wrap any chat-style model by subclassing `AIProvider`.
 
 ```python
-from argus.plugin_api import AIProvider, ai_provider
+from nephilex.plugin_api import AIProvider, ai_provider
 
 
 @ai_provider
@@ -129,18 +129,18 @@ class MyProvider(AIProvider):
         ...
 ```
 
-Set `is_remote` honestly, the `argus providers` command surfaces it so users can
+Set `is_remote` honestly, the `nephilex providers` command surfaces it so users can
 choose a local provider when source confidentiality matters.
 
 ## Community rules (YAML, no Python)
 
 The `patterns` scanner is rule-driven, and you can extend it with a **YAML file**,
-no code, which is the easiest way to contribute a check. Argus loads rules
+no code, which is the easiest way to contribute a check. Nephilex loads rules
 from any path in `scanner_options.patterns.rules` (a string or list, globs
-allowed) and from the convention directory `.argus/rules/*.yml` in your project.
+allowed) and from the convention directory `.nephilex/rules/*.yml` in your project.
 
 ```yaml
-# .argus/rules/team.yml
+# .nephilex/rules/team.yml
 rules:
   - id: hardcoded-internal-ip
     title: Hardcoded internal IP address
@@ -152,7 +152,7 @@ rules:
     confidence: low          # optional: low | medium | high
     why: An internal IP is baked into source.
     fix: Move host addresses into configuration.
-    suppress: 'argus:allow-internal-ip'   # optional: a regex that clears a match
+    suppress: 'nephilex:allow-internal-ip'   # optional: a regex that clears a match
 ```
 
 Findings from a custom rule are reported as `patterns.<id>`. A malformed rule is
@@ -164,11 +164,11 @@ plugin (below) only when a rule needs logic a regex can't express.
 ## Packaging a plugin
 
 Ship your plugins in a normal Python package and declare a registration callable
-under the `argus.plugins` entry-point group:
+under the `nephilex.plugins` entry-point group:
 
 ```toml
 # your_plugin/pyproject.toml
-[project.entry-points."argus.plugins"]
+[project.entry-points."nephilex.plugins"]
 my_plugin = "your_plugin:register"
 ```
 
@@ -179,14 +179,14 @@ def register() -> None:
     from your_plugin import scanners, reporters  # noqa: F401
 ```
 
-Once the package is installed alongside Argus, its plugins are discovered
+Once the package is installed alongside Nephilex, its plugins are discovered
 automatically, no configuration required.
 
 ## Stability and versioning
 
-### What `argus.plugin_api` guarantees
+### What `nephilex.plugin_api` guarantees
 
-`argus.plugin_api` is the public plugin contract. These names are stable:
+`nephilex.plugin_api` is the public plugin contract. These names are stable:
 
 | Name | What it is |
 | --- | --- |
@@ -207,28 +207,28 @@ plugin needs to do its job: `Project.root`, `Project.name`, `Project.files()`,
 `FileRef.language`, `FileRef.size`, `FileRef.text()`, `FileRef.lines()`; and
 `Config.options_for(name)`. The `Finding` and `ScanResult` fields follow the JSON
 report schema, which is stable on its own terms (see
-[COMPATIBILITY.md](https://github.com/Argus-CodeSecurity/Argus-appsec/blob/main/COMPATIBILITY.md)).
+[COMPATIBILITY.md](https://github.com/nephilex/nephilex/blob/main/COMPATIBILITY.md)).
 
-Within one plugin API version, Argus only makes additive changes: new optional
+Within one plugin API version, Nephilex only makes additive changes: new optional
 fields, new keyword arguments with defaults, new methods with default
 implementations on the base classes, new exported names. Removing or renaming any
 name above, or changing a method signature in a way that breaks existing
 subclasses or callers, raises `PLUGIN_API_VERSION`.
 
-Everything not exported from `argus.plugin_api` (including `argus.core.*`,
-`argus.scanners.*` and any underscored name) is internal. It can change in any
+Everything not exported from `nephilex.plugin_api` (including `nephilex.core.*`,
+`nephilex.scanners.*` and any underscored name) is internal. It can change in any
 release without notice, even when the plugin API version does not.
 
 ### How `api_version` works
 
 `Scanner`, `Reporter` and `AIProvider` each have a class attribute
-`api_version`, which defaults to `PLUGIN_API_VERSION` of the Argus the plugin was
+`api_version`, which defaults to `PLUGIN_API_VERSION` of the Nephilex the plugin was
 written against. Plugins should not set it themselves; inheriting the default
 records the version they were built for.
 
 When a plugin class is registered, the registry compares its `api_version` with
-the running Argus's `PLUGIN_API_VERSION`. On a mismatch the class is not
-registered: the registry logs a warning on the `argus.plugins` logger naming the
+the running Nephilex's `PLUGIN_API_VERSION`. On a mismatch the class is not
+registered: the registry logs a warning on the `nephilex.plugins` logger naming the
 plugin, its class and both versions, and the rest of the plugin package and the
 scan carry on. Selecting a skipped scanner by name then fails with a message that
 says it was skipped and why, rather than "unknown scanner". An integer
@@ -236,41 +236,41 @@ says it was skipped and why, rather than "unknown scanner". An integer
 
 When `PLUGIN_API_VERSION` is raised, the changelog lists what changed and how to
 port a plugin. Publish a plugin release built against the new version; users on
-older Argus releases keep the previous plugin release.
+older Nephilex releases keep the previous plugin release.
 
 ### Entry-point groups
 
-Argus loads third-party code from two entry-point groups. Both go through the
-same trust controls: `ARGUS_PLUGIN_ALLOWLIST`, `ARGUS_PLUGIN_BLOCKLIST` and the
-`ARGUS_TRUSTED_PLUGINS` pins (see `argus.plugins.signing`).
+Nephilex loads third-party code from two entry-point groups. Both go through the
+same trust controls: `NEPHILEX_PLUGIN_ALLOWLIST`, `NEPHILEX_PLUGIN_BLOCKLIST` and the
+`NEPHILEX_TRUSTED_PLUGINS` pins (see `nephilex.plugins.signing`).
 
-**`argus.plugins`** registers scanners, reporters and AI providers. The entry
+**`nephilex.plugins`** registers scanners, reporters and AI providers. The entry
 point is a callable that takes no arguments and registers plugins as a side
 effect, normally by importing modules that use the decorators:
 
 ```toml
-[project.entry-points."argus.plugins"]
-acme = "acme_argus:register"
+[project.entry-points."nephilex.plugins"]
+acme = "acme_nephilex:register"
 ```
 
 ```python
-# acme_argus/__init__.py
+# acme_nephilex/__init__.py
 def register() -> None:
-    from acme_argus import scanners  # noqa: F401  (runs the @scanner decorators)
+    from acme_nephilex import scanners  # noqa: F401  (runs the @scanner decorators)
 ```
 
-**`argus.commands`** adds subcommands to the `argus` CLI. The entry point is a
+**`nephilex.commands`** adds subcommands to the `nephilex` CLI. The entry point is a
 callable that receives the Typer application and registers commands on it. A
 command plugin that fails to load is skipped with a warning; it never breaks the
 built-in commands.
 
 ```toml
-[project.entry-points."argus.commands"]
-acme = "acme_argus.cli:register_commands"
+[project.entry-points."nephilex.commands"]
+acme = "acme_nephilex.cli:register_commands"
 ```
 
 ```python
-# acme_argus/cli.py
+# acme_nephilex/cli.py
 import typer
 
 
@@ -282,5 +282,5 @@ def register_commands(app: typer.Typer) -> None:
 ```
 
 The Typer application object passed to command plugins is not part of
-`argus.plugin_api`; command plugins depend on Typer's public API and should pin
+`nephilex.plugin_api`; command plugins depend on Typer's public API and should pin
 the Typer versions they support.

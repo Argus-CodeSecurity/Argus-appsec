@@ -13,11 +13,11 @@ pytest.importorskip("sqlmodel")
 from fastapi.testclient import TestClient  # noqa: E402
 from sqlmodel import Session  # noqa: E402
 
-from argus.core.config import Config  # noqa: E402
-from argus.core.engine import ScanEngine  # noqa: E402
-from argus.dashboard import db, store  # noqa: E402
-from argus.dashboard.app import CSRF_TOKEN, app  # noqa: E402
-from argus.reporting.json_reporter import JSONReporter  # noqa: E402
+from nephilex.core.config import Config  # noqa: E402
+from nephilex.core.engine import ScanEngine  # noqa: E402
+from nephilex.dashboard import db, store  # noqa: E402
+from nephilex.dashboard.app import CSRF_TOKEN, app  # noqa: E402
+from nephilex.reporting.json_reporter import JSONReporter  # noqa: E402
 
 # /api/scans only accepts JSON (CSRF protection).
 JSON = {"Content-Type": "application/json"}
@@ -25,7 +25,7 @@ JSON = {"Content-Type": "application/json"}
 
 @pytest.fixture(autouse=True)
 def _fresh_db(monkeypatch):
-    monkeypatch.setenv("ARGUS_DASHBOARD_DB", ":memory:")
+    monkeypatch.setenv("NEPHILEX_DASHBOARD_DB", ":memory:")
     db.reset_engine_for_tests()
     yield
 
@@ -111,14 +111,14 @@ def test_bad_report_is_rejected(client):
 
 
 def test_oversized_api_ingest_is_rejected(client, monkeypatch):
-    monkeypatch.setattr("argus.dashboard.app._MAX_REPORT_BYTES", 64)
+    monkeypatch.setattr("nephilex.dashboard.app._MAX_REPORT_BYTES", 64)
     r = client.post("/api/scans", content=b"{" + b"x" * 200 + b"}", headers=JSON)
     assert r.status_code == 413
     assert "byte limit" in r.json()["error"]
 
 
 def test_oversized_upload_is_rejected(client, monkeypatch):
-    monkeypatch.setattr("argus.dashboard.app._MAX_REPORT_BYTES", 64)
+    monkeypatch.setattr("nephilex.dashboard.app._MAX_REPORT_BYTES", 64)
     r = client.post(
         "/upload",
         files={"file": ("report.json", b"{" + b"x" * 200 + b"}", "application/json")},

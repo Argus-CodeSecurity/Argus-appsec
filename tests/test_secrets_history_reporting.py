@@ -4,11 +4,11 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
-from argus.core.config import Config
-from argus.core.plugin import ScannerContext
-from argus.core.project import Project
-from argus.scanners import secrets_history
-from argus.scanners.secrets import SecretsScanner
+from nephilex.core.config import Config
+from nephilex.core.plugin import ScannerContext
+from nephilex.core.project import Project
+from nephilex.scanners import secrets_history
+from nephilex.scanners.secrets import SecretsScanner
 
 
 def _run(tmp_path, monkeypatch, result) -> list:

@@ -7,10 +7,10 @@ import subprocess
 
 import pytest
 
-from argus.core.config import Config
-from argus.core.plugin import ScannerContext
-from argus.core.project import Project
-from argus.scanners.secrets import SecretsScanner
+from nephilex.core.config import Config
+from nephilex.core.plugin import ScannerContext
+from nephilex.core.project import Project
+from nephilex.scanners.secrets import SecretsScanner
 
 
 def _git(root, *args):

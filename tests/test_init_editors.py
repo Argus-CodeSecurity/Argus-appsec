@@ -1,4 +1,4 @@
-"""``argus init --editor``: editor MCP and hook config files."""
+"""``nephilex init --editor``: editor MCP and hook config files."""
 
 from __future__ import annotations
 
@@ -8,14 +8,14 @@ from pathlib import Path
 import pytest
 from typer.testing import CliRunner
 
-from argus.cli.main import app
-from argus.integrations import editors
+from nephilex.cli.main import app
+from nephilex.integrations import editors
 
 runner = CliRunner()
 
 EXPECTED = {
     "claude": [".mcp.json", ".claude/settings.json"],
-    "cursor": [".cursor/mcp.json", ".cursor/hooks.json", ".cursor/rules/argus.mdc"],
+    "cursor": [".cursor/mcp.json", ".cursor/hooks.json", ".cursor/rules/nephilex.mdc"],
     "vscode": [".vscode/mcp.json", ".vscode/tasks.json"],
 }
 
@@ -37,13 +37,13 @@ def test_writes_the_editor_files(tmp_path: Path, editor: str) -> None:
         assert text.isascii(), rel  # no dashes or other decorative Unicode
         if rel.endswith(".json"):
             json.loads(text)
-    assert not (tmp_path / ".argus.yml").exists()
+    assert not (tmp_path / ".nephilex.yml").exists()
 
 
 def test_claude_files(tmp_path: Path) -> None:
     assert _init(tmp_path, "--editor", "claude").exit_code == 0
-    server = _load(tmp_path, ".mcp.json")["mcpServers"]["argus"]
-    assert server == {"type": "stdio", "command": "argus", "args": ["mcp"], "env": {}}
+    server = _load(tmp_path, ".mcp.json")["mcpServers"]["nephilex"]
+    assert server == {"type": "stdio", "command": "nephilex", "args": ["mcp"], "env": {}}
     groups = _load(tmp_path, ".claude/settings.json")["hooks"]["PostToolUse"]
     assert groups == [
         {
@@ -51,7 +51,7 @@ def test_claude_files(tmp_path: Path) -> None:
             "hooks": [
                 {
                     "type": "command",
-                    "command": "argus check --hook claude --no-inline-ignores",
+                    "command": "nephilex check --hook claude --no-inline-ignores",
                     "timeout": 30,
                 }
             ],
@@ -61,19 +61,24 @@ def test_claude_files(tmp_path: Path) -> None:
 
 def test_cursor_files(tmp_path: Path) -> None:
     assert _init(tmp_path, "--editor", "cursor").exit_code == 0
-    server = _load(tmp_path, ".cursor/mcp.json")["mcpServers"]["argus"]
+    server = _load(tmp_path, ".cursor/mcp.json")["mcpServers"]["nephilex"]
     assert server["type"] == "stdio"
     assert server["args"] == ["mcp"]
-    assert server["env"] == {"ARGUS_MCP_ROOTS": "${workspaceFolder}"}
+    assert server["env"] == {"NEPHILEX_MCP_ROOTS": "${workspaceFolder}"}
     hooks = _load(tmp_path, ".cursor/hooks.json")
     assert hooks["version"] == 1
     assert hooks["hooks"]["afterFileEdit"] == [
-        {"command": "argus check --hook cursor --no-inline-ignores", "timeout": 30}
+        {"command": "nephilex check --hook cursor --no-inline-ignores", "timeout": 30}
     ]
-    rule = (tmp_path / ".cursor/rules/argus.mdc").read_text(encoding="utf-8")
+    rule = (tmp_path / ".cursor/rules/nephilex.mdc").read_text(encoding="utf-8")
     assert rule.startswith("---\ndescription: ")
     assert "alwaysApply: true\n---\n" in rule
-    for tool in ("argus_check_files", "argus_check_snippet", "argus_check_package", "argus_fix"):
+    for tool in (
+        "nephilex_check_files",
+        "nephilex_check_snippet",
+        "nephilex_check_package",
+        "nephilex_fix",
+    ):
         assert tool in rule
 
 
@@ -81,7 +86,7 @@ def test_vscode_files(tmp_path: Path) -> None:
     assert _init(tmp_path, "--editor", "vscode").exit_code == 0
     mcp = _load(tmp_path, ".vscode/mcp.json")
     assert "mcpServers" not in mcp
-    assert mcp["servers"]["argus"]["type"] == "stdio"
+    assert mcp["servers"]["nephilex"]["type"] == "stdio"
     tasks = _load(tmp_path, ".vscode/tasks.json")
     assert tasks["version"] == "2.0.0"
     (task,) = tasks["tasks"]
@@ -89,7 +94,7 @@ def test_vscode_files(tmp_path: Path) -> None:
     assert task["args"][-1] == "${file}"
     assert "hook" in task["args"]
     assert task["problemMatcher"]["fileLocation"] == ["relative", "${workspaceFolder}"]
-    from argus.integrations.hookfmt import HOOK_LINE_REGEXP
+    from nephilex.integrations.hookfmt import HOOK_LINE_REGEXP
 
     assert task["problemMatcher"]["pattern"]["regexp"] == HOOK_LINE_REGEXP
 
@@ -121,14 +126,14 @@ def test_force_merges_and_keeps_other_settings(tmp_path: Path) -> None:
     (tmp_path / ".mcp.json").write_text(
         json.dumps({"mcpServers": {"other": {"command": "o"}}}), encoding="utf-8"
     )
-    for _ in range(2):  # re-running replaces the Argus entries instead of adding more
+    for _ in range(2):  # re-running replaces the Nephilex entries instead of adding more
         res = _init(tmp_path, "--editor", "claude", "--force")
         assert res.exit_code == 0, res.output
     settings = _load(tmp_path, ".claude/settings.json")
     assert settings["model"] == "x"
     assert settings["hooks"]["PostToolUse"] == [other_hook, editors.CLAUDE_HOOK_GROUP]
     servers = _load(tmp_path, ".mcp.json")["mcpServers"]
-    assert set(servers) == {"other", "argus"}
+    assert set(servers) == {"other", "nephilex"}
 
 
 def test_force_merges_vscode_tasks_and_cursor_hooks(tmp_path: Path) -> None:
@@ -165,8 +170,8 @@ def test_unknown_editor_is_a_usage_error(tmp_path: Path) -> None:
     assert _init(tmp_path, "--editor", "emacs").exit_code == 2
 
 
-def test_plain_init_still_writes_argus_yml(tmp_path: Path) -> None:
-    target = tmp_path / ".argus.yml"
+def test_plain_init_still_writes_nephilex_yml(tmp_path: Path) -> None:
+    target = tmp_path / ".nephilex.yml"
     assert runner.invoke(app, ["init", str(target)]).exit_code == 0
     assert runner.invoke(app, ["init", str(target)]).exit_code == 1
     target.write_text("# mine\n", encoding="utf-8")

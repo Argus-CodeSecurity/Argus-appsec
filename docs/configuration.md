@@ -1,13 +1,13 @@
 # Configuration
 
-Argus reads configuration from, in increasing precedence:
+Nephilex reads configuration from, in increasing precedence:
 
 1. Built-in defaults.
-2. `.argus.yml` (or `.argus.yaml`) in the project root.
+2. `.nephilex.yml` (or `.nephilex.yaml`) in the project root.
 3. A file passed with `--config`.
 4. Command-line flags.
 
-Generate a starter file with `argus init`.
+Generate a starter file with `nephilex init`.
 
 ## Full reference
 
@@ -42,7 +42,7 @@ fail_on: ""             # e.g. high
 # Attack Simulation Mode: safe, sandboxed exploit demonstrations per finding.
 attack_simulation: false
 
-# Generate fix patches (and verify the deterministic ones). Argus's
+# Generate fix patches (and verify the deterministic ones). Nephilex's
 # deterministic, verified fixes are attached even with AI enrichment off
 # (--no-ai); only model-proposed drafts need a provider.
 generate_patches: false
@@ -55,8 +55,8 @@ cache: true
 parallel: true
 
 # Record fixes and suppressions (allowlist entries, exceptions, inline
-# argus-ignore comments, baselines) in the hash-chained .argus/audit.log.
-# Trusted local projects only. ARGUS_AUDIT_LOG=off also turns it off.
+# nephilex-ignore comments, baselines) in the hash-chained .nephilex/audit.log.
+# Trusted local projects only. NEPHILEX_AUDIT_LOG=off also turns it off.
 # See docs/audit-log.md.
 audit_log: true
 
@@ -97,11 +97,11 @@ policies: []
 
 ## Files that are scanned
 
-Argus walks the target directory and skips the directories that are noise for
+Nephilex walks the target directory and skips the directories that are noise for
 security analysis (`.git`, `node_modules`, `vendor`, `dist`, `build`, virtual
 environments, caches) and anything matching `exclude_paths`.
 
-When the target is inside a git work tree, Argus also asks git which
+When the target is inside a git work tree, Nephilex also asks git which
 untracked files it ignores (`git ls-files --others --ignored
 --exclude-standard`, run with the same hardening as every other git call) and
 skips them: build output, local virtual environments, editor and assistant
@@ -135,7 +135,7 @@ the cache, or a report.
 ## Runtime posture checks (`--live-target`)
 
 `--live-target <url>` runs a safe, read-only posture pass against a deployed URL
-alongside the static scan (or scan a URL directly with `argus scan <url>`): it
+alongside the static scan (or scan a URL directly with `nephilex scan <url>`): it
 checks security headers, cookie flags, HTTP-vs-HTTPS transport, version
 disclosure, and a short allowlist of exposed sensitive paths. It is
 non-intrusive, only GETs, no payloads or exploitation, but still: **only point
@@ -147,20 +147,20 @@ crawler or fuzzer.
 The dependency scanner checks your declared packages against the public
 [OSV database](https://osv.dev), which covers thousands of advisories across
 ecosystems. Only **package names and versions** are sent to OSV, never your
-source code, so this preserves Argus's offline-first stance. Set
+source code, so this preserves Nephilex's offline-first stance. Set
 `scanner_options.dependencies.online: false` to use only the small bundled seed
-(fully offline); Argus also falls back to the seed automatically if OSV is
+(fully offline); Nephilex also falls back to the seed automatically if OSV is
 unreachable.
 
 Lookups are batched (no dependency is silently dropped), retried with backoff on
 transient failures, and cached on disk so repeat scans are fast. The cache lives
-under `~/.cache/argus/osv` by default; override it with the `ARGUS_CACHE_DIR`
+under `~/.cache/nephilex/osv` by default; override it with the `NEPHILEX_CACHE_DIR`
 environment variable, or disable it with `scanner_options.dependencies.cache: false`.
 
 ### Reachability (experimental)
 
 Most dependency alerts concern packages your code never even imports. With
-`--reachability` (or `scanner_options.dependencies.reachability: true`), Argus
+`--reachability` (or `scanner_options.dependencies.reachability: true`), Nephilex
 annotates each PyPI dependency finding with an **import-level verdict**:
 *imported* (first-party code imports the package, treat as actionable) or
 *not imported* (no import found, deprioritized to an unlikely likelihood, but
@@ -173,7 +173,7 @@ See also [policy.md](policy.md) for the policy engine.
 
 ## Code scanning: two tiers
 
-Argus scans source code with two complementary scanners:
+Nephilex scans source code with two complementary scanners:
 
 - **`patterns`** (always on), a fast, regex-based pass with a lightweight
   single-hop taint check. Broad language coverage, catches the common cases.
@@ -187,10 +187,10 @@ Argus scans source code with two complementary scanners:
   as safe. Enable with:
 
   ```bash
-  pip install "argus-appsec[ast]"
+  pip install "nephilex[ast]"
   ```
 
-  Without the extra, the AST scanners report as not-applicable and Argus uses the
+  Without the extra, the AST scanners report as not-applicable and Nephilex uses the
   regex tier, nothing breaks. When both tiers run, findings for the same weakness
   are de-duplicated (the higher-confidence AST finding wins), so you never see one
   issue reported twice.
@@ -232,15 +232,15 @@ Credentials for cloud providers and git hosts are read from the environment (see
 | `ANTHROPIC_API_KEY` | `anthropic` provider |
 | `OPENAI_API_KEY` | `openai` provider |
 | `OLLAMA_HOST` | `ollama` provider (default `http://localhost:11434`) |
-| `GITHUB_TOKEN` / `GITLAB_TOKEN` | opening pull requests with `argus fix --open-pr` |
-| `ARGUS_AI_MODEL` | model override for the configured provider |
-| `ARGUS_AI_TIMEOUT` / `ARGUS_AI_MAX_RETRIES` | per-call model timeout in seconds (default 60) and retries (default 2) |
-| `ARGUS_GIT_TIMEOUT` | timeout for git commands in seconds (default 300) |
-| `ARGUS_CACHE_DIR` | cache location for scan results and OSV data |
-| `ARGUS_DAST_URL` | target for dynamic checks (same as `--live-target`) |
-| `ARGUS_MCP_ROOTS` / `ARGUS_MCP_SCAN_TIMEOUT` | directories the MCP server may scan, and its scan timeout (default 600) |
-| `ARGUS_DASHBOARD_TOKEN` / `ARGUS_DASHBOARD_ALLOWED_HOSTS` / `ARGUS_DASHBOARD_MAX_SCANS` | dashboard access control and retention, see [Web dashboard](dashboard.md) |
-| `ARGUS_WATCH_KEEP_SNAPSHOTS` | number of `argus watch` snapshots kept per target (default 50) |
+| `GITHUB_TOKEN` / `GITLAB_TOKEN` | opening pull requests with `nephilex fix --open-pr` |
+| `NEPHILEX_AI_MODEL` | model override for the configured provider |
+| `NEPHILEX_AI_TIMEOUT` / `NEPHILEX_AI_MAX_RETRIES` | per-call model timeout in seconds (default 60) and retries (default 2) |
+| `NEPHILEX_GIT_TIMEOUT` | timeout for git commands in seconds (default 300) |
+| `NEPHILEX_CACHE_DIR` | cache location for scan results and OSV data |
+| `NEPHILEX_DAST_URL` | target for dynamic checks (same as `--live-target`) |
+| `NEPHILEX_MCP_ROOTS` / `NEPHILEX_MCP_SCAN_TIMEOUT` | directories the MCP server may scan, and its scan timeout (default 600) |
+| `NEPHILEX_DASHBOARD_TOKEN` / `NEPHILEX_DASHBOARD_ALLOWED_HOSTS` / `NEPHILEX_DASHBOARD_MAX_SCANS` | dashboard access control and retention, see [Web dashboard](dashboard.md) |
+| `NEPHILEX_WATCH_KEEP_SNAPSHOTS` | number of `nephilex watch` snapshots kept per target (default 50) |
 
 ## Which configuration is trusted
 
@@ -249,16 +249,16 @@ often a pull request from someone outside your team. Its configuration could
 otherwise exclude every path, switch scanners off, or allowlist its own
 findings.
 
-| Situation | `.argus.yml`, `.argus/rules`, `.argus/exceptions.yml`, `.argus/context.yml`, `argus-ignore` comments |
+| Situation | `.nephilex.yml`, `.nephilex/rules`, `.nephilex/exceptions.yml`, `.nephilex/context.yml`, `nephilex-ignore` comments |
 |---|---|
-| Local path (`argus scan .`) | Honoured |
-| Cloned remote (`argus scan https://...`) | Ignored unless `--trust-remote-config` |
-| `--config-from-ref REF` | `.argus.yml` and `.argus/context.yml` read from that git ref; the checked-out tree is untrusted, so its rules, exceptions and comments are ignored |
+| Local path (`nephilex scan .`) | Honoured |
+| Cloned remote (`nephilex scan https://...`) | Ignored unless `--trust-remote-config` |
+| `--config-from-ref REF` | `.nephilex.yml` and `.nephilex/context.yml` read from that git ref; the checked-out tree is untrusted, so its rules, exceptions and comments are ignored |
 | `--config PATH` | That file is always honoured (you chose it) |
-| `argus agent`, `argus mcp` | The monitored or scanned directory is never trusted |
+| `nephilex agent`, `nephilex mcp` | The monitored or scanned directory is never trusted |
 
-`.argus/context.yml` declares sanitizers and trusted sources that switch
-checks off, so it follows the same rule as `.argus.yml`; see
+`.nephilex/context.yml` declares sanitizers and trusted sources that switch
+checks off, so it follows the same rule as `.nephilex.yml`; see
 [Project context](context.md#trust-rules). The audit log is written only
 when the project is trusted and local.
 
@@ -271,8 +271,8 @@ this automatically (`pr-config-from-base`, on by default).
 Every relevant config field has a flag, which overrides the file:
 
 ```
-argus scan TARGET
-  -c, --config PATH         path to an .argus.yml config file
+nephilex scan TARGET
+  -c, --config PATH         path to a .nephilex.yml config file
   -s, --scanners a,b        run only these scanners
       --exclude a,b         skip these scanners
   -f, --format FMT          output format (repeatable): table json sarif markdown html csv
@@ -289,7 +289,7 @@ argus scan TARGET
       --[no-]fail-on-error  fail (or not) when a scanner crashes
       --live-target URL     run safe, read-only posture checks against a URL you own
   -b, --branch NAME         branch to clone for remote targets
-      --trust-remote-config load .argus.yml from a cloned remote repo (off by default)
+      --trust-remote-config load .nephilex.yml from a cloned remote repo (off by default)
       --config-from-ref REF read config from a git ref; treat the tree as untrusted
   -q, --quiet               suppress progress output
 ```

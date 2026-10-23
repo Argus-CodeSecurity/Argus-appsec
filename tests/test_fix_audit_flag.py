@@ -1,4 +1,4 @@
-"""`audit_log: false` turns off the fix records of `argus fix`, not only the env switch."""
+"""`audit_log: false` turns off the fix records of `nephilex fix`, not only the env switch."""
 
 from __future__ import annotations
 
@@ -9,12 +9,12 @@ from pathlib import Path
 import pytest
 from typer.testing import CliRunner
 
-from argus.audit import AUDIT_PATH
-from argus.cli.main import app
-from argus.core.models import Finding, Location, Severity
-from argus.core.project import Project
-from argus.remediation import git_ops
-from argus.remediation.pullrequest import FixOptions, run_fix_workflow
+from nephilex.audit import AUDIT_PATH
+from nephilex.cli.main import app
+from nephilex.core.models import Finding, Location, Severity
+from nephilex.core.project import Project
+from nephilex.remediation import git_ops
+from nephilex.remediation.pullrequest import FixOptions, run_fix_workflow
 
 pytestmark = pytest.mark.skipif(not git_ops.git_available(), reason="git not installed")
 ID = ("-c", "user.name=Setup", "-c", "user.email=setup@example.com", "-c", "commit.gpgsign=false")
@@ -34,12 +34,12 @@ def _repo(tmp_path: Path, monkeypatch, config: str | None = None) -> Path:
     for var in ("AUTHOR", "COMMITTER"):
         monkeypatch.setenv(f"GIT_{var}_NAME", "Dev")
         monkeypatch.setenv(f"GIT_{var}_EMAIL", "dev@example.com")
-    monkeypatch.delenv("ARGUS_AUDIT_LOG", raising=False)
+    monkeypatch.delenv("NEPHILEX_AUDIT_LOG", raising=False)
     root = tmp_path / "repo"
     root.mkdir()
     (root / "a.py").write_text("import yaml\nx = yaml.load(s)\n", encoding="utf-8")
     if config is not None:
-        (root / ".argus.yml").write_text(config, encoding="utf-8")
+        (root / ".nephilex.yml").write_text(config, encoding="utf-8")
     _git(root, "init", "-q", "-b", "main")
     _git(root, *ID, "add", "-A")
     _git(root, *ID, "commit", "-qm", "init")

@@ -3,7 +3,7 @@
 A hostile repository controls its own ``.git/config``. Keys such as
 ``core.fsmonitor`` (run whenever the index is read) and ``gpg.program`` (run by
 ``log.showSignature``) turn ``git log`` / ``git ls-files`` into code execution on
-the scanning host. These tests plant both and check that Argus's git-based
+the scanning host. These tests plant both and check that Nephilex's git-based
 scanners never trigger them.
 """
 
@@ -15,7 +15,7 @@ from pathlib import Path
 
 import pytest
 
-from argus.scanners import _git
+from nephilex.scanners import _git
 
 pytestmark = pytest.mark.skipif(shutil.which("git") is None, reason="git not available")
 
@@ -99,11 +99,11 @@ def test_hardened_runner_does_not_execute_repo_config(tmp_path):
 
 
 def test_git_scanners_do_not_execute_repo_config(tmp_path):
-    from argus.core.config import Config
-    from argus.core.plugin import ScannerContext
-    from argus.core.project import Project
-    from argus.scanners.git_security import GitSecurityScanner
-    from argus.scanners.secrets_history import find_history_secrets
+    from nephilex.core.config import Config
+    from nephilex.core.plugin import ScannerContext
+    from nephilex.core.project import Project
+    from nephilex.scanners.git_security import GitSecurityScanner
+    from nephilex.scanners.secrets_history import find_history_secrets
 
     repo, marker = _hostile_repo(tmp_path)
     project = Project.from_path(repo)
@@ -134,7 +134,7 @@ def _plain_repo(tmp_path: Path) -> Path:
 
 
 def test_history_keeps_distinct_secrets_with_same_prefix(tmp_path):
-    from argus.scanners.secrets_history import find_history_secrets
+    from nephilex.scanners.secrets_history import find_history_secrets
 
     repo = _plain_repo(tmp_path)
     (repo / "a.py").write_text(
@@ -150,7 +150,7 @@ def test_history_keeps_distinct_secrets_with_same_prefix(tmp_path):
 
 
 def test_history_survives_non_utf8_content(tmp_path):
-    from argus.scanners.secrets_history import find_history_secrets
+    from nephilex.scanners.secrets_history import find_history_secrets
 
     repo = _plain_repo(tmp_path)
     (repo / "latin1.txt").write_bytes(b"caf\xe9 \xff\xfe\n")
@@ -162,24 +162,24 @@ def test_history_survives_non_utf8_content(tmp_path):
 
 
 def test_history_reports_truncation(tmp_path, monkeypatch, caplog):
-    from argus.scanners import secrets_history
+    from nephilex.scanners import secrets_history
 
     repo = _plain_repo(tmp_path)
     (repo / "a.py").write_text("x = 1\n" * 200, encoding="utf-8")
     _git_plain(repo, "add", "-A")
     _git_plain(repo, "commit", "-q", "-m", "big")
     monkeypatch.setattr(secrets_history, "_MAX_OUTPUT_BYTES", 100)
-    with caplog.at_level("WARNING", logger="argus.scanners.secrets_history"):
+    with caplog.at_level("WARNING", logger="nephilex.scanners.secrets_history"):
         _, truncated = secrets_history.find_history_secrets(repo)
     assert truncated
     assert "only the newest commits" in caplog.text
 
 
-# --- the shared runner (argus.core.gitexec) ---------------------------------
+# --- the shared runner (nephilex.core.gitexec) ---------------------------------
 
 
 def test_profiles_pin_what_each_job_can_live_without(tmp_path):
-    from argus.core import gitexec
+    from nephilex.core import gitexec
 
     untrusted = gitexec.git_argv(tmp_path, "log", profile=gitexec.UNTRUSTED)
     worktree = gitexec.git_argv(tmp_path, "log", profile=gitexec.WORKTREE)
@@ -203,7 +203,7 @@ def test_profiles_pin_what_each_job_can_live_without(tmp_path):
 
 
 def test_profiles_environment(monkeypatch):
-    from argus.core import gitexec
+    from nephilex.core import gitexec
 
     monkeypatch.setenv("GIT_EXTERNAL_DIFF", "/tmp/evil")
     monkeypatch.setenv("GIT_DIR", "/elsewhere")
@@ -220,20 +220,20 @@ def test_profiles_environment(monkeypatch):
 
 @pytest.mark.parametrize("ref", ["", "-p", "--output=x", "a\0b", "a\nb", "a\rb"])
 def test_unsafe_refs_are_rejected(ref):
-    from argus.core.gitexec import is_safe_ref
+    from nephilex.core.gitexec import is_safe_ref
 
     assert not is_safe_ref(ref)
 
 
 def test_safe_refs_are_accepted():
-    from argus.core.gitexec import is_safe_ref
+    from nephilex.core.gitexec import is_safe_ref
 
     for ref in ("main", "origin/main", "HEAD~1", "v1.2.3", "abc123"):
         assert is_safe_ref(ref)
 
 
 def test_fix_workflow_git_calls_do_not_execute_repo_config(tmp_path):
-    from argus.remediation import git_ops
+    from nephilex.remediation import git_ops
 
     repo, marker = _hostile_repo(tmp_path)
     (repo / "requirements.txt").write_text("requests==2.1\n", encoding="utf-8")
@@ -246,7 +246,7 @@ def test_fix_workflow_git_calls_do_not_execute_repo_config(tmp_path):
 
 
 def test_inventory_reads_at_ref_without_executing_repo_config(tmp_path):
-    from argus.inventory import collect_packages_at_ref
+    from nephilex.inventory import collect_packages_at_ref
 
     repo, marker = _hostile_repo(tmp_path)
     assert collect_packages_at_ref(repo, "HEAD~0") == [
@@ -256,7 +256,7 @@ def test_inventory_reads_at_ref_without_executing_repo_config(tmp_path):
 
 
 def test_config_from_ref_does_not_execute_repo_config(tmp_path):
-    from argus.core.config import load_config_from_ref
+    from nephilex.core.config import load_config_from_ref
 
     repo, marker = _hostile_repo(tmp_path)
     cfg = load_config_from_ref(repo, "HEAD")
@@ -265,7 +265,7 @@ def test_config_from_ref_does_not_execute_repo_config(tmp_path):
 
 
 def test_worktree_output_is_capped(tmp_path):
-    from argus.core import gitexec
+    from nephilex.core import gitexec
 
     repo, _ = _hostile_repo(tmp_path)
     res = gitexec.run(repo, "log", "-p", "--all", profile=gitexec.WORKTREE, max_output=10)
@@ -273,10 +273,10 @@ def test_worktree_output_is_capped(tmp_path):
 
 
 def test_history_secret_ids_differ_per_secret(tmp_path):
-    from argus.core.config import Config
-    from argus.core.plugin import ScannerContext
-    from argus.core.project import Project
-    from argus.scanners.secrets import SecretsScanner
+    from nephilex.core.config import Config
+    from nephilex.core.plugin import ScannerContext
+    from nephilex.core.project import Project
+    from nephilex.scanners.secrets import SecretsScanner
 
     repo = _plain_repo(tmp_path)
     (repo / "a.py").write_text(

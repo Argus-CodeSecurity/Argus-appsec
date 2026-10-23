@@ -6,11 +6,11 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from pathlib import Path
 
-from argus.baseline import filter_new, load_fingerprints
-from argus.core.config import Config
-from argus.core.models import Finding, Location, ScanResult, Severity
-from argus.core.project import Project
-from argus.remediation.applier import _syntax_error
+from nephilex.baseline import filter_new, load_fingerprints
+from nephilex.core.config import Config
+from nephilex.core.models import Finding, Location, ScanResult, Severity
+from nephilex.core.project import Project
+from nephilex.remediation.applier import _syntax_error
 
 
 def _finding(rule_id="patterns.x", path="a.py", line=1, snippet="danger()") -> Finding:
@@ -69,7 +69,7 @@ def test_baseline_suppresses_known_findings(tmp_path: Path):
 
 # --- trust boundary: config discovery only when a root is given ------------
 def test_config_not_discovered_without_project_root(tmp_path: Path):
-    (tmp_path / ".argus.yml").write_text("scanners: [secrets]\n", encoding="utf-8")
+    (tmp_path / ".nephilex.yml").write_text("scanners: [secrets]\n", encoding="utf-8")
     # Simulates the untrusted-remote path: no project_root -> repo config ignored.
     assert Config.load(project_root=None).scanners == []
     # With a trusted root it is honored.
@@ -78,7 +78,7 @@ def test_config_not_discovered_without_project_root(tmp_path: Path):
 
 # --- markdown report-injection hardening -----------------------------------
 def test_markdown_fences_untrusted_snippet():
-    from argus.core.plugin import registry
+    from nephilex.core.plugin import registry
 
     result = ScanResult(target="t", started_at=datetime.now(timezone.utc))
     # A snippet that tries to break out of a ``` fence and inject content.

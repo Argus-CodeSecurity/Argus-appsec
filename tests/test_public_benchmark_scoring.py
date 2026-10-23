@@ -58,12 +58,12 @@ def test_owasp_case_id_only_matches_test_case_sources() -> None:
 
 def test_strict_needs_exact_cwe_and_mapped_uses_groups() -> None:
     weak_hash = _f("a.py", 327)
-    assert not finding_matches("argus", weak_hash, 328, "strict")
-    assert finding_matches("argus", weak_hash, 328, "mapped")
+    assert not finding_matches("nephilex", weak_hash, 328, "strict")
+    assert finding_matches("nephilex", weak_hash, 328, "mapped")
     # Unrelated CWEs never match in either mode.
-    assert not finding_matches("argus", _f("a.py", 79), 89, "mapped")
+    assert not finding_matches("nephilex", _f("a.py", 79), 89, "mapped")
     with pytest.raises(ValueError):
-        finding_matches("argus", weak_hash, 328, "fuzzy")
+        finding_matches("nephilex", weak_hash, 328, "fuzzy")
 
 
 def test_rule_override_applies_only_in_mapped_mode_and_only_to_its_tool() -> None:
@@ -112,7 +112,7 @@ def test_score_owasp_counts_and_ignores_other_cwes_in_file() -> None:
         _f("testcode/BenchmarkTest00004.py", 89),  # wrong CWE: still TN
         _f("helpers/db.py", 89),  # not a test case
     ]
-    out = score_owasp(cases, findings, "argus", "strict")
+    out = score_owasp(cases, findings, "nephilex", "strict")
     sqli = out["per_category"]["sqli"]
     assert (sqli["tp"], sqli["fp"], sqli["tn"], sqli["fn"]) == (1, 1, 0, 1)
     assert sqli["fn_cases"] == ["BenchmarkTest00003"]
@@ -136,13 +136,13 @@ def test_score_labeled_recall_modes() -> None:
         _f("samples/CWE-089_b.py", 798),  # some finding, wrong CWE
         _f("samples/CWE-327_a.py", 328),  # related CWE
     ]
-    strict = score_labeled_recall(samples, findings, "argus", "strict")["overall"]
-    mapped = score_labeled_recall(samples, findings, "argus", "mapped")["overall"]
-    anyf = score_labeled_recall(samples, findings, "argus", "any")["overall"]
+    strict = score_labeled_recall(samples, findings, "nephilex", "strict")["overall"]
+    mapped = score_labeled_recall(samples, findings, "nephilex", "mapped")["overall"]
+    anyf = score_labeled_recall(samples, findings, "nephilex", "any")["overall"]
     assert (strict["detected"], mapped["detected"], anyf["detected"]) == (1, 2, 3)
     assert strict["samples"] == 3
     assert mapped["cwe_average_recall"] == pytest.approx((0.5 + 1.0) / 2)
-    per = score_labeled_recall(samples, findings, "argus", "strict")["per_cwe"]
+    per = score_labeled_recall(samples, findings, "nephilex", "strict")["per_cwe"]
     assert per["CWE-89"]["missed"] == ["CWE-089_b.py"]
 
 
@@ -166,7 +166,7 @@ def test_parse_owasp_expected_and_securityeval_ids() -> None:
 def test_tool_parsers_normalize_paths_and_cwes(tmp_path: Path) -> None:
     root = tmp_path / "ds"
     target = root / "testcode" / "BenchmarkTest00001.py"
-    argus = {
+    nephilex = {
         "findings": [
             {
                 "rule_id": "ast-python.ast-sql-injection",
@@ -196,7 +196,7 @@ def test_tool_parsers_normalize_paths_and_cwes(tmp_path: Path) -> None:
         ]
     }
     parsed = [
-        tools.parse_argus(argus, root)[0],
+        tools.parse_nephilex(nephilex, root)[0],
         tools.parse_bandit(bandit, root)[0],
         tools.parse_semgrep(semgrep, root)[0],
     ]

@@ -4,11 +4,11 @@ from __future__ import annotations
 
 import pytest
 
-from argus.core.config import Config
-from argus.core.models import Severity
-from argus.core.plugin import ScannerContext, registry
-from argus.core.project import Project
-from argus.scanners import secret_verify
+from nephilex.core.config import Config
+from nephilex.core.models import Severity
+from nephilex.core.plugin import ScannerContext, registry
+from nephilex.core.project import Project
+from nephilex.scanners import secret_verify
 
 
 class _Resp:

@@ -5,15 +5,15 @@ from __future__ import annotations
 import json
 from datetime import datetime, timezone
 
-from argus.core.models import Finding, Location, ScanResult, Severity
-from argus.core.plugin import registry
+from nephilex.core.models import Finding, Location, ScanResult, Severity
+from nephilex.core.plugin import registry
 
 
 def _result(*severities: Severity) -> ScanResult:
     r = ScanResult(
         target="/proj",
         started_at=datetime(2026, 1, 1, tzinfo=timezone.utc),
-        argus_version="0.7.0",
+        nephilex_version="0.7.0",
     )
     r.findings = [
         Finding(

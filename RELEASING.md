@@ -1,20 +1,20 @@
-# Releasing Argus
+# Releasing Nephilex
 
 This is the maintainer runbook for cutting a release. A release produces, from
 one git tag, all of the following with the same version number:
 
 | Artifact | Where | Version form |
 |---|---|---|
-| Python package `argus-appsec` | PyPI | `0.9.0` |
+| Python package `nephilex` | PyPI | `0.9.0` |
 | Git tag and GitHub Release | GitHub | `v0.9.0` |
-| Container image | `ghcr.io/argus-codesecurity/argus` | `0.9.0`, `0.9`, `latest` |
-| GitHub Action | `Argus-CodeSecurity/Argus-appsec@v0.9.0` | `v0.9.0` |
+| Container image | `ghcr.io/nephilex/nephilex` | `0.9.0`, `0.9`, `latest` |
+| GitHub Action | `nephilex/nephilex@v0.9.0` | `v0.9.0` |
 | pre-commit hooks | `rev: v0.9.0` | `v0.9.0` |
 | SBOM and attestations | Release assets, Sigstore | tied to the built files |
 
 ## How the version stays consistent
 
-- **One source of truth.** The version lives only in `src/argus/__init__.py`
+- **One source of truth.** The version lives only in `src/nephilex/__init__.py`
   (`__version__`). `pyproject.toml` reads it from there
   (`[tool.hatch.version]`), so the package metadata cannot drift.
 - **The tag must match.** The publish workflow refuses to release when the tag
@@ -28,10 +28,10 @@ one git tag, all of the following with the same version number:
 
 ## Version numbers
 
-Argus follows [Semantic Versioning](https://semver.org/) and PEP 440:
+Nephilex follows [Semantic Versioning](https://semver.org/) and PEP 440:
 
 - **Patch** (`0.9.1`): bug fixes only, no behaviour change.
-- **Minor** (`0.10.0`): new features. While Argus is pre-1.0, a minor release may
+- **Minor** (`0.10.0`): new features. While Nephilex is pre-1.0, a minor release may
   also contain breaking changes, which must be listed under a **Breaking
   changes** heading in the changelog.
 - **Major** (`1.0.0`): from 1.0 onward, breaking changes to the CLI, exit codes,
@@ -42,9 +42,9 @@ Argus follows [Semantic Versioning](https://semver.org/) and PEP 440:
 
 ## One-time setup
 
-1. **PyPI trusted publisher.** On <https://pypi.org/manage/project/argus-appsec/settings/publishing/>
-   add a GitHub publisher: owner `Argus-CodeSecurity`, repository
-   `Argus-appsec`, workflow `publish.yml`, environment `pypi`. No API token is
+1. **PyPI trusted publisher.** On <https://pypi.org/manage/project/nephilex/settings/publishing/>
+   add a GitHub publisher: owner `nephilex`, repository
+   `nephilex`, workflow `publish.yml`, environment `pypi`. No API token is
    stored anywhere.
 2. **GitHub environment.** Settings, Environments, create `pypi`. Add required
    reviewers so a release needs a second person's approval before upload.
@@ -58,7 +58,7 @@ Argus follows [Semantic Versioning](https://semver.org/) and PEP 440:
 ## Cutting a release
 
 1. Create a branch `release/vX.Y.Z` from an up-to-date `main`.
-2. Set `__version__ = "X.Y.Z"` in `src/argus/__init__.py`.
+2. Set `__version__ = "X.Y.Z"` in `src/nephilex/__init__.py`.
 3. In `CHANGELOG.md`, rename `## [Unreleased]` to `## [X.Y.Z] - YYYY-MM-DD`, add
    a new empty `## [Unreleased]` above it, and update the link references at
    the bottom of the file.
@@ -82,9 +82,9 @@ Argus follows [Semantic Versioning](https://semver.org/) and PEP 440:
 8. Verify:
 
    ```bash
-   pip install "argus-appsec==X.Y.Z" && argus --version
-   docker run --rm ghcr.io/argus-codesecurity/argus:X.Y.Z --version
-   gh attestation verify oci://ghcr.io/argus-codesecurity/argus:X.Y.Z --owner Argus-CodeSecurity
+   pip install "nephilex==X.Y.Z" && nephilex --version
+   docker run --rm ghcr.io/nephilex/nephilex:X.Y.Z --version
+   gh attestation verify oci://ghcr.io/nephilex/nephilex:X.Y.Z --owner nephilex
    ```
 
 ## Rehearsing on TestPyPI
@@ -92,7 +92,7 @@ Argus follows [Semantic Versioning](https://semver.org/) and PEP 440:
 Register the same trusted publisher on <https://test.pypi.org>, temporarily add
 `repository-url: https://test.pypi.org/legacy/` to the publish step on a branch,
 publish a pre-release such as `vX.Y.Zrc1`, then install it with
-`pip install -i https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ argus-appsec==X.Y.Zrc1`.
+`pip install -i https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ nephilex==X.Y.Zrc1`.
 
 Manual uploads from a laptop are not part of the process: they bypass the
 tests, the provenance attestation, and the second-person approval.

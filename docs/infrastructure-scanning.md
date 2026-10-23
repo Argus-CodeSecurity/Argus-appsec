@@ -1,25 +1,25 @@
 # Infrastructure scanning
 
-Argus checks deployment and platform configuration as part of a normal scan, or
+Nephilex checks deployment and platform configuration as part of a normal scan, or
 through focused commands when you only want one area.
 
 ## Commands
 
 | Command | Scanners | What it checks |
 |---------|----------|----------------|
-| `argus cicd .` | `cicd` | GitHub Actions, GitLab CI, Jenkinsfile |
-| `argus container .` | `container`, `iac` | Docker Compose, Dockerfiles, Kubernetes manifests |
-| `argus cloud .` | `cloud`, `iac` | Terraform and CloudFormation (AWS, Azure, GCP) |
-| `argus infrastructure .` | `cicd`, `container`, `cloud`, `iac` | All infrastructure checks in one pass |
-| `argus inventory .` | (analysis only) | Export languages, deps, CI/CD, container, IaC file lists |
-| `argus scan .` | all | Includes infrastructure plus SAST, secrets, dependencies, etc. |
+| `nephilex cicd .` | `cicd` | GitHub Actions, GitLab CI, Jenkinsfile |
+| `nephilex container .` | `container`, `iac` | Docker Compose, Dockerfiles, Kubernetes manifests |
+| `nephilex cloud .` | `cloud`, `iac` | Terraform and CloudFormation (AWS, Azure, GCP) |
+| `nephilex infrastructure .` | `cicd`, `container`, `cloud`, `iac` | All infrastructure checks in one pass |
+| `nephilex inventory .` | (analysis only) | Export languages, deps, CI/CD, container, IaC file lists |
+| `nephilex scan .` | all | Includes infrastructure plus SAST, secrets, dependencies, etc. |
 
 Common flags (same on each focused command):
 
 ```bash
-argus cicd . --fail-on high          # exit 1 for High+ findings (CI gate)
-argus container . -o report.json     # JSON output
-argus cloud . --quiet                # suppress progress lines
+nephilex cicd . --fail-on high          # exit 1 for High+ findings (CI gate)
+nephilex container . -o report.json     # JSON output
+nephilex cloud . --quiet                # suppress progress lines
 ```
 
 ## CI/CD scanner (`cicd`)
@@ -40,7 +40,7 @@ Example in CI:
 
 ```yaml
 - name: CI/CD security
-  run: argus cicd . --fail-on high --quiet
+  run: nephilex cicd . --fail-on high --quiet
 ```
 
 See also [ci-cd.md](ci-cd.md) for the full GitHub Action and SARIF integration.
@@ -51,7 +51,7 @@ The `container` scanner focuses on Compose and Dockerfile extras (privileged
 services, host networking, `:latest` tags, secret-like environment variables).
 
 The `iac` scanner covers the same Dockerfiles plus Kubernetes YAML and base
-Terraform resource rules. `argus container` runs both so you get one command for
+Terraform resource rules. `nephilex container` runs both so you get one command for
 container posture.
 
 Examples:
@@ -63,12 +63,12 @@ Examples:
 
 **Live cluster assessment** (running pods, RBAC, exposed services) is **not** in
 the core. Add-on packages can provide it as an extra CLI command through the
-`argus.commands` entry point (see [Writing plugins](plugins.md)).
+`nephilex.commands` entry point (see [Writing plugins](plugins.md)).
 
 ## Cloud scanner (`cloud` + `iac`)
 
 Static analysis of infrastructure-as-code. No cloud API credentials are used;
-Argus reads files in the repository.
+Nephilex reads files in the repository.
 
 Examples:
 
@@ -82,7 +82,7 @@ Examples:
 Live cloud API posture checks (querying AWS, Azure, or GCP accounts) are not part
 of the core, which only reads files in the repository.
 
-## Tuning in `.argus.yml`
+## Tuning in `.nephilex.yml`
 
 Focused commands honor project config for excludes and severity floors:
 
@@ -99,5 +99,5 @@ scanner_options:
 To run only infrastructure scanners in a full scan:
 
 ```bash
-argus scan . -s cicd,container,cloud,iac
+nephilex scan . -s cicd,container,cloud,iac
 ```

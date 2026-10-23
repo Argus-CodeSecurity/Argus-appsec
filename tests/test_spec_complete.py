@@ -4,14 +4,14 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from argus.analysis.risk_engine import enrich_contextual_risk
-from argus.analysis.security_graph import build_security_graph
-from argus.analysis.verification import assign_verification_state
-from argus.core.models import Finding, Location, ScanResult, Severity
-from argus.exceptions import FindingException, apply_exceptions
-from argus.intel.reevaluation import reevaluate_intel
-from argus.plugins.signing import plugin_allowed
-from argus.profiles import apply_profile
+from nephilex.analysis.risk_engine import enrich_contextual_risk
+from nephilex.analysis.security_graph import build_security_graph
+from nephilex.analysis.verification import assign_verification_state
+from nephilex.core.models import Finding, Location, ScanResult, Severity
+from nephilex.exceptions import FindingException, apply_exceptions
+from nephilex.intel.reevaluation import reevaluate_intel
+from nephilex.plugins.signing import plugin_allowed
+from nephilex.profiles import apply_profile
 
 
 def _finding(scanner: str = "patterns") -> Finding:
@@ -65,15 +65,15 @@ def test_reevaluation_intel():
 
 
 def test_plugin_allowlist(monkeypatch):
-    monkeypatch.setenv("ARGUS_PLUGIN_ALLOWLIST", "trusted")
+    monkeypatch.setenv("NEPHILEX_PLUGIN_ALLOWLIST", "trusted")
     assert plugin_allowed("trusted") is True
     assert plugin_allowed("other") is False
 
 
 def test_business_logic_on_corpus(tmp_path):
-    from argus.core.config import Config
-    from argus.core.engine import ScanEngine
-    from argus.core.project import Project
+    from nephilex.core.config import Config
+    from nephilex.core.engine import ScanEngine
+    from nephilex.core.project import Project
 
     root = tmp_path
     (root / "logic.py").write_text(
@@ -88,7 +88,7 @@ def test_business_logic_on_corpus(tmp_path):
 
 
 def test_junit_reporter():
-    from argus.reporting.junit import JUnitReporter
+    from nephilex.reporting.junit import JUnitReporter
 
     r = ScanResult(target=".", started_at=datetime.now(timezone.utc), findings=[_finding()])
     xml = JUnitReporter().render(r)

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Argus benchmark harness.
+"""Nephilex benchmark harness.
 
-Runs Argus against known-vulnerable reference applications and records what it
+Runs Nephilex against known-vulnerable reference applications and records what it
 finds and how long it takes, so precision/recall work has a reproducible
 foundation and regressions in either signal or speed are visible per release.
 
@@ -25,7 +25,7 @@ Notes on honest benchmarking:
   are comparable across machines and runs.
 * NIST SARD/Juliet: the Python and Java cases require a manual download from
   https://samate.nist.gov/SARD/ (license click-through). Point the
-  ``ARGUS_BENCH_SARD_DIR`` environment variable at the extracted directory and
+  ``NEPHILEX_BENCH_SARD_DIR`` environment variable at the extracted directory and
   the ``sard-local`` corpus becomes available.
 """
 
@@ -76,7 +76,7 @@ CORPORA = [
     ),
     Corpus(
         name="sard-local",
-        env_dir="ARGUS_BENCH_SARD_DIR",
+        env_dir="NEPHILEX_BENCH_SARD_DIR",
         description="NIST SARD/Juliet cases (manual download; see module "
         "docstring). Ground-truth labels ship with the suite.",
     ),
@@ -110,7 +110,7 @@ def _scan(target: Path, extra_args: list[str]) -> tuple[dict, float]:
     cmd = [
         sys.executable,
         "-m",
-        "argus",
+        "nephilex",
         "scan",
         str(target),
         "--no-ai",
@@ -126,7 +126,7 @@ def _scan(target: Path, extra_args: list[str]) -> tuple[dict, float]:
     proc = subprocess.run(cmd, capture_output=True, text=True)
     elapsed = time.perf_counter() - start
     if proc.returncode not in (0, 1):  # 1 = fail-on threshold, still a report
-        raise RuntimeError(f"argus scan failed ({proc.returncode}):\n{proc.stderr}")
+        raise RuntimeError(f"nephilex scan failed ({proc.returncode}):\n{proc.stderr}")
     return json.loads(out.read_text(encoding="utf-8")), elapsed
 
 
@@ -143,7 +143,7 @@ def bench(corpus: Corpus) -> dict | None:
         "corpus": corpus.name,
         "source": corpus.git_url or corpus.env_dir,
         "commit": commit,
-        "argus_version": report.get("argus_version"),
+        "nephilex_version": report.get("nephilex_version"),
         "scan_seconds": round(elapsed, 2),
         "total_findings": len(findings),
         "by_scanner": dict(Counter(f["scanner"] for f in findings)),
@@ -161,19 +161,19 @@ def bench(corpus: Corpus) -> dict | None:
 
 def summarize(results: list[dict]) -> None:
     lines = [
-        "# Argus benchmark summary",
+        "# Nephilex benchmark summary",
         "",
         "Finding inventories on known-vulnerable corpora (not precision/recall "
         "yet, see run_benchmarks.py). Regenerate with "
         "`python benchmarks/run_benchmarks.py`.",
         "",
-        "| Corpus | Commit | Argus | Findings | Time (s) | By scanner |",
+        "| Corpus | Commit | Nephilex | Findings | Time (s) | By scanner |",
         "|---|---|---|---|---|---|",
     ]
     for r in results:
         by_scanner = ", ".join(f"{k}: {v}" for k, v in sorted(r["by_scanner"].items()))
         lines.append(
-            f"| {r['corpus']} | `{str(r['commit'])[:10]}` | {r['argus_version']} "
+            f"| {r['corpus']} | `{str(r['commit'])[:10]}` | {r['nephilex_version']} "
             f"| {r['total_findings']} | {r['scan_seconds']} | {by_scanner} |"
         )
     (RESULTS_DIR / "SUMMARY.md").write_text("\n".join(lines) + "\n", encoding="utf-8")

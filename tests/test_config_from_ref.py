@@ -9,9 +9,9 @@ from pathlib import Path
 import pytest
 from typer.testing import CliRunner
 
-from argus.cli.main import app
-from argus.core.config import ConfigError, load_config_from_ref, load_project_config
-from argus.core.project import Project
+from nephilex.cli.main import app
+from nephilex.core.config import ConfigError, load_config_from_ref, load_project_config
+from nephilex.core.project import Project
 
 pytestmark = pytest.mark.skipif(shutil.which("git") is None, reason="git not installed")
 
@@ -43,19 +43,19 @@ def repo(tmp_path: Path) -> Path:
     root = tmp_path / "repo"
     root.mkdir()
     _git(root, "init", "-q")
-    (root / ".argus.yml").write_text("fail_on: low\n", encoding="utf-8")
+    (root / ".nephilex.yml").write_text("fail_on: low\n", encoding="utf-8")
     (root / "ci").mkdir()
-    (root / "ci" / "argus.yml").write_text("fail_on: high\n", encoding="utf-8")
+    (root / "ci" / "nephilex.yml").write_text("fail_on: high\n", encoding="utf-8")
     _git(root, "add", "-A")
     _git(root, "commit", "-q", "-m", "base")
     _git(root, "tag", "base")
     # The "pull request": loosen every in-tree setting and add a secret.
-    (root / ".argus.yml").write_text(
+    (root / ".nephilex.yml").write_text(
         'exclude_paths: ["**"]\nexclude_scanners: ["secrets"]\n', encoding="utf-8"
     )
-    (root / "ci" / "argus.yml").write_text('exclude_paths: ["**"]\n', encoding="utf-8")
+    (root / "ci" / "nephilex.yml").write_text('exclude_paths: ["**"]\n', encoding="utf-8")
     (root / "settings.py").write_text(
-        _SECRET.rstrip("\n") + '  # argus-ignore reason="trust me"\n', encoding="utf-8"
+        _SECRET.rstrip("\n") + '  # nephilex-ignore reason="trust me"\n', encoding="utf-8"
     )
     return root
 
@@ -68,7 +68,7 @@ def test_reads_config_from_ref_not_tree(repo: Path) -> None:
 
 
 def test_explicit_config_path_is_read_from_ref(repo: Path) -> None:
-    cfg = load_config_from_ref(repo, "base", repo / "ci" / "argus.yml")
+    cfg = load_config_from_ref(repo, "base", repo / "ci" / "nephilex.yml")
     assert cfg.fail_on is not None and cfg.fail_on.label == "High"
     assert cfg.exclude_paths == []
 
@@ -87,7 +87,7 @@ def test_explicit_config_outside_repo_is_error(repo: Path, tmp_path: Path) -> No
 
 
 def test_ref_without_config_gives_untrusted_defaults(repo: Path) -> None:
-    _git(repo, "rm", "-q", "--cached", ".argus.yml", "ci/argus.yml")
+    _git(repo, "rm", "-q", "--cached", ".nephilex.yml", "ci/nephilex.yml")
     _git(repo, "commit", "-q", "-m", "drop config")
     _git(repo, "tag", "empty")
     cfg = load_config_from_ref(repo, "empty")

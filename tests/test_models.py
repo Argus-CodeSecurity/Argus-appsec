@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from argus.core.models import (
+from nephilex.core.models import (
     Confidence,
     Finding,
     Likelihood,

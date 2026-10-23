@@ -1,4 +1,4 @@
-"""``argus check``: the fast, file-level check editors and AI hooks run."""
+"""``nephilex check``: the fast, file-level check editors and AI hooks run."""
 
 from __future__ import annotations
 
@@ -9,11 +9,11 @@ from pathlib import Path
 import pytest
 from typer.testing import CliRunner
 
-from argus.cli.main import app
-from argus.core.config import Config
-from argus.core.plugin import registry
-from argus.integrations import filecheck
-from argus.integrations.hookfmt import HOOK_LINE_REGEXP
+from nephilex.cli.main import app
+from nephilex.core.config import Config
+from nephilex.core.plugin import registry
+from nephilex.integrations import filecheck
+from nephilex.integrations.hookfmt import HOOK_LINE_REGEXP
 
 runner = CliRunner()
 
@@ -130,7 +130,7 @@ def test_ignored_directories_are_skipped_not_errors(project: Path) -> None:
 
 
 def test_exclude_paths_from_config_are_honoured(project: Path) -> None:
-    (project / ".argus.yml").write_text('exclude_paths: ["app.py"]\n', encoding="utf-8")
+    (project / ".nephilex.yml").write_text('exclude_paths: ["app.py"]\n', encoding="utf-8")
     assert runner.invoke(app, ["check", "app.py"]).exit_code == 0
 
 
@@ -165,17 +165,17 @@ def test_check_config_honours_selection_and_drops_network_options() -> None:
 
 
 def test_check_config_with_nothing_left_is_a_config_error() -> None:
-    from argus.core.config import ConfigError
+    from nephilex.core.config import ConfigError
 
     with pytest.raises(ConfigError):
         filecheck.check_config(Config(scanners=["dependencies"]))
 
 
 def test_check_keeps_cache_entries_of_other_files(project: Path) -> None:
-    from argus import __version__
-    from argus.core.cache import ScanCache
-    from argus.core.engine import ScanEngine
-    from argus.core.project import Project
+    from nephilex import __version__
+    from nephilex.core.cache import ScanCache
+    from nephilex.core.engine import ScanEngine
+    from nephilex.core.project import Project
 
     ScanEngine(Config()).scan(Project.from_path(project))
     before = ScanCache(project.resolve(), __version__)._entries["secrets@" + _opts_key()]
@@ -188,7 +188,7 @@ def test_check_keeps_cache_entries_of_other_files(project: Path) -> None:
 
 
 def _opts_key() -> str:
-    from argus.core.cache import scanner_key
+    from nephilex.core.cache import scanner_key
 
     return scanner_key("secrets", {}).split("@", 1)[1]
 
@@ -255,7 +255,7 @@ def test_claude_hook_bad_event_is_a_non_blocking_error(project: Path) -> None:
 
 
 def test_claude_hook_config_error_is_exit_1_not_2(project: Path, monkeypatch) -> None:
-    (project / ".argus.yml").write_text("scanners: [dependencies]\n", encoding="utf-8")
+    (project / ".nephilex.yml").write_text("scanners: [dependencies]\n", encoding="utf-8")
     res = runner.invoke(
         app, ["check", "--hook", "claude"], input=_claude_event(str(project / "app.py"))
     )
@@ -282,7 +282,7 @@ def test_unknown_hook_editor_is_a_usage_error(project: Path) -> None:
 # --- strict mode: --no-inline-ignores ------------------------------------------------
 SILENCED = (
     "import yaml\n\n\ndef load(raw):\n"
-    '    return yaml.load(raw)  # argus-ignore: python-yaml-load reason="trust me"\n'
+    '    return yaml.load(raw)  # nephilex-ignore: python-yaml-load reason="trust me"\n'
 )
 
 
@@ -299,7 +299,7 @@ def test_no_inline_ignores_reports_silenced_findings(project: Path) -> None:
     assert res.exit_code == 1, res.output
     assert "patterns.python-yaml-load" in res.stdout
     # Nothing was suppressed, so nothing is recorded as suppressed either.
-    assert not (project / ".argus" / "audit.log").exists()
+    assert not (project / ".nephilex" / "audit.log").exists()
 
 
 def test_claude_hook_with_no_inline_ignores_still_blocks(project: Path, monkeypatch) -> None:

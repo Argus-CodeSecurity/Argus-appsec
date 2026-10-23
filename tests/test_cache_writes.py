@@ -6,13 +6,13 @@ import json
 import threading
 from pathlib import Path
 
-from argus.core.cache import ScanCache
-from argus.core.project import Project
-from argus.profiles import PROFILES
+from nephilex.core.cache import ScanCache
+from nephilex.core.project import Project
+from nephilex.profiles import PROFILES
 
 
 def test_concurrent_saves_leave_a_valid_cache(tmp_path: Path, monkeypatch) -> None:
-    monkeypatch.setenv("ARGUS_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("NEPHILEX_CACHE_DIR", str(tmp_path / "cache"))
     root = tmp_path / "proj"
     root.mkdir()
 
@@ -32,11 +32,11 @@ def test_concurrent_saves_leave_a_valid_cache(tmp_path: Path, monkeypatch) -> No
     files = sorted(p.name for p in cache_dir.iterdir())
     assert len(files) == 1 and files[0].endswith(".json"), files  # no stray .tmp
     blob = json.loads((cache_dir / files[0]).read_text(encoding="utf-8"))
-    assert blob["argus"].startswith("test+")  # version plus code fingerprint
+    assert blob["nephilex"].startswith("test+")  # version plus code fingerprint
 
 
 def test_ci_profile_disables_cache(tmp_path: Path) -> None:
-    from argus.cli._common import build_config
+    from nephilex.cli._common import build_config
 
     assert PROFILES["ci"].cache is False
     (tmp_path / "app.py").write_text("x = 1\n", encoding="utf-8")

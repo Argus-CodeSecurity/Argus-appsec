@@ -1,4 +1,4 @@
-# Official Argus GitHub Action.
+# Official Nephilex GitHub Action.
 #
 # Minimal usage (in your repo's .github/workflows/security.yml):
 #
@@ -9,26 +9,26 @@
 #     - uses: actions/checkout@v4
 #       with:
 #         fetch-depth: 0       # full history enables diff-aware PR scanning
-#     - uses: Argus-CodeSecurity/Argus-appsec@v0.9.2
+#     - uses: nephilex/nephilex@v0.9.2
 #       with:
 #         fail-on: high
 #
 # On pull requests the action is diff-aware by default: it scans the base branch
 # to build a baseline, then reports and gates only on findings the PR introduces.
-# It also reads the Argus config from the base branch and ignores in-tree
+# It also reads the Nephilex config from the base branch and ignores in-tree
 # suppressions in the PR checkout (see the pr-config-from-base input).
 #
 # Security note for maintainers: inputs are never interpolated into `run:` blocks
 # with `${{ }}`. Every value reaches the shell through `env:` and is quoted, so a
 # caller that wires an input from untrusted event data cannot inject commands.
-name: "Argus Security Scan"
+name: "Nephilex Security Scan"
 description: >-
   AI-enriched application security scanning: hardcoded secrets, vulnerable
   dependencies (live OSV data, transitive via lockfiles), SAST, taint analysis,
   and IaC misconfigurations, with explanations, SARIF upload to GitHub Code
   Scanning, and diff-aware pull-request gating. Offline by default: no API key
   needed and code never leaves the runner.
-author: "The Argus Authors"
+author: "The Nephilex Authors"
 
 branding:
   icon: "eye"
@@ -53,7 +53,7 @@ inputs:
     required: false
     default: ""
   scanners:
-    description: "Comma-separated scanners to run (default: all). See `argus scanners`."
+    description: "Comma-separated scanners to run (default: all). See `nephilex scanners`."
     required: false
     default: ""
   exclude-scanners:
@@ -66,17 +66,17 @@ inputs:
     default: ""
   config:
     description: >-
-      Path to an .argus.yml config file. On pull requests (with
+      Path to a .nephilex.yml config file. On pull requests (with
       pr-config-from-base) this file is read from the base branch, not from
       the PR's checkout.
     required: false
     default: ""
   pr-config-from-base:
     description: >-
-      On pull requests, read the Argus config from the base branch
+      On pull requests, read the Nephilex config from the base branch
       (`--config-from-ref origin/<base>`) and treat the PR checkout as
-      untrusted, so a PR cannot loosen the gate by editing .argus.yml,
-      .argus/exceptions.yml, .argus/rules or adding argus-ignore comments.
+      untrusted, so a PR cannot loosen the gate by editing .nephilex.yml,
+      .nephilex/exceptions.yml, .nephilex/rules or adding nephilex-ignore comments.
       Config changes take effect once merged. Set to "false" to use the PR's
       own config (not recommended for repositories that accept outside PRs).
     required: false
@@ -84,7 +84,7 @@ inputs:
   sarif-file:
     description: "Where to write the SARIF report."
     required: false
-    default: "argus.sarif"
+    default: "nephilex.sarif"
   upload-sarif:
     description: >-
       Upload the SARIF report to GitHub Code Scanning (needs
@@ -94,7 +94,7 @@ inputs:
   category:
     description: "Code Scanning category for the SARIF upload."
     required: false
-    default: "argus"
+    default: "nephilex"
   diff-aware:
     description: >-
       On pull requests, scan the base branch first and report only findings the
@@ -107,19 +107,19 @@ inputs:
       (the "PR bot"). Needs `pull-requests: write` permission. Off by default.
     required: false
     default: "false"
-  argus-version:
+  nephilex-version:
     description: >-
-      argus-appsec version to install from PyPI. Empty (the default) installs the
-      Argus source bundled with this action ref, so `@vX.Y.Z` runs exactly X.Y.Z.
+      nephilex version to install from PyPI. Empty (the default) installs the
+      Nephilex source bundled with this action ref, so `@vX.Y.Z` runs exactly X.Y.Z.
     required: false
     default: ""
   python-version:
-    description: "Python version used to run Argus."
+    description: "Python version used to run Nephilex."
     required: false
     default: "3.12"
   extra-args:
     description: >-
-      Extra arguments appended to `argus scan`, split on whitespace like a shell
+      Extra arguments appended to `nephilex scan`, split on whitespace like a shell
       would (quotes are not interpreted).
     required: false
     default: ""
@@ -136,19 +136,19 @@ runs:
       with:
         python-version: ${{ inputs.python-version }}
 
-    - name: Install Argus
+    - name: Install Nephilex
       shell: bash
       env:
-        ARGUS_VERSION: ${{ inputs.argus-version }}
+        NEPHILEX_VERSION: ${{ inputs.nephilex-version }}
         ACTION_PATH: ${{ github.action_path }}
       run: |
         set -euo pipefail
-        if [ -n "$ARGUS_VERSION" ]; then
-          if ! [[ "$ARGUS_VERSION" =~ ^[0-9A-Za-z.+!-]+$ ]]; then
-            echo "::error::argus-version must be a plain version string, got: $ARGUS_VERSION"
+        if [ -n "$NEPHILEX_VERSION" ]; then
+          if ! [[ "$NEPHILEX_VERSION" =~ ^[0-9A-Za-z.+!-]+$ ]]; then
+            echo "::error::nephilex-version must be a plain version string, got: $NEPHILEX_VERSION"
             exit 1
           fi
-          python -m pip install --quiet "argus-appsec==${ARGUS_VERSION}"
+          python -m pip install --quiet "nephilex==${NEPHILEX_VERSION}"
         else
           python -m pip install --quiet "$ACTION_PATH"
         fi
@@ -160,36 +160,36 @@ runs:
       shell: bash
       run: |
         # The PR checkout is contributor-controlled, so the later steps read the
-        # config from the base branch instead (ARGUS_CONFIG_REF in their env).
+        # config from the base branch instead (NEPHILEX_CONFIG_REF in their env).
         # If the base ref cannot be fetched, the scan fails with exit 2 rather
         # than silently trusting the PR's config.
         git fetch --no-tags --depth=1 origin \
           "+refs/heads/${GITHUB_BASE_REF}:refs/remotes/origin/${GITHUB_BASE_REF}" \
-          || echo "::warning::Argus: could not fetch base branch '${GITHUB_BASE_REF}'."
+          || echo "::warning::Nephilex: could not fetch base branch '${GITHUB_BASE_REF}'."
 
     - name: Build baseline from base branch (diff-aware PRs)
       if: github.event_name == 'pull_request' && inputs.diff-aware == 'true'
       shell: bash
       env:
-        ARGUS_CONFIG_REF: ${{ (github.event_name == 'pull_request' || github.event_name == 'pull_request_target') && inputs.pr-config-from-base == 'true' && format('origin/{0}', github.base_ref) || '' }}
+        NEPHILEX_CONFIG_REF: ${{ (github.event_name == 'pull_request' || github.event_name == 'pull_request_target') && inputs.pr-config-from-base == 'true' && format('origin/{0}', github.base_ref) || '' }}
       run: |
         # Never break the build over the baseline: a missing base ref just means
         # a full (non-diff-aware) scan.
         git fetch origin "${GITHUB_BASE_REF}" --depth=1 2>/dev/null || true
-        if git worktree add "${RUNNER_TEMP}/argus-base" "origin/${GITHUB_BASE_REF}" 2>/dev/null; then
+        if git worktree add "${RUNNER_TEMP}/nephilex-base" "origin/${GITHUB_BASE_REF}" 2>/dev/null; then
           # Scan the base with the same trust settings as the PR scan, so
           # findings suppressed in-tree on the base are in the baseline too.
           base_args=()
-          [ -n "${ARGUS_CONFIG_REF:-}" ] && base_args+=(--config-from-ref "${ARGUS_CONFIG_REF}")
-          argus scan "${RUNNER_TEMP}/argus-base" -f json \
-            -o "${RUNNER_TEMP}/argus-baseline.json" --quiet "${base_args[@]}" || true
+          [ -n "${NEPHILEX_CONFIG_REF:-}" ] && base_args+=(--config-from-ref "${NEPHILEX_CONFIG_REF}")
+          nephilex scan "${RUNNER_TEMP}/nephilex-base" -f json \
+            -o "${RUNNER_TEMP}/nephilex-baseline.json" --quiet "${base_args[@]}" || true
         else
-          echo "::notice::Argus: could not check out base branch '${GITHUB_BASE_REF}';" \
+          echo "::notice::Nephilex: could not check out base branch '${GITHUB_BASE_REF}';" \
                "running a full scan instead of a diff-aware one." \
                "Use actions/checkout with fetch-depth: 0 to enable diff-aware scanning."
         fi
 
-    - name: Run Argus
+    - name: Run Nephilex
       shell: bash
       env:
         INPUT_PATH: ${{ inputs.path }}
@@ -201,7 +201,7 @@ runs:
         INPUT_FAIL_ON: ${{ inputs.fail-on }}
         INPUT_FAIL_ON_ERROR: ${{ inputs.fail-on-error }}
         INPUT_EXTRA_ARGS: ${{ inputs.extra-args }}
-        ARGUS_CONFIG_REF: ${{ (github.event_name == 'pull_request' || github.event_name == 'pull_request_target') && inputs.pr-config-from-base == 'true' && format('origin/{0}', github.base_ref) || '' }}
+        NEPHILEX_CONFIG_REF: ${{ (github.event_name == 'pull_request' || github.event_name == 'pull_request_target') && inputs.pr-config-from-base == 'true' && format('origin/{0}', github.base_ref) || '' }}
       run: |
         set -uo pipefail
         args=(scan "$INPUT_PATH" -f sarif -o "$INPUT_SARIF_FILE" --quiet)
@@ -212,13 +212,13 @@ runs:
         [ -n "$INPUT_FAIL_ON" ]          && args+=(--fail-on "$INPUT_FAIL_ON")
         [ "$INPUT_FAIL_ON_ERROR" = "true" ]  && args+=(--fail-on-error)
         [ "$INPUT_FAIL_ON_ERROR" = "false" ] && args+=(--no-fail-on-error)
-        [ -n "${ARGUS_CONFIG_REF:-}" ]   && args+=(--config-from-ref "${ARGUS_CONFIG_REF}")
-        [ -f "${RUNNER_TEMP}/argus-baseline.json" ] && args+=(--baseline "${RUNNER_TEMP}/argus-baseline.json")
+        [ -n "${NEPHILEX_CONFIG_REF:-}" ]   && args+=(--config-from-ref "${NEPHILEX_CONFIG_REF}")
+        [ -f "${RUNNER_TEMP}/nephilex-baseline.json" ] && args+=(--baseline "${RUNNER_TEMP}/nephilex-baseline.json")
         # Word-split extra-args into an array without evaluating it, so globs,
         # `$(...)` and `;` stay literal arguments instead of running.
         extra=()
         [ -n "$INPUT_EXTRA_ARGS" ] && read -r -a extra <<< "$INPUT_EXTRA_ARGS"
-        argus "${args[@]}" "${extra[@]}"
+        nephilex "${args[@]}" "${extra[@]}"
 
     - name: Comment findings on the pull request (PR bot)
       # Run even when the gate above failed: that is when the comment matters most.
@@ -226,7 +226,7 @@ runs:
       shell: bash
       env:
         GITHUB_TOKEN: ${{ github.token }}
-        ARGUS_CONFIG_REF: ${{ (github.event_name == 'pull_request' || github.event_name == 'pull_request_target') && inputs.pr-config-from-base == 'true' && format('origin/{0}', github.base_ref) || '' }}
+        NEPHILEX_CONFIG_REF: ${{ (github.event_name == 'pull_request' || github.event_name == 'pull_request_target') && inputs.pr-config-from-base == 'true' && format('origin/{0}', github.base_ref) || '' }}
         INPUT_PATH: ${{ inputs.path }}
         INPUT_SCANNERS: ${{ inputs.scanners }}
         INPUT_EXCLUDE_SCANNERS: ${{ inputs.exclude-scanners }}
@@ -240,9 +240,9 @@ runs:
         [ -n "$INPUT_EXCLUDE_SCANNERS" ] && args+=(--exclude "$INPUT_EXCLUDE_SCANNERS")
         [ -n "$INPUT_MIN_SEVERITY" ]     && args+=(--min-severity "$INPUT_MIN_SEVERITY")
         [ -n "$INPUT_CONFIG" ]           && args+=(--config "$INPUT_CONFIG")
-        [ -n "${ARGUS_CONFIG_REF:-}" ]   && args+=(--config-from-ref "${ARGUS_CONFIG_REF}")
-        [ -f "${RUNNER_TEMP}/argus-baseline.json" ] && args+=(--baseline "${RUNNER_TEMP}/argus-baseline.json")
-        argus "${args[@]}" || echo "::warning::Argus PR review could not be posted."
+        [ -n "${NEPHILEX_CONFIG_REF:-}" ]   && args+=(--config-from-ref "${NEPHILEX_CONFIG_REF}")
+        [ -f "${RUNNER_TEMP}/nephilex-baseline.json" ] && args+=(--baseline "${RUNNER_TEMP}/nephilex-baseline.json")
+        nephilex "${args[@]}" || echo "::warning::Nephilex PR review could not be posted."
 
     - name: Upload SARIF to GitHub Code Scanning
       if: always() && inputs.upload-sarif == 'true'

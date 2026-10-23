@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from argus.core.config import Config
-from argus.core.plugin import ScannerContext
-from argus.core.project import Project
-from argus.scanners.cicd import CicdScanner
+from nephilex.core.config import Config
+from nephilex.core.plugin import ScannerContext
+from nephilex.core.project import Project
+from nephilex.scanners.cicd import CicdScanner
 
 
 def test_cicd_cli_helper_finds_workflow_issue(tmp_path: Path) -> None:
@@ -25,7 +25,7 @@ def test_cicd_cli_helper_finds_workflow_issue(tmp_path: Path) -> None:
 def test_cli_registers_infrastructure_commands() -> None:
     import typer
 
-    from argus.cli.main import app
+    from nephilex.cli.main import app
 
     click_app = typer.main.get_command(app)
     names = set(click_app.commands)

@@ -7,8 +7,8 @@ without a ground-truth mapping. This file is the complement: a small, fully
 labeled corpus that ships in the repo so the numbers are reproducible on any
 machine with one command and no network.
 
-Each case is a single file that is either **vulnerable** (Argus should raise at
-least one actionable finding) or **safe** (Argus should raise none). From that we
+Each case is a single file that is either **vulnerable** (Nephilex should raise at
+least one actionable finding) or **safe** (Nephilex should raise none). From that we
 compute, per domain and overall:
 
 * **Recall**    = caught vulnerable cases / all vulnerable cases  (did we miss a bug?)
@@ -32,11 +32,11 @@ import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 
-from argus.core.config import Config
-from argus.core.engine import ScanEngine
-from argus.core.models import Severity
-from argus.core.project import Project
-from argus.plugins import register_builtins
+from nephilex.core.config import Config
+from nephilex.core.engine import ScanEngine
+from nephilex.core.models import Severity
+from nephilex.core.project import Project
+from nephilex.plugins import register_builtins
 
 HERE = Path(__file__).resolve().parent
 RESULTS_DIR = HERE / "results"
@@ -892,7 +892,7 @@ CASES: list[Case] = [
 
 def _scan_case(case: Case) -> int:
     """Scan one case in isolation; return the count of actionable findings."""
-    tmp = Path(tempfile.mkdtemp(prefix="argus-bench-"))
+    tmp = Path(tempfile.mkdtemp(prefix="nephilex-bench-"))
     try:
         target = tmp / case.filename
         target.parent.mkdir(parents=True, exist_ok=True)  # e.g. .cursor/mcp.json
@@ -930,7 +930,7 @@ def main(write_json: bool = False) -> int:
                 d["fp"] += n
                 false_pos.append(f"{case.name} (+{n})")
 
-    print("Argus AppSec, labeled-corpus accuracy")
+    print("Nephilex, labeled-corpus accuracy")
     print("=" * 52)
     print(
         "NOTE: This is a small in-repo labeled corpus for regression detection only.\n"

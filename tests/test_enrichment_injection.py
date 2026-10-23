@@ -9,11 +9,11 @@ never change a finding's severity.
 
 from __future__ import annotations
 
-from argus.agents.base import AgentContext
-from argus.agents.enrichment import _SYSTEM, EnrichmentAgent
-from argus.core.config import Config
-from argus.core.models import Finding, Location, Severity
-from argus.core.project import Project
+from nephilex.agents.base import AgentContext
+from nephilex.agents.enrichment import _SYSTEM, EnrichmentAgent
+from nephilex.core.config import Config
+from nephilex.core.models import Finding, Location, Severity
+from nephilex.core.project import Project
 
 
 def _ctx(tmp_path, ai=None) -> AgentContext:

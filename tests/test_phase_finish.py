@@ -6,19 +6,19 @@ import json
 import subprocess
 from pathlib import Path
 
-from argus.analysis.auth_map import build_auth_map
-from argus.analysis.symbol_reachability import (
+from nephilex.analysis.auth_map import build_auth_map
+from nephilex.analysis.symbol_reachability import (
     collect_python_symbols,
     extract_osv_symbols,
     symbol_verdict,
 )
-from argus.core.config import Config
-from argus.core.plugin import ScannerContext
-from argus.core.project import Project
-from argus.sbom.diff import diff_components
-from argus.scanners.api import ApiScanner
-from argus.scanners.provenance import ProvenanceScanner
-from argus.supply_chain.intel import _parse_feed_payload, load_malicious_packages
+from nephilex.core.config import Config
+from nephilex.core.plugin import ScannerContext
+from nephilex.core.project import Project
+from nephilex.sbom.diff import diff_components
+from nephilex.scanners.api import ApiScanner
+from nephilex.scanners.provenance import ProvenanceScanner
+from nephilex.supply_chain.intel import _parse_feed_payload, load_malicious_packages
 
 
 def _git(repo: Path, *args: str) -> None:

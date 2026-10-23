@@ -1,4 +1,4 @@
-"""Run Argus, Bandit and Semgrep and normalize their JSON into ``Finding`` records.
+"""Run Nephilex, Bandit and Semgrep and normalize their JSON into ``Finding`` records.
 
 Each runner writes the tool's raw JSON plus a ``.meta.json`` next to it in the
 raw cache (``benchmarks/.corpora/raw/<dataset>/``). Parsers are pure functions
@@ -26,7 +26,7 @@ from pathlib import Path
 
 from benchmarks.public.scoring import Finding, parse_cwe, parse_cwes
 
-TOOLS = ("argus", "bandit", "semgrep")
+TOOLS = ("nephilex", "bandit", "semgrep")
 SEMGREP_DEFAULT_CONFIG = "p/python"
 
 
@@ -52,7 +52,7 @@ def _sha256_file(path: Path) -> str:
 
 
 def _clean_env() -> dict[str, str]:
-    """Environment for third-party tools: no PYTHONPATH leaking Argus's tree."""
+    """Environment for third-party tools: no PYTHONPATH leaking Nephilex's tree."""
     env = dict(os.environ)
     env.pop("PYTHONPATH", None)
     env["SEMGREP_SEND_METRICS"] = "off"
@@ -91,14 +91,14 @@ def _resolve(explicit: str | None, env_var: str, name: str) -> str:
     return candidate
 
 
-# --- Argus ------------------------------------------------------------------
+# --- Nephilex ------------------------------------------------------------------
 
 
-def run_argus(root: Path, raw: Path, opts: ToolOptions) -> dict[str, object]:
+def run_nephilex(root: Path, raw: Path, opts: ToolOptions) -> dict[str, object]:
     cmd = [
         sys.executable,
         "-m",
-        "argus",
+        "nephilex",
         "scan",
         str(root),
         "--no-ai",
@@ -117,11 +117,11 @@ def run_argus(root: Path, raw: Path, opts: ToolOptions) -> dict[str, object]:
     if "ast-python" not in scanners:
         raise RuntimeError(
             "the ast-python tier did not run; install the [ast] extra "
-            "(pip install 'argus-appsec[ast]') so the benchmark measures it"
+            "(pip install 'nephilex[ast]') so the benchmark measures it"
         )
     return {
-        "version": str(report.get("argus_version")),
-        "command": ["argus", *_portable(cmd[3:], root, raw, {})],
+        "version": str(report.get("nephilex_version")),
+        "command": ["nephilex", *_portable(cmd[3:], root, raw, {})],
         "exit_code": code,
         "seconds": round(elapsed, 1),
         "scanners_run": scanners,
@@ -130,7 +130,7 @@ def run_argus(root: Path, raw: Path, opts: ToolOptions) -> dict[str, object]:
     }
 
 
-def parse_argus(report: dict, root: Path) -> list[Finding]:
+def parse_nephilex(report: dict, root: Path) -> list[Finding]:
     out = []
     for f in report.get("findings", []):
         loc = f.get("location") or {}
@@ -149,7 +149,7 @@ def parse_argus(report: dict, root: Path) -> list[Finding]:
 
 
 def run_bandit(root: Path, raw: Path, opts: ToolOptions) -> dict[str, object]:
-    exe = _resolve(opts.bandit, "ARGUS_BENCH_BANDIT", "bandit")
+    exe = _resolve(opts.bandit, "NEPHILEX_BENCH_BANDIT", "bandit")
     env = _clean_env()
     cmd = [exe, "-r", str(root), "-f", "json", "-o", str(raw), "-q"]
     code, elapsed = _execute(cmd, (0, 1), raw.parent, env)
@@ -215,7 +215,7 @@ def _semgrep_rules(opts: ToolOptions) -> tuple[Path, dict[str, object]]:
 
 
 def run_semgrep(root: Path, raw: Path, opts: ToolOptions) -> dict[str, object]:
-    exe = _resolve(opts.semgrep, "ARGUS_BENCH_SEMGREP", "semgrep")
+    exe = _resolve(opts.semgrep, "NEPHILEX_BENCH_SEMGREP", "semgrep")
     env = _clean_env()
     rules, rules_meta = _semgrep_rules(opts)
     # Run from the ruleset's directory and pass the bare file name: Semgrep
@@ -284,12 +284,12 @@ def _rel(path: str, root: Path) -> str:
 
 
 RUNNERS: dict[str, Callable[[Path, Path, ToolOptions], dict[str, object]]] = {
-    "argus": run_argus,
+    "nephilex": run_nephilex,
     "bandit": run_bandit,
     "semgrep": run_semgrep,
 }
 PARSERS: dict[str, Callable[[dict, Path], list[Finding]]] = {
-    "argus": parse_argus,
+    "nephilex": parse_nephilex,
     "bandit": parse_bandit,
     "semgrep": parse_semgrep,
 }

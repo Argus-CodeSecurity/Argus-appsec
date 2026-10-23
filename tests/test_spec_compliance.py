@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from argus.profiles import PROFILES, apply_profile
+from nephilex.profiles import PROFILES, apply_profile
 
 
 def test_apply_profile_fast():
@@ -27,7 +27,7 @@ def test_all_profiles_documented():
 
 
 def test_host_assess_returns_scan():
-    from argus.agent.host_posture import assess_host
+    from nephilex.agent.host_posture import assess_host
 
     result = assess_host(label="test-host")
     assert result.target == "host:test-host"
@@ -35,7 +35,7 @@ def test_host_assess_returns_scan():
 
 
 def test_fim_first_run_no_findings(tmp_path):
-    from argus.agent.fim import check_integrity
+    from nephilex.agent.fim import check_integrity
 
     f = tmp_path / "cfg.txt"
     f.write_text("v1\n", encoding="utf-8")
@@ -50,7 +50,7 @@ def test_fim_first_run_no_findings(tmp_path):
 def test_baseline_and_server_cli_registered():
     import typer
 
-    from argus.cli.main import app
+    from nephilex.cli.main import app
 
     cmds = typer.main.get_command(app).commands
     assert "baseline" in cmds

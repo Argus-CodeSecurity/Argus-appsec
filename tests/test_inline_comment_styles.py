@@ -1,4 +1,4 @@
-"""argus-ignore works in the comment syntax of each file type, and only there."""
+"""nephilex-ignore works in the comment syntax of each file type, and only there."""
 
 from __future__ import annotations
 
@@ -6,12 +6,12 @@ from pathlib import Path
 
 import pytest
 
-from argus.core.config import Config
-from argus.core.engine import ScanEngine
-from argus.core.project import Project
+from nephilex.core.config import Config
+from nephilex.core.engine import ScanEngine
+from nephilex.core.project import Project
 
 KEY = "AKIAIOSFODNN7EXAMPLE"
-REASON = 'argus-ignore reason="test fixture key"'
+REASON = 'nephilex-ignore reason="test fixture key"'
 
 
 def _secret_lines(root: Path, name: str, line: str) -> list[int]:
@@ -63,4 +63,4 @@ def test_other_comment_styles_do_not_suppress(tmp_path: Path, name: str, line: s
 
 
 def test_reason_is_still_required_in_every_style(tmp_path: Path) -> None:
-    assert _secret_lines(tmp_path, "q.sql", f"SELECT '{KEY}'; -- argus-ignore") == [1]
+    assert _secret_lines(tmp_path, "q.sql", f"SELECT '{KEY}'; -- nephilex-ignore") == [1]

@@ -12,13 +12,13 @@ pytest.importorskip("sqlmodel")
 
 from sqlmodel import Session, select  # noqa: E402
 
-from argus.core.models import ScanResult  # noqa: E402
-from argus.dashboard import db, store  # noqa: E402
+from nephilex.core.models import ScanResult  # noqa: E402
+from nephilex.dashboard import db, store  # noqa: E402
 
 
 @pytest.fixture(autouse=True)
 def _fresh_db(monkeypatch):
-    monkeypatch.setenv("ARGUS_DASHBOARD_DB", ":memory:")
+    monkeypatch.setenv("NEPHILEX_DASHBOARD_DB", ":memory:")
     db.reset_engine_for_tests()
 
 

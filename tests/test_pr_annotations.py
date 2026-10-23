@@ -4,10 +4,10 @@ from __future__ import annotations
 
 import pytest
 
-from argus.remediation import hosting
-from argus.remediation.annotations import build_fix_comments
-from argus.remediation.applier import AppliedFix, ApplyReport
-from argus.remediation.hosting import HostingError, RepoRef, post_pr_review
+from nephilex.remediation import hosting
+from nephilex.remediation.annotations import build_fix_comments
+from nephilex.remediation.applier import AppliedFix, ApplyReport
+from nephilex.remediation.hosting import HostingError, RepoRef, post_pr_review
 
 
 def _report() -> ApplyReport:

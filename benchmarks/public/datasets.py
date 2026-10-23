@@ -24,7 +24,7 @@ from pathlib import Path, PurePosixPath
 from benchmarks.public.scoring import LabeledSample, OwaspCase, parse_cwe
 
 # Marker written after a complete extraction; a partial tree is re-extracted.
-_COMPLETE = ".argus-bench-complete"
+_COMPLETE = ".nephilex-bench-complete"
 
 
 @dataclass(frozen=True)
@@ -176,7 +176,7 @@ def _materialize_securityeval(root: Path) -> Path:
     ``Testcases_Insecure_Code`` folder still holds older samples that the
     authors removed from the dataset, so it is not scanned.
     """
-    out = root / "_argus_bench_samples"
+    out = root / "_nephilex_bench_samples"
     if (out / _COMPLETE).is_file():
         return out
     shutil.rmtree(out, ignore_errors=True)

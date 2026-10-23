@@ -3,7 +3,7 @@
 A scanner sees code, not your architecture. It cannot know that
 `myapp.security.escape_html` is your reviewed HTML encoder, that `scripts/`
 only runs from an operator's laptop, or that `billing/` holds card data.
-`.argus/context.yml` tells it, so findings reflect your project instead of a
+`.nephilex/context.yml` tells it, so findings reflect your project instead of a
 generic one:
 
 - **sanitizers**: functions that neutralise taint, per language and optionally
@@ -24,24 +24,24 @@ what the file did. See [Reviewing what the context changed](#reviewing-what-the-
 ## Trust rules
 
 The context file is project configuration and follows the same rules as
-`.argus.yml` (see [Which configuration is trusted](configuration.md#which-configuration-is-trusted)).
+`.nephilex.yml` (see [Which configuration is trusted](configuration.md#which-configuration-is-trusted)).
 A sanitizer entry switches checks off, so the file must never come from the
 code it is meant to review.
 
-| Situation | `.argus/context.yml` |
+| Situation | `.nephilex/context.yml` |
 |---|---|
-| Local path (`argus scan .`) | Honoured |
-| Cloned remote (`argus scan https://...`) | Ignored unless `--trust-remote-config` |
+| Local path (`nephilex scan .`) | Honoured |
+| Cloned remote (`nephilex scan https://...`) | Ignored unless `--trust-remote-config` |
 | `--config-from-ref REF` | Read from that git ref; the working tree's copy is ignored |
-| `argus agent`, `argus mcp` | Ignored |
+| `nephilex agent`, `nephilex mcp` | Ignored |
 
 In CI on pull requests, use `--config-from-ref origin/<base-branch>` (the
 GitHub Action does this by default). A pull request that adds or edits
-`.argus/context.yml` then has no effect on its own scan: the version already
+`.nephilex/context.yml` then has no effect on its own scan: the version already
 reviewed and merged on the base branch decides. Changes to the context file
 take effect after they are merged, like any other gate setting.
 
-Treat changes to `.argus/context.yml` like changes to the gate itself: put the
+Treat changes to `.nephilex/context.yml` like changes to the gate itself: put the
 file under `CODEOWNERS` for your security reviewers.
 
 ## Schema
@@ -148,7 +148,7 @@ db.query("SELECT * FROM t WHERE n = '" + name + "'");  // still reported (CWE-89
 
 Each entry is a dotted name. A call to it (matched like a sanitizer) yields a
 clean value whatever its arguments, and the name itself no longer counts as an
-input source where Argus treats it as one by default (`os.environ` and
+input source where Nephilex treats it as one by default (`os.environ` and
 `sys.argv` in Python, `process.env` and `process.argv` in JavaScript):
 
 ```python
@@ -198,7 +198,7 @@ setting that applied:
 ```json
 "metadata": {
   "context": {
-    "source": ".argus/context.yml",
+    "source": ".nephilex/context.yml",
     "original_severity": "high",
     "original_likelihood": "possible",
     "changes": [
@@ -219,7 +219,7 @@ rule, path, line and the context entries that occur in the file:
 
 ```json
 "context": {
-  "source": "origin/main:.argus/context.yml",
+  "source": "origin/main:.nephilex/context.yml",
   "digest": "3f2a9c0d1e4b5a67",
   "internal": 1,
   "exposure": 0,

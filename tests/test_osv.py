@@ -9,7 +9,7 @@ from __future__ import annotations
 import httpx
 import pytest
 
-from argus.scanners import osv
+from nephilex.scanners import osv
 
 pytestmark = pytest.mark.osv_network
 
@@ -55,7 +55,7 @@ def test_query_batches_all_packages(monkeypatch):
 
 # --- caching: a second lookup does not re-fetch the vuln record ------------
 def test_query_uses_disk_cache(tmp_path, monkeypatch):
-    monkeypatch.setenv("ARGUS_CACHE_DIR", str(tmp_path))
+    monkeypatch.setenv("NEPHILEX_CACHE_DIR", str(tmp_path))
     fetches = {"vulns": 0}
 
     def handler(request: httpx.Request) -> httpx.Response:
@@ -73,7 +73,7 @@ def test_query_uses_disk_cache(tmp_path, monkeypatch):
 
 
 def test_cache_roundtrip_and_expiry(tmp_path, monkeypatch):
-    monkeypatch.setenv("ARGUS_CACHE_DIR", str(tmp_path))
+    monkeypatch.setenv("NEPHILEX_CACHE_DIR", str(tmp_path))
     cache_dir = osv._cache_dir()
     osv._cache_put("OSV-X", {"id": "OSV-X"}, cache_dir)
     assert osv._cache_get("OSV-X", cache_dir) == {"id": "OSV-X"}
@@ -84,7 +84,7 @@ def test_cache_roundtrip_and_expiry(tmp_path, monkeypatch):
 
 
 def test_cache_filename_is_traversal_safe(tmp_path, monkeypatch):
-    monkeypatch.setenv("ARGUS_CACHE_DIR", str(tmp_path))
+    monkeypatch.setenv("NEPHILEX_CACHE_DIR", str(tmp_path))
     cache_dir = osv._cache_dir()
     # A malicious advisory id must not escape the cache directory.
     path = osv._cache_file(cache_dir, "../../etc/passwd")

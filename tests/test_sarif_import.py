@@ -8,9 +8,9 @@ from pathlib import Path
 
 import pytest
 
-from argus.core.models import Confidence, Finding, Location, Severity
-from argus.core.project import Project
-from argus.importers import (
+from nephilex.core.models import Confidence, Finding, Location, Severity
+from nephilex.core.project import Project
+from nephilex.importers import (
     SarifImportError,
     import_sarif,
     load_sarif,
@@ -138,7 +138,7 @@ def test_gitleaks_secrets_never_stored(vulnerable_project):
     assert aws.cwe == ["CWE-798"]
     assert aws.severity is Severity.HIGH  # no level at all: secrets default high
     assert aws.title == "AWS Access Token"
-    # Same redacted line as Argus's own secrets scanner records.
+    # Same redacted line as Nephilex's own secrets scanner records.
     assert aws.location.snippet == 'AWS_ACCESS_KEY_ID = "AKI\u2026 [redacted, 20 chars]"'
     # The file does not exist: the bare value from the SARIF is masked whole.
     generic = _by_rule(out.findings, "generic-api-key")
@@ -398,11 +398,11 @@ def test_severity_sources(tmp_path, props, level, expected):
 
 
 def test_inline_suppression_applies_to_trusted_projects_only(tmp_path):
-    from argus.core.config import Config
-    from argus.importers import process_imported
+    from nephilex.core.config import Config
+    from nephilex.importers import process_imported
 
     (tmp_path / "app.py").write_text(
-        'os.system(cmd)  # argus-ignore reason="reviewed"\nos.system(other)\n', encoding="utf-8"
+        'os.system(cmd)  # nephilex-ignore reason="reviewed"\nos.system(other)\n', encoding="utf-8"
     )
     doc = _doc([_result("app.py", 1), _result("app.py", 2)])
     project = Project.from_path(tmp_path)

@@ -4,14 +4,14 @@ from __future__ import annotations
 
 import json
 
-from argus.mcp.server import handle_request
+from nephilex.mcp.server import handle_request
 
 
 def test_mcp_help_lists_every_tool():
     from typer.testing import CliRunner
 
-    from argus.cli.main import app
-    from argus.mcp.server import TOOLS
+    from nephilex.cli.main import app
+    from nephilex.mcp.server import TOOLS
 
     res = CliRunner().invoke(app, ["mcp", "--help"], terminal_width=200)
     assert res.exit_code == 0, res.output
@@ -31,16 +31,16 @@ def test_initialize_returns_capabilities_and_server_info():
     )
     assert resp["id"] == 1
     result = resp["result"]
-    assert result["serverInfo"]["name"] == "argus-appsec"
+    assert result["serverInfo"]["name"] == "nephilex"
     assert "tools" in result["capabilities"]
     assert result["protocolVersion"] == "2024-11-05"  # echoes the client's version
 
 
-def test_tools_list_exposes_argus_scan():
+def test_tools_list_exposes_nephilex_scan():
     resp = handle_request({"jsonrpc": "2.0", "id": 2, "method": "tools/list"})
     tools = resp["result"]["tools"]
-    assert any(t["name"] == "argus_scan" for t in tools)
-    scan = next(t for t in tools if t["name"] == "argus_scan")
+    assert any(t["name"] == "nephilex_scan" for t in tools)
+    scan = next(t for t in tools if t["name"] == "nephilex_scan")
     assert "path" in scan["inputSchema"]["required"]
 
 
@@ -67,14 +67,14 @@ def test_unknown_tool_is_reported_in_band():
 
 def test_scan_tool_returns_structured_findings(vulnerable_project, monkeypatch):
     # The tool only scans inside its allowed roots (default: the working directory).
-    monkeypatch.setenv("ARGUS_MCP_ROOTS", str(vulnerable_project.root))
+    monkeypatch.setenv("NEPHILEX_MCP_ROOTS", str(vulnerable_project.root))
     resp = handle_request(
         {
             "jsonrpc": "2.0",
             "id": 5,
             "method": "tools/call",
             "params": {
-                "name": "argus_scan",
+                "name": "nephilex_scan",
                 "arguments": {"path": str(vulnerable_project.root), "min_severity": "low"},
             },
         }
@@ -92,7 +92,10 @@ def test_scan_tool_bad_path_is_reported_in_band():
             "jsonrpc": "2.0",
             "id": 6,
             "method": "tools/call",
-            "params": {"name": "argus_scan", "arguments": {"path": "/no/such/path/argus-xyz"}},
+            "params": {
+                "name": "nephilex_scan",
+                "arguments": {"path": "/no/such/path/nephilex-xyz"},
+            },
         }
     )
     assert resp["result"]["isError"] is True

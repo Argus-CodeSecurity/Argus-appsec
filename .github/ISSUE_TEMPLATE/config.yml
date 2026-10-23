@@ -1,8 +1,8 @@
 blank_issues_enabled: true
 contact_links:
-  - name: Report a security vulnerability in Argus (private)
-    url: https://github.com/Argus-CodeSecurity/Argus-appsec/security/advisories/new
+  - name: Report a security vulnerability in Nephilex (private)
+    url: https://github.com/nephilex/nephilex/security/advisories/new
     about: Please report security issues privately, not as a public issue. See SECURITY.md.
   - name: Questions & discussion
-    url: https://github.com/Argus-CodeSecurity/Argus-appsec/discussions
+    url: https://github.com/nephilex/nephilex/discussions
     about: Ask questions and discuss ideas here (enable Discussions in repo settings).

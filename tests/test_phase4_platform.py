@@ -4,15 +4,15 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from argus.analysis.drift import compare_inventories, compare_scans, highest_added_severity
-from argus.core.models import Finding, Location, ScanResult, Severity
+from nephilex.analysis.drift import compare_inventories, compare_scans, highest_added_severity
+from nephilex.core.models import Finding, Location, ScanResult, Severity
 
 
 def _scan(target: str, *findings: Finding) -> ScanResult:
     return ScanResult(
         target=target,
         started_at=datetime.now(timezone.utc),
-        argus_version="0.8.0",
+        nephilex_version="0.8.0",
         findings=list(findings),
     )
 
@@ -70,7 +70,7 @@ def test_highest_added_severity():
 def test_drift_cli_registered():
     import typer
 
-    from argus.cli.main import app
+    from nephilex.cli.main import app
 
     cmds = typer.main.get_command(app).commands
     assert "drift" in cmds
@@ -82,7 +82,7 @@ def test_enterprise_policy_pack_loads():
 
     import yaml
 
-    from argus.policy.engine import load_policies
+    from nephilex.policy.engine import load_policies
 
     path = Path(__file__).resolve().parents[1] / "examples" / "policies" / "enterprise.yml"
     data = yaml.safe_load(path.read_text(encoding="utf-8"))

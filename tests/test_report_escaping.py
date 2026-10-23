@@ -4,13 +4,13 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from argus.core.models import Finding, Location, Remediation, ScanResult, Severity
-from argus.remediation import pr_review
-from argus.remediation.annotations import build_fix_comments
-from argus.remediation.applier import AppliedFix, ApplyReport
-from argus.remediation.pullrequest import _pr_body
-from argus.reporting.markdown import MarkdownReporter
-from argus.reporting.md_escape import md_code, md_fence, md_text
+from nephilex.core.models import Finding, Location, Remediation, ScanResult, Severity
+from nephilex.remediation import pr_review
+from nephilex.remediation.annotations import build_fix_comments
+from nephilex.remediation.applier import AppliedFix, ApplyReport
+from nephilex.remediation.pullrequest import _pr_body
+from nephilex.reporting.markdown import MarkdownReporter
+from nephilex.reporting.md_escape import md_code, md_fence, md_text
 
 HOSTILE_TITLE = "Pwned @octo-org/admins [click](https://evil.example) <img src=x> **x**"
 HOSTILE_PATH = "src/a`b|c @team.py"

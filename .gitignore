@@ -17,9 +17,9 @@ env/
 htmlcov/
 coverage.xml
 
-# Argus output
-.argus/
-argus-report.*
+# Nephilex output
+.nephilex/
+nephilex-report.*
 *.sarif
 # SARIF inputs used by the importer tests are source, not scan output.
 !tests/fixtures/sarif/*.sarif

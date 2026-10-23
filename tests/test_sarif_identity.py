@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from argus.core.models import Finding, Location, docs_url_for
-from argus.importers import parse_sarif
+from nephilex.core.models import Finding, Location, docs_url_for
+from nephilex.importers import parse_sarif
 
 
 def _doc(result: dict) -> dict:

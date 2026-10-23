@@ -4,12 +4,12 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from argus.core.config import Config
-from argus.core.plugin import ScannerContext
-from argus.core.project import Project
-from argus.scanners.cicd import CicdScanner
-from argus.scanners.cloud import CloudScanner
-from argus.scanners.container import ContainerScanner
+from nephilex.core.config import Config
+from nephilex.core.plugin import ScannerContext
+from nephilex.core.project import Project
+from nephilex.scanners.cicd import CicdScanner
+from nephilex.scanners.cloud import CloudScanner
+from nephilex.scanners.container import ContainerScanner
 
 
 def _ctx(tmp_path: Path, *files: tuple[str, str]) -> ScannerContext:

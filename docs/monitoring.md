@@ -5,7 +5,7 @@ not: a new CVE is published against a dependency you already ship, or a CVE you
 carry lands on the [CISA KEV](https://www.cisa.gov/known-exploited-vulnerabilities-catalog)
 catalog. Catching that is a *monitoring* problem, not a one-off scan.
 
-You do not need a new tool for it. Argus already has the pieces:
+You do not need a new tool for it. Nephilex already has the pieces:
 
 - **Fresh data every run.** The dependency scanner queries live OSV data (cached
   with a TTL) and enriches with EPSS and KEV on every scan, so a newly-published
@@ -22,11 +22,11 @@ committed baseline:
 
 ```bash
 # once, to capture the current state
-argus scan . -f json -o .argus-baseline.json
+nephilex scan . -f json -o .nephilex-baseline.json
 
 # on a schedule (e.g. daily): fail only if a NEW high+ finding appeared,
 # which includes a dependency that became vulnerable since the baseline
-argus scan . --baseline .argus-baseline.json --fail-on high
+nephilex scan . --baseline .nephilex-baseline.json --fail-on high
 ```
 
 A daily scheduled run that exits non-zero when a new critical or high appears is a
@@ -37,6 +37,6 @@ working watchtower: the day a CVE you ship is added to KEV, the next run flags i
 Doing this **automatically across many repositories**, on a schedule you do not
 maintain, with **Slack/email alerts** on new criticals and a history of when each
 finding appeared and cleared, is the retention feature of the hosted
-[Argus Cloud](https://github.com/Argus-CodeSecurity/Argus-appsec) offering. The
+[Nephilex Cloud](https://github.com/nephilex/nephilex) offering. The
 open-source core gives you the same detection; the hosted product runs and alerts
 on it for you.

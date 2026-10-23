@@ -9,11 +9,11 @@ from pathlib import Path
 import pytest
 from typer.testing import CliRunner
 
-from argus.cli.main import app
-from argus.core import gitexec
-from argus.core.config import Config, ConfigError
-from argus.core.engine import ScanEngine
-from argus.core.project import Project, git_ignored_paths
+from nephilex.cli.main import app
+from nephilex.core import gitexec
+from nephilex.core.config import Config, ConfigError
+from nephilex.core.engine import ScanEngine
+from nephilex.core.project import Project, git_ignored_paths
 
 pytestmark = pytest.mark.skipif(shutil.which("git") is None, reason="git not installed")
 

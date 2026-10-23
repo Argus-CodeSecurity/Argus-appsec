@@ -1,7 +1,7 @@
 # Policy engine
 
-Argus includes a deterministic **policy engine** that evaluates scan findings
-against rules declared in `.argus.yml`. Policies never depend on LLM output.
+Nephilex includes a deterministic **policy engine** that evaluates scan findings
+against rules declared in `.nephilex.yml`. Policies never depend on LLM output.
 
 ## Declaring policies
 
@@ -49,14 +49,14 @@ policies:
 
 ```bash
 # Evaluate policies after a scan
-argus policy check .
+nephilex policy check .
 
 # Evaluate an existing JSON report
-argus policy check --report results.json
+nephilex policy check --report results.json
 
 # In CI (after scan)
-argus scan . -f json -o results.json --quiet
-argus policy check --report results.json
+nephilex scan . -f json -o results.json --quiet
+nephilex policy check --report results.json
 ```
 
 Policies complement `--fail-on`, which gates on raw severity. Use policies when
@@ -65,5 +65,5 @@ malicious packages, warn on typosquats).
 
 ## Version control
 
-Keep `.argus.yml` policies in git. Changes to policy should be reviewed like
+Keep `.nephilex.yml` policies in git. Changes to policy should be reviewed like
 code changes - they define your security gate.

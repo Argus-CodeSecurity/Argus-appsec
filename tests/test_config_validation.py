@@ -7,9 +7,9 @@ from pathlib import Path
 import pytest
 from typer.testing import CliRunner
 
-from argus.cli.main import app
-from argus.core.config import Config, ConfigError
-from argus.core.models import Severity
+from nephilex.cli.main import app
+from nephilex.core.config import Config, ConfigError
+from nephilex.core.models import Severity
 
 runner = CliRunner()
 
@@ -65,13 +65,13 @@ def test_severities_parse() -> None:
 
 
 def test_yaml_top_level_must_be_mapping(tmp_path: Path) -> None:
-    (tmp_path / ".argus.yml").write_text("- scanners\n", encoding="utf-8")
+    (tmp_path / ".nephilex.yml").write_text("- scanners\n", encoding="utf-8")
     with pytest.raises(ConfigError, match="mapping"):
         Config.load(project_root=tmp_path)
 
 
 def test_invalid_yaml_is_config_error(tmp_path: Path) -> None:
-    (tmp_path / ".argus.yml").write_text("scanners: [\n", encoding="utf-8")
+    (tmp_path / ".nephilex.yml").write_text("scanners: [\n", encoding="utf-8")
     with pytest.raises(ConfigError, match="YAML"):
         Config.load(project_root=tmp_path)
 

@@ -2,7 +2,7 @@
 
 A fast-growing share of code is written with AI coding agents. If the agent runs a
 security scan right after it generates code, the vulnerability is caught before it
-is ever committed. Argus ships a built-in [Model Context
+is ever committed. Nephilex ships a built-in [Model Context
 Protocol](https://modelcontextprotocol.io) server so any MCP-capable agent can
 call it as a tool.
 
@@ -11,12 +11,12 @@ read-only: no tool modifies your files.
 
 For ready-made Claude Code, Cursor and VS Code setups (MCP config plus a hook
 that checks every edited file), see [Editors and AI assistants](editors.md)
-and `argus init --editor`.
+and `nephilex init --editor`.
 
 ## Run it
 
 ```bash
-argus mcp
+nephilex mcp
 ```
 
 That starts the server on stdin/stdout. You normally do not run it by hand; you
@@ -24,13 +24,13 @@ point an MCP client at it.
 
 ## Connect an agent
 
-Most MCP clients take a small JSON config. Register Argus as a server:
+Most MCP clients take a small JSON config. Register Nephilex as a server:
 
 ```json
 {
   "mcpServers": {
-    "argus": {
-      "command": "argus",
+    "nephilex": {
+      "command": "nephilex",
       "args": ["mcp"]
     }
   }
@@ -41,26 +41,26 @@ Once connected, the agent sees five tools:
 
 | Tool | Arguments | Returns |
 | --- | --- | --- |
-| `argus_scan` | `path` (required), `min_severity` (optional: info/low/medium/high/critical) | A full scan of a directory or file: a structured summary plus findings, each with rule id, severity, CWE/OWASP, location, and remediation. |
-| `argus_check_files` | `paths` (required, 1 to 100 files), `min_severity` (default low) | The fast, file-level check (`argus check`): only the file-local scanners, no network. Findings carry an `id`, path, line, rule id, severity, a one-line `fix`, a `hook` line and `fix_available`. |
-| `argus_check_snippet` | `code` (required), `filename` or `language`, `min_severity` | The same check on code text, scanned in a private temporary directory, never in the project. |
-| `argus_check_package` | `ecosystem`, `name` (required), `version` | A verdict on a dependency before it is added: known malicious, typosquat, known vulnerabilities (OSV, needs `version`) and whether the name exists on the registry. |
-| `argus_fix` | `finding_id` (required) | For a finding from a previous check, Argus's deterministic, verified fix as a unified diff, or the reason there is none. Never applied. |
+| `nephilex_scan` | `path` (required), `min_severity` (optional: info/low/medium/high/critical) | A full scan of a directory or file: a structured summary plus findings, each with rule id, severity, CWE/OWASP, location, and remediation. |
+| `nephilex_check_files` | `paths` (required, 1 to 100 files), `min_severity` (default low) | The fast, file-level check (`nephilex check`): only the file-local scanners, no network. Findings carry an `id`, path, line, rule id, severity, a one-line `fix`, a `hook` line and `fix_available`. |
+| `nephilex_check_snippet` | `code` (required), `filename` or `language`, `min_severity` | The same check on code text, scanned in a private temporary directory, never in the project. |
+| `nephilex_check_package` | `ecosystem`, `name` (required), `version` | A verdict on a dependency before it is added: known malicious, typosquat, known vulnerabilities (OSV, needs `version`) and whether the name exists on the registry. |
+| `nephilex_fix` | `finding_id` (required) | For a finding from a previous check, Nephilex's deterministic, verified fix as a unified diff, or the reason there is none. Never applied. |
 
 A typical agent instruction: *"After you write or edit files, call
-`argus_check_files` on them and fix anything critical or high before
-finishing. Before adding a dependency, call `argus_check_package`."*
+`nephilex_check_files` on them and fix anything critical or high before
+finishing. Before adding a dependency, call `nephilex_check_package`."*
 
 Every tool declares MCP tool annotations (`readOnlyHint: true`,
 `destructiveHint: false`, `idempotentHint: true`, and `openWorldHint: true`
-only for `argus_scan` and `argus_check_package`, which can use the network).
+only for `nephilex_scan` and `nephilex_check_package`, which can use the network).
 Clients that support protocol 2025-06-18 also receive each result as
 `structuredContent`; the same JSON is always in the text content for older
 clients.
 
 ## What comes back
 
-`argus_scan` returns JSON so the agent can act on it programmatically:
+`nephilex_scan` returns JSON so the agent can act on it programmatically:
 
 ```json
 {
@@ -92,7 +92,7 @@ and whether the list was `truncated`, so coverage is never silently hidden).
 
 ### Checking files and snippets
 
-`argus_check_files` and `argus_check_snippet` return:
+`nephilex_check_files` and `nephilex_check_snippet` return:
 
 ```json
 {
@@ -127,20 +127,20 @@ and whether the list was `truncated`, so coverage is never silently hidden).
 }
 ```
 
-`argus_check_snippet` returns `filename` (the sanitized file name the code
+`nephilex_check_snippet` returns `filename` (the sanitized file name the code
 was checked as) instead of `checked`. A filename hint keeps its directories,
 because some rules depend on them (`.github/workflows/ci.yml`,
 `Dockerfile`); `..` and absolute parts are refused.
 
 The `id` is the finding fingerprint: rule, path and a digest of the flagged
 code. It stays the same across checks while the code is unchanged, unlike
-`scan_id` (the per-scan id used in `argus scan` reports), which restarts
+`scan_id` (the per-scan id used in `nephilex scan` reports), which restarts
 from 1 in every check.
 
 ### Fixes
 
-`argus_fix` takes a finding `id` from a check made by the same server
-process. When Argus has a deterministic rewrite for the rule, it re-reads the
+`nephilex_fix` takes a finding `id` from a check made by the same server
+process. When Nephilex has a deterministic rewrite for the rule, it re-reads the
 file, confirms the flagged line is unchanged, applies the rewrite on a dry
 run, and returns it only if it verifies (the rule no longer fires on the new
 line and the file still parses):
@@ -167,7 +167,7 @@ where it helps, the one-line `guidance`.
 
 ### Packages
 
-`argus_check_package` returns a `verdict`, the first that applies of:
+`nephilex_check_package` returns a `verdict`, the first that applies of:
 `malicious` (in the malicious-package intel), `possibly_hallucinated` (the
 registry says the name does not exist), `vulnerable` (OSV advisories for the
 given version), `suspicious` (the name resembles a popular package),
@@ -176,26 +176,26 @@ given version), `suspicious` (the name resembles a popular package),
 
 The registry lookup is only made for npm, PyPI and crates.io. For other
 ecosystems, or when the lookup fails, `registry.status` is `unknown`:
-Argus never guesses that a package is hallucinated. Without a `version`, the
+Nephilex never guesses that a package is hallucinated. Without a `version`, the
 vulnerability lookup is `not_checked`.
 
 ## Notes
 
-- **Read-only.** No tool writes to your project; `argus_fix` only returns a
+- **Read-only.** No tool writes to your project; `nephilex_fix` only returns a
   diff.
 - **Confined to your project.** Paths must be inside the directory the server
-  was started in, or inside one of the directories listed in `ARGUS_MCP_ROOTS`
+  was started in, or inside one of the directories listed in `NEPHILEX_MCP_ROOTS`
   (separated by `;` on Windows and `:` elsewhere). Relative paths are taken
   relative to the first of those directories. This stops a prompt-injected
   agent from reading your home directory.
 - **Untrusted by default.** Rules and suppressions shipped inside the scanned
-  directory (`.argus/rules`, `argus-ignore` comments) are not honoured, since
+  directory (`.nephilex/rules`, `nephilex-ignore` comments) are not honoured, since
   the agent may have just cloned it.
-- **Bounded.** Every tool call stops after `ARGUS_MCP_SCAN_TIMEOUT` seconds
+- **Bounded.** Every tool call stops after `NEPHILEX_MCP_SCAN_TIMEOUT` seconds
   (default 600).
 - **Local paths only.** It does not clone remote repositories from an agent call.
-- **Network.** `argus_check_files`, `argus_check_snippet` and `argus_fix`
-  never use the network. `argus_scan` uses it for dependency CVE lookups, and
-  `argus_check_package` for OSV, the malicious-package feeds and the registry.
-  Set `ARGUS_MCP_OFFLINE=1` to keep `argus_check_package` offline: the
+- **Network.** `nephilex_check_files`, `nephilex_check_snippet` and `nephilex_fix`
+  never use the network. `nephilex_scan` uses it for dependency CVE lookups, and
+  `nephilex_check_package` for OSV, the malicious-package feeds and the registry.
+  Set `NEPHILEX_MCP_OFFLINE=1` to keep `nephilex_check_package` offline: the
   bundled intel and typosquat checks still run, the rest report `unknown`.

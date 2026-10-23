@@ -1,4 +1,4 @@
-"""Project context (.argus/context.yml): schema, trust gating and effects on findings."""
+"""Project context (.nephilex/context.yml): schema, trust gating and effects on findings."""
 
 from __future__ import annotations
 
@@ -9,12 +9,12 @@ from pathlib import Path
 import pytest
 from typer.testing import CliRunner
 
-from argus.cli.main import app
-from argus.context import ProjectContext, apply_context, parse_context
-from argus.core.config import Config, ConfigError, load_project_config
-from argus.core.engine import ScanEngine
-from argus.core.models import Finding, Likelihood, Location, Severity
-from argus.core.project import Project
+from nephilex.cli.main import app
+from nephilex.context import ProjectContext, apply_context, parse_context
+from nephilex.core.config import Config, ConfigError, load_project_config
+from nephilex.core.engine import ScanEngine
+from nephilex.core.models import Finding, Likelihood, Location, Severity
+from nephilex.core.project import Project
 
 runner = CliRunner()
 
@@ -107,7 +107,7 @@ def test_invalid_context_is_a_config_error(text: str, message: str) -> None:
 
 
 def test_invalid_context_exits_2_on_the_cli(tmp_path: Path) -> None:
-    _write(tmp_path, {"app.py": "x = 1\n", ".argus/context.yml": "sanitisers: {}\n"})
+    _write(tmp_path, {"app.py": "x = 1\n", ".nephilex/context.yml": "sanitisers: {}\n"})
     res = runner.invoke(app, ["scan", str(tmp_path), "--no-ai", "-q"])
     assert res.exit_code == 2, res.output
     assert "context.yml" in res.output
@@ -128,26 +128,26 @@ PY_APP = (
 
 
 def test_local_project_context_is_loaded(tmp_path: Path) -> None:
-    _write(tmp_path, {".argus/context.yml": HOSTILE})
+    _write(tmp_path, {".nephilex/context.yml": HOSTILE})
     cfg = load_project_config(Project.from_path(tmp_path))
     assert cfg.context is not None and [s.name for s in cfg.context.sanitizers] == ["helpers.clean"]
 
 
 def test_remote_project_context_is_ignored(tmp_path: Path) -> None:
-    _write(tmp_path, {".argus/context.yml": HOSTILE})
+    _write(tmp_path, {".nephilex/context.yml": HOSTILE})
     cfg = load_project_config(Project.from_path(tmp_path, origin="github"))
     assert cfg.context is not None and cfg.context.is_empty()
 
 
 def test_remote_context_honoured_with_trust_remote_config(tmp_path: Path) -> None:
-    _write(tmp_path, {".argus/context.yml": HOSTILE})
+    _write(tmp_path, {".nephilex/context.yml": HOSTILE})
     cfg = load_project_config(Project.from_path(tmp_path, origin="github"), trust_remote=True)
     assert cfg.context is not None and not cfg.context.is_empty()
 
 
 def test_engine_ignores_tree_context_for_an_untrusted_config(tmp_path: Path) -> None:
     pytest.importorskip("tree_sitter_python")
-    _write(tmp_path, {".argus/context.yml": HOSTILE, "app.py": PY_APP})
+    _write(tmp_path, {".nephilex/context.yml": HOSTILE, "app.py": PY_APP})
     cfg = Config(scanners=["ast-python"])  # trust_project_config defaults to False
     rules = {f.rule_id for f in _scan(tmp_path, cfg)}
     assert "ast-python.ast-path-traversal" in rules
@@ -155,7 +155,7 @@ def test_engine_ignores_tree_context_for_an_untrusted_config(tmp_path: Path) -> 
 
 def test_remote_scan_with_hostile_context_still_reports(tmp_path: Path) -> None:
     pytest.importorskip("tree_sitter_python")
-    _write(tmp_path, {".argus/context.yml": HOSTILE, "app.py": PY_APP})
+    _write(tmp_path, {".nephilex/context.yml": HOSTILE, "app.py": PY_APP})
     project = Project.from_path(tmp_path, origin="github")
     cfg = load_project_config(project)
     cfg.scanners = ["ast-python"]
@@ -185,7 +185,7 @@ def test_pull_request_cannot_declare_its_own_sinks_sanitized(tmp_path: Path) -> 
     _git(root, "commit", "-q", "-m", "base")
     _git(root, "tag", "base")
     # The pull request adds vulnerable code and a context that clears it.
-    _write(root, {".argus/context.yml": HOSTILE, "app.py": PY_APP})
+    _write(root, {".nephilex/context.yml": HOSTILE, "app.py": PY_APP})
 
     project = Project.from_path(root)
     cfg = load_project_config(project, config_from_ref="base")
@@ -202,17 +202,17 @@ def test_context_from_the_base_ref_is_honoured(tmp_path: Path) -> None:
     root = tmp_path / "repo"
     root.mkdir()
     _git(root, "init", "-q")
-    _write(root, {".argus/context.yml": HOSTILE})
+    _write(root, {".nephilex/context.yml": HOSTILE})
     _git(root, "add", "-A")
     _git(root, "commit", "-q", "-m", "base with reviewed context")
     _git(root, "tag", "base")
     # The PR deletes the context file; the base ref still decides.
-    (root / ".argus" / "context.yml").unlink()
+    (root / ".nephilex" / "context.yml").unlink()
     _write(root, {"app.py": PY_APP})
 
     cfg = load_project_config(Project.from_path(root), config_from_ref="base")
     assert cfg.context is not None
-    assert cfg.context.source == "base:.argus/context.yml"
+    assert cfg.context.source == "base:.nephilex/context.yml"
     cfg.scanners = ["ast-python"]
     rules = {f.rule_id for f in _scan(root, cfg)}
     assert "ast-python.ast-path-traversal" not in rules
@@ -224,10 +224,10 @@ def test_invalid_context_at_ref_is_a_config_error(tmp_path: Path) -> None:
     root = tmp_path / "repo"
     root.mkdir()
     _git(root, "init", "-q")
-    _write(root, {".argus/context.yml": "internal_paths: 3\n"})
+    _write(root, {".nephilex/context.yml": "internal_paths: 3\n"})
     _git(root, "add", "-A")
     _git(root, "commit", "-q", "-m", "base")
-    with pytest.raises(ConfigError, match="HEAD:.argus/context.yml"):
+    with pytest.raises(ConfigError, match="HEAD:.nephilex/context.yml"):
         load_project_config(Project.from_path(root), config_from_ref="HEAD")
 
 
@@ -238,7 +238,7 @@ def test_python_cwe_specific_sanitizer_clears_only_its_cwe(tmp_path: Path) -> No
     before = {f.rule_id for f in _scan(tmp_path, Config(scanners=["ast-python"]))}
     assert {"ast-python.ast-path-traversal", "ast-python.ast-command-injection"} <= before
 
-    _write(tmp_path, {".argus/context.yml": HOSTILE})
+    _write(tmp_path, {".nephilex/context.yml": HOSTILE})
     project = Project.from_path(tmp_path)
     cfg = load_project_config(project)
     cfg.scanners = ["ast-python"]
@@ -257,7 +257,7 @@ def test_python_sanitizer_without_cwe_clears_every_sink(tmp_path: Path) -> None:
     pytest.importorskip("tree_sitter_python")
     _write(
         tmp_path,
-        {"app.py": PY_APP, ".argus/context.yml": "sanitizers: {python: [helpers.clean]}\n"},
+        {"app.py": PY_APP, ".nephilex/context.yml": "sanitizers: {python: [helpers.clean]}\n"},
     )
     rules = {f.rule_id for f in _scan(tmp_path) if f.scanner == "ast-python"}
     assert not rules & {"ast-python.ast-path-traversal", "ast-python.ast-command-injection"}
@@ -273,7 +273,7 @@ def test_sanitizer_matches_by_dotted_suffix_only(tmp_path: Path) -> None:
     )
     _write(
         tmp_path,
-        {"app.py": code, ".argus/context.yml": "sanitizers: {python: [helpers.clean]}\n"},
+        {"app.py": code, ".nephilex/context.yml": "sanitizers: {python: [helpers.clean]}\n"},
     )
     rules = {f.rule_id for f in _scan(tmp_path)}
     assert "ast-python.ast-path-traversal" in rules  # other.clean is not helpers.clean
@@ -293,7 +293,7 @@ def test_python_trusted_source(tmp_path: Path) -> None:
     _write(tmp_path, {"app.py": code})
     lines = {f.location.start_line for f in _scan(tmp_path) if f.scanner == "ast-python"}
     assert {5, 7} <= lines
-    _write(tmp_path, {".argus/context.yml": "trusted_sources: {python: [os.environ]}\n"})
+    _write(tmp_path, {".nephilex/context.yml": "trusted_sources: {python: [os.environ]}\n"})
     lines = {f.location.start_line for f in _scan(tmp_path) if f.scanner == "ast-python"}
     assert 5 not in lines and 7 not in lines
 
@@ -319,7 +319,7 @@ def test_js_sanitizer_and_trusted_source(tmp_path: Path) -> None:
     _write(
         tmp_path,
         {
-            ".argus/context.yml": (
+            ".nephilex/context.yml": (
                 "sanitizers:\n  javascript: [{name: utils.htmlSafe, cwe: [CWE-79]}]\n"
                 "trusted_sources:\n  javascript: [process.env]\n"
             )
@@ -344,9 +344,9 @@ def test_editing_context_invalidates_the_scan_cache(tmp_path: Path) -> None:
         return {f.rule_id for f in ScanEngine(cfg).scan(project).findings}
 
     assert "ast-python.ast-path-traversal" in rules()
-    _write(tmp_path, {".argus/context.yml": HOSTILE})
+    _write(tmp_path, {".nephilex/context.yml": HOSTILE})
     assert "ast-python.ast-path-traversal" not in rules()
-    (tmp_path / ".argus" / "context.yml").unlink()
+    (tmp_path / ".nephilex" / "context.yml").unlink()
     assert "ast-python.ast-path-traversal" in rules()
 
 
@@ -360,7 +360,7 @@ def test_internal_paths_downgrade_and_tag_but_never_hide(tmp_path: Path) -> None
         {
             "app/loader.py": YAML_LOAD,
             "scripts/loader.py": YAML_LOAD,
-            ".argus/context.yml": "internal_paths: [{path: 'scripts/**', note: cron only}]\n",
+            ".nephilex/context.yml": "internal_paths: [{path: 'scripts/**', note: cron only}]\n",
         },
     )
     project = Project.from_path(tmp_path)

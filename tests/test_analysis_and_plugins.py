@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import pytest
 
-from argus.analysis.repository import RepositoryAnalyzer
-from argus.core.models import Finding, Location, Severity
-from argus.core.plugin import Registry, Scanner, ScannerContext
+from nephilex.analysis.repository import RepositoryAnalyzer
+from nephilex.core.models import Finding, Location, Severity
+from nephilex.core.plugin import Registry, Scanner, ScannerContext
 
 
 def test_analyzer_detects_language_and_framework(vulnerable_project):
@@ -101,8 +101,8 @@ def test_registry_allows_idempotent_reregistration():
 
 def test_analyzer_caps_aggregate_source_blob(tmp_path, monkeypatch):
     """A monorepo of many small files must not build an unbounded source blob."""
-    from argus.analysis import repository as repo_mod
-    from argus.core.project import Project
+    from nephilex.analysis import repository as repo_mod
+    from nephilex.core.project import Project
 
     budget = 120
     monkeypatch.setattr(repo_mod, "_SOURCE_BLOB_BUDGET", budget)

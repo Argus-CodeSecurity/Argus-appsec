@@ -1,4 +1,4 @@
-"""``argus import`` and ``argus scan --import-sarif``."""
+"""``nephilex import`` and ``nephilex scan --import-sarif``."""
 
 from __future__ import annotations
 
@@ -8,8 +8,8 @@ from pathlib import Path
 import pytest
 from typer.testing import CliRunner
 
-from argus.cli.main import app
-from argus.core.models import ScanResult
+from nephilex.cli.main import app
+from nephilex.core.models import ScanResult
 
 runner = CliRunner()
 FIXTURES = Path(__file__).parent / "fixtures" / "sarif"
@@ -113,7 +113,7 @@ def test_import_baseline_suppresses_known(vulnerable_project, tmp_path):
 
 
 def test_import_honors_allowlist_and_exclude_paths(vulnerable_project):
-    (vulnerable_project.root / ".argus.yml").write_text(
+    (vulnerable_project.root / ".nephilex.yml").write_text(
         "allow:\n"
         "  - rule: py/sql-injection\n"
         "    reason: accepted for the test\n"

