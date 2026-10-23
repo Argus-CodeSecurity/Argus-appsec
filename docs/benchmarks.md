@@ -390,7 +390,9 @@ are in [Scanners](scanners.md).
 The public datasets above have a known weakness: Nephilex's Python rules were
 revised with OWASP BenchmarkPython visible. This benchmark answers that with
 code nobody tuned anything on: real vulnerabilities from real projects, taken
-as before/after pairs from the commits that fixed them.
+as before/after pairs from the commits that fixed them. This is the frozen v1
+set; a development set and a time-split test set use the same rule (see
+"Three benchmark sets" below).
 
 ### Selection rule
 
@@ -673,6 +675,203 @@ Nephilex and Semgrep here are well inside the noise.
 - **Default configurations only,** as in the public benchmark: Semgrep CE
   with two registry rulesets, Bandit defaults, Nephilex without AI triage.
   Semgrep timed out on some rules for 22 large case versions.
+
+## Three benchmark sets
+
+The held-out benchmark above is one of three sets built with the same
+selection rule and scored by the same harness (`benchmarks/heldout/`, every
+command takes `--set`). They exist so that the number quoted for a release
+comes from cases nobody looked at while the rules were being written.
+
+| Set | What it is | Who may look at it | Use |
+| --- | --- | --- | --- |
+| v1 held-out (`benchmarks/heldout/manifest.json`) | 201 cases from advisories published 2024-01-01 to 2026-09-30, selected and scored on 2026-10-23 | Its results are published above and in `benchmarks/results/heldout/`. Rule work should not use its per-case results | Frozen: its manifest and results are not changed or rescored |
+| Development (`benchmarks/heldout/sets/dev/manifest.json`) | The same window and rule, minus every advisory v1 examined, in a different sampling order | Anyone, in full: every miss is meant to be read | Studying misses and testing rule changes. Its numbers are development data, not a claim |
+| Time-split test (`benchmarks/heldout/sets/timesplit/`) | Advisories published on or after 2026-10-01, up to a freeze date given when it is selected | Nobody, until the detection rules for the release are frozen | The headline number for a release |
+
+**Rule: the headline accuracy number for a release comes from the time-split
+set**, selected after the release's detection rules are frozen and scored once
+with exactly those rules. Development-set numbers are never quoted as a
+claim, and the v1 number stays the number for the release it was published
+with.
+
+### Time-split test set (rule only)
+
+The rule is committed (`timesplit_rule` in `benchmarks/heldout/selection.py`,
+the guard in `benchmarks/heldout/cli.py`, the description in
+`benchmarks/heldout/sets/timesplit/README.md`) but the set has not been
+selected. No advisory published on or after 2026-10-01 has been queried,
+counted, fetched or scanned for it; the tests use synthetic advisories only.
+
+- **Window.** Reviewed `pip` and `npm` advisories published from 2026-10-01
+  up to and including `--until`, which must be before the day of selection
+  (UTC) so the window is closed. The API's date filter is re-checked on each
+  advisory's `published_at`.
+- **Same rule as v1** for CWEs, fix commits, files and the 5-file cap.
+- **Exclusions.** Every advisory the v1 or development selection examined,
+  any advisory sharing a CVE id with one of them, and any file and commit that
+  is already a v1 or development case.
+- **Sampling.** SHA-256 of `"timesplit:"` plus the upper-cased GHSA id, up to
+  200 `pip` and 150 `npm` cases.
+- **Freeze guard.** `select --set timesplit` refuses to run, before any
+  request, without `--rules-frozen-at <full commit sha>`, and unless
+  `src/nephilex` in the checkout is identical to that commit. The commit, the
+  harness commit and the time are recorded in the manifest's `freeze` entry.
+  The set is selected once, and `scan --set timesplit` refuses to run if
+  `src/nephilex` no longer matches the frozen commit.
+
+```bash
+python benchmarks/heldout/run.py select --set timesplit \
+    --until YYYY-MM-DD --rules-frozen-at <full commit sha>
+```
+
+### Development set
+
+**These are development data, not a claim.** The set exists to be studied:
+the people improving detection read every miss, so after the first rule
+change its numbers no longer measure code Nephilex was not developed on. The
+numbers below are the starting point, before any rule was changed with this
+set visible.
+
+**Rule.** The v1 rule unchanged (window 2024-01-01 to 2026-09-30, CWE list,
+fix-commit, file and 5-file rules), with three differences, all in
+`benchmarks/heldout/selection.py` (`DEV_RULE`, `PriorSets`):
+
+- Every advisory the v1 selection examined is skipped before sampling,
+  whether it became a v1 case or was dropped: 149 GHSA ids (150 listings,
+  one advisory is in both `pip` and `npm`), listed in the manifest under
+  `excluded_prior_sets`. The v1 selection before its amendment examined a
+  subset of these. Advisories sharing a CVE id with one of them are skipped
+  too (none did), and a file and commit that is already a v1 case is never
+  used again (14 files).
+- Sampling order: SHA-256 of `"dev:"` plus the upper-cased GHSA id.
+- Budget: 200 `pip` and 150 `npm` cases.
+
+The rule and the manifest were committed before any file was fetched, and the
+content hashes were committed before any tool ran; git history shows the
+order.
+
+Selection counts, snapshot taken on 2026-10-23:
+
+| Step | pip | npm |
+| --- | --- | --- |
+| Reviewed advisories in the window with a target CWE (API filter) | 1882 | 1874 |
+| Skipped: examined by the v1 selection | 99 | 51 |
+| Withdrawn | 88 | 82 |
+| No GitHub fix commit reference | 789 | 737 |
+| Candidates | 906 | 1004 |
+| Examined in sample order before the budget was reached | 157 | 101 |
+| Dropped: fix touches more than 5 source files | 24 | 19 |
+| Dropped: no eligible source file in the fix commits | 13 | 5 |
+| Dropped: no fix commit retrievable | 4 | 0 |
+| Selected advisories | 116 | 77 |
+| Selected cases (files) | 201 | 150 |
+
+The listed, withdrawn and no-fix-commit counts equal v1's, and the candidates
+plus the skipped advisories equal v1's candidates (1005 and 1055), so the two
+selections saw the same population. No advisory fell outside the window on
+the client-side date check. The 351 cases (193 advisories) are 193 Python, 51
+JavaScript and 107 TypeScript files. All were fetched, verified and scored;
+none was excluded.
+
+**Runs.** Nephilex 0.11.0, harness commit
+`008261bcc96357539c3160a382a1634f35f89576`, whose `src/nephilex` is identical
+to `main` at `0beceec8aac330648d0e3637a46d51b815201d2d` (702 runs, no scanner
+failed). Bandit 1.9.4 (no parse errors). Semgrep 1.182.1 CE with `p/python`
+(151 rules) and `p/javascript` (74 rules), the same SHA-256 digests as the v1
+run; it reported 59 warnings on 31 of the 702 case versions (56 rule
+timeouts, 3 syntax errors). Settings are those of the v1 run (see "Tools and
+settings" above). Windows 11, Python 3.11, 2026-10-23.
+
+Mapped CWE match, 3-line window:
+
+| Tool | Cases | Detected | Recall | Flagged after fix | Still flagged | Fix-aware detected | Fix-aware recall | Precision proxy |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Nephilex | 351 | 12 | 3.4% | 4 | 4 | 8 | 2.3% | 75.0% |
+| Bandit (Python only) | 193 | 23 | 11.9% | 11 | 9 | 14 | 7.2% | 67.7% |
+| Semgrep | 351 | 3 | 0.9% | 1 | 0 | 3 | 0.9% | 75.0% |
+
+All three modes (detected / flagged after the fix):
+
+| Tool | Cases | Strict | Mapped | Any finding in the changed lines |
+| --- | --- | --- | --- | --- |
+| Nephilex | 351 | 10 / 4 | 12 / 4 | 20 / 9 |
+| Bandit | 193 | 15 / 11 | 23 / 11 | 34 / 25 |
+| Semgrep | 351 | 3 / 1 | 3 / 1 | 8 / 5 |
+
+By language, mapped, detected / cases (flagged after the fix):
+
+| Language | Cases | Nephilex | Bandit | Semgrep |
+| --- | --- | --- | --- | --- |
+| Python | 193 | 10/193 (4) | 23/193 (11) | 3/193 (0) |
+| JavaScript | 51 | 1/51 (0) | not applicable | 0/51 (1) |
+| TypeScript | 107 | 1/107 (0) | not applicable | 0/107 (0) |
+
+By CWE, mapped, detected / cases (CWEs with at least 5 cases; the rest are in
+`benchmarks/results/dev/SUMMARY.md`). Bandit's count covers the Python cases
+only:
+
+| CWE | Cases | Nephilex | Bandit | Semgrep |
+| --- | --- | --- | --- | --- |
+| 22 path traversal | 40 | 0/40 | 2/23 | 0/40 |
+| 73 external control of file name | 5 | 0/5 | 0/2 | 0/5 |
+| 74 injection | 10 | 0/10 | 0/5 | 0/10 |
+| 77 command injection | 16 | 1/16 | 0/9 | 0/16 |
+| 78 OS command injection | 28 | 2/28 | 6/15 | 2/28 |
+| 79 XSS | 60 | 0/60 | 2/22 | 0/60 |
+| 88 argument injection | 8 | 0/8 | 0/6 | 0/8 |
+| 89 SQL injection | 18 | 3/18 | 1/13 | 0/18 |
+| 94 code injection | 31 | 1/31 | 7/15 | 0/31 |
+| 95 eval injection | 8 | 1/8 | 4/4 | 0/8 |
+| 295 certificate validation | 5 | 0/5 | 0/3 | 0/5 |
+| 306 missing authentication | 7 | 0/7 | 0/5 | 0/7 |
+| 347 signature verification | 15 | 0/15 | 0/9 | 0/15 |
+| 352 CSRF | 5 | 0/5 | 0/1 | 0/5 |
+| 502 deserialization | 13 | 2/13 | 4/13 | 0/13 |
+| 601 open redirect | 12 | 2/12 | 0/5 | 0/12 |
+| 639 authorization bypass | 17 | 0/17 | 0/10 | 0/17 |
+| 918 SSRF | 64 | 0/64 | 0/35 | 0/64 |
+| 1336 template injection | 12 | 0/12 | 1/8 | 0/12 |
+
+Per advisory, mapped: Nephilex 10 of 193 (5.2%), Bandit 20 of the 110
+advisories with a Python case (18.2%), Semgrep 3 of 193 (1.6%). Window
+sensitivity, mapped, detected / flagged after the fix at windows 0, 3 and 10:
+Nephilex 8/1, 12/4, 13/6; Bandit 20/6, 23/11, 29/17; Semgrep 3/1, 3/1, 6/3.
+95% Wilson intervals for mapped recall: Nephilex 2.0% to 5.9%, Bandit 8.1% to
+17.2%, Semgrep 0.3% to 2.5%.
+
+What the development set shows, for the people working on detection:
+
+- **The largest classes are the emptiest.** CWE-918 (64 cases), CWE-79 (60)
+  and CWE-22 (40) together are 164 of 351 cases, and Nephilex detects none of
+  them in mapped mode; Bandit and Semgrep detect 4 between them. CWE-94 is 1
+  of 31 for Nephilex against 7 of 15 for Bandit: 4 of Bandit's 7 are `eval`
+  (B307), 1 is Jinja2 autoescape (B701), and 2 are `subprocess` findings in
+  cases that also carry CWE-78.
+- **Where Nephilex detected,** 7 of its 12 detections are `ast-python` rules
+  (code injection, open redirect, SQL string building), 3 are regex
+  `patterns` rules (`shell=True`, `pickle.loads`, `child_process.exec`) and 2
+  are `llm` rules (`llm.torch-load-pickle`, `llm.tool-handler-exec` in an
+  MCP server). Only 2 of the 12 are JavaScript or TypeScript, from 158 such
+  cases.
+- **Flagged after the fix:** in Nephilex's 4 cases the same rule still fires
+  on the patched lines: SQL string building in two LangGraph SQLite
+  checkpoint files, open redirect in a Khoj auth router, and `pickle.loads`
+  in the pdfminer CMap loader. Whether each is a false positive needs a
+  reading of the fix.
+- Per-case outcomes for all three tools are in
+  `benchmarks/results/dev/SUMMARY.md` ("Per case"), and every finding on both
+  versions is in `benchmarks/results/dev/cases/<case>.json`.
+
+The limitations listed for v1 apply unchanged: single-file view, changed
+lines as a proxy for the vulnerable lines, a precision proxy that is not
+precision, and noisy advisory CWE labels.
+
+```bash
+python benchmarks/heldout/run.py fetch --set dev
+python benchmarks/heldout/run.py scan --set dev --bandit /path/to/bandit --semgrep /path/to/semgrep
+python benchmarks/heldout/run.py score --set dev     # re-score the committed results
+```
 
 ## Public reference apps (finding inventory)
 
