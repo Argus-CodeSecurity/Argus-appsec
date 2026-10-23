@@ -173,7 +173,8 @@ unchanged from the 0.9.2 run, and their numbers are identical to it.
     the cases Nephilex got wrong in 0.9.2 were read, and general rules were
     written for the idioms behind them. No OWASP case was held out, so the
     OWASP rows below measure Nephilex on code it was developed against, not on
-    unseen code. The checks under "Methodology checks" are the evidence on
+    unseen code. The checks under "Methodology checks" and the held-out
+    benchmark on real fix commits (below) are the evidence on
     generalisation; read them before quoting a number.
 
 OWASP Benchmark for Python v0.1, all 1230 cases:
@@ -383,6 +384,295 @@ are in [Scanners](scanners.md).
   includes a dependency scanner that may query OSV for the dataset's
   `requirements.txt`; those findings fall outside the test cases and do not
   affect the scores.
+
+## Held-out benchmark: real fix commits
+
+The public datasets above have a known weakness: Nephilex's Python rules were
+revised with OWASP BenchmarkPython visible. This benchmark answers that with
+code nobody tuned anything on: real vulnerabilities from real projects, taken
+as before/after pairs from the commits that fixed them.
+
+### Selection rule
+
+The rule was written down and committed (in `benchmarks/heldout/selection.py`,
+with the resulting manifest) before any tool was run on the selected files.
+Git history shows the order. In full:
+
+1. **Source.** GitHub Advisory Database, reviewed advisories only, ecosystems
+   `pip` and `npm`, published from 2024-01-01 to 2026-09-30, not withdrawn.
+2. **CWE.** The advisory lists at least one CWE that Nephilex's Python or
+   JavaScript/TypeScript source-code rules report, or a member of the
+   equivalence group that contains one (`benchmarks/public/mapping.py`). The
+   claimed CWEs, with the scanner modules that report them, are recorded in the
+   manifest: 22, 73, 74, 77, 78, 79, 80, 89, 90, 94, 95, 295, 306, 327, 330, 338,
+   347, 352, 489, 501, 502, 598, 601, 611, 614, 639, 643, 918, 1004, 1336. With
+   their groups the target set adds 23, 36, 88, 99, 297, 328, 331, 564, 776 and
+   916. CWEs reported only by configuration, infrastructure, dependency, CI,
+   secret, other-language or LLM-misuse rules (for example 200, 250, 732) are
+   not claimed here: those rules detect them only in narrow contexts. A case's
+   label is the subset of its advisory's CWEs that is in the target set.
+3. **Fix commit.** At least one advisory reference is a GitHub commit URL
+   (`/commit/<sha>` or `/pull/<n>/commits/<sha>`). All such commits are used.
+4. **Files.** From each fix commit, every modified or renamed `.py`, `.js`,
+   `.mjs`, `.cjs`, `.jsx`, `.ts`, `.mts`, `.cts` or `.tsx` file, except tests
+   (`test`/`tests`/`spec`/`__tests__`/`e2e` directories, `test_*.py`,
+   `*_test.py`, `test.py`, `tests.py`, `conftest.py`, `*.test.js`, `*.spec.ts`
+   and similar),
+   documentation and examples (`doc`, `docs`, `example(s)`, `sample(s)`),
+   vendored or build output (`vendor`, `third_party`, `node_modules`, `dist`,
+   `build`, `coverage`, ...), minified or generated files (`*.min.js`,
+   bundles, `*_pb2.py`) and TypeScript declarations (`*.d.ts`). Files the fix
+   added or deleted have no before/after pair and are skipped. Within one
+   advisory a path is taken once, from the first commit that touches it; a file
+   and commit already used by another advisory is not used twice.
+5. **Localized fixes.** An advisory whose fix touches more than 5 eligible
+   files is dropped as a refactor: most of its changed lines would not be the
+   vulnerable code.
+6. **Sampling.** Candidate advisories are ordered by SHA-256 of their GHSA id,
+   a fixed order nobody chose, and taken until 120 `pip` and 80 `npm` cases
+   are reached. Nothing in the order depends on any tool.
+
+A **case** is one file of one advisory. The vulnerable version is the file at
+the fix commit's first parent; the patched version is the file at the fix
+commit. The manifest (`benchmarks/heldout/manifest.json`) records for each case
+the advisory id, CVE, CWEs, repository, parent and fix SHAs, paths, the changed
+line ranges on both sides and the SHA-256 of both versions, so anyone can
+re-fetch and verify exactly the same files. It also lists every dropped
+advisory and file with its reason.
+
+Changed lines come from the fix commit's unified diff: removed lines on the
+vulnerable side and added lines on the patched side. A hunk that only inserts
+lines marks the two vulnerable-side lines around the insertion point, and a
+hunk that only deletes marks the two patched-side lines around the deletion.
+
+### Selection counts
+
+Snapshot taken on 2026-10-23:
+
+| Step | pip | npm |
+| --- | --- | --- |
+| Reviewed advisories in the window with a target CWE (API filter) | 1882 | 1874 |
+| Withdrawn | 88 | 82 |
+| No GitHub fix commit reference | 789 | 737 |
+| Candidates | 1005 | 1055 |
+| Examined in sample order before the budget was reached | 99 | 51 |
+| Dropped: fix touches more than 5 source files | 18 | 7 |
+| Dropped: no eligible source file in the fix commits | 5 | 2 |
+| Dropped: fix commit not retrievable | 0 | 1 |
+| Selected advisories | 76 | 41 |
+| Selected cases (files) | 120 | 81 |
+
+The 201 cases (117 advisories) are 118 Python, 48 JavaScript and 35 TypeScript files.
+
+**Amendment, made before any score existed.** The first committed selection
+missed test modules named `test.py` or `tests.py` (the Django convention):
+three of its 202 cases were such files (Weblate `weblate/api/tests.py`,
+xml2rfc `test.py`, Taguette `tests.py`). The scan was stopped while Nephilex was
+still on its first cases, its partial output was deleted unread, `tests?.py`
+and `tests?.js` were added to the test-file rule, and the selection was re-run
+on the cached API responses. The same sampling order then added two files from
+the next advisories (wlc `wlc/main.py`, picklescan
+`src/picklescan/scanner.py`). Both manifests are in git history.
+
+### Scoring
+
+Fixed with the selection rule, before any tool ran:
+
+- **Window.** A finding belongs to a case when it is in the case's file and its
+  line is within 3 lines of a changed line on that side. Windows of 0 and 10
+  lines are published as a sensitivity check.
+- **CWE match.** `mapped` (primary): the finding's CWEs, plus the documented
+  rule overrides, intersect the equivalence group of one of the case's label
+  CWEs, exactly as in the public benchmark (`benchmarks/public/mapping.py`,
+  unchanged). `strict`: a finding CWE equals a label CWE. `any`: any finding in
+  the window, whatever its CWE.
+- **Detected.** The vulnerable version has a matching finding in the window
+  around its changed lines.
+- **Flagged after the fix.** The patched version has a matching finding in the
+  window around its changed lines. **Still flagged** counts detected cases
+  that are also flagged after the fix.
+- **Recall** = detected / cases. **Fix-aware recall** = (detected and not
+  flagged after the fix) / cases: the tool told the vulnerable version apart
+  from the patched one.
+- **Precision proxy** = detected / (detected + flagged after the fix), treating
+  every match on fixed code as a false positive. Real advisories have no
+  labeled safe code, so this is a proxy, not precision (see Limitations).
+- Results are given per case (file) and per advisory (an advisory is detected
+  when any of its files is), by CWE, language and ecosystem, with raw counts.
+  A case with two label CWEs counts once in each CWE row.
+
+### Reproduce
+
+```bash
+pip install -e ".[ast]"
+pip install bandit semgrep                  # ideally in a separate virtualenv
+python benchmarks/heldout/run.py fetch      # files in the manifest, verified by SHA-256
+python benchmarks/heldout/run.py scan --bandit /path/to/bandit --semgrep /path/to/semgrep
+python benchmarks/heldout/run.py score      # re-score the committed results, no tools, no network
+```
+
+`select` re-applies the rule to the live Advisory Database
+(`--api-command` or `GITHUB_TOKEN` for authenticated GETs); because GitHub adds,
+edits and withdraws advisories, reproducing the published numbers starts at
+`fetch`, from the committed manifest. Downloaded files go to
+`benchmarks/.corpora/heldout/` (git-ignored); they are scanned as data and never
+imported or run.
+
+Outputs, in `benchmarks/results/heldout/`:
+
+- `heldout.json`: Nephilex source commit, manifest hash, tool versions and
+  command lines, Semgrep ruleset digests, the CWE mapping tables, and every
+  metric for every tool and mode, with the window sensitivity.
+- `cases/<case_id>.json`: one file per case with its manifest entry, every
+  finding each tool reported on both versions (line, rule id, CWEs; no source
+  code) and each tool's outcome. `score` re-scores from these.
+- `runs.json` (run metadata) and `SUMMARY.md` (generated tables, including
+  the per-CWE breakdown in `any` mode and per ecosystem).
+
+### Tools and settings
+
+| Tool | Version | Configuration |
+| --- | --- | --- |
+| Nephilex | 0.10.0, source commit `200a227a5424c1e6394643456a4fd71cc164528f` | `nephilex scan <case>/<version> --no-ai --no-cache -f json`, default scanners, one run per case and version (402 runs); the harness refuses to score if `ast-python` (Python cases) or `ast-js` (JS/TS cases) did not run |
+| Bandit | 1.9.4 | `bandit -r <root> -f json`, default plugins, all severities and confidences; Python cases only |
+| Semgrep | 1.182.1 (Community Edition) | `semgrep scan --config p/python --config p/javascript --metrics=off --no-git-ignore --json`; `p/python` 151 rules, SHA-256 `de5bc79d074c3b4146338a0bf95830406f169bd91ac590a2f1ef111f162e23f5`; `p/javascript` 74 rules, SHA-256 `1bcb61b57b5c9ee521d5e1db2d80062fe90b64fc788650564dc1f1c5243419c2`; both fetched 2026-10-23 |
+
+The Nephilex commit is this benchmark's harness commit; its `src/nephilex` is
+identical to the code it was branched from, and nothing under `src/nephilex`
+was changed for or after this benchmark. Each Nephilex run sees one file, so
+its cross-file analysis can never join two unrelated projects. Bandit and
+Semgrep CE analyze one file at a time, so each ran once over the whole tree and
+findings were attributed to cases by path. Every finding at every severity
+counts for every tool. Each case's file is stored under its last three path
+components; a directory name that one of the tools skips by default (`env`,
+`target`, ...) gets a trailing underscore. Runs were made on Windows 11 with
+Python 3.11 on 2026-10-23.
+
+All 201 selected cases were fetched, verified and scored; none was excluded
+at fetch or scan time. Semgrep reported 36 warnings on 22 of the 402 case
+versions: 34 rule timeouts (its default per-rule time limit) and 2 reported as
+"Other syntax error". A timeout skips only the rule that timed out on that
+file. Bandit reported no parse
+errors and no Nephilex scanner failed.
+
+### Results
+
+Mapped CWE match, 3-line window (primary):
+
+| Tool | Cases | Detected | Recall | Flagged after fix | Still flagged | Fix-aware detected | Fix-aware recall | Precision proxy |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Nephilex | 201 | 4 | 2.0% | 1 | 1 | 3 | 1.5% | 80.0% |
+| Bandit (Python only) | 118 | 12 | 10.2% | 5 | 4 | 8 | 6.8% | 70.6% |
+| Semgrep | 201 | 4 | 2.0% | 1 | 1 | 3 | 1.5% | 80.0% |
+
+The same, split by language family:
+
+| Tool | Python (118): detected / flagged after fix / fix-aware | JS/TS (83): detected / flagged after fix / fix-aware |
+| --- | --- | --- |
+| Nephilex | 2 / 1 / 1 | 2 / 0 / 2 |
+| Bandit | 12 / 5 / 8 | not applicable |
+| Semgrep | 3 / 1 / 2 | 1 / 0 / 1 |
+
+All three modes (detected / flagged after the fix, out of the tool's cases):
+
+| Tool | Cases | Strict | Mapped | Any finding in the changed lines |
+| --- | --- | --- | --- | --- |
+| Nephilex | 201 | 2 / 1 | 4 / 1 | 6 / 6 |
+| Bandit | 118 | 6 / 5 | 12 / 5 | 20 / 10 |
+| Semgrep | 201 | 3 / 1 | 4 / 1 | 5 / 1 |
+
+Per advisory (detected when any of its files is), mapped: Nephilex 3 of 117
+(2.6%), Bandit 9 of the 75 advisories with a Python case (12.0%), Semgrep 4 of
+117 (3.4%).
+
+By CWE, mapped, detected / cases (CWEs with at least 5 cases; the rest are in
+`SUMMARY.md`). Bandit's case count is lower where some cases are JS/TS:
+
+| CWE | Cases | Nephilex | Bandit | Semgrep |
+| --- | --- | --- | --- | --- |
+| 22 path traversal | 40 | 0/40 | 1/29 | 0/40 |
+| 79 XSS | 37 | 0/37 | 0/9 | 1/37 |
+| 918 SSRF | 25 | 0/25 | 0/19 | 0/25 |
+| 94 code injection | 23 | 0/23 | 5/11 | 0/23 |
+| 502 deserialization | 13 | 1/13 | 1/13 | 0/13 |
+| 601 open redirect | 11 | 0/11 | 0/7 | 0/11 |
+| 78 OS command injection | 10 | 0/10 | 2/7 | 2/10 |
+| 89 SQL injection | 8 | 1/8 | 2/5 | 1/8 |
+| 95 eval injection | 8 | 0/8 | 6/6 | 0/8 |
+| 74 injection | 6 | 0/6 | 0/2 | 0/6 |
+| 77 command injection | 5 | 2/5 | 0/1 | 0/5 |
+| 88 argument injection | 5 | 0/5 | 0/5 | 0/5 |
+| 639 authorization bypass | 5 | 0/5 | 0/3 | 0/5 |
+
+No case in the sample carries CWE-611 (XXE).
+
+Window sensitivity, mapped, detected / flagged after the fix:
+
+| Tool | Window 0 | Window 3 | Window 10 |
+| --- | --- | --- | --- |
+| Nephilex | 4 / 0 | 4 / 1 | 4 / 2 |
+| Bandit | 11 / 3 | 12 / 5 | 12 / 5 |
+| Semgrep | 4 / 1 | 4 / 1 | 4 / 1 |
+
+With 4 detections in 201 cases, Nephilex's recall has a 95% Wilson interval of
+0.8% to 5.0%; Bandit's 12 in 118 gives 5.9% to 16.9%. Differences between
+Nephilex and Semgrep here are well inside the noise.
+
+### What the numbers say
+
+- **On real fix commits, all three tools find very little.** Nephilex detects
+  4 of 201 cases (2.0%), the same count as Semgrep; Bandit detects 12 of its
+  118 Python cases (10.2%). Against the +89.4 OWASP score above, this is the
+  number to quote for code Nephilex was not developed on.
+- **Bandit's lead comes from flagging sinks without asking where the data
+  came from.** Six of its 12 detections are `eval()` (B307, credited to
+  CWE-94/95 by the committed override), two are `shell=True` and two are SQL
+  built by string formatting. Real library advisories often have a public
+  function parameter as the attacker-controlled input, which a sink-only rule
+  catches and a source-to-sink taint rule does not.
+- **Where Nephilex detected, three of its four detections came from the regex
+  `patterns` tier** (`child_process.exec` in two JavaScript files,
+  `pickle.loads` in LangChain's FAISS loader); the fourth is the low-confidence
+  AST rule for SQL formatted from a non-constant value with no traced source
+  (LlamaIndex DuckDB retriever). None of the four is a traced flow from an
+  untrusted source to a sink, the analysis behind the OWASP results.
+- **Misses worth reading** include Parsl (`%`-formatted SQL from a Flask route
+  parameter passed to `pandas.read_sql_query`) and PaddlePaddle (`shell=True`
+  with an f-string of a URL parameter), both found by Bandit and Semgrep.
+  They are recorded, not fixed: no Nephilex rule was changed because of this
+  benchmark.
+- **Flagged after the fix** is rare for every tool in mapped mode. Nephilex's
+  one case is the LangChain loader, where the fix kept `pickle.loads` behind an
+  opt-in flag, so the finding is arguably still correct. In `any` mode,
+  Nephilex matches 6 fixed files: besides that one, cookie-flag, OAuth `state`
+  and race-hint findings near the changed lines of open-redirect and XSS fixes
+  (they name other weaknesses), and a command-injection finding in the patched
+  MLflow file of a code-injection advisory.
+
+### Limitations
+
+- **Single-file view.** Each case is only the changed file, not the
+  repository. A flow whose source is in another file (a route handler calling
+  a helper) is invisible to every tool. This handicaps taint-based analysis
+  (Nephilex, Semgrep's taint rules) more than sink-only rules (Bandit).
+- **Changed lines are a proxy for the vulnerable lines.** A fix can add a
+  check far from the sink, or touch several files of which one holds the bug.
+  The window, the 5-file cap and the per-advisory roll-up limit this, they do
+  not remove it.
+- **The precision proxy is not precision.** A match on the patched lines may
+  still be a real issue (as in the LangChain case), and findings outside the
+  changed lines are not counted at all, so a tool that reports a lot elsewhere
+  in the file pays nothing. There is no labeled safe code in this benchmark.
+- **Advisory CWE labels are noisy.** Authors pick broad (CWE-74) or
+  neighbouring CWEs; the `any` mode is published for that reason.
+- **Small sample.** 201 cases from 117 advisories, with most CWEs under 15
+  cases and none for CWE-611. Per-CWE rows are anecdotes, not rates.
+- **Snapshot.** The Advisory Database changes; the manifest freezes the
+  2026-10-23 selection. The selection rule was amended once before any score
+  existed (see "Amendment" above).
+- **Default configurations only,** as in the public benchmark: Semgrep CE
+  with two registry rulesets, Bandit defaults, Nephilex without AI triage.
+  Semgrep timed out on some rules for 22 large case versions.
 
 ## Public reference apps (finding inventory)
 

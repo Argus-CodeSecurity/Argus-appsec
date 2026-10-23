@@ -1,0 +1,122 @@
+{
+ "case": {
+  "ghsa_id": "GHSA-hxpf-9xvq-wph8",
+  "cve_id": "CVE-2026-57496",
+  "ecosystem": "pip",
+  "packages": [
+   "netlicensing-mcp"
+  ],
+  "published_at": "2026-06-18T17:22:02Z",
+  "advisory_cwes": [22],
+  "html_url": "https://github.com/advisories/GHSA-hxpf-9xvq-wph8",
+  "label_cwes": [22],
+  "repo": "Labs64/NetLicensing-MCP",
+  "fix_sha": "b8fd0ea76d533202573eb24add9fb2fbd9331496",
+  "parent_sha": "8f01239a8016befa31a4e4a90ecb6599763371b8",
+  "path_vulnerable": "src/netlicensing_mcp/client.py",
+  "path_patched": "src/netlicensing_mcp/client.py",
+  "language": "python",
+  "vulnerable_lines": [
+   [16, 17],
+   [76, 77],
+   [143, 143],
+   [153, 153],
+   [167, 167],
+   [182, 182]
+  ],
+  "patched_lines": [
+   [17, 17],
+   [78, 104],
+   [171, 171],
+   [181, 181],
+   [195, 195],
+   [210, 210]
+  ],
+  "commit_url": "https://github.com/Labs64/NetLicensing-MCP/commit/b8fd0ea76d533202573eb24add9fb2fbd9331496",
+  "case_id": "088-GHSA-hxpf-9xvq-wph8",
+  "content": {
+   "vulnerable": {
+    "sha256": "1b71ad9d4d1f1dc9ccd839cc992ae0b5c263d287fff0bbe3066747ac1f88c63d",
+    "bytes": 6649
+   },
+   "patched": {
+    "sha256": "d086264ccb82daaa3e3a7d7c42344f0db3163ea5055fcb838dadbfea5d2a7bbd",
+    "bytes": 8194
+   }
+  }
+ },
+ "status": "scored",
+ "tools": {
+  "nephilex": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  },
+  "bandit": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  },
+  "semgrep": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  }
+ },
+ "outcomes": {
+  "nephilex": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  },
+  "bandit": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  },
+  "semgrep": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  }
+ }
+}

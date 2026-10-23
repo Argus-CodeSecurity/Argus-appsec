@@ -453,7 +453,11 @@ class ScanEngine:
             if applies:
                 selected.append(instance)
             else:
-                self._progress(f"Skipping scanner '{name}' (not applicable).")
+                try:
+                    reason = instance.unavailable_reason(project)
+                except Exception:  # a broken hint must not sink the scan
+                    reason = None
+                self._progress(f"Skipping scanner '{name}' ({reason or 'not applicable'}).")
         return selected, failed, errors
 
     def _run_agents(self, result: ScanResult, project: Project, ai: AIProvider) -> None:
@@ -850,10 +854,19 @@ class ScanEngine:
         When the regex ``patterns`` tier and the AST ``ast-python`` tier both catch
         one injection, often a line or two apart (construction vs. execution),
         keep the higher-confidence (then higher-severity) finding so the report is
-        not doubled. Only merges findings from *different* scanners with the same
-        CWE in the same file within a small line window, so distinct issues and
-        within-tier findings are preserved. Findings with no line or CWE pass through.
+        not doubled. On a tie, keep the finding that has a deterministic fix (so
+        the verified patch is not lost), then the AST tier's, then the lower rule
+        id: the choice never depends on the order scanners ran in, so ``scan`` and
+        ``check`` agree. Only merges findings from *different* scanners with the
+        same CWE in the same file within a small line window, so distinct issues
+        and within-tier findings are preserved. Findings with no line or CWE pass
+        through.
         """
+        from nephilex.remediation.rewrites import has_rewrite
+
+        def rank(f: Finding) -> tuple[Any, ...]:
+            return (f.confidence, f.severity, has_rewrite(f.rule_id), f.scanner.startswith("ast-"))
+
         passthrough = [f for f in findings if f.location.start_line is None or not f.cwe]
         mergeable = [f for f in findings if f.location.start_line is not None and f.cwe]
         mergeable.sort(
@@ -870,7 +883,8 @@ class ScanEngine:
                 and (f.location.start_line or 0) - (prev.location.start_line or 0)
                 <= cls._DEDUPE_WINDOW
             ):
-                if (f.confidence, f.severity) > (prev.confidence, prev.severity):
+                # f wins on rank, or on a full tie by having the lower rule id.
+                if (rank(f), prev.rule_id) > (rank(prev), f.rule_id):
                     kept[-1] = f
                 continue
             kept.append(f)

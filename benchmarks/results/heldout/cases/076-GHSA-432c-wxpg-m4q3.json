@@ -1,0 +1,160 @@
+{
+ "case": {
+  "ghsa_id": "GHSA-432c-wxpg-m4q3",
+  "cve_id": null,
+  "ecosystem": "pip",
+  "packages": [
+   "xml2rfc"
+  ],
+  "published_at": "2025-02-07T20:32:27Z",
+  "advisory_cwes": [22],
+  "html_url": "https://github.com/advisories/GHSA-432c-wxpg-m4q3",
+  "label_cwes": [22],
+  "repo": "ietf-tools/xml2rfc",
+  "fix_sha": "ec98f9cb4b9a8658222117df037dda473ca3f4e4",
+  "parent_sha": "a46fad0649ce7f201db319cfb64eda6e44323d0b",
+  "path_vulnerable": "xml2rfc/parser.py",
+  "path_patched": "xml2rfc/parser.py",
+  "language": "python",
+  "vulnerable_lines": [
+   [19, 20],
+   [144, 151]
+  ],
+  "patched_lines": [
+   [20, 20],
+   [145, 151]
+  ],
+  "commit_url": "https://github.com/ietf-tools/xml2rfc/commit/ec98f9cb4b9a8658222117df037dda473ca3f4e4",
+  "case_id": "076-GHSA-432c-wxpg-m4q3",
+  "content": {
+   "vulnerable": {
+    "sha256": "bfa60924ad619bb812bef7f86736df9271c01471fe436ede425b9dd07cd92699",
+    "bytes": 37221
+   },
+   "patched": {
+    "sha256": "d338a6bfcf91f783c6e6f74848b5d074871cdd01c3532a72d44306d8a6b78c74",
+    "bytes": 37118
+   }
+  }
+ },
+ "status": "scored",
+ "tools": {
+  "nephilex": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [
+     [
+      356,
+      "patterns.weak-hash-md5-sha1",
+      [327]
+     ]
+    ],
+    "patched": [
+     [
+      356,
+      "patterns.weak-hash-md5-sha1",
+      [327]
+     ]
+    ]
+   }
+  },
+  "bandit": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [
+     [
+      28,
+      "B101",
+      [703]
+     ],
+     [
+      356,
+      "B324",
+      [327]
+     ]
+    ],
+    "patched": [
+     [
+      29,
+      "B101",
+      [703]
+     ],
+     [
+      356,
+      "B324",
+      [327]
+     ]
+    ]
+   }
+  },
+  "semgrep": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [
+     [
+      356,
+      "python.lang.security.insecure-hash-algorithms.insecure-hash-algorithm-sha1",
+      [327]
+     ]
+    ],
+    "patched": [
+     [
+      356,
+      "python.lang.security.insecure-hash-algorithms.insecure-hash-algorithm-sha1",
+      [327]
+     ]
+    ]
+   }
+  }
+ },
+ "outcomes": {
+  "nephilex": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  },
+  "bandit": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  },
+  "semgrep": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  }
+ }
+}

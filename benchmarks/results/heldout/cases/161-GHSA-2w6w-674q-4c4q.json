@@ -1,0 +1,92 @@
+{
+ "case": {
+  "ghsa_id": "GHSA-2w6w-674q-4c4q",
+  "cve_id": "CVE-2026-33937",
+  "ecosystem": "npm",
+  "packages": [
+   "handlebars"
+  ],
+  "published_at": "2026-03-27T18:19:58Z",
+  "advisory_cwes": [94, 843],
+  "html_url": "https://github.com/advisories/GHSA-2w6w-674q-4c4q",
+  "label_cwes": [94],
+  "repo": "handlebars-lang/handlebars.js",
+  "fix_sha": "68d8df5a88e0a26fe9e6084c5c6aaebe67b07da2",
+  "parent_sha": "b2a083136b11e1da9f0f47a11f749a9830a49328",
+  "path_vulnerable": "lib/handlebars/internal/proto-access.js",
+  "path_patched": "lib/handlebars/internal/proto-access.js",
+  "language": "javascript",
+  "vulnerable_lines": [
+   [18, 19]
+  ],
+  "patched_lines": [
+   [19, 19]
+  ],
+  "commit_url": "https://github.com/handlebars-lang/handlebars.js/commit/68d8df5a88e0a26fe9e6084c5c6aaebe67b07da2",
+  "case_id": "161-GHSA-2w6w-674q-4c4q",
+  "content": {
+   "vulnerable": {
+    "sha256": "f2745d0432e8b781b110a69cb5b3680ee0333152f3290c7222fea9ea58b485e5",
+    "bytes": 2386
+   },
+   "patched": {
+    "sha256": "f5b999584c321013ebe80d85e95836ba048cfe0ed5d8306f3b3564236618d42d",
+    "bytes": 2433
+   }
+  }
+ },
+ "status": "scored",
+ "tools": {
+  "nephilex": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  },
+  "bandit": {
+   "status": "not_applicable"
+  },
+  "semgrep": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  }
+ },
+ "outcomes": {
+  "nephilex": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  },
+  "semgrep": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  }
+ }
+}

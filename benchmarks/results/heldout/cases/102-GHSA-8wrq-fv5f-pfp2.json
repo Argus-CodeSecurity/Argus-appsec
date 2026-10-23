@@ -1,0 +1,142 @@
+{
+ "case": {
+  "ghsa_id": "GHSA-8wrq-fv5f-pfp2",
+  "cve_id": "CVE-2026-1115",
+  "ecosystem": "pip",
+  "packages": [
+   "lollms"
+  ],
+  "published_at": "2026-04-10T09:31:15Z",
+  "advisory_cwes": [79],
+  "html_url": "https://github.com/advisories/GHSA-8wrq-fv5f-pfp2",
+  "label_cwes": [79],
+  "repo": "ParisNeo/lollms",
+  "fix_sha": "9767b882dbc893c388a286856beeaead69b8292a",
+  "parent_sha": "728d0835fb3117b95d4c4016101e589941948d87",
+  "path_vulnerable": "backend/routers/social/__init__.py",
+  "path_patched": "backend/routers/social/__init__.py",
+  "language": "python",
+  "vulnerable_lines": [
+   [7, 8],
+   [34, 35],
+   [154, 154],
+   [165, 165],
+   [243, 244],
+   [445, 445],
+   [455, 455]
+  ],
+  "patched_lines": [
+   [8, 8],
+   [36, 61],
+   [179, 181],
+   [184, 184],
+   [195, 195],
+   [274, 278],
+   [477, 479],
+   [483, 483],
+   [493, 493]
+  ],
+  "commit_url": "https://github.com/ParisNeo/lollms/commit/9767b882dbc893c388a286856beeaead69b8292a",
+  "case_id": "102-GHSA-8wrq-fv5f-pfp2",
+  "content": {
+   "vulnerable": {
+    "sha256": "1f33f942d12c482bba19f29cd11b7274ff4321b51ba1057e47eb51bb73e9f04c",
+    "bytes": 19766
+   },
+   "patched": {
+    "sha256": "b610c85c0e99e34a924d48ac1305363d0a9e2137e5bdcd2aa27605f9c633f37f",
+    "bytes": 20989
+   }
+  }
+ },
+ "status": "scored",
+ "tools": {
+  "nephilex": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": [
+     [
+      274,
+      "logic.race-hint",
+      [840]
+     ],
+     [
+      275,
+      "logic.race-hint",
+      [840]
+     ],
+     [
+      276,
+      "logic.race-hint",
+      [840]
+     ]
+    ]
+   }
+  },
+  "bandit": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  },
+  "semgrep": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  }
+ },
+ "outcomes": {
+  "nephilex": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": true
+   }
+  },
+  "bandit": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  },
+  "semgrep": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  }
+ }
+}

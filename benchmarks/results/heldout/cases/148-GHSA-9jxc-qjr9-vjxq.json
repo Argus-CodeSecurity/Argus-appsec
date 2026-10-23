@@ -1,0 +1,96 @@
+{
+ "case": {
+  "ghsa_id": "GHSA-9jxc-qjr9-vjxq",
+  "cve_id": "CVE-2024-39698",
+  "ecosystem": "npm",
+  "packages": [
+   "electron-updater"
+  ],
+  "published_at": "2024-07-09T17:48:21Z",
+  "advisory_cwes": [154, 295],
+  "html_url": "https://github.com/advisories/GHSA-9jxc-qjr9-vjxq",
+  "label_cwes": [295],
+  "repo": "electron-userland/electron-builder",
+  "fix_sha": "ac2e6a25aa491c1ef5167a552c19fc2085cd427f",
+  "parent_sha": "4a4023c3661b9e190e526965b894f90bdcea87ab",
+  "path_vulnerable": "packages/electron-updater/src/windowsExecutableCodeSignatureVerifier.ts",
+  "path_patched": "packages/electron-updater/src/windowsExecutableCodeSignatureVerifier.ts",
+  "language": "typescript",
+  "vulnerable_lines": [
+   [4, 5],
+   [50, 51],
+   [99, 99]
+  ],
+  "patched_lines": [
+   [5, 5],
+   [52, 63],
+   [111, 112]
+  ],
+  "commit_url": "https://github.com/electron-userland/electron-builder/commit/ac2e6a25aa491c1ef5167a552c19fc2085cd427f",
+  "case_id": "148-GHSA-9jxc-qjr9-vjxq",
+  "content": {
+   "vulnerable": {
+    "sha256": "d68cfc1954e14ac3ea67e1e48774b339e60298c09d0f4cfbb0542ab99c3ada9f",
+    "bytes": 5535
+   },
+   "patched": {
+    "sha256": "b9a92b04ca8c9da3011f4f463f5999d10b7bf9b6caa394b730edaec93cc2f0eb",
+    "bytes": 6358
+   }
+  }
+ },
+ "status": "scored",
+ "tools": {
+  "nephilex": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  },
+  "bandit": {
+   "status": "not_applicable"
+  },
+  "semgrep": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  }
+ },
+ "outcomes": {
+  "nephilex": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  },
+  "semgrep": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  }
+ }
+}

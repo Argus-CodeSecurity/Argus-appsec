@@ -78,6 +78,8 @@ their own threat models.
 | --- | --- | --- |
 | A crafted finding path (traversal or a symlink) redirecting a write outside the tree | The resolved target must stay under the project root and must not be a symlink; otherwise the write is refused and reported | `remediation/applier.py` |
 | Silent or risky rewrites | Fixes are line-confined, re-verified after write, labeled machine-generated with rule id and confidence, and never auto-merged | `remediation/applier.py`, `remediation/rewrites.py` |
+| A repository choosing a program for `nephilex fix --verify-with-tests` to run | The test command comes from `--test-command`, or from `autofix.test_command` only when the project config is trusted; the flag itself is never set by config | `remediation/testverify.py` `resolve_test_command` |
+| The test run touching the operator's checkout, hanging, flooding memory, or reading tokens from the environment | Runs in a temporary git worktree of HEAD (removed in a `finally`, hooks off while it is created), without a shell, bare program names looked up only in absolute `PATH` entries, a timeout that kills the process tree, the last 1 MB of output kept, and credential-like environment variables removed; only fixes whose tests pass are committed, and the committed files must match the tested ones | `remediation/testverify.py`, `remediation/pullrequest.py` |
 
 ### 8. The AI enrichment layer
 
@@ -114,6 +116,11 @@ their own threat models.
   in CI is still planned so new shipped rules cannot regress.
 - **Prompt injection**: see section 8; hardening the enrichment prompt contract
   is an active review area.
+- **Test verification runs the target's code** (`nephilex fix --verify-with-tests`,
+  opt-in). The controls in section 7 are not a sandbox: the tests run as the
+  operator, with their file system and network, and the environment scrub is a
+  deny list. The feature is documented as being for trusted repositories only;
+  running the tests in a container is not built in.
 
 ## Reporting
 

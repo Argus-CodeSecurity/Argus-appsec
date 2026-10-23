@@ -16,7 +16,8 @@ from nephilex.cli._console import err_console
 from nephilex.cli.output import emit, print_posture
 
 FORMAT_HELP = (
-    "Output format(s): table, json, sarif, gitlab, markdown, html, csv, badge, vex. Repeatable."
+    "Output format(s): table, json, sarif, gitlab, markdown, html, csv, junit, badge, vex. "
+    "Repeatable."
 )
 
 

@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import typer
+from rich.markup import escape
 
 from nephilex.cli._common import (
     CONFIG_FROM_REF_HELP,
@@ -18,6 +20,10 @@ from nephilex.cli._common import (
 from nephilex.cli._console import console, err_console
 from nephilex.cli.output import print_fix_outcome
 from nephilex.core.config import load_project_config
+
+if TYPE_CHECKING:
+    from nephilex.core.config import Config
+    from nephilex.remediation.testverify import TestVerification
 
 
 def fix(
@@ -70,6 +76,27 @@ def fix(
         "--no-verify",
         help="Skip the repository's git commit hooks when committing fixes (hooks run by default).",
     ),
+    verify_with_tests: bool = typer.Option(
+        False,
+        "--verify-with-tests",
+        help="Run the project's tests in a temporary worktree before and after the fixes "
+        "and commit only fixes whose tests pass. Runs the project's code: use only on "
+        "repositories you trust.",
+    ),
+    test_command: str | None = typer.Option(
+        None,
+        "--test-command",
+        metavar="CMD",
+        help="Test command for --verify-with-tests (implies it), run without a shell, "
+        'e.g. "python -m pytest -q". Default: autofix.test_command in a trusted '
+        ".nephilex.yml.",
+    ),
+    test_timeout: float | None = typer.Option(
+        None,
+        "--test-timeout",
+        metavar="SECONDS",
+        help="Time limit for each test run (default: autofix.test_timeout, else 600).",
+    ),
 ) -> None:
     """Scan a repo, apply Nephilex's deterministic fixes on a branch, and open a PR.
 
@@ -90,6 +117,15 @@ def fix(
             cfg.scanners = split_csv(scanners_opt)
         if min_severity:
             cfg.min_severity = cli_severity(min_severity, "--min-severity")
+
+        verify = _test_verification(
+            cfg,
+            enabled=verify_with_tests or test_command is not None,
+            command=test_command,
+            timeout=test_timeout,
+            dry_run=dry_run,
+            quiet=quiet,
+        )
 
         result = ScanEngine(cfg, progress=progress_printer(quiet)).scan(project)
 
@@ -116,6 +152,7 @@ def fix(
             only_rules=only_rules,
             no_verify=no_verify,
             audit=cfg.audit_log,
+            verify_tests=verify,
         )
         outcome = run_fix_workflow(project, result.findings, options)
         print_fix_outcome(outcome, open_pr=open_pr or annotate_pr, dry_run=dry_run)
@@ -124,6 +161,46 @@ def fix(
             raise typer.Exit(1)
     finally:
         resolved.cleanup()
+
+
+def _test_verification(
+    cfg: Config,
+    *,
+    enabled: bool,
+    command: str | None,
+    timeout: float | None,
+    dry_run: bool,
+    quiet: bool,
+) -> TestVerification | None:
+    """Build the --verify-with-tests settings; exit 2 on a usage error."""
+    from nephilex.remediation.testverify import (
+        TestCommandError,
+        TestVerification,
+        resolve_test_command,
+    )
+
+    if not enabled:
+        if timeout is not None:
+            err_console.print("[red]Error:[/red] --test-timeout needs --verify-with-tests.")
+            raise typer.Exit(2)
+        return None
+    if dry_run:
+        err_console.print(
+            "[red]Error:[/red] --verify-with-tests cannot be combined with --dry-run: "
+            "it applies the fixes in a temporary worktree and commits the ones that pass."
+        )
+        raise typer.Exit(2)
+    try:
+        test_cmd = resolve_test_command(command, timeout, cfg)
+    except TestCommandError as exc:
+        err_console.print(f"[red]Error:[/red] {escape(str(exc))}")
+        raise typer.Exit(2) from exc
+    if not quiet:
+        err_console.print(
+            f"[dim]- Test verification: {escape(test_cmd.display())} "
+            f"(from {escape(test_cmd.source)}, timeout {test_cmd.timeout:g}s).[/dim]"
+        )
+    return TestVerification(command=test_cmd, config=cfg, progress=progress_printer(quiet))
 
 
 def review(

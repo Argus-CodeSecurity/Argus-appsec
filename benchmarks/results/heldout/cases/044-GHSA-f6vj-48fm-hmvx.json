@@ -1,0 +1,112 @@
+{
+ "case": {
+  "ghsa_id": "GHSA-f6vj-48fm-hmvx",
+  "cve_id": "CVE-2026-49818",
+  "ecosystem": "pip",
+  "packages": [
+   "apache-airflow-providers-samba"
+  ],
+  "published_at": "2026-06-09T09:32:07Z",
+  "advisory_cwes": [22],
+  "html_url": "https://github.com/advisories/GHSA-f6vj-48fm-hmvx",
+  "label_cwes": [22],
+  "repo": "apache/airflow",
+  "fix_sha": "bc1df029af15cb1d35d5ca0d33bf9235500137cc",
+  "parent_sha": "e61c9bac30a7b1a7f68589629f10c4cb247c683e",
+  "path_vulnerable": "providers/samba/src/airflow/providers/samba/transfers/gcs_to_samba.py",
+  "path_patched": "providers/samba/src/airflow/providers/samba/transfers/gcs_to_samba.py",
+  "language": "python",
+  "vulnerable_lines": [
+   [180, 180]
+  ],
+  "patched_lines": [
+   [180, 190]
+  ],
+  "commit_url": "https://github.com/apache/airflow/commit/bc1df029af15cb1d35d5ca0d33bf9235500137cc",
+  "case_id": "044-GHSA-f6vj-48fm-hmvx",
+  "content": {
+   "vulnerable": {
+    "sha256": "ae2163dc042baf31c32c0ee4ebcb0d02fd6a4af8ce50ddcd72d97b24bbd58e7c",
+    "bytes": 8990
+   },
+   "patched": {
+    "sha256": "2a0531ce8660d64c33e0dfee366bd59b81e7efe012bdf5c919cf6bd206dd15ee",
+    "bytes": 9636
+   }
+  }
+ },
+ "status": "scored",
+ "tools": {
+  "nephilex": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  },
+  "bandit": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  },
+  "semgrep": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  }
+ },
+ "outcomes": {
+  "nephilex": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  },
+  "bandit": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  },
+  "semgrep": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  }
+ }
+}

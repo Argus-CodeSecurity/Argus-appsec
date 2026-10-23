@@ -1,0 +1,106 @@
+{
+ "case": {
+  "ghsa_id": "GHSA-2r69-qgv3-hr65",
+  "cve_id": "CVE-2026-45245",
+  "ecosystem": "npm",
+  "packages": [
+   "@steipete/summarize"
+  ],
+  "published_at": "2026-05-18T21:31:51Z",
+  "advisory_cwes": [918],
+  "html_url": "https://github.com/advisories/GHSA-2r69-qgv3-hr65",
+  "label_cwes": [918],
+  "repo": "steipete/summarize",
+  "fix_sha": "ecbb2c414255aa480a15d0d8b205224c14cfdbcb",
+  "parent_sha": "4eaf0e2c1a8e8e5dd92779f4aba6428dc630d20d",
+  "path_vulnerable": "apps/chrome-extension/src/entrypoints/background/hover-controller.ts",
+  "path_patched": "apps/chrome-extension/src/entrypoints/background/hover-controller.ts",
+  "language": "typescript",
+  "vulnerable_lines": [
+   [49, 50],
+   [111, 112]
+  ],
+  "patched_lines": [
+   [50, 104],
+   [167, 178]
+  ],
+  "commit_url": "https://github.com/steipete/summarize/commit/ecbb2c414255aa480a15d0d8b205224c14cfdbcb",
+  "case_id": "183-GHSA-2r69-qgv3-hr65",
+  "content": {
+   "vulnerable": {
+    "sha256": "4527b7fcfb70fbb479bb2d32298420f77976ac2030fadc8836e2c65e9cb9f035",
+    "bytes": 7714
+   },
+   "patched": {
+    "sha256": "6254b0c9efb893657e75a7cfd3d714ebadd3adf25d92056ba54461d76d16f103",
+    "bytes": 9680
+   }
+  }
+ },
+ "status": "scored",
+ "tools": {
+  "nephilex": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  },
+  "bandit": {
+   "status": "not_applicable"
+  },
+  "semgrep": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [
+     [
+      126,
+      "typescript.react.security.react-insecure-request.react-insecure-request",
+      [319]
+     ]
+    ],
+    "patched": [
+     [
+      193,
+      "typescript.react.security.react-insecure-request.react-insecure-request",
+      [319]
+     ]
+    ]
+   }
+  }
+ },
+ "outcomes": {
+  "nephilex": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  },
+  "semgrep": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  }
+ }
+}

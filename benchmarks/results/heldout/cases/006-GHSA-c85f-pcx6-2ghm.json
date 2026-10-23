@@ -1,0 +1,120 @@
+{
+ "case": {
+  "ghsa_id": "GHSA-c85f-pcx6-2ghm",
+  "cve_id": "CVE-2024-45849",
+  "ecosystem": "pip",
+  "packages": [
+   "mindsdb"
+  ],
+  "published_at": "2024-09-12T15:33:00Z",
+  "advisory_cwes": [94, 95],
+  "html_url": "https://github.com/advisories/GHSA-c85f-pcx6-2ghm",
+  "label_cwes": [94, 95],
+  "repo": "mindsdb/mindshub",
+  "fix_sha": "11a4db792ad36cf704f7307c7602128b17752c80",
+  "parent_sha": "ff120b08f45a4b15a313f7723ea0f2d8aa4be87c",
+  "path_vulnerable": "mindsdb/integrations/handlers/chromadb_handler/chromadb_handler.py",
+  "path_patched": "mindsdb/integrations/handlers/chromadb_handler/chromadb_handler.py",
+  "language": "python",
+  "vulnerable_lines": [
+   [1, 1],
+   [332, 332]
+  ],
+  "patched_lines": [
+   [1, 1],
+   [333, 333]
+  ],
+  "commit_url": "https://github.com/mindsdb/mindshub/commit/11a4db792ad36cf704f7307c7602128b17752c80",
+  "case_id": "006-GHSA-c85f-pcx6-2ghm",
+  "content": {
+   "vulnerable": {
+    "sha256": "a1117128dac40dad1c76a5da5600f18823cef83846eefbbe4c0ba44c9001b957",
+    "bytes": 14244
+   },
+   "patched": {
+    "sha256": "f500465586069c809632d6d7b998a0a3a53920187f2de53b543f07425dbaf054",
+    "bytes": 14267
+   }
+  }
+ },
+ "status": "scored",
+ "tools": {
+  "nephilex": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  },
+  "bandit": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [
+     [
+      332,
+      "B307",
+      [78]
+     ]
+    ],
+    "patched": []
+   }
+  },
+  "semgrep": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  }
+ },
+ "outcomes": {
+  "nephilex": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  },
+  "bandit": {
+   "window": 3,
+   "mapped": {
+    "detected": true,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": true,
+    "flagged_after_fix": false
+   }
+  },
+  "semgrep": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  }
+ }
+}

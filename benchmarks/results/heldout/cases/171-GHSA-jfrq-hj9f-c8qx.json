@@ -1,0 +1,92 @@
+{
+ "case": {
+  "ghsa_id": "GHSA-jfrq-hj9f-c8qx",
+  "cve_id": "CVE-2026-26862",
+  "ecosystem": "npm",
+  "packages": [
+   "clevertap-web-sdk"
+  ],
+  "published_at": "2026-02-27T18:31:06Z",
+  "advisory_cwes": [79],
+  "html_url": "https://github.com/advisories/GHSA-jfrq-hj9f-c8qx",
+  "label_cwes": [79],
+  "repo": "CleverTap/clevertap-web-sdk",
+  "fix_sha": "766f75f0c9082a27eb0b59c9fa4b0d9b19ba3d10",
+  "parent_sha": "123788a6a21000f1f82acd17b59c7d624ab48895",
+  "path_vulnerable": "src/modules/notification.js",
+  "path_patched": "src/modules/notification.js",
+  "language": "javascript",
+  "vulnerable_lines": [
+   [428, 429]
+  ],
+  "patched_lines": [
+   [429, 430]
+  ],
+  "commit_url": "https://github.com/CleverTap/clevertap-web-sdk/commit/766f75f0c9082a27eb0b59c9fa4b0d9b19ba3d10",
+  "case_id": "171-GHSA-jfrq-hj9f-c8qx",
+  "content": {
+   "vulnerable": {
+    "sha256": "c38b131b27954e9313c1a27db2310b2ae9537fdce05d7432a3dad6019fbbb8eb",
+    "bytes": 24394
+   },
+   "patched": {
+    "sha256": "c506f41da62183b1595ff84705b12e40255166ca7a7cf2e0ea7eb634e1689568",
+    "bytes": 24589
+   }
+  }
+ },
+ "status": "scored",
+ "tools": {
+  "nephilex": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  },
+  "bandit": {
+   "status": "not_applicable"
+  },
+  "semgrep": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  }
+ },
+ "outcomes": {
+  "nephilex": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  },
+  "semgrep": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  }
+ }
+}

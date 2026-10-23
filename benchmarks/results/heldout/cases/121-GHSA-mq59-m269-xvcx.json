@@ -1,0 +1,100 @@
+{
+ "case": {
+  "ghsa_id": "GHSA-mq59-m269-xvcx",
+  "cve_id": "CVE-2026-27978",
+  "ecosystem": "npm",
+  "packages": [
+   "next"
+  ],
+  "published_at": "2026-03-17T15:30:14Z",
+  "advisory_cwes": [352],
+  "html_url": "https://github.com/advisories/GHSA-mq59-m269-xvcx",
+  "label_cwes": [352],
+  "repo": "vercel/next.js",
+  "fix_sha": "a27a11d78e748a8c7ccfd14b7759ad2b9bf097d8",
+  "parent_sha": "00bdb037afd7229072640fd066bc940a26d0084f",
+  "path_vulnerable": "packages/next/src/server/app-render/action-handler.ts",
+  "path_patched": "packages/next/src/server/app-render/action-handler.ts",
+  "language": "typescript",
+  "vulnerable_lines": [
+   [619, 621],
+   [634, 636],
+   [638, 638],
+   [642, 642],
+   [653, 653]
+  ],
+  "patched_lines": [
+   [619, 626],
+   [639, 643],
+   [645, 645],
+   [649, 649],
+   [660, 660]
+  ],
+  "commit_url": "https://github.com/vercel/next.js/commit/a27a11d78e748a8c7ccfd14b7759ad2b9bf097d8",
+  "case_id": "121-GHSA-mq59-m269-xvcx",
+  "content": {
+   "vulnerable": {
+    "sha256": "cd93d5df59f5adc8172a331e8b6bf463e447545f3d713ba8fcce069487e44a3e",
+    "bytes": 50354
+   },
+   "patched": {
+    "sha256": "d0cc7f3ffeed666b9a289b6051c5dfdd326e13ac60325056f778de6cd62e4ebd",
+    "bytes": 50809
+   }
+  }
+ },
+ "status": "scored",
+ "tools": {
+  "nephilex": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  },
+  "bandit": {
+   "status": "not_applicable"
+  },
+  "semgrep": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  }
+ },
+ "outcomes": {
+  "nephilex": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  },
+  "semgrep": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  }
+ }
+}

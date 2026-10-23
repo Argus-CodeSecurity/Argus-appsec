@@ -1,0 +1,135 @@
+{
+ "case": {
+  "ghsa_id": "GHSA-jjpw-65fv-8g48",
+  "cve_id": "CVE-2026-25586",
+  "ecosystem": "npm",
+  "packages": [
+   "@nyariv/sandboxjs"
+  ],
+  "published_at": "2026-02-05T21:04:58Z",
+  "advisory_cwes": [74],
+  "html_url": "https://github.com/advisories/GHSA-jjpw-65fv-8g48",
+  "label_cwes": [74],
+  "repo": "nyariv/SandboxJS",
+  "fix_sha": "67cb186c41c78c51464f70405504e8ef0a6e43c3",
+  "parent_sha": "6103d7147c4666fe48cfda58a4d5f37005b43754",
+  "path_vulnerable": "src/utils.ts",
+  "path_patched": "src/utils.ts",
+  "language": "typescript",
+  "vulnerable_lines": [
+   [33, 33],
+   [50, 50],
+   [57, 57],
+   [90, 90],
+   [176, 177],
+   [285, 290],
+   [292, 298],
+   [300, 300],
+   [302, 304],
+   [306, 308],
+   [310, 311],
+   [313, 313],
+   [340, 343],
+   [345, 361],
+   [363, 363],
+   [379, 380],
+   [387, 394],
+   [396, 399],
+   [401, 401],
+   [521, 522],
+   [530, 530],
+   [532, 533]
+  ],
+  "patched_lines": [
+   [33, 33],
+   [50, 50],
+   [57, 57],
+   [89, 90],
+   [176, 180],
+   [289, 292],
+   [294, 294],
+   [296, 298],
+   [301, 307],
+   [309, 318],
+   [320, 328],
+   [355, 359],
+   [361, 362],
+   [364, 364],
+   [374, 376],
+   [383, 383],
+   [387, 410],
+   [414, 425],
+   [428, 438],
+   [558, 559],
+   [567, 567],
+   [569, 570],
+   [574, 577]
+  ],
+  "commit_url": "https://github.com/nyariv/SandboxJS/commit/67cb186c41c78c51464f70405504e8ef0a6e43c3",
+  "case_id": "195-GHSA-jjpw-65fv-8g48",
+  "content": {
+   "vulnerable": {
+    "sha256": "3439cc5a96c8cd715bee9881a52b4e0dbaed1d4e943b32b3f39dd72cfd09ec37",
+    "bytes": 13945
+   },
+   "patched": {
+    "sha256": "b6d236d27c3c56eb9b84560e4c8e156f53872f02bb2165e88cc77860c2ff2ccd",
+    "bytes": 14851
+   }
+  }
+ },
+ "status": "scored",
+ "tools": {
+  "nephilex": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  },
+  "bandit": {
+   "status": "not_applicable"
+  },
+  "semgrep": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  }
+ },
+ "outcomes": {
+  "nephilex": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  },
+  "semgrep": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  }
+ }
+}

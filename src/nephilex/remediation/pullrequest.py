@@ -2,9 +2,11 @@
 
 Given a scan's findings and a local git repository, this:
 
-1. applies deterministic fixes to a fresh branch,
-2. commits them, and
-3. (optionally) pushes the branch and opens a pull request.
+1. (optionally) verifies the fixes with the project's tests in a temporary
+   worktree and keeps only the ones that pass,
+2. applies deterministic fixes to a fresh branch,
+3. commits them, and
+4. (optionally) pushes the branch and opens a pull request.
 
 Every step is guarded and reported so the CLI can explain exactly what happened
 or why it stopped. Nothing is pushed or opened unless explicitly requested.
@@ -26,6 +28,14 @@ from nephilex.remediation.hosting import (
     open_pull_request,
     parse_remote,
     redact_credentials,
+)
+from nephilex.remediation.testverify import (
+    TEST_STATUS_LABELS,
+    TESTS_PASSED,
+    TestVerification,
+    VerificationReport,
+    content_digest,
+    verify_fixes_with_tests,
 )
 from nephilex.reporting.md_escape import md_code, md_fence
 
@@ -50,6 +60,9 @@ class FixOptions:
     # CLI passes the config's audit_log setting; NEPHILEX_AUDIT_LOG=off also
     # turns them off.
     audit: bool = True
+    # Run the project's tests in a temporary worktree before committing and
+    # keep only the fixes that pass (`nephilex fix --verify-with-tests`).
+    verify_tests: TestVerification | None = None
 
 
 @dataclass
@@ -62,6 +75,8 @@ class FixOutcome:
     pull_request: PullRequest | None = None
     messages: list[str] = field(default_factory=list)  # human-readable notes
     error: str | None = None
+    # Per-fix test results when the fixes were verified with tests.
+    verification: VerificationReport | None = None
 
     def note(self, msg: str) -> None:
         self.messages.append(msg)
@@ -71,6 +86,11 @@ def run_fix_workflow(project: Project, findings: list[Finding], options: FixOpti
     root = Path(project.root)
 
     # Dry run: preview the file changes only, touch nothing.
+    if options.dry_run and options.verify_tests is not None:
+        return FixOutcome(
+            applied=ApplyReport(),
+            error="Test verification cannot be combined with a dry run.",
+        )
     if options.dry_run:
         report = apply_fixes(
             project,
@@ -144,35 +164,70 @@ def run_fix_workflow(project: Project, findings: list[Finding], options: FixOpti
     if original == "HEAD":
         original = head_sha or base
     existed = git_ops.branch_exists(root, options.branch)
+    if existed and not options.force_branch:
+        return FixOutcome(
+            applied=ApplyReport(),
+            error=(
+                f"Branch '{options.branch}' already exists. Delete it, pick "
+                f"another with --branch, or pass --force-branch."
+            ),
+        )
+
+    # With --verify-with-tests, decide which fixes may land before touching
+    # the operator's checkout: everything runs in a temporary worktree.
+    to_fix = findings
+    verification: VerificationReport | None = None
+    if options.verify_tests is not None:
+        try:
+            verification = verify_fixes_with_tests(
+                project,
+                findings,
+                options.verify_tests,
+                commit=head_sha or base_sha,
+                include_unverified=options.include_unverified,
+                only_rules=options.only_rules,
+            )
+        except Exception as exc:
+            return FixOutcome(
+                applied=ApplyReport(),
+                error=f"Test verification failed: {exc}. Nothing was committed.",
+            )
+        stop = _verification_outcome(verification, options)
+        if stop is not None:
+            return stop
+        passed = verification.passed_ids()
+        to_fix = [f for f in findings if f.id in passed]
+
     audit_snapshot = _snapshot_audit_log(root)
 
     # Create (or, with --force-branch, reset) the working branch at base.
     try:
-        if existed and not options.force_branch:
-            return FixOutcome(
-                applied=ApplyReport(),
-                error=(
-                    f"Branch '{options.branch}' already exists. Delete it, pick "
-                    f"another with --branch, or pass --force-branch."
-                ),
-            )
         git_ops.create_branch(root, options.branch, base=base, reset=existed)
         verb = "Reset" if existed else "Created"
+        if verification is not None:
+            outcome.verification = verification
+            _note_verification(outcome, verification)
         outcome.note(f"{verb} branch '{options.branch}' at '{base}'.")
     except git_ops.GitError as exc:
-        return FixOutcome(applied=ApplyReport(), error=str(exc))
+        return FixOutcome(applied=ApplyReport(), error=str(exc), verification=verification)
 
     try:
         # Apply the fixes on the branch.
         report = apply_fixes(
             project,
-            findings,
+            to_fix,
             include_unverified=options.include_unverified,
             dry_run=False,
             only_rules=options.only_rules,
-            audit=options.audit,
+            # With test verification the records are written below, once
+            # each fix carries its test result.
+            audit=options.audit and verification is None,
         )
         outcome.applied = report
+        if verification is not None:
+            _match_tested_fixes(root, report, verification)
+            if options.audit:
+                record_fix_events(root, "fix.applied", report.fixes, report)
         if options.only_rules is not None:
             outcome.note(
                 f"Auto-tier: only {len(options.only_rules)} auto-approved rule(s) considered."
@@ -194,7 +249,7 @@ def run_fix_workflow(project: Project, findings: list[Finding], options: FixOpti
         elif audit_state == "ignored":
             outcome.note(f"{AUDIT_PATH} is ignored by git, so it was not committed.")
         git_ops.stage_paths(root, to_stage)
-        message = _commit_message(report)
+        message = _commit_message(report, verification)
         outcome.commit_sha = git_ops.commit(root, message, no_verify=options.no_verify)
         outcome.committed = True
         outcome.note(f"Committed {len(report.fixes)} fix(es) as {outcome.commit_sha[:8]}.")
@@ -255,7 +310,7 @@ def _push_and_open_pr(
             head=options.branch,
             base=base,
             title=_pr_title(report),
-            body=_pr_body(report),
+            body=_pr_body(report, outcome.verification),
         )
         outcome.pull_request = pr
         outcome.note(f"Opened pull request: {pr.url}")
@@ -288,6 +343,69 @@ def _push_and_open_pr(
             outcome.note(f"Posted {len(comments)} inline annotation(s) on the pull request.")
         except HostingError as exc:  # annotation failure must not fail the whole run
             outcome.note(f"Could not post inline annotations: {exc}")
+
+
+def _verification_outcome(
+    verification: VerificationReport, options: FixOptions
+) -> FixOutcome | None:
+    """The outcome to return when test verification leaves nothing to commit."""
+    if verification.error:
+        outcome = FixOutcome(
+            applied=ApplyReport(), error=verification.error, verification=verification
+        )
+        _note_verification(outcome, verification)
+        return outcome
+    if verification.passed_ids():
+        return None
+    outcome = FixOutcome(applied=ApplyReport(), verification=verification)
+    _note_verification(outcome, verification)
+    if options.only_rules is not None:
+        outcome.note(f"Auto-tier: only {len(options.only_rules)} auto-approved rule(s) considered.")
+    if verification.fixes:
+        outcome.note("No fix passed test verification; nothing was committed.")
+    else:
+        outcome.note("No deterministic fixes could be applied; nothing to commit.")
+    return outcome
+
+
+def _note_verification(outcome: FixOutcome, verification: VerificationReport) -> None:
+    """Explain the test runs in the outcome's notes (shown to the operator only)."""
+    v = verification
+    if v.removed_env:
+        shown = ", ".join(v.removed_env[:8]) + (" ..." if len(v.removed_env) > 8 else "")
+        outcome.note(
+            f"Test environment: removed {len(v.removed_env)} variable(s) that look "
+            f"like credentials ({shown})."
+        )
+    if v.baseline is not None:
+        outcome.note(f"Tests before the fixes ({v.command}): {v.baseline.describe(v.timeout)}.")
+    if v.after is not None:
+        outcome.note(f"Tests with the fixes applied: {v.after.describe(v.timeout)}.")
+    for run in (v.baseline, v.after):
+        if run is not None and not run.passed and run.output.strip():
+            outcome.note("Last lines of the test output:\n" + run.tail())
+            break
+    for msg in v.notes:
+        outcome.note(msg)
+
+
+def _match_tested_fixes(root: Path, report: ApplyReport, verification: VerificationReport) -> None:
+    """Carry the test results over, and refuse to commit anything that was not tested.
+
+    The fixes are applied a second time, now on the branch; the applier is
+    deterministic, so the files must equal the ones the tests ran against.
+    """
+    by_id = {fix.finding_id: fix for fix in verification.fixes}
+    for fix in report.fixes:
+        tested = by_id.get(fix.finding_id)
+        if tested is None or tested.tests != TESTS_PASSED:
+            raise RuntimeError(f"{fix.path}:{fix.line} was not verified with tests")
+        fix.tests, fix.tests_reason = tested.tests, tested.tests_reason
+    if set(report.changed_files) != set(verification.tested_files):
+        raise RuntimeError("the fixed files differ from the ones the tests ran against")
+    for rel in report.changed_files:
+        if content_digest((root / rel).read_bytes()) != verification.tested_files[rel]:
+            raise RuntimeError(f"{rel} differs from the version the tests ran against")
 
 
 def _has_changes_besides_audit_log(root: Path) -> bool:
@@ -379,21 +497,40 @@ def _rollback(
 
 
 # --- message/body builders -------------------------------------------------
-def _commit_message(report: ApplyReport) -> str:
+def _commit_message(report: ApplyReport, verification: VerificationReport | None = None) -> str:
     n = len(report.fixes)
     rules = sorted({f.rule_id for f in report.fixes})
     header = f"fix(security): apply {n} Nephilex fix{'es' if n != 1 else ''}"
     lines = [header, "", "Applied automated security fixes:"]
     for fix in report.fixes:
         mark = "verified" if fix.verified else "unverified"
+        if fix.tests:
+            mark += f", tests {TEST_STATUS_LABELS.get(fix.tests, fix.tests)}"
         lines.append(f"- {fix.path}:{fix.line} {fix.rule_id} ({mark})")
+    lines += ["", f"Rules: {', '.join(rules)}"]
+    if verification is not None:
+        lines += ["", _verification_sentence(verification)]
     lines += [
-        "",
-        f"Rules: {', '.join(rules)}",
         "",
         "Generated by Nephilex (https://github.com/nephilex/nephilex).",
     ]
     return "\n".join(lines)
+
+
+def _verification_sentence(verification: VerificationReport) -> str:
+    counts = verification.counts()
+    left_out = counts["failed"] + counts["not_verified"]
+    text = (
+        "The project's test command passed before and after these fixes in a "
+        "clean temporary worktree, and a rescan of the fixed files found neither "
+        "the original findings nor any new High or Critical finding."
+    )
+    if left_out:
+        text += (
+            f" {left_out} other fix(es) were left out: {counts['failed']} failed "
+            f"and {counts['not_verified']} could not be verified."
+        )
+    return text
 
 
 def _pr_title(report: ApplyReport) -> str:
@@ -401,7 +538,8 @@ def _pr_title(report: ApplyReport) -> str:
     return f"Nephilex: fix {n} security finding{'s' if n != 1 else ''}"
 
 
-def _pr_body(report: ApplyReport) -> str:
+def _pr_body(report: ApplyReport, verification: VerificationReport | None = None) -> str:
+    tested = verification is not None
     lines = [
         "## Automated security fixes by Nephilex",
         "",
@@ -409,15 +547,18 @@ def _pr_body(report: ApplyReport) -> str:
         f"fix(es) across **{len(report.changed_files)}** file(s). Each change is a "
         "minimal, line-level rewrite that removes the detected weakness.",
         "",
-        "| File | Line | Rule | Verified |",
-        "|------|------|------|----------|",
+        "| File | Line | Rule | Verified |" + (" Tests |" if tested else ""),
+        "|------|------|------|----------|" + ("-------|" if tested else ""),
     ]
     for f in report.fixes:
+        tests = f" {TEST_STATUS_LABELS.get(f.tests or '', 'not run')} |" if tested else ""
         lines.append(
             f"| {md_code(f.path, in_table=True)} | {f.line} | "
             f"{md_code(f.rule_id, in_table=True)} | "
-            f"{'yes' if f.verified else 'no'} |"
+            f"{'yes' if f.verified else 'no'} |" + tests
         )
+    if verification is not None:
+        lines += ["", "### Test verification", "", _verification_sentence(verification)]
     lines += [
         "",
         "<details><summary>Diffs</summary>",
@@ -429,7 +570,15 @@ def _pr_body(report: ApplyReport) -> str:
         "</details>",
         "",
         "**Verified** fixes are ones where Nephilex re-checked the rewritten line and "
-        "confirmed the detection no longer fires. Please review before merging.",
+        "confirmed the detection no longer fires."
+        + (
+            " **Tests** is the result of the project's own test command with the "
+            "fixes applied; a passing run is evidence, not proof, that behavior is "
+            "unchanged."
+            if tested
+            else ""
+        )
+        + " Please review before merging.",
         "",
         "_Generated by [Nephilex](https://github.com/nephilex/nephilex)._",
     ]

@@ -1,0 +1,166 @@
+{
+ "case": {
+  "ghsa_id": "GHSA-g4r8-3qmh-pmch",
+  "cve_id": "CVE-2025-12765",
+  "ecosystem": "pip",
+  "packages": [
+   "pgadmin4"
+  ],
+  "published_at": "2025-11-13T15:30:30Z",
+  "advisory_cwes": [295],
+  "html_url": "https://github.com/advisories/GHSA-g4r8-3qmh-pmch",
+  "label_cwes": [295],
+  "repo": "pgadmin-org/pgadmin4",
+  "fix_sha": "09d2b7eeb0e330df73b1aef0cba57788fde52b6b",
+  "parent_sha": "e374edc69239b3e02ecde895e27d9f9e488b87ee",
+  "path_vulnerable": "web/config.py",
+  "path_patched": "web/config.py",
+  "language": "python",
+  "vulnerable_lines": [
+   [756, 757]
+  ],
+  "patched_lines": [
+   [757, 759]
+  ],
+  "commit_url": "https://github.com/pgadmin-org/pgadmin4/commit/09d2b7eeb0e330df73b1aef0cba57788fde52b6b",
+  "case_id": "099-GHSA-g4r8-3qmh-pmch",
+  "content": {
+   "vulnerable": {
+    "sha256": "b99361b929b510db85c2435de77cbd2ee6feb95dbd5dcc250fda22f899e790fc",
+    "bytes": 38534
+   },
+   "patched": {
+    "sha256": "908cce1a4f5679e62a80b9f6d681a35e0bdb3cbb3d256e3f80fe85c0097f3efa",
+    "bytes": 38666
+   }
+  }
+ },
+ "status": "scored",
+ "tools": {
+  "nephilex": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [
+     [
+      860,
+      "authz.oauth-missing-state",
+      [352]
+     ]
+    ],
+    "patched": [
+     [
+      863,
+      "authz.oauth-missing-state",
+      [352]
+     ]
+    ]
+   }
+  },
+  "bandit": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [
+     [
+      179,
+      "B105",
+      [259]
+     ],
+     [
+      394,
+      "B105",
+      [259]
+     ],
+     [
+      807,
+      "B105",
+      [259]
+     ],
+     [
+      810,
+      "B105",
+      [259]
+     ]
+    ],
+    "patched": [
+     [
+      179,
+      "B105",
+      [259]
+     ],
+     [
+      394,
+      "B105",
+      [259]
+     ],
+     [
+      810,
+      "B105",
+      [259]
+     ],
+     [
+      813,
+      "B105",
+      [259]
+     ]
+    ]
+   }
+  },
+  "semgrep": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  }
+ },
+ "outcomes": {
+  "nephilex": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  },
+  "bandit": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  },
+  "semgrep": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  }
+ }
+}

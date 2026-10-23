@@ -1,0 +1,134 @@
+{
+ "case": {
+  "ghsa_id": "GHSA-6w2r-r2m5-xq5w",
+  "cve_id": "CVE-2025-57833",
+  "ecosystem": "pip",
+  "packages": [
+   "Django"
+  ],
+  "published_at": "2025-09-08T18:31:31Z",
+  "advisory_cwes": [89],
+  "html_url": "https://github.com/advisories/GHSA-6w2r-r2m5-xq5w",
+  "label_cwes": [89],
+  "repo": "django/django",
+  "fix_sha": "102965ea93072fe3c39a30be437c683ec1106ef5",
+  "parent_sha": "44cd014a0ad35b3867595db1f3f4f1844308d581",
+  "path_vulnerable": "django/db/models/sql/query.py",
+  "path_patched": "django/db/models/sql/query.py",
+  "language": "python",
+  "vulnerable_lines": [
+   [1661, 1662]
+  ],
+  "patched_lines": [
+   [1662, 1662]
+  ],
+  "commit_url": "https://github.com/django/django/commit/102965ea93072fe3c39a30be437c683ec1106ef5",
+  "case_id": "086-GHSA-6w2r-r2m5-xq5w",
+  "content": {
+   "vulnerable": {
+    "sha256": "840da4de041401dbd6a83d15e43ba1beea463244eacf36cb8e8a6d26a080ac4c",
+    "bytes": 116561
+   },
+   "patched": {
+    "sha256": "c91aa47c0ccc680dc8e4fed895be59dd7d38f12524e0e242d9289b58244601bd",
+    "bytes": 116593
+   }
+  }
+ },
+ "status": "scored",
+ "tools": {
+  "nephilex": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  },
+  "bandit": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [
+     [
+      928,
+      "B101",
+      [703]
+     ],
+     [
+      984,
+      "B101",
+      [703]
+     ]
+    ],
+    "patched": [
+     [
+      928,
+      "B101",
+      [703]
+     ],
+     [
+      984,
+      "B101",
+      [703]
+     ]
+    ]
+   }
+  },
+  "semgrep": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  }
+ },
+ "outcomes": {
+  "nephilex": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  },
+  "bandit": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  },
+  "semgrep": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  }
+ }
+}

@@ -141,6 +141,9 @@ runs:
       env:
         NEPHILEX_VERSION: ${{ inputs.nephilex-version }}
         ACTION_PATH: ${{ github.action_path }}
+      # The [ast] extra provides the tree-sitter taint tiers (ast-python,
+      # ast-python-xfile, ast-js). Without it those scanners are skipped and the
+      # Action reports less than the CLI does with the same config.
       run: |
         set -euo pipefail
         if [ -n "$NEPHILEX_VERSION" ]; then
@@ -148,9 +151,9 @@ runs:
             echo "::error::nephilex-version must be a plain version string, got: $NEPHILEX_VERSION"
             exit 1
           fi
-          python -m pip install --quiet "nephilex==${NEPHILEX_VERSION}"
+          python -m pip install --quiet "nephilex[ast]==${NEPHILEX_VERSION}"
         else
-          python -m pip install --quiet "$ACTION_PATH"
+          python -m pip install --quiet "${ACTION_PATH}[ast]"
         fi
 
     - name: Use base-branch config on pull requests

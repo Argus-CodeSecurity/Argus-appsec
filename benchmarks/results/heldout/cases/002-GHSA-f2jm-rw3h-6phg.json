@@ -1,0 +1,114 @@
+{
+ "case": {
+  "ghsa_id": "GHSA-f2jm-rw3h-6phg",
+  "cve_id": "CVE-2024-5998",
+  "ecosystem": "pip",
+  "packages": [
+   "langchain-community"
+  ],
+  "published_at": "2024-09-17T12:30:32Z",
+  "advisory_cwes": [502],
+  "html_url": "https://github.com/advisories/GHSA-f2jm-rw3h-6phg",
+  "label_cwes": [502],
+  "repo": "langchain-ai/langchain",
+  "fix_sha": "604dfe2d99246b0c09f047c604f0c63eafba31e7",
+  "parent_sha": "f101c759ed0e1df8bcf9044a429dc578e0c33b22",
+  "path_vulnerable": "libs/community/langchain_community/retrievers/web_research.py",
+  "path_patched": "libs/community/langchain_community/retrievers/web_research.py",
+  "language": "python",
+  "vulnerable_lines": [
+   [3, 3],
+   [83, 84]
+  ],
+  "patched_lines": [
+   [3, 3],
+   [84, 112]
+  ],
+  "commit_url": "https://github.com/langchain-ai/langchain/commit/604dfe2d99246b0c09f047c604f0c63eafba31e7",
+  "case_id": "002-GHSA-f2jm-rw3h-6phg",
+  "content": {
+   "vulnerable": {
+    "sha256": "c3126b05c8affb74dbbb0408276970f5d7e78f329241bcb444d8f28fc12bbaec",
+    "bytes": 8634
+   },
+   "patched": {
+    "sha256": "d4e5579dc5ecc706edf2aa96082fcf242a638c2d8d2373d694e77ae28622a0c3",
+    "bytes": 10055
+   }
+  }
+ },
+ "status": "scored",
+ "tools": {
+  "nephilex": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  },
+  "bandit": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  },
+  "semgrep": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  }
+ },
+ "outcomes": {
+  "nephilex": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  },
+  "bandit": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  },
+  "semgrep": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  }
+ }
+}

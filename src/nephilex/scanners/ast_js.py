@@ -117,6 +117,9 @@ _SANITIZERS = {
 }
 
 
+_JS_PATTERNS = ("*.js", "*.jsx", "*.mjs", "*.cjs", "*.ts", "*.tsx", "*.mts", "*.cts")
+
+
 @dataclass
 class Sink:
     id: str
@@ -232,11 +235,12 @@ class ASTJsScanner(Scanner):
     )
 
     def applies_to(self, project) -> bool:
-        return is_available() and bool(
-            project.files_matching(
-                "*.js", "*.jsx", "*.mjs", "*.cjs", "*.ts", "*.tsx", "*.mts", "*.cts"
-            )
-        )
+        return is_available() and bool(project.files_matching(*_JS_PATTERNS))
+
+    def unavailable_reason(self, project) -> str | None:
+        if is_available() or not project.files_matching(*_JS_PATTERNS):
+            return None
+        return 'needs the [ast] extra: pip install "nephilex[ast]"'
 
     def scan(self, ctx: ScannerContext) -> Iterable[Finding]:
         parsers = _load_parsers()

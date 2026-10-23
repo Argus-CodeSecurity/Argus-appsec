@@ -1,0 +1,92 @@
+{
+ "case": {
+  "ghsa_id": "GHSA-p2w6-rmh7-w8q3",
+  "cve_id": "CVE-2026-33539",
+  "ecosystem": "npm",
+  "packages": [
+   "parse-server"
+  ],
+  "published_at": "2026-03-24T19:12:06Z",
+  "advisory_cwes": [89],
+  "html_url": "https://github.com/advisories/GHSA-p2w6-rmh7-w8q3",
+  "label_cwes": [89],
+  "repo": "parse-community/parse-server",
+  "fix_sha": "03249f9bf5b8783c8b848f84dab791ff0b761b8c",
+  "parent_sha": "ec2cce9e331459515ed1cdf051277117385673e2",
+  "path_vulnerable": "src/Routers/AggregateRouter.js",
+  "path_patched": "src/Routers/AggregateRouter.js",
+  "language": "javascript",
+  "vulnerable_lines": [
+   [50, 51]
+  ],
+  "patched_lines": [
+   [51, 53]
+  ],
+  "commit_url": "https://github.com/parse-community/parse-server/commit/03249f9bf5b8783c8b848f84dab791ff0b761b8c",
+  "case_id": "136-GHSA-p2w6-rmh7-w8q3",
+  "content": {
+   "vulnerable": {
+    "sha256": "c4beec836b624915ddb6f9cd1ab67a21f3f87050446a4ff3f5bbaad79e4e5681",
+    "bytes": 3625
+   },
+   "patched": {
+    "sha256": "715e42bf2ae52d74094244ddd9db667062cc4470ea655fe351d4a85777d0aece",
+    "bytes": 3688
+   }
+  }
+ },
+ "status": "scored",
+ "tools": {
+  "nephilex": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  },
+  "bandit": {
+   "status": "not_applicable"
+  },
+  "semgrep": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  }
+ },
+ "outcomes": {
+  "nephilex": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  },
+  "semgrep": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  }
+ }
+}

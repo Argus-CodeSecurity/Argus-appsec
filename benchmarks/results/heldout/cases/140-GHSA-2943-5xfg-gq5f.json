@@ -1,0 +1,92 @@
+{
+ "case": {
+  "ghsa_id": "GHSA-2943-5xfg-gq5f",
+  "cve_id": "CVE-2026-77414",
+  "ecosystem": "npm",
+  "packages": [
+   "jsonata"
+  ],
+  "published_at": "2026-08-21T20:58:01Z",
+  "advisory_cwes": [94],
+  "html_url": "https://github.com/advisories/GHSA-2943-5xfg-gq5f",
+  "label_cwes": [94],
+  "repo": "jsonata-js/jsonata",
+  "fix_sha": "59e25144fc3b7125f6befd71b8a6e14e1fa610d2",
+  "parent_sha": "8ee4476f8a228bfc7a62979ae0a9c13a4043cd03",
+  "path_vulnerable": "src/parser.js",
+  "path_patched": "src/parser.js",
+  "language": "javascript",
+  "vulnerable_lines": [
+   [354, 354]
+  ],
+  "patched_lines": [
+   [354, 354]
+  ],
+  "commit_url": "https://github.com/jsonata-js/jsonata/commit/59e25144fc3b7125f6befd71b8a6e14e1fa610d2",
+  "case_id": "140-GHSA-2943-5xfg-gq5f",
+  "content": {
+   "vulnerable": {
+    "sha256": "2955eb295d1a8a8f5cfc0cb1826328b6560f2c247f05bc139ecfd12e11acae62",
+    "bytes": 56383
+   },
+   "patched": {
+    "sha256": "d8cb534f59ebe73f37e96facab184cfade9babf826913824dff7800761885c1a",
+    "bytes": 56400
+   }
+  }
+ },
+ "status": "scored",
+ "tools": {
+  "nephilex": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  },
+  "bandit": {
+   "status": "not_applicable"
+  },
+  "semgrep": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  }
+ },
+ "outcomes": {
+  "nephilex": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  },
+  "semgrep": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  }
+ }
+}

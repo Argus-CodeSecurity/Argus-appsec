@@ -1,0 +1,92 @@
+{
+ "case": {
+  "ghsa_id": "GHSA-x5c9-v98j-722r",
+  "cve_id": "CVE-2026-56675",
+  "ecosystem": "npm",
+  "packages": [
+   "9router"
+  ],
+  "published_at": "2026-09-23T18:12:26Z",
+  "advisory_cwes": [287, 290, 306, 441],
+  "html_url": "https://github.com/advisories/GHSA-x5c9-v98j-722r",
+  "label_cwes": [306],
+  "repo": "decolua/9router",
+  "fix_sha": "da667836cc7584bea0edd893de1d590c9ea279dc",
+  "parent_sha": "2a619655b8a7e3d9676afb5a2993b04a8a484368",
+  "path_vulnerable": "src/dashboardGuard.js",
+  "path_patched": "src/dashboardGuard.js",
+  "language": "javascript",
+  "vulnerable_lines": [
+   [92, 93]
+  ],
+  "patched_lines": [
+   [93, 95]
+  ],
+  "commit_url": "https://github.com/decolua/9router/commit/da667836cc7584bea0edd893de1d590c9ea279dc",
+  "case_id": "197-GHSA-x5c9-v98j-722r",
+  "content": {
+   "vulnerable": {
+    "sha256": "063f99351331888387f234c6fad7c6334887bacff4f86c3e131a93637652dabe",
+    "bytes": 7982
+   },
+   "patched": {
+    "sha256": "0245a52d6c452ea35bc2e8cc49e8d0002cc5e5d20d1e6f59a3f5905ed13ceceb",
+    "bytes": 8207
+   }
+  }
+ },
+ "status": "scored",
+ "tools": {
+  "nephilex": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  },
+  "bandit": {
+   "status": "not_applicable"
+  },
+  "semgrep": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  }
+ },
+ "outcomes": {
+  "nephilex": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  },
+  "semgrep": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  }
+ }
+}

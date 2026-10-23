@@ -1,0 +1,92 @@
+{
+ "case": {
+  "ghsa_id": "GHSA-w27v-7q3p-w38r",
+  "cve_id": "CVE-2026-84370",
+  "ecosystem": "npm",
+  "packages": [
+   "svgo"
+  ],
+  "published_at": "2026-09-08T21:20:28Z",
+  "advisory_cwes": [79, 184],
+  "html_url": "https://github.com/advisories/GHSA-w27v-7q3p-w38r",
+  "label_cwes": [79],
+  "repo": "svg/svgo",
+  "fix_sha": "3db3ef33e409a0bc0fdaf255e46c908b00e93bc2",
+  "parent_sha": "4e9b9aed2a4607cf28025871151421d5bfe86484",
+  "path_vulnerable": "lib/svgo/tools.js",
+  "path_patched": "lib/svgo/tools.js",
+  "language": "javascript",
+  "vulnerable_lines": [
+   [169, 169]
+  ],
+  "patched_lines": [
+   [169, 174]
+  ],
+  "commit_url": "https://github.com/svg/svgo/commit/3db3ef33e409a0bc0fdaf255e46c908b00e93bc2",
+  "case_id": "168-GHSA-w27v-7q3p-w38r",
+  "content": {
+   "vulnerable": {
+    "sha256": "637a07ac8f9b45e884bdc521c2a449e0d11c96d22d4a65607a258010295ba6a7",
+    "bytes": 7631
+   },
+   "patched": {
+    "sha256": "d1bda94f9cef2aded91daeebdfbb2eb6ea5a13e652cca9e86cc789c250b4c93c",
+    "bytes": 7821
+   }
+  }
+ },
+ "status": "scored",
+ "tools": {
+  "nephilex": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  },
+  "bandit": {
+   "status": "not_applicable"
+  },
+  "semgrep": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  }
+ },
+ "outcomes": {
+  "nephilex": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  },
+  "semgrep": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  }
+ }
+}

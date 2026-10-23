@@ -1,0 +1,141 @@
+{
+ "case": {
+  "ghsa_id": "GHSA-r3hx-x5rh-p9vv",
+  "cve_id": null,
+  "ecosystem": "pip",
+  "packages": [
+   "django-haystack"
+  ],
+  "published_at": "2026-07-15T22:42:28Z",
+  "advisory_cwes": [95],
+  "html_url": "https://github.com/advisories/GHSA-r3hx-x5rh-p9vv",
+  "label_cwes": [95],
+  "repo": "django-haystack/django-haystack",
+  "fix_sha": "eb05f193c9771a68dcc8cfac6674a0d48a52ee9d",
+  "parent_sha": "294bb04af1b6d1f0bff49c3e4ea624f22d99e918",
+  "path_vulnerable": "haystack/backends/elasticsearch_backend.py",
+  "path_patched": "haystack/backends/elasticsearch_backend.py",
+  "language": "python",
+  "vulnerable_lines": [
+   [1, 1],
+   [865, 865]
+  ],
+  "patched_lines": [
+   [1, 1],
+   [866, 866]
+  ],
+  "commit_url": "https://github.com/django-haystack/django-haystack/commit/eb05f193c9771a68dcc8cfac6674a0d48a52ee9d",
+  "case_id": "017-GHSA-r3hx-x5rh-p9vv",
+  "content": {
+   "vulnerable": {
+    "sha256": "aa2662182ddbdfb1975a281d915e8759486ffa8816f1937a8b7fd9109d35f9d5",
+    "bytes": 39281
+   },
+   "patched": {
+    "sha256": "3392eaf0e526039e98750c737f9f9688b517558c7465b1792e8f35058c9d4805",
+    "bytes": 39304
+   }
+  }
+ },
+ "status": "scored",
+ "tools": {
+  "nephilex": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  },
+  "bandit": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [
+     [
+      288,
+      "B101",
+      [703]
+     ],
+     [
+      865,
+      "B307",
+      [78]
+     ],
+     [
+      872,
+      "B110",
+      [703]
+     ]
+    ],
+    "patched": [
+     [
+      289,
+      "B101",
+      [703]
+     ],
+     [
+      873,
+      "B110",
+      [703]
+     ]
+    ]
+   }
+  },
+  "semgrep": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  }
+ },
+ "outcomes": {
+  "nephilex": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  },
+  "bandit": {
+   "window": 3,
+   "mapped": {
+    "detected": true,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": true,
+    "flagged_after_fix": false
+   }
+  },
+  "semgrep": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  }
+ }
+}

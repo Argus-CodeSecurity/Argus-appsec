@@ -1,0 +1,98 @@
+{
+ "case": {
+  "ghsa_id": "GHSA-p3h2-2j4p-p83g",
+  "cve_id": null,
+  "ecosystem": "npm",
+  "packages": [
+   "@samanhappy/mcphub"
+  ],
+  "published_at": "2026-04-22T20:50:19Z",
+  "advisory_cwes": [22],
+  "html_url": "https://github.com/advisories/GHSA-p3h2-2j4p-p83g",
+  "label_cwes": [22],
+  "repo": "samanhappy/mcphub",
+  "fix_sha": "af5b013c09bb0add6b7ad9aaa5b875cf150d2a7c",
+  "parent_sha": "ff01972847df71ab057e0cec50980c8b6f28465b",
+  "path_vulnerable": "src/controllers/mcpbController.ts",
+  "path_patched": "src/controllers/mcpbController.ts",
+  "language": "typescript",
+  "vulnerable_lines": [
+   [43, 43],
+   [107, 107],
+   [110, 110]
+  ],
+  "patched_lines": [
+   [40, 78],
+   [82, 82],
+   [145, 146],
+   [148, 148],
+   [151, 151]
+  ],
+  "commit_url": "https://github.com/samanhappy/mcphub/commit/af5b013c09bb0add6b7ad9aaa5b875cf150d2a7c",
+  "case_id": "179-GHSA-p3h2-2j4p-p83g",
+  "content": {
+   "vulnerable": {
+    "sha256": "b5d9ac08bf056ce210a2149e6d27ab8610481564687e60d3b4415ccfb654093b",
+    "bytes": 4736
+   },
+   "patched": {
+    "sha256": "4492ea426a64fb4d565fe8f97c60efdbadbe6ca131972debd3089e8ce60f20f1",
+    "bytes": 6128
+   }
+  }
+ },
+ "status": "scored",
+ "tools": {
+  "nephilex": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  },
+  "bandit": {
+   "status": "not_applicable"
+  },
+  "semgrep": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  }
+ },
+ "outcomes": {
+  "nephilex": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  },
+  "semgrep": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  }
+ }
+}

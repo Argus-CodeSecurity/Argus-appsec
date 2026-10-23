@@ -1,0 +1,110 @@
+{
+ "case": {
+  "ghsa_id": "GHSA-xgfm-fjx6-62mj",
+  "cve_id": null,
+  "ecosystem": "pip",
+  "packages": [
+   "readthedocs-sphinx-search"
+  ],
+  "published_at": "2024-01-16T20:48:16Z",
+  "advisory_cwes": [79],
+  "html_url": "https://github.com/advisories/GHSA-xgfm-fjx6-62mj",
+  "label_cwes": [79],
+  "repo": "readthedocs/readthedocs-sphinx-search",
+  "fix_sha": "8c6f6d01e88e72ef32ed0c220b6c19d1e1121c73",
+  "parent_sha": "1608743622df0883b785a2ce07c587f146f2102b",
+  "path_vulnerable": "sphinx_search/static/js/rtd_sphinx_search.js",
+  "path_patched": "sphinx_search/static/js/rtd_sphinx_search.js",
+  "language": "javascript",
+  "vulnerable_lines": [
+   [8, 9],
+   [71, 71],
+   [78, 78],
+   [171, 171],
+   [186, 186],
+   [195, 231],
+   [268, 268],
+   [272, 272],
+   [304, 309],
+   [482, 482]
+  ],
+  "patched_lines": [
+   [9, 40],
+   [103, 103],
+   [110, 110],
+   [203, 203],
+   [218, 218],
+   [226, 227],
+   [263, 263],
+   [267, 267],
+   [298, 299],
+   [471, 471]
+  ],
+  "commit_url": "https://github.com/readthedocs/readthedocs-sphinx-search/commit/8c6f6d01e88e72ef32ed0c220b6c19d1e1121c73",
+  "case_id": "042-GHSA-xgfm-fjx6-62mj",
+  "content": {
+   "vulnerable": {
+    "sha256": "bbe7416bdbea17fdecf81dd1db9f5d3f45f46a5855e63decab95c5f8d327209c",
+    "bytes": 27812
+   },
+   "patched": {
+    "sha256": "4bed00be58f46f6d4018b4fe40a9c45b20dbec00710e2a75317c524b953e2bf5",
+    "bytes": 27163
+   }
+  }
+ },
+ "status": "scored",
+ "tools": {
+  "nephilex": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  },
+  "bandit": {
+   "status": "not_applicable"
+  },
+  "semgrep": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  }
+ },
+ "outcomes": {
+  "nephilex": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  },
+  "semgrep": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  }
+ }
+}

@@ -42,7 +42,8 @@ from dataclasses import dataclass, replace
 from typing import Any
 
 from nephilex.core.models import Confidence, Finding, Likelihood, Severity
-from nephilex.scanners import llm_prompt
+from nephilex.scanners import llm_agent, llm_prompt
+from nephilex.scanners.llm_agent import ACTION_KINDS, ModelCall
 from nephilex.scanners.llm_ast import (
     LLM01,
     LLM05,
@@ -62,7 +63,9 @@ from nephilex.scanners.llm_ast import (
     walk,
 )
 
-ALL_KINDS = frozenset({"shell", "code", "sql", "file", "ssrf", "html", "ssti", "deser"})
+ALL_KINDS = (
+    frozenset({"shell", "code", "sql", "file", "ssrf", "html", "ssti", "deser"}) | ACTION_KINDS
+)
 
 
 @dataclass(frozen=True)
@@ -73,9 +76,31 @@ class Taint:
     line: int
     model: str | None = None  # Pydantic model the value was (or will be) validated as
     validated: bool = False  # a structured object; only its fields can be dangerous
+    #: untrusted: content from outside the application (web, files, documents,
+    #: email, APIs, stored text), as opposed to the caller's own request input
+    external: bool = False
+    #: llm: the external content that was in this model call's prompt
+    via: tuple[str, int] | None = None
+    #: untrusted: the attacker controls the value's shape (message roles, keys),
+    #: not only text inside it
+    structural: bool = True
+    #: tool-arg: the tool whose argument this is
+    tool: str | None = None
 
 
 TaintSet = dict[str, Taint]  # flavor -> Taint
+
+
+def _combine(cur: Taint, t: Taint) -> Taint:
+    base, other = (t, cur) if t.external and not cur.external else (cur, t)
+    return replace(
+        base,
+        kinds=cur.kinds | t.kinds,
+        external=cur.external or t.external,
+        via=base.via or other.via,
+        structural=cur.structural or t.structural,
+        tool=base.tool or other.tool,
+    )
 
 
 def _merge(a: TaintSet, b: TaintSet) -> TaintSet:
@@ -89,7 +114,7 @@ def _merge(a: TaintSet, b: TaintSet) -> TaintSet:
         if cur is None:
             out[flavor] = t
         elif not cur.validated and not t.validated:
-            out[flavor] = replace(cur, kinds=cur.kinds | t.kinds)
+            out[flavor] = _combine(cur, t)
         elif cur.validated:
             out[flavor] = t
     return out
@@ -242,6 +267,129 @@ _TOOL_WRAPPERS = {"Tool", "StructuredTool", "FunctionTool", "from_function", "fr
 _AGENT_TOOLS_CALLEE = re.compile(r"(?i)agent|crew|assistant|executor|runner|chat_engine")
 _SKIP_PARAMS = {"self", "cls", "ctx", "context", "run_manager", "config", "callbacks"}
 _CONSTRAINED_PARAM = re.compile(r"^(?:Literal\[|int\b|float\b|bool\b|UUID\b)")
+
+# --- agent trust boundaries ----------------------------------------------------
+
+#: Arguments of a model call that are configuration, not prompt text.
+_NON_PROMPT_KWARGS = {
+    "model",
+    "temperature",
+    "max_tokens",
+    "max_completion_tokens",
+    "max_output_tokens",
+    "top_p",
+    "top_k",
+    "n",
+    "stop",
+    "seed",
+    "stream",
+    "tools",
+    "tool_choice",
+    "functions",
+    "function_call",
+    "parallel_tool_calls",
+    "response_format",
+    "text_format",
+    "api_key",
+    "base_url",
+    "timeout",
+    "headers",
+    "extra_headers",
+    "extra_body",
+    "user",
+    "metadata",
+    "store",
+    "config",
+    "callbacks",
+    "reasoning",
+    "thinking",
+    "betas",
+}
+#: Constructors and methods whose ``tools`` give an LLM object its tools.
+_TOOL_HOLDERS = re.compile(
+    r"^(?:bind_tools|from_tools|initialize_agent|create_\w*agent|AgentExecutor|Agent|"
+    r"FunctionAgent|ReActAgent|CodeAgent|ToolCallingAgent|AssistantAgent|ToolNode|Crew)$"
+)
+#: Built-in framework tools: what their model-chosen input can reach, and
+#: whether they return external content (web pages, search results, files, mail).
+_BUILTIN_TOOL_CAPS: dict[str, frozenset[str]] = {
+    "ShellTool": frozenset({"shell"}),
+    "BashProcess": frozenset({"shell"}),
+    "PythonREPLTool": frozenset({"code"}),
+    "PythonAstREPLTool": frozenset({"code"}),
+    "WriteFileTool": frozenset({"file"}),
+    "DeleteFileTool": frozenset({"file"}),
+    "MoveFileTool": frozenset({"file"}),
+    "CopyFileTool": frozenset({"file"}),
+    "FileManagementToolkit": frozenset({"file"}),
+    "RequestsGetTool": frozenset({"ssrf"}),
+    "RequestsPostTool": frozenset({"ssrf", "send"}),
+    "RequestsPutTool": frozenset({"ssrf", "send"}),
+    "RequestsPatchTool": frozenset({"ssrf", "send"}),
+    "RequestsDeleteTool": frozenset({"ssrf", "send"}),
+    "RequestsToolkit": frozenset({"ssrf", "send"}),
+    "GmailSendMessage": frozenset({"recipient"}),
+    "GmailToolkit": frozenset({"recipient"}),
+    "SQLDatabaseToolkit": frozenset({"sql"}),
+    "QuerySQLDatabaseTool": frozenset({"sql"}),
+    "QuerySQLDataBaseTool": frozenset({"sql"}),
+}
+_BUILTIN_TOOL_EXTERNAL = {
+    "TavilySearchResults": "web search results",
+    "TavilySearch": "web search results",
+    "DuckDuckGoSearchRun": "web search results",
+    "DuckDuckGoSearchResults": "web search results",
+    "BraveSearch": "web search results",
+    "GoogleSearchRun": "web search results",
+    "GoogleSerperRun": "web search results",
+    "WikipediaQueryRun": "Wikipedia pages",
+    "ArxivQueryRun": "arXiv papers",
+    "RequestsGetTool": "HTTP responses",
+    "RequestsToolkit": "HTTP responses",
+    "PlayWrightBrowserToolkit": "web pages",
+    "GmailToolkit": "email messages",
+    "GmailGetMessage": "email messages",
+    "GmailSearch": "email messages",
+    "ReadFileTool": "file contents",
+    "FileManagementToolkit": "file contents",
+}
+_LOAD_TOOLS_CAPS = {"terminal": frozenset({"shell"})}
+_LOAD_TOOLS_EXTERNAL = re.compile(
+    r"^(?:requests\w*|ddg-search|serpapi|google-\w+|wikipedia|arxiv)$"
+)
+#: Environment variable names that hold credentials.
+_SECRET_ENV = re.compile(r"(?i)secret|token|passw|api_?key|private_?key|credential|_key$")
+#: Calls that load a database row (whose free-text fields users wrote).
+_ORM_LOAD = re.compile(
+    r"\.query\.(?:get|get_or_404|filter|filter_by)\b|\.objects\.(?:get|filter|first|last)\b|"
+    r"(?:^|\.)get_object_or_404$|\.first_or_404$|\bdb\.session\.get$"
+)
+_FREE_TEXT_ATTR = re.compile(
+    r"(?i)(?:^|_)(?:text|description|desc|body|content|bio|about|notes?|policy|comments?|"
+    r"message|instructions?|summary|review|answer|question|title|subject|details)$"
+)
+#: Container methods that put their argument into the receiver.
+_MUTATORS = {"append", "extend", "insert", "add", "update", "appendleft", "setdefault"}
+#: Google API client methods that change data (``service.users().messages().send``).
+_GAPI_WRITE = {"insert", "patch", "update", "delete", "send", "modify", "trash", "create"}
+_HTTP_WRITE_VERBS = {"post", "put", "patch", "delete"}
+_HTTP_BODY_KWARGS = ("json", "data", "params", "content", "files", "body")
+_EMAIL_HEADERS = {"to", "cc", "bcc"}
+#: Methods whose result is (part of) the string they are called on or given.
+_STRING_METHODS = {
+    "format",
+    "join",
+    "replace",
+    "strip",
+    "lstrip",
+    "rstrip",
+    "lower",
+    "upper",
+    "encode",
+    "decode",
+    "removeprefix",
+    "removesuffix",
+}
 
 # --- sanitizers --------------------------------------------------------------
 
@@ -479,12 +627,46 @@ class PyTaint:
         self.findings: list[Finding] = []
         self._seen: set[tuple[str, str, int]] = set()
         self._leak_seen: set[tuple[str, int]] = set()
+        #: LLM object name -> the expression that gave it its tools
+        self.obj_tools: dict[str, list[Any]] = {}
+        #: LLM objects that retrieve documents into their own prompt
+        self.rag_objects: set[str] = set()
+        #: every ``name = value`` in the file, to resolve tool lists by name
+        self.assigns: dict[str, list[Any]] = {}
+        #: functions defined once in the file, by name, for call-site inlining
+        self.local_funcs: dict[str, Any] = {}
+        #: functions whose body performs a side effect (shell, write, request, ...)
+        self.func_effects: set[str] = set()
+        #: tool name -> sink kinds its model-chosen arguments reach
+        self.tool_caps: dict[str, set[str]] = {}
+        #: tool name -> external content it returns to the model (origin)
+        self.tool_returns: dict[str, tuple[str, int]] = {}
+        #: model calls that read external content, by call line
+        self.calls: dict[int, ModelCall] = {}
+        self._ret_stack: list[TaintSet] = []
+        self._inline_stack: list[str] = []
+        self._inline_memo: dict[tuple[Any, ...], TaintSet] = {}
+        #: untrusted conditions of the enclosing ``if`` blocks
+        self._control: list[Taint] = []
+        #: name -> tainted names it was looked up by (``row = TABLE.get(key)``)
+        self._lookups: dict[str, set[str]] = {}
+        self._loop_depth = 0
 
     # --- entry ---------------------------------------------------------------
     def run(self) -> list[Finding]:
         self._collect_objects()
         self._collect_tool_funcs()
+        self._collect_functions()
         self._block(self.root, {})
+        for call in sorted(self.calls.values(), key=lambda c: c.line):
+            for name, caps in call.tools.items():
+                caps |= self.tool_caps.get(name, set())
+                if name in self.tool_returns:
+                    origin, line = self.tool_returns[name]
+                    call.add_source(f"the result of tool '{name}' ({origin})", line)
+            finding = llm_agent.indirect_injection_finding(call, self.path, self.in_test)
+            if finding is not None:
+                self.findings.append(finding)
         return self.findings
 
     def _imports(self, prefix: str) -> bool:
@@ -514,6 +696,15 @@ class PyTaint:
             return "http", None
         if q == "aiohttp.ClientSession":
             return "http", None
+        if q in (
+            "googleapiclient.discovery.build",
+            "googleapiclient.discovery.build_from_document",
+        ):
+            return "gapi", None
+        if q in ("imaplib.IMAP4", "imaplib.IMAP4_SSL", "poplib.POP3", "poplib.POP3_SSL"):
+            return "mailbox", None
+        if _ORM_LOAD.search(self.src.text(fn)):
+            return "orm", None
         if fn.type == "attribute":
             method = fn.child_by_field_name("attribute")
             recv = fn.child_by_field_name("object")
@@ -634,6 +825,46 @@ class PyTaint:
                     changed = True
             if not changed:
                 break
+        for name, right in bindings:
+            self.assigns.setdefault(name, []).append(right)
+            call = (
+                right.named_children[0] if right.type == "await" and right.named_children else right
+            )
+            if call.type != "call" or self.objects.get(name) not in ("llm", "llm-structured"):
+                continue
+            tools = self._tools_arg(call)
+            if tools is not None:
+                self.obj_tools.setdefault(name, []).append(tools)
+            fn = call.child_by_field_name("function")
+            if fn is not None and fn.type == "attribute":
+                # ``llm.bind_tools(...)`` keeps the tools of whatever it derives from.
+                recv = fn.child_by_field_name("object")
+                root = self._root_name(recv) if recv is not None else None
+                if root in self.obj_tools and root != name:
+                    self.obj_tools.setdefault(name, []).extend(self.obj_tools[root])
+            if re.search(
+                r"(?:as_query_engine|as_chat_engine|from_chain_type|create_retrieval_chain|"
+                r"RetrievalQA\w*|ConversationalRetrievalChain\w*)$",
+                self.src.text(fn) if fn is not None else "",
+            ):
+                self.rag_objects.add(name)
+
+    def _tools_arg(self, call) -> Any | None:
+        """The expression that hands a model or agent its tools, if this call does."""
+        fn = call.child_by_field_name("function")
+        if fn is None:
+            return None
+        last = self._q(fn).rsplit(".", 1)[-1]
+        pos, kw = call_args(call)
+        if "tools" in kw:
+            return kw["tools"]
+        if not _TOOL_HOLDERS.match(last):
+            return None
+        if last in ("bind_tools", "from_tools", "initialize_agent", "ToolNode") and pos:
+            return pos[0]
+        if last.startswith("create_") and len(pos) > 1:
+            return pos[1]
+        return None
 
     def _collect_tool_funcs(self) -> None:
         defined = {
@@ -672,6 +903,49 @@ class PyTaint:
                             name = self.src.text(value)
                             if name in defined:
                                 self.tool_funcs.add(name)
+            elif node.type == "decorated_definition":
+                definition = node.child_by_field_name("definition")
+                name_node = (
+                    definition.child_by_field_name("name") if definition is not None else None
+                )
+                for d in node.named_children:
+                    if d.type != "decorator" or not d.named_children or name_node is None:
+                        continue
+                    expr = d.named_children[0]
+                    if expr.type == "call":
+                        expr = expr.child_by_field_name("function") or expr
+                    if _TOOL_DECORATOR.search(self.src.text(expr)):
+                        self.tool_funcs.add(self.src.text(name_node))
+
+    def _collect_functions(self) -> None:
+        """Functions defined once in the file (inlining) and which have side effects."""
+        seen: dict[str, int] = {}
+        for node in walk(self.root):
+            if node.type != "function_definition":
+                continue
+            name_node = node.child_by_field_name("name")
+            if name_node is None:
+                continue
+            name = self.src.text(name_node)
+            seen[name] = seen.get(name, 0) + 1
+            self.local_funcs[name] = node
+            for n in walk(node):
+                if n.type != "call":
+                    continue
+                fn = n.child_by_field_name("function")
+                if fn is None:
+                    continue
+                fn_text = self.src.text(fn)
+                kinds = {
+                    k
+                    for k, _a, _l in self._sink_args(n, fn, fn_text, qualify(fn_text, self.aliases))
+                }
+                if kinds - {"ssrf", "html"}:
+                    self.func_effects.add(name)
+                    break
+        for name, count in seen.items():
+            if count > 1:
+                del self.local_funcs[name]
 
     # --- statements ------------------------------------------------------------
     def _block(self, node, scope: dict[str, TaintSet]) -> None:
@@ -703,6 +977,14 @@ class PyTaint:
                 else:
                     self._expr(child, scope)
                     self._schema_guard(child, scope)
+                    self._mutation(child, scope)
+            return
+        if t == "return_statement":
+            for child in node.named_children:
+                self._expr(child, scope)
+            if node.named_children and self._ret_stack:
+                value = self._eval(node.named_children[0], scope)
+                self._ret_stack[-1] = _merge(self._ret_stack[-1], value)
             return
         if t == "if_statement":
             self._if(node, scope)
@@ -715,10 +997,28 @@ class PyTaint:
                 taint = self._eval(right, scope)
                 if left is not None:
                     self._bind(left, taint, scope, strong=True)
-            for field_name in ("body", "alternative"):
-                child = node.child_by_field_name(field_name)
-                if child is not None:
-                    self._generic(child, scope)
+            # Twice, so a value appended at the end of one iteration (a tool
+            # result added to the message list) is seen by the next.
+            self._loop_depth += 1
+            for _ in range(self._passes()):
+                for field_name in ("body", "alternative"):
+                    child = node.child_by_field_name(field_name)
+                    if child is not None:
+                        self._generic(child, scope)
+            self._loop_depth -= 1
+            return
+        if t == "while_statement":
+            cond = node.child_by_field_name("condition")
+            body = node.child_by_field_name("body")
+            self._loop_depth += 1
+            for _ in range(self._passes()):
+                if cond is not None:
+                    self._expr(cond, scope)
+                if body is not None:
+                    self._generic(body, scope)
+            self._loop_depth -= 1
+            for alt in node.children_by_field_name("alternative"):
+                self._generic(alt, scope)
             return
         if t == "with_statement":
             for item in walk(node):
@@ -740,6 +1040,10 @@ class PyTaint:
                 self._block(body, scope)
             return
         self._generic(node, scope)
+
+    def _passes(self) -> int:
+        """Loop bodies run twice, but only the outer two levels (nesting stays linear)."""
+        return 2 if self._loop_depth <= 2 else 1
 
     def _generic(self, node, scope: dict[str, TaintSet]) -> None:
         if node.type == "block":
@@ -786,18 +1090,46 @@ class PyTaint:
         if is_tool or is_route:
             params = node.child_by_field_name("parameters")
             for pname, ann in self._params(params):
-                if pname in _SKIP_PARAMS or (ann and _CONSTRAINED_PARAM.match(ann)):
-                    continue
                 if is_route and (pname in ("request", "db", "session") or "Depends" in (ann or "")):
                     continue
-                flavor = "tool-arg" if is_tool else "untrusted"
-                origin = (
-                    f"argument '{pname}' of agent tool '{fname}'"
-                    if is_tool
-                    else f"request parameter '{pname}' of '{fname}'"
-                )
-                scope[pname] = {flavor: Taint(flavor, ALL_KINDS, origin, line_of(node))}
+                if pname in _SKIP_PARAMS:
+                    continue
+                if ann and _CONSTRAINED_PARAM.match(ann):
+                    if is_route:
+                        # A typed flag cannot inject text, but it still decides branches.
+                        origin = f"request parameter '{pname}' of '{fname}'"
+                        scope[pname] = {
+                            "control": Taint("control", frozenset(), origin, line_of(node))
+                        }
+                    continue
+                if is_tool:
+                    scope[pname] = {
+                        "tool-arg": Taint(
+                            "tool-arg",
+                            ALL_KINDS,
+                            f"argument '{pname}' of agent tool '{fname}'",
+                            line_of(node),
+                            tool=fname,
+                        )
+                    }
+                elif ann and "UploadFile" in ann:
+                    scope[pname] = self._untrusted(
+                        f"uploaded file '{pname}' of '{fname}'", line_of(node)
+                    )
+                else:
+                    scope[pname] = self._untrusted(
+                        f"request parameter '{pname}' of '{fname}'",
+                        line_of(node),
+                        external=False,
+                    )
+        saved_control, self._control = self._control, []
+        self._ret_stack.append({})
         self._block(body, scope)
+        returned = self._ret_stack.pop()
+        self._control = saved_control
+        ext = returned.get("untrusted")
+        if is_tool and ext is not None and ext.external and fname not in self.tool_returns:
+            self.tool_returns[fname] = (ext.origin, ext.line)
 
     def _params(self, params) -> list[tuple[str, str | None]]:
         out: list[tuple[str, str | None]] = []
@@ -833,14 +1165,78 @@ class PyTaint:
         if augmented:
             taint = _merge(self._eval(left, scope), taint)
         self._bind(left, taint, scope, strong=not augmented)
+        self._header_sinks(node, left, right, scope)
+        self._record_lookup(left, right, scope)
         # A system prompt assembled into a named variable.
         name = self.src.text(left)
         if left.type in ("identifier", "attribute") and llm_prompt.SYSTEM_PROMPT_NAME.search(name):
             self._system_prompt(right, f"'{name}' system prompt variable", scope)
 
+    def _header_sinks(self, node, left, right, scope: dict[str, TaintSet]) -> None:
+        """``msg["To"] = value`` (also inside a tuple assignment) is an email recipient."""
+        pairs = [(left, right)]
+        if (
+            left.type in ("pattern_list", "tuple_pattern")
+            and right.type in ("expression_list", "tuple")
+            and len(left.named_children) == len(right.named_children)
+        ):
+            pairs = list(zip(left.named_children, right.named_children, strict=True))
+        for target, value in pairs:
+            if target.type != "subscript":
+                continue
+            header = string_value(target.child_by_field_name("subscript"), self.src)
+            if header is None or header.lower() not in _EMAIL_HEADERS:
+                continue
+            label = f'{self.src.text(target.child_by_field_name("value"))}["{header}"] header'
+            self._hit(node, "recipient", label, self._eval(value, scope))
+
+    def _record_lookup(self, left, right, scope: dict[str, TaintSet]) -> None:
+        """``row = TABLE.get(key)`` lets a later ``if row is None: return`` vouch for ``key``."""
+        if left.type != "identifier":
+            return
+        name = self.src.text(left)
+        self._lookups.pop(name, None)
+        if right.type != "call":
+            return
+        fn = right.child_by_field_name("function")
+        if fn is None or fn.type != "attribute":
+            return
+        attr = fn.child_by_field_name("attribute")
+        recv = fn.child_by_field_name("object")
+        if attr is None or recv is None or self.src.text(attr) != "get":
+            return
+        pos, _kw = call_args(right)
+        if pos:
+            keys = self._tainted_names(pos[0], scope)
+            if keys:
+                self._lookups[name] = keys
+
+    def _mutation(self, expr, scope: dict[str, TaintSet]) -> None:
+        """``items.append(x)`` puts ``x``'s taint into ``items``."""
+        if expr.type != "call":
+            return
+        fn = expr.child_by_field_name("function")
+        if fn is None or fn.type != "attribute":
+            return
+        attr = fn.child_by_field_name("attribute")
+        recv = fn.child_by_field_name("object")
+        if attr is None or recv is None or self.src.text(attr) not in _MUTATORS:
+            return
+        if recv.type not in ("identifier", "attribute"):
+            return
+        pos, kw = call_args(expr)
+        taint = self._union(pos, kw, scope)
+        if self._control:
+            taint = _merge(taint, {"selector": self._control[-1]})
+        if taint:
+            key = self.src.text(recv)
+            scope[key] = _merge(scope.get(key, {}), taint)
+
     def _bind(self, target, taint: TaintSet, scope: dict[str, TaintSet], *, strong: bool) -> None:
         if target.type in ("identifier", "attribute"):
             key = self.src.text(target).strip()
+            if self._control:
+                taint = _merge(taint, {"selector": self._control[-1]})
             if taint:
                 scope[key] = taint if strong else _merge(scope.get(key, {}), taint)
             elif strong:
@@ -879,6 +1275,11 @@ class PyTaint:
             self._expr(cond, scope)
         guarded = self._guarded_names(cond, scope) if cond is not None else set()
         exits = cons is not None and self._exits(cons)
+        # A branch chosen by untrusted input: what it binds is selected by that input.
+        decided = self._decided_by(cond, scope) if cond is not None else {}
+        cond_t = decided.get("untrusted") or decided.get("control")
+        if cond_t is not None:
+            self._control.append(replace(cond_t, flavor="selector"))
         if cons is not None:
             if guarded and not exits:
                 saved = {n: scope.pop(n) for n in list(guarded) if n in scope}
@@ -889,9 +1290,23 @@ class PyTaint:
                 self._block(cons, scope)
         for alt in node.children_by_field_name("alternative"):
             self._generic(alt, scope)
+        if cond_t is not None:
+            self._control.pop()
         if guarded and exits:
             for n in guarded:
                 scope.pop(n, None)
+
+    def _decided_by(self, cond, scope: dict[str, TaintSet]) -> TaintSet:
+        """Taint of the values a condition tests (a comparison result is clean, the
+        operands it compares are what decide the branch)."""
+        if cond.type in ("comparison_operator", "boolean_operator", "not_operator"):
+            out: TaintSet = {}
+            for child in cond.named_children:
+                out = _merge(out, self._decided_by(child, scope))
+            return out
+        if cond.type == "parenthesized_expression" and cond.named_children:
+            return self._decided_by(cond.named_children[0], scope)
+        return self._eval(cond, scope)
 
     def _exits(self, block) -> bool:
         stmts = [c for c in block.named_children if c.type != "comment"]
@@ -962,6 +1377,15 @@ class PyTaint:
                     for a, b in ((left, right), (right, left)):
                         if b.type in ("string", "integer", "true", "false"):
                             guarded |= self._checked_value(a, scope)
+                elif op in ("is", "is not"):
+                    # row = TABLE.get(key); if row is None: return  -> key was in TABLE
+                    for a, b in ((left, right), (right, left)):
+                        if b.type == "none" and a.type == "identifier":
+                            guarded |= self._lookups.get(self.src.text(a), set())
+            elif n.type == "not_operator":
+                arg = n.child_by_field_name("argument")
+                if arg is not None and arg.type == "identifier":
+                    guarded |= self._lookups.get(self.src.text(arg), set())
             elif n.type == "call":
                 fn = n.child_by_field_name("function")
                 if fn is None:
@@ -1002,9 +1426,47 @@ class PyTaint:
         for n in walk(node):
             if n.type == "call":
                 self._check_sink(n, scope)
+                self._check_model_call(n, scope)
+                self._check_tool_selection(n, scope)
+                fn = n.child_by_field_name("function")
+                if (
+                    fn is not None
+                    and fn.type == "identifier"
+                    and self.src.text(fn) in self.local_funcs
+                ):
+                    self._eval_call(n, scope)  # walk the callee with these arguments
             if n.type in ("dictionary", "tuple", "call"):
                 for expr, label in llm_prompt.system_prompt_exprs(n, self.src, self.aliases):
                     self._system_prompt(expr, label, scope)
+
+    @staticmethod
+    def _content_only(ts: TaintSet) -> TaintSet:
+        """Untrusted text placed inside a fixed structure (a string, a role-tagged message)."""
+        t = ts.get("untrusted")
+        if t is None or not t.structural:
+            return ts
+        return {**ts, "untrusted": replace(t, structural=False)}
+
+    def _selected(self, out: TaintSet, by: TaintSet) -> TaintSet:
+        """``out`` was chosen by ``by``: mark it when ``by`` is untrusted."""
+        t = by.get("untrusted") or by.get("control")
+        return _merge(out, {"selector": replace(t, flavor="selector")}) if t else out
+
+    def _env_secret(self, node) -> TaintSet:
+        """A credential read from the environment (``os.environ["API_KEY"]``)."""
+        name_node = None
+        if node.type == "subscript":
+            if self._q(node.child_by_field_name("value")) == "os.environ":
+                name_node = node.child_by_field_name("subscript")
+        elif node.type == "call":
+            fn = node.child_by_field_name("function")
+            if fn is not None and self._q(fn) in ("os.getenv", "os.environ.get"):
+                pos, kw = call_args(node)
+                name_node = pos[0] if pos else kw.get("key")
+        name = string_value(name_node, self.src) if name_node is not None else None
+        if not name or not _SECRET_ENV.search(name):
+            return {}
+        return {"secret": Taint("secret", ALL_KINDS, f"environment variable {name}", line_of(node))}
 
     def _eval(self, node, scope: dict[str, TaintSet]) -> TaintSet:
         if node is None:
@@ -1029,22 +1491,37 @@ class PyTaint:
                 if child.type == "interpolation":
                     expr = child.child_by_field_name("expression")
                     out = _merge(out, self._eval(expr, scope))
-            return out
+            return self._content_only(out)
         if t == "attribute":
             key = self.src.text(node)
             if key in scope:
                 return scope[key]
             if _UNTRUSTED_TEXT.search(key):
-                return {"untrusted": Taint("untrusted", ALL_KINDS, "request input", line_of(node))}
+                return self._untrusted("request input", line_of(node), external=False)
             obj = node.child_by_field_name("object")
             attr = node.child_by_field_name("attribute")
+            attr_name = self.src.text(attr) if attr is not None else ""
+            if (
+                obj is not None
+                and obj.type == "identifier"
+                and self.objects.get(self.src.text(obj)) == "orm"
+                and _FREE_TEXT_ATTR.search(attr_name)
+            ):
+                return self._untrusted(
+                    f"user-written text stored in '{key}' (loaded from the database)",
+                    line_of(node),
+                )
             base = self._eval(obj, scope)
-            return self._attr(base, self.src.text(attr) if attr is not None else "")
+            return self._attr(base, attr_name)
         if t == "subscript":
             key = self.src.text(node)
             if _UNTRUSTED_TEXT.search(key):
-                return {"untrusted": Taint("untrusted", ALL_KINDS, "request input", line_of(node))}
-            return self._eval(node.child_by_field_name("value"), scope)
+                return self._untrusted("request input", line_of(node), external=False)
+            secret = self._env_secret(node)
+            if secret:
+                return secret
+            out = self._eval(node.child_by_field_name("value"), scope)
+            return self._selected(out, self._eval(node.child_by_field_name("subscript"), scope))
         if t == "call":
             return self._eval_call(node, scope)
         if t == "conditional_expression":
@@ -1053,10 +1530,39 @@ class PyTaint:
             for i, part in enumerate(parts):
                 if i != 1:  # skip the condition
                     out = _merge(out, self._eval(part, scope))
+            if len(parts) > 1:
+                out = self._selected(out, self._decided_by(parts[1], scope))
+            return out
+        if t == "dictionary":
+            out = {}
+            role_fixed = False
+            for pair in node.named_children:
+                if pair.type == "pair":
+                    key_s = string_value(pair.child_by_field_name("key"), self.src)
+                    value = pair.child_by_field_name("value")
+                    if key_s == "role" and string_value(value, self.src) is not None:
+                        role_fixed = True
+                    out = _merge(out, self._eval(value, scope))
+                else:
+                    out = _merge(out, self._eval(pair, scope))
+            return self._content_only(out) if role_fixed else out
+        if t == "tuple":
+            items = node.named_children
+            out = {}
+            for child in items:
+                out = _merge(out, self._eval(child, scope))
+            if len(items) == 2 and string_value(items[0], self.src) is not None:
+                return self._content_only(out)  # a LangChain ("user", text) message
             return out
         out = {}
         for child in node.named_children:
             out = _merge(out, self._eval(child, scope))
+        if t in ("list_comprehension", "generator_expression", "set_comprehension"):
+            for clause in node.named_children:
+                if clause.type == "for_in_clause":
+                    out = self._selected(out, self._eval(clause, scope))
+                elif clause.type == "if_clause" and clause.named_children:
+                    out = self._selected(out, self._decided_by(clause.named_children[0], scope))
         return out
 
     def _attr(self, base: TaintSet, attr: str) -> TaintSet:
@@ -1067,6 +1573,10 @@ class PyTaint:
             if flavor == "llm" and attr in _CLEAN_ATTRS and not t.validated:
                 continue
             if t.validated:
+                nested = self.models.refs.get(t.model or "", {}).get(attr)
+                if nested is not None:
+                    out[flavor] = replace(t, model=nested)  # a sub-model: judge its fields
+                    continue
                 verdict = self.models.field_constrained(t.model, attr)
                 if verdict is not False:
                     continue  # constrained, or a schema we cannot see (benefit of the doubt)
@@ -1092,9 +1602,23 @@ class PyTaint:
         pos, kw = call_args(node)
         source = self._source(node, fn, fn_text, q, last, kw)
         if source is not None:
+            t = source.get("llm")
+            if t is not None and t.via is None:
+                via = self._call_sources(node, scope)
+                if via:
+                    source = {**source, "llm": replace(t, via=via[0])}
             return source
+        secret = self._env_secret(node)
+        if secret:
+            return secret
         if fn.type == "identifier" and last in _CLEAN_FUNCS:
             return {}
+        if fn.type == "identifier" and fn_text in self.local_funcs:
+            return _merge(self._union(pos, kw, scope), self._inline(fn_text, pos, kw, scope))
+        if (fn.type == "identifier" and fn_text == "str") or re.match(
+            r"^(?:Human|AI|System|Chat|Tool)Message$", last
+        ):
+            return self._content_only(self._union(pos, kw, scope))
         # Pydantic / TypeAdapter validation produces a structured object.
         if fn.type == "attribute" and last in _VALIDATE_METHODS:
             recv = fn.child_by_field_name("object")
@@ -1115,9 +1639,17 @@ class PyTaint:
             recv_t = self._eval(recv, scope)
             if last in _CLEAN_METHODS and recv_t:
                 return {}
+            if last == "get":
+                # TABLE.get(key): the value comes from TABLE (or the default), not the key.
+                rest = self._union(pos[1:], {k: v for k, v in kw.items() if k != "key"}, scope)
+                return _merge(recv_t, rest)
             out = _merge(recv_t, self._union(pos, kw, scope))
         else:
             out = self._union(pos, kw, scope)
+        if "secret" in out and not (fn.type == "attribute" and last in _STRING_METHODS):
+            # A client built with a key (Github(token)) is not the key, and neither is
+            # what it returns; only string operations carry the secret value along.
+            out = {f: t for f, t in out.items() if f != "secret"}
         if removed:
             out = _strip(out, removed)
         return out
@@ -1176,14 +1708,23 @@ class PyTaint:
                 return self._untrusted("an HTTP response", line)
             if last in _READ_METHODS and recv is not None and self._variable_file(recv):
                 return self._untrusted("file contents", line)
+            if kind == "mailbox" and last in ("fetch", "retr", "uid"):
+                return self._untrusted("email messages from the mailbox", line)
+            if kind == "gapi" and last == "execute" and recv is not None:
+                call_chain = self.src.text(recv)
+                writes = {m for m in _GAPI_WRITE if f".{m}(" in call_chain}
+                if not writes and re.search(r"\.(?:list|get|batchGet)\(", call_chain):
+                    return self._untrusted("a Google API response", line)
+        if q.startswith("email.message_from_"):
+            return self._untrusted("an email message", line)
         if q.startswith(("requests.", "httpx.")) and last in _HTTP_VERBS | {"request"}:
             return self._untrusted("an HTTP response", line)
         if _UNTRUSTED_TEXT.search(fn_text + "("):
-            return self._untrusted("request input", line)
+            return self._untrusted("request input", line, external=False)
         return None
 
-    def _untrusted(self, origin: str, line: int) -> TaintSet:
-        return {"untrusted": Taint("untrusted", ALL_KINDS, origin, line)}
+    def _untrusted(self, origin: str, line: int, *, external: bool = True) -> TaintSet:
+        return {"untrusted": Taint("untrusted", ALL_KINDS, origin, line, external=external)}
 
     def _variable_file(self, recv) -> bool:
         """``open(p).read()`` / ``Path(p).read_text()`` with a caller-chosen ``p``.
@@ -1206,13 +1747,13 @@ class PyTaint:
         if arg is None:
             return False
         callees = {
-            id(n)
+            (n.start_byte, n.end_byte)
             for c in walk(arg)
             if c.type == "call" and c.child_by_field_name("function") is not None
             for n in walk(c.child_by_field_name("function"))
         }
         for n in walk(arg):
-            if n.type != "identifier" or id(n) in callees:
+            if n.type != "identifier" or (n.start_byte, n.end_byte) in callees:
                 continue
             name = self.src.text(n)
             parent = n.parent
@@ -1261,6 +1802,21 @@ class PyTaint:
             if arg.type in ("list", "tuple"):
                 head = arg.named_children[:1]
                 return [("shell", head, q)] if head else []
+            if arg.type == "binary_operator":
+                # BASE_ARGV + [...]: the program comes from the leftmost list.
+                left = arg
+                while left.type == "binary_operator" and left.child_by_field_name("left"):
+                    left = left.child_by_field_name("left")
+                if left.type in ("list", "tuple"):
+                    head = left.named_children[:1]
+                    return [("shell", head, q)] if head else []
+                if left.type == "identifier":
+                    return [("shell", [left], q)]
+            if arg.type == "identifier" and len(self.assigns.get(self.src.text(arg), [])) == 1:
+                value = self.assigns[self.src.text(arg)][0]
+                if value.type in ("list", "binary_operator"):
+                    # argv = [...] or BASE_ARGV + [...] assigned once: judge its program.
+                    return self._sink_args_argv(value, q)
             return [("shell", [arg], q)]
         if fn_text in _CODE_FUNCS:
             return [("code", first, fn_text)]
@@ -1307,7 +1863,34 @@ class PyTaint:
                     if last in ("request", "stream")
                     else (pos[0] if pos else None)
                 )
-            return [("ssrf", [url], url_from)] if url is not None else []
+            out: list[tuple[str, list[Any], str]] = (
+                [("ssrf", [url], url_from)] if url is not None else []
+            )
+            method = string_value(pos[0], self.src) if last == "request" and pos else None
+            if last in _HTTP_WRITE_VERBS or (method or "").lower() in _HTTP_WRITE_VERBS:
+                body = [kw[k] for k in _HTTP_BODY_KWARGS if k in kw]
+                body += pos[2:] if last == "request" else pos[1:]
+                # Listed even without a body: a DELETE is a side effect too.
+                out.append(("send", body, f"{url_from}() request body"))
+            return out
+        if fn.type == "attribute" and last in _GAPI_WRITE:
+            recv = fn.child_by_field_name("object")
+            if recv is not None and self._receiver_kind(recv) == "gapi":
+                return [("api-write", [*pos, *kw.values()], f"Google API {last}()")]
+        if fn.type == "attribute" and last in ("sendmail", "send_message"):
+            recv = fn.child_by_field_name("object")
+            to = kw.get("to_addrs") or (pos[1] if last == "sendmail" and len(pos) > 1 else None)
+            if recv is not None and to is not None:
+                return [("recipient", [to], f"{fn_text}() recipients")]
+            return []
+        if q in ("django.core.mail.send_mail", "django.core.mail.send_mass_mail"):
+            to = kw.get("recipient_list") or (pos[3] if len(pos) > 3 else None)
+            return [("recipient", [to], f"{fn_text}() recipients")] if to is not None else []
+        if q.endswith(
+            ("mail.EmailMessage", "mail.EmailMultiAlternatives", "sendgrid.helpers.mail.Mail")
+        ):
+            to = kw.get("to") or kw.get("to_emails")
+            return [("recipient", [to], f"{fn_text}() recipients")] if to is not None else []
         if q in ("urllib.request.urlopen", "urllib.request.Request", "urllib.request.urlretrieve"):
             return [("ssrf", first or [kw.get("url")], q)]
         if last == "render_template_string" or q in (
@@ -1334,6 +1917,15 @@ class PyTaint:
             if loader is None or not re.search(r"Safe|Base", self.src.text(loader)):
                 return [("deser", first, "yaml.load")]
         return []
+
+    def _sink_args_argv(self, value, q: str) -> list[tuple[str, list[Any], str]]:
+        left = value
+        while left.type == "binary_operator" and left.child_by_field_name("left"):
+            left = left.child_by_field_name("left")
+        if left.type in ("list", "tuple"):
+            head = left.named_children[:1]
+            return [("shell", head, q)] if head else []
+        return [("shell", [left], q)]
 
     def _host_pinned(self, node) -> bool:
         """A URL whose scheme and host are literal, so only path/query vary."""
@@ -1369,14 +1961,310 @@ class PyTaint:
                     continue
                 if kind == "ssrf" and self._host_pinned(arg):
                     continue
-                taint = self._eval(arg, scope)
-                for flavor, t in taint.items():
-                    if t.validated or kind not in t.kinds:
-                        continue
-                    if flavor == "llm":
-                        self._report_output(call, kind, label, t)
-                    elif flavor == "tool-arg" and kind in ("shell", "code"):
-                        self._report_tool(call, kind, label, t)
+                self._hit(call, kind, label, self._eval(arg, scope))
+
+    def _hit(self, node, kind: str, label: str, taint: TaintSet) -> None:
+        """A value with ``taint`` reaches a sink of class ``kind`` at ``node``."""
+        for flavor, t in taint.items():
+            if t.validated or kind not in t.kinds:
+                continue
+            if flavor == "llm":
+                if t.line in self.calls:
+                    self.calls[t.line].add_sink(kind, label, line_of(node))
+                if kind in SINK_SPECS:
+                    self._report_output(node, kind, label, t)
+                elif kind == "recipient":
+                    self._report_tool_arg(node, kind, label, t)
+            elif flavor == "tool-arg":
+                if t.tool is not None:
+                    self.tool_caps.setdefault(t.tool, set()).add(kind)
+                if kind in ("shell", "code"):
+                    self._report_tool(node, kind, label, t)
+                elif kind in llm_agent.TOOL_ARG_SINKS:
+                    self._report_tool_arg(node, kind, label, t)
+
+    # --- model calls, tools and trust boundaries ------------------------------------
+    def _is_model_call(self, call) -> bool:
+        fn = call.child_by_field_name("function")
+        if fn is None:
+            return False
+        fn_text = self.src.text(fn)
+        q = qualify(fn_text, self.aliases)
+        _pos, kw = call_args(call)
+        src = self._source(call, fn, fn_text, q, q.rsplit(".", 1)[-1], kw)
+        return bool(src and "llm" in src)
+
+    def _prompt_args(self, call) -> list[Any]:
+        pos, kw = call_args(call)
+        return [*pos, *(v for k, v in kw.items() if k not in _NON_PROMPT_KWARGS)]
+
+    def _call_tools(self, call) -> list[Any]:
+        """Expressions giving this model call its tools (its own and its receiver's)."""
+        out: list[Any] = []
+        own = self._tools_arg(call)
+        if own is not None:
+            out.append(own)
+        fn = call.child_by_field_name("function")
+        if fn is not None and fn.type == "attribute":
+            recv = fn.child_by_field_name("object")
+            root = self._root_name(recv) if recv is not None else None
+            out.extend(self.obj_tools.get(root or "", []))
+        return out
+
+    def _resolve_tools(self, node, depth: int = 0) -> dict[str, set[str]]:
+        """Tool name -> known capabilities, for every tool an expression names."""
+        found: dict[str, set[str]] = {}
+        for n in walk(node):
+            if n.type == "identifier":
+                name = self.src.text(n)
+                if name in self.tool_funcs:
+                    found.setdefault(name, set())
+                elif name in self.assigns and depth < 3 and name not in found:
+                    for right in self.assigns[name]:
+                        for k, v in self._resolve_tools(right, depth + 1).items():
+                            found.setdefault(k, set()).update(v)
+            elif n.type == "call":
+                fn = n.child_by_field_name("function")
+                if fn is None:
+                    continue
+                last = self._q(fn).rsplit(".", 1)[-1]
+                if last in _BUILTIN_TOOL_CAPS or last in _BUILTIN_TOOL_EXTERNAL:
+                    found.setdefault(last, set()).update(_BUILTIN_TOOL_CAPS.get(last, ()))
+                elif last == "load_tools":
+                    pos, kw = call_args(n)
+                    names = kw.get("tool_names") or (pos[0] if pos else None)
+                    for item in names.named_children if names is not None else []:
+                        tool = string_value(item, self.src)
+                        if tool:
+                            found.setdefault(tool, set()).update(_LOAD_TOOLS_CAPS.get(tool, ()))
+        return found
+
+    def _builtin_sources(self, tools: dict[str, set[str]], line: int) -> list[tuple[str, int]]:
+        out = []
+        for name in tools:
+            what = _BUILTIN_TOOL_EXTERNAL.get(name)
+            if what is None and _LOAD_TOOLS_EXTERNAL.match(name):
+                what = "web content"
+            if what is not None:
+                out.append((f"{what} returned by the '{name}' tool", line))
+        return out
+
+    def _call_sources(self, call, scope: dict[str, TaintSet]) -> list[tuple[str, int]]:
+        """External content that reaches this model call: its prompt and its tools."""
+        out: list[tuple[str, int]] = []
+        for arg in self._prompt_args(call):
+            t = self._eval(arg, scope).get("untrusted")
+            if t is not None and t.external and (t.origin, t.line) not in out:
+                out.append((t.origin, t.line))
+        fn = call.child_by_field_name("function")
+        recv = fn.child_by_field_name("object") if fn is not None else None
+        root = self._root_name(recv) if recv is not None and fn.type == "attribute" else None
+        if root in self.rag_objects:
+            out.append((f"documents '{root}' retrieves into its own prompt", line_of(call)))
+        tools: dict[str, set[str]] = {}
+        for node in self._call_tools(call):
+            for k, v in self._resolve_tools(node).items():
+                tools.setdefault(k, set()).update(v)
+        for name in tools:
+            if name in self.tool_returns:
+                origin, line = self.tool_returns[name]
+                out.append((f"the result of tool '{name}' ({origin})", line))
+        out.extend(self._builtin_sources(tools, line_of(call)))
+        return out
+
+    def _check_model_call(self, call, scope: dict[str, TaintSet]) -> None:
+        if not self._is_model_call(call):
+            return
+        line = line_of(call)
+        fn = call.child_by_field_name("function")
+        label = f"{self.src.text(fn)}()" if fn is not None else "the model call"
+        info = self.calls.get(line)
+        if info is None:
+            info = ModelCall(
+                line=line,
+                end_line=end_line_of(call),
+                columns=self.src.columns(call),
+                snippet=self.src.line_text(line),
+                label=label,
+            )
+            self.calls[line] = info
+        for origin, src_line in self._call_sources(call, scope):
+            info.add_source(origin, src_line)
+        for node in self._call_tools(call):
+            for name, caps in self._resolve_tools(node).items():
+                info.tools.setdefault(name, set()).update(caps)
+        prompt = [self._eval(arg, scope) for arg in self._prompt_args(call)]
+        for ts in prompt:
+            secret = ts.get("secret")
+            if secret is not None and ("secret-sent-to-model", "", secret.line) not in self._seen:
+                self._seen.add(("secret-sent-to-model", "", secret.line))
+                self.findings.append(
+                    llm_agent.secret_to_model_finding(
+                        origin=secret.origin,
+                        source_line=secret.line,
+                        label=label,
+                        **self._where(call),
+                    )
+                )
+        self._check_roles(call, label, scope)
+
+    def _where(self, node) -> dict[str, Any]:
+        line = line_of(node)
+        return {
+            "path": self.path,
+            "line": line,
+            "end_line": end_line_of(node),
+            "columns": self.src.columns(node),
+            "snippet": self.src.line_text(line),
+            "in_test": self.in_test,
+        }
+
+    def _check_roles(self, call, label: str, scope: dict[str, TaintSet]) -> None:
+        """The caller must not supply message roles or whole message objects."""
+        pos, kw = call_args(call)
+        targets = [kw[k] for k in ("messages", "input", "contents") if k in kw]
+        if pos and pos[0].type == "dictionary":
+            for pair in pos[0].named_children:
+                if pair.type == "pair" and string_value(
+                    pair.child_by_field_name("key"), self.src
+                ) in ("messages", "input"):
+                    targets.append(pair.child_by_field_name("value"))
+        for target in targets:
+            bad = self._role_control(target, scope)
+            if bad is None or ("untrusted-message-role", "", bad.line) in self._seen:
+                continue
+            self._seen.add(("untrusted-message-role", "", bad.line))
+            self.findings.append(
+                llm_agent.message_role_finding(
+                    origin=bad.origin, source_line=bad.line, label=label, **self._where(call)
+                )
+            )
+
+    def _role_control(self, node, scope: dict[str, TaintSet]) -> Taint | None:
+        if node is None:
+            return None
+        if node.type == "parenthesized_expression" and node.named_children:
+            return self._role_control(node.named_children[0], scope)
+        if node.type == "binary_operator":
+            return self._role_control(node.child_by_field_name("left"), scope) or (
+                self._role_control(node.child_by_field_name("right"), scope)
+            )
+        if node.type == "list":
+            for el in node.named_children:
+                if el.type == "dictionary":
+                    for pair in el.named_children:
+                        if pair.type != "pair":
+                            continue
+                        if string_value(pair.child_by_field_name("key"), self.src) == "role":
+                            t = self._eval(pair.child_by_field_name("value"), scope).get(
+                                "untrusted"
+                            )
+                            if t is not None:
+                                return t
+                    continue
+                found = self._role_control(el, scope)
+                if found is not None:
+                    return found
+            return None
+        if node.type == "list_splat" and node.named_children:
+            return self._role_control(node.named_children[0], scope)
+        t = self._eval(node, scope).get("untrusted")
+        if t is not None and t.structural and not t.external:
+            return t
+        return None
+
+    def _check_tool_selection(self, call, scope: dict[str, TaintSet]) -> None:
+        """Untrusted data must not decide which side-effecting tools a model gets."""
+        tools_node = self._tools_arg(call)
+        if tools_node is None:
+            return
+        ts = self._eval(tools_node, scope)
+        # A tool list chosen by untrusted data, or raw request data used as the list.
+        # (A tool object that merely reads untrusted documents does not choose anything.)
+        raw = ts.get("untrusted")
+        t = ts.get("selector") or (raw if raw and raw.structural and not raw.external else None)
+        if t is None:
+            return
+        tools = self._resolve_tools(tools_node)
+        effectful = sorted(
+            name
+            for name, caps in tools.items()
+            if caps or name in self.func_effects or name in self.tool_caps
+        )
+        if not effectful:
+            return
+        key = ("untrusted-tool-selection", "", line_of(call))
+        if key in self._seen:
+            return
+        self._seen.add(key)
+        fn = call.child_by_field_name("function")
+        self.findings.append(
+            llm_agent.tool_selection_finding(
+                origin=t.origin,
+                source_line=t.line,
+                tools=effectful,
+                label=f"{self.src.text(fn)}()" if fn is not None else "the agent",
+                **self._where(call),
+            )
+        )
+
+    def _inline(self, name: str, pos: list[Any], kw: dict[str, Any], scope) -> TaintSet:
+        """Walk a local function's body with the caller's argument taint; its return taint."""
+        func = self.local_funcs.get(name)
+        if func is None or name in self._inline_stack or len(self._inline_stack) >= 3:
+            return {}
+        params = [p for p, _ann in self._params(func.child_by_field_name("parameters"))]
+        if params and params[0] in ("self", "cls"):
+            return {}
+        callee: dict[str, TaintSet] = {}
+        for pname, arg in zip(params, pos, strict=False):
+            ts = self._eval(arg, scope)
+            if ts:
+                callee[pname] = ts
+        for k, arg in kw.items():
+            ts = self._eval(arg, scope)
+            if ts and k in params:
+                callee[k] = ts
+        key = (
+            name,
+            tuple(
+                sorted(
+                    (p, f, t.line, t.via, frozenset(t.kinds), t.validated)
+                    for p, ts in callee.items()
+                    for f, t in ts.items()
+                )
+            ),
+        )
+        if key in self._inline_memo:
+            return self._inline_memo[key]
+        self._inline_memo[key] = {}
+        body = func.child_by_field_name("body")
+        if body is None:
+            return {}
+        self._inline_stack.append(name)
+        self._ret_stack.append({})
+        saved_control, self._control = self._control, []
+        try:
+            self._block(body, callee)
+        finally:
+            self._control = saved_control
+            returned = self._ret_stack.pop()
+            self._inline_stack.pop()
+        self._inline_memo[key] = returned
+        return returned
+
+    def _report_tool_arg(self, node, kind: str, label: str, t: Taint) -> None:
+        line = line_of(node)
+        key = ("tool-argument-to-sink", kind, line)
+        if key in self._seen:
+            return
+        self._seen.add(key)
+        origin = t.origin if t.flavor == "tool-arg" else f"tool-call argument ({t.origin})"
+        self.findings.append(
+            llm_agent.tool_argument_finding(
+                kind=kind, label=label, origin=origin, **self._where(node)
+            )
+        )
 
     def _system_prompt(self, expr, label: str, scope: dict[str, TaintSet]) -> None:
         if expr is None:
@@ -1393,41 +2281,9 @@ class PyTaint:
         if key in self._seen:
             return
         self._seen.add(key)
-        line = line_of(expr)
         self.findings.append(
-            make_finding(
-                rule="untrusted-input-in-system-prompt",
-                key=str(taint.line),
-                title="Untrusted input placed in a system prompt",
-                description=(
-                    f"{taint.origin[:1].upper()}{taint.origin[1:]} (line {taint.line}) flows "
-                    f"into the {label}. Text in the system prompt is read as instructions, so "
-                    "whoever controls that input can override them."
-                ),
-                path=self.path,
-                line=line,
-                end_line=end_line_of(expr),
-                columns=self.src.columns(expr),
-                snippet=self.src.line_text(line),
-                severity=Severity.MEDIUM,
-                confidence=Confidence.MEDIUM,
-                cwe=["CWE-77", "CWE-74"],
-                owasp_llm=LLM01,
-                why="The system prompt is the instruction channel the model trusts most. "
-                "Interpolating untrusted data into it erases the boundary between your "
-                "instructions and attacker-supplied text (direct or indirect prompt "
-                "injection).",
-                attack="Put 'Ignore all previous instructions and ...' in the request "
-                "parameter, uploaded file or indexed document that feeds this prompt.",
-                impact="Instruction override: data exfiltration, policy bypass, and misuse "
-                "of any tool the model can call.",
-                fix="Keep the system prompt static. Pass untrusted data in a separate "
-                "user-role message, clearly delimited and labelled as data, and constrain "
-                "what the model may do with it (least-privilege tools, output checks).",
-                tags=["llm", "prompt"],
-                metadata={"source": taint.origin, "source_line": taint.line, "context": label},
-                in_test=self.in_test,
-                likelihood=Likelihood.POSSIBLE,
+            system_prompt_finding(
+                origin=taint.origin, source_line=taint.line, label=label, **self._where(expr)
             )
         )
 
@@ -1492,44 +2348,109 @@ class PyTaint:
         if key in self._seen:
             return
         self._seen.add(key)
-        spec = SINK_SPECS[kind]
         self.findings.append(
-            make_finding(
-                rule="tool-handler-exec",
-                key=kind,
-                title=f"Agent tool passes a model-chosen argument to {label}",
-                description=(
-                    f"The {t.origin} is {spec.phrase} by {label}. The model picks tool "
-                    "arguments, so this tool hands the model (and anyone who can inject "
-                    "into it) direct command or code execution."
-                ),
-                path=self.path,
-                line=line,
-                end_line=end_line_of(call),
-                columns=self.src.columns(call),
-                snippet=self.src.line_text(line),
-                severity=Severity.HIGH,
-                confidence=Confidence.HIGH,
-                cwe=list(spec.cwe),
-                owasp_llm=LLM06,
-                why="Tool-call arguments are model output. A tool whose handler shells out "
-                "or evals them gives the agent unbounded capability, which is exactly what "
-                "a prompt injection needs.",
-                attack=spec.attack,
-                impact="Host compromise driven by any text the agent reads.",
-                fix="Give the tool a narrow, typed interface (Literal/Enum parameters mapped "
-                "to fixed argv lists), never pass arguments through a shell or eval, and "
-                "require human confirmation for side effects.",
-                tags=["llm", "agent", "taint"],
-                metadata={
-                    "analysis": "taint-dataflow",
-                    "sink": kind,
-                    "sink_call": label,
-                    "tool_argument": t.origin,
-                },
-                in_test=self.in_test,
-            )
+            tool_exec_finding(kind=kind, label=label, origin=t.origin, **self._where(call))
         )
+
+
+def tool_exec_finding(
+    *,
+    kind: str,
+    label: str,
+    origin: str,
+    path: str,
+    line: int,
+    end_line: int,
+    columns: tuple[int, int],
+    snippet: str,
+    in_test: bool,
+) -> Finding:
+    """``tool-handler-exec``: a tool passes its model-chosen argument to a shell or eval."""
+    spec = SINK_SPECS[kind]
+    return make_finding(
+        rule="tool-handler-exec",
+        key=kind,
+        title=f"Agent tool passes a model-chosen argument to {label}",
+        description=(
+            f"The {origin} is {spec.phrase} by {label}. The model picks tool "
+            "arguments, so this tool hands the model (and anyone who can inject "
+            "into it) direct command or code execution."
+        ),
+        path=path,
+        line=line,
+        end_line=end_line,
+        columns=columns,
+        snippet=snippet,
+        severity=Severity.HIGH,
+        confidence=Confidence.HIGH,
+        cwe=list(spec.cwe),
+        owasp_llm=LLM06,
+        why="Tool-call arguments are model output. A tool whose handler shells out "
+        "or evals them gives the agent unbounded capability, which is exactly what "
+        "a prompt injection needs.",
+        attack=spec.attack,
+        impact="Host compromise driven by any text the agent reads.",
+        fix="Give the tool a narrow, typed interface (Literal/Enum parameters mapped "
+        "to fixed argv lists), never pass arguments through a shell or eval, and "
+        "require human confirmation for side effects.",
+        tags=["llm", "agent", "taint"],
+        metadata={
+            "analysis": "taint-dataflow",
+            "sink": kind,
+            "sink_call": label,
+            "tool_argument": origin,
+        },
+        in_test=in_test,
+    )
+
+
+def system_prompt_finding(
+    *,
+    origin: str,
+    source_line: int,
+    label: str,
+    path: str,
+    line: int,
+    end_line: int,
+    columns: tuple[int, int],
+    snippet: str,
+    in_test: bool,
+) -> Finding:
+    """``untrusted-input-in-system-prompt``: untrusted data in the instruction channel."""
+    return make_finding(
+        rule="untrusted-input-in-system-prompt",
+        key=str(source_line),
+        title="Untrusted input placed in a system prompt",
+        description=(
+            f"{origin[:1].upper()}{origin[1:]} (line {source_line}) flows "
+            f"into the {label}. Text in the system prompt is read as instructions, so "
+            "whoever controls that input can override them."
+        ),
+        path=path,
+        line=line,
+        end_line=end_line,
+        columns=columns,
+        snippet=snippet,
+        severity=Severity.MEDIUM,
+        confidence=Confidence.MEDIUM,
+        cwe=["CWE-77", "CWE-74"],
+        owasp_llm=LLM01,
+        why="The system prompt is the instruction channel the model trusts most. "
+        "Interpolating untrusted data into it erases the boundary between your "
+        "instructions and attacker-supplied text (direct or indirect prompt "
+        "injection).",
+        attack="Put 'Ignore all previous instructions and ...' in the request "
+        "parameter, uploaded file or indexed document that feeds this prompt.",
+        impact="Instruction override: data exfiltration, policy bypass, and misuse "
+        "of any tool the model can call.",
+        fix="Keep the system prompt static. Pass untrusted data in a separate "
+        "user-role message, clearly delimited and labelled as data, and constrain "
+        "what the model may do with it (least-privilege tools, output checks).",
+        tags=["llm", "prompt"],
+        metadata={"source": origin, "source_line": source_line, "context": label},
+        in_test=in_test,
+        likelihood=Likelihood.POSSIBLE,
+    )
 
 
 def analyze_python(data: bytes, root, path: str, in_test: bool) -> Iterable[Finding]:

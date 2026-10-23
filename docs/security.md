@@ -29,6 +29,29 @@ Highlights of what is already defended:
 - **Secret handling.** Values are redacted to a prefix plus length everywhere;
   live verification is opt-in and read-only.
 - **Report safety.** The HTML report escapes every attacker-controlled field.
+- **Test verification of fixes.** `nephilex fix --verify-with-tests` runs a
+  test command chosen by the operator (a scanned repository's own config can
+  set it only when that config is trusted), without a shell, in a temporary
+  worktree that is always removed, with a timeout, capped output, and an
+  environment from which credential-like variables are removed. See below for
+  what this does not protect.
+
+## Running a project's tests
+
+Unlike scanning, `nephilex fix --verify-with-tests` exists to execute the
+target's code: it runs the project's test suite to check that a
+fix did not break the application. Running a project's tests runs that
+project's code, with your user's permissions. The controls listed above keep
+the test run out of your working tree and away from tokens in the environment,
+and they stop a hung suite, but they are not a sandbox: the tests can read
+your files (SSH keys, cloud credential files, `~/.netrc`), reach the network,
+and pick up a secret stored in a variable the deny list does not recognise.
+
+Use `--verify-with-tests` only on repositories you trust as much as you would
+trust running their tests yourself. It is off by default, it is never turned
+on by a repository's own configuration, and its test output is never sent to
+an AI provider. For untrusted code, run the tests in a disposable container
+or VM instead. Details: [Fixing findings](fixing.md#verifying-fixes-with-your-tests).
 
 ## Reporting a vulnerability
 

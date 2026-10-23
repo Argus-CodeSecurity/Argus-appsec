@@ -1,0 +1,121 @@
+{
+ "case": {
+  "ghsa_id": "GHSA-2jrp-274c-jhv3",
+  "cve_id": "CVE-2026-25580",
+  "ecosystem": "pip",
+  "packages": [
+   "pydantic-ai",
+   "pydantic-ai-slim"
+  ],
+  "published_at": "2026-02-06T18:32:39Z",
+  "advisory_cwes": [918],
+  "html_url": "https://github.com/advisories/GHSA-2jrp-274c-jhv3",
+  "label_cwes": [918],
+  "repo": "pydantic/pydantic-ai",
+  "fix_sha": "d398bc9d39aecca6530fa7486a410d5cce936301",
+  "parent_sha": "06c77f46591c5bb5efacb170d203b9e3f4b1b413",
+  "path_vulnerable": "pydantic_ai_slim/pydantic_ai/models/__init__.py",
+  "path_patched": "pydantic_ai_slim/pydantic_ai/models/__init__.py",
+  "language": "python",
+  "vulnerable_lines": [
+   [1280, 1281],
+   [1293, 1293],
+   [1295, 1299],
+   [1302, 1304]
+  ],
+  "patched_lines": [
+   [1281, 1288],
+   [1301, 1303],
+   [1305, 1305],
+   [1308, 1311]
+  ],
+  "commit_url": "https://github.com/pydantic/pydantic-ai/commit/d398bc9d39aecca6530fa7486a410d5cce936301",
+  "case_id": "019-GHSA-2jrp-274c-jhv3",
+  "content": {
+   "vulnerable": {
+    "sha256": "3499963ec8c28729c97d34afc5a64b0aaae2dcc4d691bf3afef524a9e8ab074d",
+    "bytes": 57748
+   },
+   "patched": {
+    "sha256": "866e7a885f2283c6ba38e44175b123021cb16d4ccb1787c6779e4223fcce1dca",
+    "bytes": 58058
+   }
+  }
+ },
+ "status": "scored",
+ "tools": {
+  "nephilex": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  },
+  "bandit": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  },
+  "semgrep": {
+   "status": "ok",
+   "parse_error_versions": [
+    "patched"
+   ],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  }
+ },
+ "outcomes": {
+  "nephilex": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  },
+  "bandit": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  },
+  "semgrep": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  }
+ }
+}

@@ -313,7 +313,8 @@ SINKS: list[Sink] = [
         attack="Send a crafted pickle stream (a __reduce__ payload) or a YAML document "
         "with `!!python/object/apply` tags.",
         impact="Remote code execution.",
-        fix="Never unpickle untrusted bytes; use JSON or yaml.safe_load with a schema.",
+        fix="Never deserialize untrusted data with pickle, marshal or yaml.load; use JSON, "
+        "or yaml.safe_load, and validate the result against a schema.",
     ),
     Sink(
         id="ast-xss",
@@ -439,6 +440,11 @@ class ASTPythonScanner(Scanner):
 
     def applies_to(self, project) -> bool:
         return is_available() and bool(project.files_matching("*.py"))
+
+    def unavailable_reason(self, project) -> str | None:
+        if is_available() or not project.files_matching("*.py"):
+            return None
+        return 'needs the [ast] extra: pip install "nephilex[ast]"'
 
     def scan(self, ctx: ScannerContext) -> Iterable[Finding]:
         parser = _load_parser()

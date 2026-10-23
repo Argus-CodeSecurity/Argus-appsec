@@ -1,0 +1,115 @@
+{
+ "case": {
+  "ghsa_id": "GHSA-g5cg-6c7v-mmpw",
+  "cve_id": "CVE-2025-59155",
+  "ecosystem": "npm",
+  "packages": [
+   "hackmd-mcp"
+  ],
+  "published_at": "2025-09-15T20:37:46Z",
+  "advisory_cwes": [918],
+  "html_url": "https://github.com/advisories/GHSA-g5cg-6c7v-mmpw",
+  "label_cwes": [918],
+  "repo": "yuna0x0/hackmd-mcp",
+  "fix_sha": "43936c78a5bb3dedc74e8f080607a1125caa8c13",
+  "parent_sha": "35af63cdc8a1bc6a35c159686722722a81db94f7",
+  "path_vulnerable": "index.ts",
+  "path_patched": "index.ts",
+  "language": "typescript",
+  "vulnerable_lines": [
+   [45, 45],
+   [50, 50],
+   [68, 68],
+   [74, 77],
+   [81, 81],
+   [103, 104],
+   [111, 118],
+   [121, 121],
+   [124, 127],
+   [146, 150],
+   [157, 166],
+   [171, 180]
+  ],
+  "patched_lines": [
+   [44, 70],
+   [72, 72],
+   [77, 77],
+   [95, 95],
+   [101, 114],
+   [118, 118],
+   [140, 148],
+   [155, 180],
+   [183, 183],
+   [186, 186],
+   [205, 205],
+   [212, 214],
+   [219, 221]
+  ],
+  "commit_url": "https://github.com/yuna0x0/hackmd-mcp/commit/43936c78a5bb3dedc74e8f080607a1125caa8c13",
+  "case_id": "152-GHSA-g5cg-6c7v-mmpw",
+  "content": {
+   "vulnerable": {
+    "sha256": "07920ccefb2255037f37b96108447616500e6141382ef77804c172573e80eade",
+    "bytes": 6073
+   },
+   "patched": {
+    "sha256": "bfae0614ea11b3a4ebf41fe7be4fea69fac32ebe97834ddf82fa52ee2fe0718a",
+    "bytes": 7337
+   }
+  }
+ },
+ "status": "scored",
+ "tools": {
+  "nephilex": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  },
+  "bandit": {
+   "status": "not_applicable"
+  },
+  "semgrep": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  }
+ },
+ "outcomes": {
+  "nephilex": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  },
+  "semgrep": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  }
+ }
+}

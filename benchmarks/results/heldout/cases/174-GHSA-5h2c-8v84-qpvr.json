@@ -1,0 +1,97 @@
+{
+ "case": {
+  "ghsa_id": "GHSA-5h2c-8v84-qpvr",
+  "cve_id": null,
+  "ecosystem": "npm",
+  "packages": [
+   "openclaw"
+  ],
+  "published_at": "2026-03-03T21:39:51Z",
+  "advisory_cwes": [15, 78],
+  "html_url": "https://github.com/advisories/GHSA-5h2c-8v84-qpvr",
+  "label_cwes": [78],
+  "repo": "openclaw/openclaw",
+  "fix_sha": "9363c320d8ffe29290906752fab92621da02c3f7",
+  "parent_sha": "ab1840b8811c2b70c6c3dcb63e02ca09a71dc3be",
+  "path_vulnerable": "src/config/env-vars.ts",
+  "path_patched": "src/config/env-vars.ts",
+  "language": "typescript",
+  "vulnerable_lines": [
+   [1, 1],
+   [21, 21],
+   [39, 39]
+  ],
+  "patched_lines": [
+   [1, 5],
+   [8, 11],
+   [29, 29],
+   [47, 47]
+  ],
+  "commit_url": "https://github.com/openclaw/openclaw/commit/9363c320d8ffe29290906752fab92621da02c3f7",
+  "case_id": "174-GHSA-5h2c-8v84-qpvr",
+  "content": {
+   "vulnerable": {
+    "sha256": "40579bffacb2e68b90a6bffbf3bdc9807490323663d9838a4086e9f1abcad5be",
+    "bytes": 1928
+   },
+   "patched": {
+    "sha256": "b4f5787e626c843d83e903ed2715ebcfd177811ac47b0ac7d78b7bda0730ec09",
+    "bytes": 2103
+   }
+  }
+ },
+ "status": "scored",
+ "tools": {
+  "nephilex": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  },
+  "bandit": {
+   "status": "not_applicable"
+  },
+  "semgrep": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  }
+ },
+ "outcomes": {
+  "nephilex": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  },
+  "semgrep": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  }
+ }
+}

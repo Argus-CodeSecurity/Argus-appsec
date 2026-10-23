@@ -1,0 +1,214 @@
+{
+ "case": {
+  "ghsa_id": "GHSA-6hx8-3wjj-gr8g",
+  "cve_id": "CVE-2026-54770",
+  "ecosystem": "pip",
+  "packages": [
+   "webob"
+  ],
+  "published_at": "2026-08-27T22:10:07Z",
+  "advisory_cwes": [601],
+  "html_url": "https://github.com/advisories/GHSA-6hx8-3wjj-gr8g",
+  "label_cwes": [601],
+  "repo": "Pylons/webob",
+  "fix_sha": "ff89560643fb252751b4db8806a283b5377f1f07",
+  "parent_sha": "54c1133c79e48940776a272f4500530e1cc3232a",
+  "path_vulnerable": "src/webob/response.py",
+  "path_patched": "src/webob/response.py",
+  "language": "python",
+  "vulnerable_lines": [
+   [17, 17],
+   [44, 44],
+   [1284, 1287],
+   [1297, 1297]
+  ],
+  "patched_lines": [
+   [16, 17],
+   [43, 48],
+   [1288, 1290],
+   [1300, 1308]
+  ],
+  "commit_url": "https://github.com/Pylons/webob/commit/ff89560643fb252751b4db8806a283b5377f1f07",
+  "case_id": "060-GHSA-6hx8-3wjj-gr8g",
+  "content": {
+   "vulnerable": {
+    "sha256": "cc47d99c6b99b13a9270a1211919e179166291fe22948d85f43b1b7f3708b614",
+    "bytes": 56304
+   },
+   "patched": {
+    "sha256": "eb5487cedad02aa709fa69fea2ca0634ff7a79678106dfc45c78e27e27da7517",
+    "bytes": 56654
+   }
+  }
+ },
+ "status": "scored",
+ "tools": {
+  "nephilex": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [
+     [
+      1071,
+      "authz.cookie-missing-httponly",
+      [1004]
+     ],
+     [
+      1071,
+      "authz.insecure-session-cookie",
+      [614]
+     ]
+    ],
+    "patched": [
+     [
+      1075,
+      "authz.cookie-missing-httponly",
+      [1004]
+     ],
+     [
+      1075,
+      "authz.insecure-session-cookie",
+      [614]
+     ]
+    ]
+   }
+  },
+  "bandit": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [
+     [
+      1222,
+      "B101",
+      [703]
+     ],
+     [
+      1274,
+      "B324",
+      [327]
+     ],
+     [
+      1383,
+      "B101",
+      [703]
+     ],
+     [
+      1469,
+      "B101",
+      [703]
+     ],
+     [
+      1470,
+      "B101",
+      [703]
+     ],
+     [
+      1492,
+      "B101",
+      [703]
+     ]
+    ],
+    "patched": [
+     [
+      1226,
+      "B101",
+      [703]
+     ],
+     [
+      1278,
+      "B324",
+      [327]
+     ],
+     [
+      1394,
+      "B101",
+      [703]
+     ],
+     [
+      1480,
+      "B101",
+      [703]
+     ],
+     [
+      1481,
+      "B101",
+      [703]
+     ],
+     [
+      1503,
+      "B101",
+      [703]
+     ]
+    ]
+   }
+  },
+  "semgrep": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [
+     [
+      1274,
+      "python.lang.security.insecure-hash-algorithms-md5.insecure-hash-algorithm-md5",
+      [327]
+     ]
+    ],
+    "patched": [
+     [
+      1278,
+      "python.lang.security.insecure-hash-algorithms-md5.insecure-hash-algorithm-md5",
+      [327]
+     ]
+    ]
+   }
+  }
+ },
+ "outcomes": {
+  "nephilex": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  },
+  "bandit": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  },
+  "semgrep": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  }
+ }
+}

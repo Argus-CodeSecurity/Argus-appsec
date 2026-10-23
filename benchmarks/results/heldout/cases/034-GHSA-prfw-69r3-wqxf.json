@@ -1,0 +1,275 @@
+{
+ "case": {
+  "ghsa_id": "GHSA-prfw-69r3-wqxf",
+  "cve_id": "CVE-2026-10801",
+  "ecosystem": "pip",
+  "packages": [
+   "ms-swift"
+  ],
+  "published_at": "2026-06-04T12:30:25Z",
+  "advisory_cwes": [327],
+  "html_url": "https://github.com/advisories/GHSA-prfw-69r3-wqxf",
+  "label_cwes": [327],
+  "repo": "modelscope/ms-swift",
+  "fix_sha": "27426a6431759a82e2a1c98344b425f90be17e07",
+  "parent_sha": "5efb4afdfa72a0321a8ab552174fddcc177d44db",
+  "path_vulnerable": "swift/template/base.py",
+  "path_patched": "swift/template/base.py",
+  "language": "python",
+  "vulnerable_lines": [
+   [816, 816]
+  ],
+  "patched_lines": [
+   [815, 817],
+   [819, 820]
+  ],
+  "commit_url": "https://github.com/modelscope/ms-swift/commit/27426a6431759a82e2a1c98344b425f90be17e07",
+  "case_id": "034-GHSA-prfw-69r3-wqxf",
+  "content": {
+   "vulnerable": {
+    "sha256": "6217352ccdeb53c739efc5a41a89ee814b78daa79f233e4b772d6dbc6523f55d",
+    "bytes": 107325
+   },
+   "patched": {
+    "sha256": "cc1629c8a84b764b530895692e4e04322aa6732281be229efce9e98752e113cc",
+    "bytes": 107643
+   }
+  }
+ },
+ "status": "scored",
+ "tools": {
+  "nephilex": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  },
+  "bandit": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [
+     [
+      609,
+      "B101",
+      [703]
+     ],
+     [
+      618,
+      "B101",
+      [703]
+     ],
+     [
+      717,
+      "B101",
+      [703]
+     ],
+     [
+      842,
+      "B101",
+      [703]
+     ],
+     [
+      850,
+      "B101",
+      [703]
+     ],
+     [
+      1297,
+      "B101",
+      [703]
+     ],
+     [
+      1311,
+      "B101",
+      [703]
+     ],
+     [
+      1317,
+      "B101",
+      [703]
+     ],
+     [
+      1318,
+      "B101",
+      [703]
+     ],
+     [
+      1864,
+      "B101",
+      [703]
+     ],
+     [
+      1871,
+      "B101",
+      [703]
+     ],
+     [
+      1873,
+      "B101",
+      [703]
+     ],
+     [
+      1882,
+      "B101",
+      [703]
+     ],
+     [
+      1947,
+      "B101",
+      [703]
+     ],
+     [
+      2112,
+      "B101",
+      [703]
+     ],
+     [
+      2130,
+      "B101",
+      [703]
+     ]
+    ],
+    "patched": [
+     [
+      609,
+      "B101",
+      [703]
+     ],
+     [
+      618,
+      "B101",
+      [703]
+     ],
+     [
+      717,
+      "B101",
+      [703]
+     ],
+     [
+      846,
+      "B101",
+      [703]
+     ],
+     [
+      854,
+      "B101",
+      [703]
+     ],
+     [
+      1301,
+      "B101",
+      [703]
+     ],
+     [
+      1315,
+      "B101",
+      [703]
+     ],
+     [
+      1321,
+      "B101",
+      [703]
+     ],
+     [
+      1322,
+      "B101",
+      [703]
+     ],
+     [
+      1868,
+      "B101",
+      [703]
+     ],
+     [
+      1875,
+      "B101",
+      [703]
+     ],
+     [
+      1877,
+      "B101",
+      [703]
+     ],
+     [
+      1886,
+      "B101",
+      [703]
+     ],
+     [
+      1951,
+      "B101",
+      [703]
+     ],
+     [
+      2116,
+      "B101",
+      [703]
+     ],
+     [
+      2134,
+      "B101",
+      [703]
+     ]
+    ]
+   }
+  },
+  "semgrep": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  }
+ },
+ "outcomes": {
+  "nephilex": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  },
+  "bandit": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  },
+  "semgrep": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  }
+ }
+}

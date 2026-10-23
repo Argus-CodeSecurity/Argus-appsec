@@ -1,0 +1,104 @@
+{
+ "case": {
+  "ghsa_id": "GHSA-wrvh-rcmr-9qfc",
+  "cve_id": "CVE-2024-34065",
+  "ecosystem": "npm",
+  "packages": [
+   "@strapi/plugin-users-permissions"
+  ],
+  "published_at": "2024-06-12T19:39:11Z",
+  "advisory_cwes": [294, 601],
+  "html_url": "https://github.com/advisories/GHSA-wrvh-rcmr-9qfc",
+  "label_cwes": [601],
+  "repo": "strapi/strapi",
+  "fix_sha": "9c79921d22142a5de77ea26151550a14e4b12669",
+  "parent_sha": "ca6c7c80ec0b8e77d4b03cd0411e5302de26b8ce",
+  "path_vulnerable": "packages/plugins/users-permissions/server/controllers/auth.js",
+  "path_patched": "packages/plugins/users-permissions/server/controllers/auth.js",
+  "language": "javascript",
+  "vulnerable_lines": [
+   [204, 207]
+  ],
+  "patched_lines": [
+   [204, 225]
+  ],
+  "commit_url": "https://github.com/strapi/strapi/commit/9c79921d22142a5de77ea26151550a14e4b12669",
+  "case_id": "191-GHSA-wrvh-rcmr-9qfc",
+  "content": {
+   "vulnerable": {
+    "sha256": "6c4f46e4c697f9daf05afaa94122bfdd7eb98e1e9b737923c1fe0dd3be6b0b9b",
+    "bytes": 13861
+   },
+   "patched": {
+    "sha256": "1c8a732a858d113f02837121f4769a3e09eb41e1a2c6532a8fa44928c0d5fa62",
+    "bytes": 14613
+   }
+  }
+ },
+ "status": "scored",
+ "tools": {
+  "nephilex": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [
+     [
+      203,
+      "authz.oauth-missing-state",
+      [352]
+     ]
+    ],
+    "patched": [
+     [
+      203,
+      "authz.oauth-missing-state",
+      [352]
+     ]
+    ]
+   }
+  },
+  "bandit": {
+   "status": "not_applicable"
+  },
+  "semgrep": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  }
+ },
+ "outcomes": {
+  "nephilex": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": true,
+    "flagged_after_fix": true
+   }
+  },
+  "semgrep": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  }
+ }
+}

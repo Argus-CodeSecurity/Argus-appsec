@@ -8,7 +8,7 @@ and to a CWE:
 
 | Scanner | Reads | Needs |
 |---------|-------|-------|
-| `llm` | Python and JS/TS files that touch an LLM or agent stack (OpenAI, Anthropic, LangChain, LlamaIndex, LiteLLM, Ollama, Google GenAI, CrewAI, AutoGen, MCP SDKs, transformers) | The data-flow rules need the `[ast]` extra (`pip install "nephilex[ast]"`); the line rules always run |
+| `llm` | Python and JS/TS files that touch an LLM or agent stack (OpenAI, Anthropic, LangChain, LlamaIndex, LiteLLM, Ollama, Google GenAI, CrewAI, AutoGen, MCP SDKs for Python and TypeScript, OpenAI Agents, transformers) | The data-flow rules need the `[ast]` extra (`pip install "nephilex[ast]"`); the line rules always run |
 | `agent-config` | MCP and agent configuration files (`.mcp.json`, `.cursor/mcp.json`, `.vscode/mcp.json`, `claude_desktop_config.json`, `.claude/settings.json`, Windsurf `mcp_config.json`, Cline, Roo Code, Gemini CLI) | Nothing extra |
 
 Every finding carries `owasp` and `metadata.owasp_llm` (for example
@@ -31,7 +31,12 @@ nephilex scan ./my-ai-app --scanners llm,agent-config
 | `llm.agent-requests-tool` | LLM06 | 918 | `RequestsToolkit` / `Requests*Tool` enabled with `allow_dangerous_requests=True` |
 | `llm.agent-sql-write-tool` | LLM06 | 89, 250 | `SQLDatabaseToolkit` / `create_sql_agent` with no read-only scoping in the file |
 | `llm.agent-code-execution` | LLM06 | 94, 250 | AutoGen `use_docker: False` or `LocalCommandLineCodeExecutor`; CrewAI `code_execution_mode="unsafe"` |
-| `llm.untrusted-input-in-system-prompt` | LLM01 | 77, 74 | Request input, file contents, retrieved documents or HTTP responses flowing into a system prompt |
+| `llm.indirect-prompt-injection` | LLM01 | 1427, 74 | External content (HTTP responses, files read at run time, retrieved documents, email, Google API data, stored free text, tool results) in the prompt of a model whose tools or output can act on it |
+| `llm.tool-argument-to-sink` | LLM06 | 73/22, 918, 89, 200 | A model-chosen tool argument (or a hand-dispatched tool-call argument) used as a write path, an outbound URL, SQL text or an email recipient |
+| `llm.untrusted-message-role` | LLM01 | 1427, 74 | The caller supplies message roles or the whole message list |
+| `llm.untrusted-tool-selection` | LLM06 | 862, 1427 | Request input decides which side-effecting tools an agent gets |
+| `llm.secret-sent-to-model` | LLM02 | 200, 522 | A credential read from the environment placed in prompt text |
+| `llm.untrusted-input-in-system-prompt` | LLM01 | 77, 74 | Request input, file contents, retrieved documents, HTTP responses or stored user-written text flowing into a system prompt (Python and JS/TS) |
 | `llm.secret-in-system-prompt` | LLM07 | 798, 200 | A credential in system-prompt text |
 | `llm.internal-url-in-system-prompt` | LLM07 | 200 | A private IP, `localhost` or `*.internal`-style host in system-prompt text |
 | `llm.prompt-injection` | LLM01 | 74 | Request input concatenated into a prompt string (line rule) |
@@ -87,6 +92,13 @@ What clears a value, and only for the sink it protects:
   (`block.type == "tool_use"`) does not clear the rest of the object.
 
 `json.loads` does not clear anything: the parsed dict is still model text.
+
+In JS/TS the sinks also include an Express `res.send` / `res.write` / `res.end`
+of a string that contains markup (Express serves a string body as
+`text/html`) and `db.prepare(sql)` on a database-like receiver. Both languages
+follow a call into a function defined once in the same file with the caller's
+argument taint, so a tool-call argument passed to a local `run_tool(...)`
+helper is traced into the helper's body.
 
 ### `llm.tool-handler-exec` (LLM06 Excessive Agency)
 
@@ -146,10 +158,177 @@ System prompts are `{"role": "system" | "developer"}` messages, LangChain
 `instructions=`, `system_prompt=` / `system_message=` / `system_instruction=`
 arguments, and variables named like `SYSTEM_PROMPT`. Sources are request
 parameters (including FastAPI/Flask route parameters), file reads, vector-store
-retrieval, document loaders and HTTP responses.
+retrieval, document loaders, HTTP responses, and free-text fields of a row
+loaded through an ORM (`Store.query.get_or_404(id).policy_text`: names such as
+`*_text`, `description`, `bio`, `notes`, `policy`, `body`). In JS/TS the same
+rule covers `{role: "system" | "developer"}` objects and the `system` /
+`instructions` options of OpenAI, Anthropic and Vercel AI SDK calls, with
+`req.body`, `req.query`, `req.params` and `await req.json()` as sources:
+
+```ts
+const { system, message } = req.body;
+await anthropic.messages.create({ model, max_tokens: 600, system: system || DEFAULT_SYSTEM,  // flagged
+  messages: [{ role: "user", content: String(message) }] });
+```
 
 **Fix.** Keep the system prompt static; pass untrusted data in a delimited
 user-role message and constrain what the model may do with it.
+
+### `llm.indirect-prompt-injection` (LLM01 Prompt Injection)
+
+Text a model reads can instruct it. When an application puts content written
+by third parties into a prompt, and that model can act (call a tool that runs
+commands, writes files, sends data or fetches URLs, or produce output that
+reaches a dangerous sink), whoever writes the content controls the action.
+
+```python
+def handle_ticket(ticket_id: int) -> str:
+    ticket = requests.get(f"{HELPDESK}/tickets/{ticket_id}", timeout=10).json()
+    messages = [
+        {"role": "system", "content": "Resolve the ticket and refund when owed."},
+        {"role": "user", "content": f"Subject: {ticket['subject']}\n\n{ticket['description']}"},
+    ]
+    resp = client.chat.completions.create(model="gpt-4o", messages=messages, tools=TOOLS)  # flagged
+    for tc in resp.choices[0].message.tool_calls or []:
+        args = json.loads(tc.function.arguments)
+        issue_refund(args["order_id"], args["amount"])  # issue_refund POSTs args to /refunds
+```
+
+The finding is reported at the model call and says which content entered the
+prompt (and on which line), which tools can act on it and what their
+model-chosen arguments reach, and which sinks the output reaches. For the full
+file this snippet comes from (`benchmarks/agent/corpus/ipi-support-ticket-refund-tool/vulnerable`):
+
+> An HTTP response (line 29) is placed in the prompt of
+> client.chat.completions.create() without separation from the instructions,
+> and the model's output reaches requests.post() request body (line 24).
+> Whoever can write that content can steer what the model does.
+
+External content is: HTTP responses (`requests`, `httpx`, `fetch`, `axios`),
+files read from a caller-chosen path, uploaded files, vector-store retrieval
+and document loaders (including query engines and retrieval chains that
+retrieve into their own prompt), IMAP mail and parsed email messages, Google
+API reads (`service.users().messages().get(...).execute()`), ORM free-text
+fields, the return value of a tool that returns any of these, and built-in
+search, browsing, mail and file tools (Tavily, DuckDuckGo, Wikipedia,
+`RequestsGetTool`, Gmail, `FileManagementToolkit`). Request input from the
+caller is not external content for this rule: that is direct prompt injection
+by the user, covered by the tool and output rules.
+
+What the model can reach:
+
+* **tools**: for every tool the model or agent is given (`tools=`, `bind_tools`,
+  `create_react_agent`, `AgentExecutor`, `ReActAgent.from_tools`, Vercel AI SDK
+  `tools: {...}`), the sinks its model-chosen arguments reach inside the tool
+  body, after guards: shell, `eval`, file write path, unpinned URL, SQL text,
+  HTTP request body, email recipient, Google API writes. Built-in shell, REPL,
+  file-write, requests, SQL and Gmail-send tools count as their capability;
+* **output**: model output reaching any sink of `insecure-output-handling`, a
+  request body, an email recipient or a data-changing API call, including
+  through hand-written tool-dispatch loops and calls into local helper
+  functions.
+
+The severity is HIGH unless the only reach is HTML (MEDIUM). Delimiting the
+content (tags, a user-role message) does not clear the finding; it does not
+stop a model from following instructions in the content.
+
+Not flagged: the same content summarized by a model with no tools and output
+that is only returned; tools whose arguments are `Literal`/`Enum`/zod `enum`,
+allowlisted (`if host not in HOSTS: return`, `row = TABLE.get(key); if row is
+None: return`) or confined (`resolve()` plus `is_relative_to`); a structured
+output schema that pins the fields that reach the action.
+
+**Fix.** Give the model that reads untrusted content no side-effecting tools,
+or require human approval for each side effect; constrain tool arguments with
+allowlists or `Literal`/enum schemas; validate output before it reaches a sink;
+or split the work so a model with no tools reads the content and only a
+validated, constrained value reaches the privileged step.
+
+### `llm.tool-argument-to-sink` (LLM06 Excessive Agency)
+
+The tool-chaining counterpart of `tool-handler-exec`: a model-chosen argument
+of a tool (LangChain `@tool`, MCP `@mcp.tool()` and TypeScript
+`server.tool` / `server.registerTool`, Vercel AI SDK and OpenAI Agents
+`tool({execute})`, LangChain.js `tool()`), or a tool-call argument that code
+dispatches by hand, used as a file path to write, an outbound URL, SQL text or
+an email recipient.
+
+```python
+@mcp.tool()
+def save_note(path: str, content: str) -> str:
+    target = NOTES_ROOT / path
+    target.write_text(content, encoding="utf-8")  # flagged: CWE-73, CWE-22
+```
+
+```ts
+server.tool("fetch_url", "Fetch a web page.", { url: z.string().url() }, async ({ url }) => {
+  const res = await fetch(url);  // flagged: CWE-918
+  return { content: [{ type: "text", text: await res.text() }] };
+});
+```
+
+A recipient is an email `To`/`Cc`/`Bcc` header (`msg["To"] = to`, also inside
+a tuple assignment), `smtp.sendmail(..., to_addrs)`, Django `send_mail`
+recipients, nodemailer `sendMail({to})`, Resend and SendGrid `to`.
+
+**Fix.** Resolve paths and require them to stay inside a base directory
+(`Path.resolve().is_relative_to(BASE)`, or `path.resolve` plus
+`startsWith(BASE + path.sep)`); pin URL hosts or check `hostname` against an
+allowlist and refuse redirects; bind SQL parameters; map recipients from a
+fixed set.
+
+### `llm.untrusted-message-role` (LLM01 Prompt Injection)
+
+```python
+@app.post("/chat")
+def chat(req: ChatRequest):
+    messages = [{"role": "system", "content": SYSTEM_PROMPT}] + req.messages
+    resp = client.chat.completions.create(model="gpt-4o-mini", messages=messages)  # flagged
+```
+
+Roles are the trust boundary of a chat prompt. Flagged when request data is
+used as message objects (a client-supplied transcript) or as a `role` value
+(`{"role": req.role, ...}`, `{ role, content }` destructured from `req.body`).
+Request text inside a message whose role is a literal is the correct pattern
+and is not flagged, including a server-side history the user turn is appended
+to.
+
+**Fix.** Accept only the new user text, keep the transcript on the server, and
+set every role in code.
+
+### `llm.untrusted-tool-selection` (LLM06 Excessive Agency)
+
+```python
+@app.post("/ask")
+def ask(req: AskRequest, user: User = Depends(get_current_user)):
+    tools = [get_issue, set_status] if req.allow_writes else [get_issue]
+    agent = create_react_agent(ChatOpenAI(model="gpt-4o-mini"), tools)  # flagged
+```
+
+Flagged when request input (including typed flags such as `allow_writes:
+bool`) chooses the tool list given to an agent or model (a conditional, a
+subscript, a comprehension or an `if` block that appends), and that list
+includes a tool with a side effect. The same code with the flag computed from
+the authenticated user (`user.role in {...}`) is not flagged.
+
+**Fix.** Decide tools on the server from the authenticated user's permissions.
+
+### `llm.secret-sent-to-model` (LLM02 Sensitive Information Disclosure)
+
+```js
+const prompt = [
+  `Authenticate with this secret key: ${process.env.STRIPE_SECRET_KEY}`,  // flagged at the model call
+  `Question: ${question}`,
+].join("\n");
+```
+
+An environment variable whose name says it holds a credential (`*SECRET*`,
+`*TOKEN*`, `*PASSWORD*`, `*API_KEY*`, `*_KEY`) flowing into prompt text of a
+model call. Using the key to construct a client (`new OpenAI({ apiKey })`,
+`Github(token)`) is not flagged, and neither is the data that client returns.
+
+**Fix.** Keep the credential in code or a tool that calls the service; give the
+model a placeholder.
 
 ### `llm.secret-in-system-prompt` and `llm.internal-url-in-system-prompt` (LLM07 System Prompt Leakage)
 
@@ -240,9 +419,13 @@ limit it to read-only tools.
 
 ## Scope and honesty
 
-The data-flow tier is intra-file and per function (nested JS functions see their
-enclosing scope). A value that crosses a module boundary, or a prompt built in
-one file and sent from another, is not traced. Pydantic models defined in other
+The data-flow tier is intra-file. Within a file it is per function, follows
+calls into functions defined once in the file (up to three levels deep), and
+runs loop bodies twice so a tool result appended to the message list reaches
+the next model call (nested JS functions see their enclosing scope). A value
+that crosses a module boundary, or a prompt built in one file and sent from
+another, is not traced, and neither are keyword-argument splats into a helper
+(`send_email(**block.input)`) or comprehension variables. Pydantic models defined in other
 files are trusted rather than guessed at, which favors precision over recall.
 The configuration rules read only the files listed above, by their documented
 key names. Treat findings as high-value leads and a clean result as "no known
@@ -250,3 +433,65 @@ LLM or agent anti-patterns found", not a proof of safety.
 
 The labeled corpus in `benchmarks/accuracy.py` has a vulnerable and a safe case
 for each data-flow and configuration rule, and CI fails if any is misclassified.
+
+## Benchmark: labeled agent corpus with a held-out split
+
+`benchmarks/agent/` holds 38 scenarios (76 cases: 38 vulnerable, 38 safe) of
+LLM-application and agent code: 25 Python, 8 TypeScript and 5 JavaScript
+scenarios covering indirect prompt injection (12), tool chaining (8), trust
+boundaries (8), output handling (3), excessive agency (5), system prompt leakage
+(1) and sensitive disclosure (1). Each scenario pairs a vulnerable case with a
+safe case that does the same thing correctly, labeled with the OWASP LLM 2025
+ids a correct report may carry. The corpus was written by a separate author
+who did not read the scanner code or run the scanner.
+
+Scenarios were split before any rule was written: a scenario is **held out**
+when the SHA-256 of its id is divisible by 3 (24 dev, 14 held-out scenarios).
+The corpus, the split and a baseline score were committed first; rule work
+looked only at dev cases; the held-out split was scored once, after the rules
+were committed. A vulnerable case counts as caught only when an `llm` or
+`agent-config` finding at LOW or above carries one of its expected OWASP ids;
+any such finding on a safe case is a false positive.
+
+```bash
+python benchmarks/agent/run.py                  # both splits
+python benchmarks/agent/run.py --only dev --details dev
+```
+
+| Split | Cases (vuln / safe) | Before: recall | Before: precision | After: recall | After: precision |
+|-------|---------------------|----------------|-------------------|---------------|------------------|
+| dev | 24 / 24 | 29.2% (7/24) | 87.5% (1 FP) | 100.0% (24/24) | 96.0% (1 FP) |
+| held-out | 14 / 14 | 35.7% (5/14) | 83.3% (1 FP) | 64.3% (9/14) | 69.2% (4 FP) |
+
+The held-out result is much worse than dev, and it is the number to believe:
+the dev score measures how well the rules fit the cases they were written
+against. On held-out indirect prompt injection, 2 of 6 vulnerable cases were
+caught. The held-out misses, read after the score was recorded:
+
+* a Slack SDK read (`slack.conversations.history`) is not a known external
+  source, so the injection was missed (the model-chosen URL fetch was reported
+  as LLM05 SSRF, which the label does not accept);
+* tool-call arguments passed as `send_email(**block.input)` and a tool call
+  made inside a list comprehension were not followed;
+* tools chosen by request input among JSON tool schemas, whose implementations
+  are lambdas in a dict, were not resolved to their side effects;
+* `marked.parse(answer)` matched the zod-style `.parse` validation heuristic, so
+  model output rendered as HTML was treated as validated;
+* false positives: a host allowlist checked through a variable
+  (`parsed = urlparse(url); if parsed.hostname not in HOSTS: return`) did not
+  clear `url`; a `FileManagementToolkit` confined with `root_dir` still counted
+  as a file-write capability; and the two bugs below.
+
+Two of the held-out false positives came from mistakes in the new rules and
+were fixed afterwards: a client built with a credential (`new
+WebClient(process.env.SLACK_BOT_TOKEN)`) carried the secret into its API
+responses, and `untrusted-tool-selection` fired on a tool object that only
+reads uploaded documents (one held-out TP had been caught for that wrong
+reason). Because held-out cases were read to find them, the re-score is not a
+held-out measurement: dev 100.0% / 96.0% (unchanged), held-out 57.1% recall
+(8/14) / 80.0% precision (2 FP). Results are in `benchmarks/agent/results/`
+(`baseline.json`, `after.json`, `post-review.json`).
+
+The remaining dev false positive is a support bot whose refund tool only files
+a refund proposal for human review: the code is structurally the same as
+issuing the refund, and nothing in it says a person approves the request.

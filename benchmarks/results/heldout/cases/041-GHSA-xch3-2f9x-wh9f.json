@@ -1,0 +1,227 @@
+{
+ "case": {
+  "ghsa_id": "GHSA-xch3-2f9x-wh9f",
+  "cve_id": "CVE-2025-14287",
+  "ecosystem": "pip",
+  "packages": [
+   "mlflow"
+  ],
+  "published_at": "2026-03-16T15:30:41Z",
+  "advisory_cwes": [94],
+  "html_url": "https://github.com/advisories/GHSA-xch3-2f9x-wh9f",
+  "label_cwes": [94],
+  "repo": "mlflow/mlflow",
+  "fix_sha": "8b8792a7034fb33a14b0b31cabcaa9b912d3485f",
+  "parent_sha": "c0a2f87e7a6264f6fb356c1e40ff4e4e8b41d6a5",
+  "path_vulnerable": "mlflow/sagemaker/__init__.py",
+  "path_patched": "mlflow/sagemaker/__init__.py",
+  "language": "python",
+  "vulnerable_lines": [
+   [8, 8],
+   [15, 15],
+   [145, 159],
+   [161, 162],
+   [164, 164],
+   [166, 167],
+   [1162, 1162]
+  ],
+  "patched_lines": [
+   [9, 9],
+   [144, 144],
+   [146, 158],
+   [160, 162],
+   [164, 171],
+   [1166, 1166]
+  ],
+  "commit_url": "https://github.com/mlflow/mlflow/commit/8b8792a7034fb33a14b0b31cabcaa9b912d3485f",
+  "case_id": "041-GHSA-xch3-2f9x-wh9f",
+  "content": {
+   "vulnerable": {
+    "sha256": "8747ca9539c114e01be04361a4e0430e01cde425f150f4cc6efb5d331e91ef22",
+    "bytes": 132153
+   },
+   "patched": {
+    "sha256": "952276808d675930ffa3de6993e2c3ea14b08171b7c1b7fc23cea927263a1815",
+    "bytes": 132278
+   }
+  }
+ },
+ "status": "scored",
+ "tools": {
+  "nephilex": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [
+     [
+      587,
+      "logic.race-hint",
+      [840]
+     ],
+     [
+      588,
+      "logic.race-hint",
+      [840]
+     ],
+     [
+      589,
+      "logic.race-hint",
+      [840]
+     ]
+    ],
+    "patched": [
+     [
+      591,
+      "logic.race-hint",
+      [840]
+     ],
+     [
+      592,
+      "logic.race-hint",
+      [840]
+     ],
+     [
+      593,
+      "logic.race-hint",
+      [840]
+     ],
+     [
+      1166,
+      "ast-python.ast-command-injection",
+      [78]
+     ]
+    ]
+   }
+  },
+  "bandit": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [
+     [
+      15,
+      "B404",
+      [78]
+     ],
+     [
+      167,
+      "B605",
+      [78]
+     ],
+     [
+      1162,
+      "B603",
+      [78]
+     ]
+    ],
+    "patched": [
+     [
+      9,
+      "B404",
+      [78]
+     ],
+     [
+      149,
+      "B603",
+      [78]
+     ],
+     [
+      149,
+      "B607",
+      [78]
+     ],
+     [
+      154,
+      "B603",
+      [78]
+     ],
+     [
+      154,
+      "B607",
+      [78]
+     ],
+     [
+      162,
+      "B603",
+      [78]
+     ],
+     [
+      162,
+      "B607",
+      [78]
+     ],
+     [
+      166,
+      "B603",
+      [78]
+     ],
+     [
+      166,
+      "B607",
+      [78]
+     ],
+     [
+      1166,
+      "B603",
+      [78]
+     ]
+    ]
+   }
+  },
+  "semgrep": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  }
+ },
+ "outcomes": {
+  "nephilex": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": true
+   }
+  },
+  "bandit": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": true,
+    "flagged_after_fix": true
+   }
+  },
+  "semgrep": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  }
+ }
+}

@@ -1,0 +1,126 @@
+{
+ "case": {
+  "ghsa_id": "GHSA-2943-5xfg-gq5f",
+  "cve_id": "CVE-2026-77414",
+  "ecosystem": "npm",
+  "packages": [
+   "jsonata"
+  ],
+  "published_at": "2026-08-21T20:58:01Z",
+  "advisory_cwes": [94],
+  "html_url": "https://github.com/advisories/GHSA-2943-5xfg-gq5f",
+  "label_cwes": [94],
+  "repo": "jsonata-js/jsonata",
+  "fix_sha": "59e25144fc3b7125f6befd71b8a6e14e1fa610d2",
+  "parent_sha": "8ee4476f8a228bfc7a62979ae0a9c13a4043cd03",
+  "path_vulnerable": "src/jsonata.js",
+  "path_patched": "src/jsonata.js",
+  "language": "javascript",
+  "vulnerable_lines": [
+   [222, 222],
+   [231, 231],
+   [274, 274],
+   [280, 280],
+   [352, 352],
+   [425, 425],
+   [636, 636],
+   [677, 677],
+   [912, 913],
+   [945, 945],
+   [996, 996],
+   [1002, 1002],
+   [1336, 1336],
+   [1673, 1673],
+   [1695, 1695],
+   [1858, 1858],
+   [1865, 1865],
+   [2146, 2146]
+  ],
+  "patched_lines": [
+   [222, 222],
+   [231, 231],
+   [274, 274],
+   [280, 280],
+   [352, 352],
+   [425, 425],
+   [636, 636],
+   [677, 677],
+   [912, 913],
+   [945, 945],
+   [996, 996],
+   [1002, 1002],
+   [1336, 1336],
+   [1673, 1673],
+   [1695, 1695],
+   [1858, 1858],
+   [1865, 1865],
+   [2146, 2146]
+  ],
+  "commit_url": "https://github.com/jsonata-js/jsonata/commit/59e25144fc3b7125f6befd71b8a6e14e1fa610d2",
+  "case_id": "139-GHSA-2943-5xfg-gq5f",
+  "content": {
+   "vulnerable": {
+    "sha256": "7f9ee5b5baeba53c30472c5fa2c84f7153847c5937cac0edc0fbf00366b7a606",
+    "bytes": 89763
+   },
+   "patched": {
+    "sha256": "5079d79c0a95d43681a557b64ea2ebf2b084179bafd6ef5045289bc513618d18",
+    "bytes": 90127
+   }
+  }
+ },
+ "status": "scored",
+ "tools": {
+  "nephilex": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  },
+  "bandit": {
+   "status": "not_applicable"
+  },
+  "semgrep": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  }
+ },
+ "outcomes": {
+  "nephilex": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  },
+  "semgrep": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  }
+ }
+}

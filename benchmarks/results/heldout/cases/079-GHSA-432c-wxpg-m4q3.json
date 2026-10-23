@@ -1,0 +1,158 @@
+{
+ "case": {
+  "ghsa_id": "GHSA-432c-wxpg-m4q3",
+  "cve_id": null,
+  "ecosystem": "pip",
+  "packages": [
+   "xml2rfc"
+  ],
+  "published_at": "2025-02-07T20:32:27Z",
+  "advisory_cwes": [22],
+  "html_url": "https://github.com/advisories/GHSA-432c-wxpg-m4q3",
+  "label_cwes": [22],
+  "repo": "ietf-tools/xml2rfc",
+  "fix_sha": "ec98f9cb4b9a8658222117df037dda473ca3f4e4",
+  "parent_sha": "a46fad0649ce7f201db319cfb64eda6e44323d0b",
+  "path_vulnerable": "xml2rfc/writers/preptool.py",
+  "path_patched": "xml2rfc/writers/preptool.py",
+  "language": "python",
+  "vulnerable_lines": [
+   [35, 36],
+   [1717, 1717],
+   [1721, 1723],
+   [1725, 1730]
+  ],
+  "patched_lines": [
+   [36, 36],
+   [1718, 1722]
+  ],
+  "commit_url": "https://github.com/ietf-tools/xml2rfc/commit/ec98f9cb4b9a8658222117df037dda473ca3f4e4",
+  "case_id": "079-GHSA-432c-wxpg-m4q3",
+  "content": {
+   "vulnerable": {
+    "sha256": "d48f3a8eb5398674c78aaf2b1e20d476c9f38cb971478e15b7b00daa22030bd9",
+    "bytes": 113947
+   },
+   "patched": {
+    "sha256": "b830f8aec8159ffe0614bf2aa67993556c8b035c501da1b45bfe4c70e636a6c3",
+    "bytes": 113590
+   }
+  }
+ },
+ "status": "scored",
+ "tools": {
+  "nephilex": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  },
+  "bandit": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [
+     [
+      1811,
+      "B310",
+      [22]
+     ],
+     [
+      1847,
+      "B310",
+      [22]
+     ],
+     [
+      1874,
+      "B310",
+      [22]
+     ],
+     [
+      1939,
+      "B310",
+      [22]
+     ]
+    ],
+    "patched": [
+     [
+      1807,
+      "B310",
+      [22]
+     ],
+     [
+      1843,
+      "B310",
+      [22]
+     ],
+     [
+      1870,
+      "B310",
+      [22]
+     ],
+     [
+      1935,
+      "B310",
+      [22]
+     ]
+    ]
+   }
+  },
+  "semgrep": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  }
+ },
+ "outcomes": {
+  "nephilex": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  },
+  "bandit": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  },
+  "semgrep": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  }
+ }
+}

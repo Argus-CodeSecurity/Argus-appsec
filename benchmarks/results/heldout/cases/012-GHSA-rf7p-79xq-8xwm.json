@@ -1,0 +1,278 @@
+{
+ "case": {
+  "ghsa_id": "GHSA-rf7p-79xq-8xwm",
+  "cve_id": "CVE-2023-52311",
+  "ecosystem": "pip",
+  "packages": [
+   "PaddlePaddle"
+  ],
+  "published_at": "2024-01-03T09:30:33Z",
+  "advisory_cwes": [78],
+  "html_url": "https://github.com/advisories/GHSA-rf7p-79xq-8xwm",
+  "label_cwes": [78],
+  "repo": "PaddlePaddle/Paddle",
+  "fix_sha": "c5f6862d118d7d69210f0e73bea1b055f5f21f2b",
+  "parent_sha": "e64a054ff6b3964070fb2eb24c9aace2db5965eb",
+  "path_vulnerable": "python/paddle/utils/download.py",
+  "path_patched": "python/paddle/utils/download.py",
+  "language": "python",
+  "vulnerable_lines": [
+   [23, 24],
+   [199, 211],
+   [214, 214]
+  ],
+  "patched_lines": [
+   [24, 24],
+   [200, 211],
+   [213, 220],
+   [222, 224]
+  ],
+  "commit_url": "https://github.com/PaddlePaddle/Paddle/commit/c5f6862d118d7d69210f0e73bea1b055f5f21f2b",
+  "case_id": "012-GHSA-rf7p-79xq-8xwm",
+  "content": {
+   "vulnerable": {
+    "sha256": "28dd18b7c67b4d93855cb9953f513f4592bcf4002faf58b2566573a30447aec2",
+    "bytes": 11653
+   },
+   "patched": {
+    "sha256": "897b8d74499e44ae1d2c37b3d50b79b073d4503ea8b9bb8159439d45a40cbeb4",
+    "bytes": 12046
+   }
+  }
+ },
+ "status": "scored",
+ "tools": {
+  "nephilex": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [
+     [
+      266,
+      "patterns.weak-hash-md5-sha1",
+      [327]
+     ]
+    ],
+    "patched": [
+     [
+      276,
+      "patterns.weak-hash-md5-sha1",
+      [327]
+     ]
+    ]
+   }
+  },
+  "bandit": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [
+     [
+      19,
+      "B404",
+      [78]
+     ],
+     [
+      139,
+      "B101",
+      [703]
+     ],
+     [
+      168,
+      "B113",
+      [400]
+     ],
+     [
+      205,
+      "B602",
+      [78]
+     ],
+     [
+      235,
+      "B101",
+      [703]
+     ],
+     [
+      266,
+      "B324",
+      [327]
+     ],
+     [
+      311,
+      "B202",
+      [22]
+     ],
+     [
+      320,
+      "B202",
+      [22]
+     ],
+     [
+      326,
+      "B202",
+      [22]
+     ],
+     [
+      340,
+      "B202",
+      [22]
+     ],
+     [
+      346,
+      "B202",
+      [22]
+     ],
+     [
+      353,
+      "B202",
+      [22]
+     ]
+    ],
+    "patched": [
+     [
+      19,
+      "B404",
+      [78]
+     ],
+     [
+      140,
+      "B101",
+      [703]
+     ],
+     [
+      169,
+      "B113",
+      [400]
+     ],
+     [
+      202,
+      "B101",
+      [703]
+     ],
+     [
+      211,
+      "B602",
+      [78]
+     ],
+     [
+      245,
+      "B101",
+      [703]
+     ],
+     [
+      276,
+      "B324",
+      [327]
+     ],
+     [
+      321,
+      "B202",
+      [22]
+     ],
+     [
+      330,
+      "B202",
+      [22]
+     ],
+     [
+      336,
+      "B202",
+      [22]
+     ],
+     [
+      350,
+      "B202",
+      [22]
+     ],
+     [
+      356,
+      "B202",
+      [22]
+     ],
+     [
+      363,
+      "B202",
+      [22]
+     ]
+    ]
+   }
+  },
+  "semgrep": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [
+     [
+      205,
+      "python.lang.security.audit.subprocess-shell-true.subprocess-shell-true",
+      [78]
+     ],
+     [
+      266,
+      "python.lang.security.insecure-hash-algorithms-md5.insecure-hash-algorithm-md5",
+      [327]
+     ]
+    ],
+    "patched": [
+     [
+      211,
+      "python.lang.security.audit.subprocess-shell-true.subprocess-shell-true",
+      [78]
+     ],
+     [
+      276,
+      "python.lang.security.insecure-hash-algorithms-md5.insecure-hash-algorithm-md5",
+      [327]
+     ]
+    ]
+   }
+  }
+ },
+ "outcomes": {
+  "nephilex": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  },
+  "bandit": {
+   "window": 3,
+   "mapped": {
+    "detected": true,
+    "flagged_after_fix": true
+   },
+   "strict": {
+    "detected": true,
+    "flagged_after_fix": true
+   },
+   "any": {
+    "detected": true,
+    "flagged_after_fix": true
+   }
+  },
+  "semgrep": {
+   "window": 3,
+   "mapped": {
+    "detected": true,
+    "flagged_after_fix": true
+   },
+   "strict": {
+    "detected": true,
+    "flagged_after_fix": true
+   },
+   "any": {
+    "detected": true,
+    "flagged_after_fix": true
+   }
+  }
+ }
+}

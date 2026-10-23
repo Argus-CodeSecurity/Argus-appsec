@@ -1,0 +1,632 @@
+{
+ "case": {
+  "ghsa_id": "GHSA-rf8c-3f5p-xv45",
+  "cve_id": "CVE-2026-25198",
+  "ecosystem": "pip",
+  "packages": [
+   "web2py"
+  ],
+  "published_at": "2026-02-05T09:31:13Z",
+  "advisory_cwes": [601],
+  "html_url": "https://github.com/advisories/GHSA-rf8c-3f5p-xv45",
+  "label_cwes": [601],
+  "repo": "web2py/web2py",
+  "fix_sha": "b4e1ddbd6d40fb30863f6263a67bcdf411a0c6df",
+  "parent_sha": "d4f83efaeac65850ff842cc7d69d2961ce577d4c",
+  "path_vulnerable": "gluon/tools.py",
+  "path_patched": "gluon/tools.py",
+  "language": "python",
+  "vulnerable_lines": [
+   [133, 134],
+   [149, 149]
+  ],
+  "patched_lines": [
+   [133, 138],
+   [153, 153],
+   [155, 156]
+  ],
+  "commit_url": "https://github.com/web2py/web2py/commit/b4e1ddbd6d40fb30863f6263a67bcdf411a0c6df",
+  "case_id": "084-GHSA-rf8c-3f5p-xv45",
+  "content": {
+   "vulnerable": {
+    "sha256": "4a6fa0b00d9f78774e975d87d519cd0657ec89d7b97f0df72746198c8a08206b",
+    "bytes": 277419
+   },
+   "patched": {
+    "sha256": "ba1d1f24cba977be4b8d10ba423ca2b3ec94c2081a6d9422c0611803ca77e4ae",
+    "bytes": 277620
+   }
+  }
+ },
+ "status": "scored",
+ "tools": {
+  "nephilex": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [
+     [
+      2562,
+      "logic.race-hint",
+      [840]
+     ],
+     [
+      2563,
+      "logic.race-hint",
+      [840]
+     ],
+     [
+      2564,
+      "logic.race-hint",
+      [840]
+     ],
+     [
+      3066,
+      "ast-python.ast-open-redirect",
+      [601]
+     ],
+     [
+      3520,
+      "ast-python.ast-open-redirect",
+      [601]
+     ],
+     [
+      3628,
+      "ast-python.ast-open-redirect",
+      [601]
+     ],
+     [
+      3643,
+      "ast-python.ast-open-redirect",
+      [601]
+     ],
+     [
+      3654,
+      "ast-python.ast-weak-random",
+      [330, 338]
+     ],
+     [
+      3655,
+      "ast-python.ast-weak-random",
+      [330, 338]
+     ],
+     [
+      3656,
+      "ast-python.ast-weak-random",
+      [330, 338]
+     ],
+     [
+      3657,
+      "ast-python.ast-weak-random",
+      [330, 338]
+     ],
+     [
+      3658,
+      "ast-python.ast-weak-random",
+      [330, 338]
+     ],
+     [
+      3713,
+      "ast-python.ast-open-redirect",
+      [601]
+     ],
+     [
+      3719,
+      "ast-python.ast-open-redirect",
+      [601]
+     ],
+     [
+      3741,
+      "ast-python.ast-open-redirect",
+      [601]
+     ],
+     [
+      4102,
+      "ast-python.ast-open-redirect",
+      [601]
+     ],
+     [
+      4109,
+      "ast-python.ast-open-redirect",
+      [601]
+     ],
+     [
+      4122,
+      "ast-python.ast-open-redirect",
+      [601]
+     ],
+     [
+      4255,
+      "ast-python.ast-open-redirect",
+      [601]
+     ],
+     [
+      4325,
+      "ast-python.ast-open-redirect",
+      [601]
+     ],
+     [
+      4384,
+      "logic.admin-function",
+      [840]
+     ],
+     [
+      4423,
+      "patterns.python-pickle-loads",
+      [502]
+     ],
+     [
+      6455,
+      "ast-python.ast-path-traversal",
+      [22]
+     ],
+     [
+      6466,
+      "ast-python.ast-path-traversal",
+      [22]
+     ],
+     [
+      6905,
+      "ast-python-xfile.ast-open-redirect",
+      [601]
+     ],
+     [
+      7155,
+      "ast-python.ast-open-redirect",
+      [601]
+     ]
+    ],
+    "patched": [
+     [
+      2568,
+      "logic.race-hint",
+      [840]
+     ],
+     [
+      2569,
+      "logic.race-hint",
+      [840]
+     ],
+     [
+      2570,
+      "logic.race-hint",
+      [840]
+     ],
+     [
+      3072,
+      "ast-python.ast-open-redirect",
+      [601]
+     ],
+     [
+      3526,
+      "ast-python.ast-open-redirect",
+      [601]
+     ],
+     [
+      3634,
+      "ast-python.ast-open-redirect",
+      [601]
+     ],
+     [
+      3649,
+      "ast-python.ast-open-redirect",
+      [601]
+     ],
+     [
+      3660,
+      "ast-python.ast-weak-random",
+      [330, 338]
+     ],
+     [
+      3661,
+      "ast-python.ast-weak-random",
+      [330, 338]
+     ],
+     [
+      3662,
+      "ast-python.ast-weak-random",
+      [330, 338]
+     ],
+     [
+      3663,
+      "ast-python.ast-weak-random",
+      [330, 338]
+     ],
+     [
+      3664,
+      "ast-python.ast-weak-random",
+      [330, 338]
+     ],
+     [
+      3719,
+      "ast-python.ast-open-redirect",
+      [601]
+     ],
+     [
+      3725,
+      "ast-python.ast-open-redirect",
+      [601]
+     ],
+     [
+      3747,
+      "ast-python.ast-open-redirect",
+      [601]
+     ],
+     [
+      4108,
+      "ast-python.ast-open-redirect",
+      [601]
+     ],
+     [
+      4115,
+      "ast-python.ast-open-redirect",
+      [601]
+     ],
+     [
+      4128,
+      "ast-python.ast-open-redirect",
+      [601]
+     ],
+     [
+      4261,
+      "ast-python.ast-open-redirect",
+      [601]
+     ],
+     [
+      4331,
+      "ast-python.ast-open-redirect",
+      [601]
+     ],
+     [
+      4390,
+      "logic.admin-function",
+      [840]
+     ],
+     [
+      4429,
+      "patterns.python-pickle-loads",
+      [502]
+     ],
+     [
+      6461,
+      "ast-python.ast-path-traversal",
+      [22]
+     ],
+     [
+      6472,
+      "ast-python.ast-path-traversal",
+      [22]
+     ],
+     [
+      6911,
+      "ast-python-xfile.ast-open-redirect",
+      [601]
+     ],
+     [
+      7161,
+      "ast-python.ast-open-redirect",
+      [601]
+     ]
+    ]
+   }
+  },
+  "bandit": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [
+     [
+      25,
+      "B403",
+      [502]
+     ],
+     [
+      934,
+      "B110",
+      [703]
+     ],
+     [
+      1069,
+      "B310",
+      [22]
+     ],
+     [
+      1269,
+      "B107",
+      [259]
+     ],
+     [
+      1430,
+      "B107",
+      [259]
+     ],
+     [
+      1491,
+      "B107",
+      [259]
+     ],
+     [
+      1522,
+      "B107",
+      [259]
+     ],
+     [
+      1614,
+      "B106",
+      [259]
+     ],
+     [
+      1632,
+      "B106",
+      [259]
+     ],
+     [
+      2895,
+      "B110",
+      [703]
+     ],
+     [
+      3131,
+      "B311",
+      [330]
+     ],
+     [
+      3155,
+      "B110",
+      [703]
+     ],
+     [
+      3216,
+      "B110",
+      [703]
+     ],
+     [
+      3395,
+      "B110",
+      [703]
+     ],
+     [
+      3651,
+      "B105",
+      [259]
+     ],
+     [
+      3654,
+      "B311",
+      [330]
+     ],
+     [
+      3655,
+      "B311",
+      [330]
+     ],
+     [
+      3656,
+      "B311",
+      [330]
+     ],
+     [
+      3657,
+      "B311",
+      [330]
+     ],
+     [
+      3658,
+      "B311",
+      [330]
+     ],
+     [
+      3822,
+      "B105",
+      [259]
+     ],
+     [
+      4006,
+      "B105",
+      [259]
+     ],
+     [
+      4246,
+      "B105",
+      [259]
+     ],
+     [
+      4423,
+      "B301",
+      [502]
+     ],
+     [
+      5367,
+      "B310",
+      [22]
+     ]
+    ],
+    "patched": [
+     [
+      25,
+      "B403",
+      [502]
+     ],
+     [
+      940,
+      "B110",
+      [703]
+     ],
+     [
+      1075,
+      "B310",
+      [22]
+     ],
+     [
+      1275,
+      "B107",
+      [259]
+     ],
+     [
+      1436,
+      "B107",
+      [259]
+     ],
+     [
+      1497,
+      "B107",
+      [259]
+     ],
+     [
+      1528,
+      "B107",
+      [259]
+     ],
+     [
+      1620,
+      "B106",
+      [259]
+     ],
+     [
+      1638,
+      "B106",
+      [259]
+     ],
+     [
+      2901,
+      "B110",
+      [703]
+     ],
+     [
+      3137,
+      "B311",
+      [330]
+     ],
+     [
+      3161,
+      "B110",
+      [703]
+     ],
+     [
+      3222,
+      "B110",
+      [703]
+     ],
+     [
+      3401,
+      "B110",
+      [703]
+     ],
+     [
+      3657,
+      "B105",
+      [259]
+     ],
+     [
+      3660,
+      "B311",
+      [330]
+     ],
+     [
+      3661,
+      "B311",
+      [330]
+     ],
+     [
+      3662,
+      "B311",
+      [330]
+     ],
+     [
+      3663,
+      "B311",
+      [330]
+     ],
+     [
+      3664,
+      "B311",
+      [330]
+     ],
+     [
+      3828,
+      "B105",
+      [259]
+     ],
+     [
+      4012,
+      "B105",
+      [259]
+     ],
+     [
+      4252,
+      "B105",
+      [259]
+     ],
+     [
+      4429,
+      "B301",
+      [502]
+     ],
+     [
+      5373,
+      "B310",
+      [22]
+     ]
+    ]
+   }
+  },
+  "semgrep": {
+   "status": "ok",
+   "parse_error_versions": [
+    "patched",
+    "vulnerable"
+   ],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  }
+ },
+ "outcomes": {
+  "nephilex": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  },
+  "bandit": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  },
+  "semgrep": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  }
+ }
+}
