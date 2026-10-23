@@ -7,6 +7,15 @@ include breaking changes, noted explicitly).
 
 ## [Unreleased]
 
+### Changed
+- Releases go through a staging phase. A release candidate (`0.12.0rc1`, a
+  GitHub pre-release) publishes to TestPyPI and the `rc` image tag; only a
+  final version reaches PyPI and `latest`, and the workflows refuse a release
+  whose pre-release setting disagrees with its version. A manual Docker build
+  publishes `edge` and `sha-<commit>`, never `latest`. See RELEASING.md for the
+  phases and the four-week rhythm.
+- Routine Dependabot updates are monthly instead of weekly.
+
 ## [0.11.0] - 2026-10-23
 
 ### Added

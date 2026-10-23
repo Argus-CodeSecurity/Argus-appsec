@@ -1,4 +1,5 @@
-# Publish Nephilex to PyPI when a GitHub Release is published.
+# Publish Nephilex when a GitHub Release is published: release candidates
+# (0.12.0rc1) go to TestPyPI for staging, final versions (0.12.0) to PyPI.
 #
 # Uses PyPI Trusted Publishing (OIDC), no API token or secret is stored in the
 # repo. You configure the trust relationship once on PyPI (see RELEASING.md).
@@ -23,6 +24,8 @@ jobs:
   verify:
     name: Verify tag and run tests
     runs-on: ubuntu-latest
+    outputs:
+      channel: ${{ steps.version.outputs.channel }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -38,15 +41,40 @@ jobs:
           pip install --require-hashes -r requirements/dev.txt
           pip install --no-deps --no-build-isolation -e .
 
-      - name: Release tag matches the package version
+      - name: Release tag matches the package version, and pick the channel
+        id: version
         env:
           TAG: ${{ github.event.release.tag_name }}
+          PRERELEASE: ${{ github.event.release.prerelease }}
         run: |
           version="$(python -c 'import nephilex; print(nephilex.__version__)')"
           if [ "${TAG#v}" != "$version" ]; then
             echo "::error::Release tag '$TAG' does not match package version '$version'."
             exit 1
           fi
+          # Staging or production is decided by the version, and the GitHub
+          # release must agree, so a release candidate can never reach PyPI or
+          # :latest and a final version is never hidden as a pre-release.
+          #   0.12.0     -> production (PyPI, :latest)
+          #   0.12.0rc1  -> staging    (TestPyPI, :rc); also a1, b1
+          if [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            channel=production
+          elif [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(a|b|rc)[0-9]+$ ]]; then
+            channel=staging
+          else
+            echo "::error::Version '$version' is neither X.Y.Z nor X.Y.Z{a,b,rc}N."
+            exit 1
+          fi
+          if [ "$channel" = staging ] && [ "$PRERELEASE" != true ]; then
+            echo "::error::$version is a pre-release: mark the GitHub release as a pre-release."
+            exit 1
+          fi
+          if [ "$channel" = production ] && [ "$PRERELEASE" = true ]; then
+            echo "::error::$version is a final version: do not mark the GitHub release as a pre-release."
+            exit 1
+          fi
+          echo "channel=$channel" >> "$GITHUB_OUTPUT"
+          echo "Release channel: $channel"
 
       - name: Test
         run: pytest -q
@@ -116,9 +144,30 @@ jobs:
           name: sbom
           path: sbom/
 
+  publish-testpypi:
+    name: Publish to TestPyPI (staging)
+    needs: [verify, build]
+    if: needs.verify.outputs.channel == 'staging'
+    runs-on: ubuntu-latest
+    environment:
+      name: testpypi
+      url: https://test.pypi.org/project/nephilex/
+    permissions:
+      id-token: write # required for trusted publishing (OIDC)
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: dist
+          path: dist/
+      - name: Publish
+        uses: pypa/gh-action-pypi-publish@7245906fb61fa33a13554f9d5fb856fe61758086 # v1.14.3
+        with:
+          repository-url: https://test.pypi.org/legacy/
+
   publish:
     name: Publish to PyPI
-    needs: build
+    needs: [verify, build]
+    if: needs.verify.outputs.channel == 'production'
     runs-on: ubuntu-latest
     environment:
       name: pypi
