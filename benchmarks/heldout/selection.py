@@ -32,15 +32,28 @@ Rule, in order:
 
 A *case* is one file of one advisory: the vulnerable version is the file at the
 fix commit's first parent, the patched version is the file at the fix commit.
+
+Three sets use this rule (``SetRule``). They differ only in the published
+window, the case budget, the sampling order and what they exclude:
+
+* ``V1_RULE``: the frozen v1 held-out set (``benchmarks/heldout/manifest.json``).
+* ``DEV_RULE``: the development set. Same window as v1, minus every advisory
+  v1 examined, sampled in a different order. Its misses are meant to be read.
+* ``timesplit_rule``: the time-split test set. Advisories published on or after
+  ``TIMESPLIT_START`` up to a freeze date given when it is selected, minus
+  every advisory the earlier sets examined. It is selected only after the
+  detection rules for a release are frozen (see ``cli.py``).
 """
 
 from __future__ import annotations
 
+import datetime as _dt
 import hashlib
 import re
-from collections.abc import Iterable, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import PurePosixPath
+from typing import Any
 
 from benchmarks.public.mapping import accepted_cwes
 
@@ -227,9 +240,129 @@ def advisory_label(cwe_ids: Iterable[str | int]) -> list[int]:
     return sorted(out)
 
 
-def sample_order(ghsa_id: str) -> str:
-    """Fixed pseudo-random order key for sampling (rule step 6)."""
-    return hashlib.sha256(ghsa_id.upper().encode("ascii")).hexdigest()
+def sample_order(ghsa_id: str, prefix: str = "") -> str:
+    """Fixed pseudo-random order key for sampling (rule step 6).
+
+    v1 hashes the upper-cased GHSA id alone. Other sets hash ``prefix`` plus
+    the id (``"dev:GHSA-..."``), which gives an unrelated order.
+    """
+    return hashlib.sha256((prefix + ghsa_id.upper()).encode("ascii")).hexdigest()
+
+
+# --- benchmark sets -------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class SetRule:
+    """What one benchmark set changes in the shared rule (steps 1 and 6)."""
+
+    name: str
+    published_window: tuple[str, str]  # inclusive ISO dates, UTC
+    case_budget: Mapping[str, int]
+    order_prefix: str  # "" for v1, see ``sample_order``
+
+    def order_key(self, ghsa_id: str) -> str:
+        return sample_order(ghsa_id, self.order_prefix)
+
+    def in_window(self, published_at: str | None) -> bool:
+        """Client-side re-check of the API's ``published`` filter."""
+        day = str(published_at or "")[:10]
+        return bool(day) and self.published_window[0] <= day <= self.published_window[1]
+
+    @property
+    def sampling(self) -> str:
+        key = f'"{self.order_prefix}" + GHSA id' if self.order_prefix else "GHSA id"
+        return f"advisories ordered by sha256({key}), taken until the budget is reached"
+
+
+V1_RULE = SetRule("v1", PUBLISHED_WINDOW, CASE_BUDGET, "")
+
+# Development set: the v1 window, about 200 pip and 150 npm cases.
+DEV_CASE_BUDGET: dict[str, int] = {"pip": 200, "npm": 150}
+DEV_RULE = SetRule("dev", PUBLISHED_WINDOW, DEV_CASE_BUDGET, "dev:")
+
+# Time-split test set: published on or after this date, up to a freeze date.
+TIMESPLIT_START = "2026-10-01"
+TIMESPLIT_CASE_BUDGET: dict[str, int] = {"pip": 200, "npm": 150}
+
+
+def timesplit_rule(until: str, since: str = TIMESPLIT_START) -> SetRule:
+    """The time-split rule for the window ``since..until`` (both inclusive).
+
+    Raises ``ValueError`` for a malformed date, a start before
+    ``TIMESPLIT_START`` (that would reach into the v1 and dev window) or an
+    empty window. The caller checks that ``until`` is already in the past.
+    """
+    start = _parse_date(since, "since")
+    end = _parse_date(until, "until")
+    if start < _dt.date.fromisoformat(TIMESPLIT_START):
+        raise ValueError(f"since {start} is before the time-split start {TIMESPLIT_START}")
+    if end < start:
+        raise ValueError(f"until {end} is before since {start}")
+    return SetRule(
+        "timesplit", (start.isoformat(), end.isoformat()), TIMESPLIT_CASE_BUDGET, "timesplit:"
+    )
+
+
+def _parse_date(value: str, name: str) -> _dt.date:
+    try:
+        return _dt.date.fromisoformat(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{name} must be a date written YYYY-MM-DD, got {value!r}") from exc
+
+
+@dataclass(frozen=True)
+class PriorSets:
+    """Advisories and files that earlier sets examined. A later set skips them.
+
+    ``ghsa_ids`` holds every advisory an earlier selection examined, whether it
+    became a case or was dropped. ``cve_ids`` holds their CVE ids, so the same
+    vulnerability filed under a second GHSA id is skipped too. ``files`` holds
+    (repository, fix commit, path) of every earlier case.
+    """
+
+    ghsa_ids: frozenset[str] = frozenset()
+    cve_ids: frozenset[str] = frozenset()
+    files: frozenset[tuple[str, str, str]] = frozenset()
+    sources: tuple[dict[str, Any], ...] = ()
+
+    def reason(self, adv: Mapping[str, Any]) -> str | None:
+        """Why an advisory is skipped because of an earlier set, or None."""
+        if str(adv.get("ghsa_id", "")).upper() in self.ghsa_ids:
+            return "examined by an earlier set"
+        cve = str(adv.get("cve_id") or "").upper()
+        if cve and cve in self.cve_ids:
+            return "shares a CVE id with an advisory an earlier set examined"
+        return None
+
+    def merge(self, other: PriorSets) -> PriorSets:
+        return PriorSets(
+            self.ghsa_ids | other.ghsa_ids,
+            self.cve_ids | other.cve_ids,
+            self.files | other.files,
+            self.sources + other.sources,
+        )
+
+
+def prior_from_manifest(doc: Mapping[str, Any], set_name: str, path: str, sha256: str) -> PriorSets:
+    """Everything one manifest's selection examined: its cases and its drops."""
+    examined = [*doc.get("cases", []), *doc.get("excluded_advisories", [])]
+    ghsa = frozenset(str(a["ghsa_id"]).upper() for a in examined)
+    cves = frozenset(str(a["cve_id"]).upper() for a in examined if a.get("cve_id"))
+    files = frozenset(
+        (str(c["repo"]).lower(), str(c["fix_sha"]).lower(), str(c["path_patched"]))
+        for c in doc.get("cases", [])
+    )
+    source = {
+        "set": set_name,
+        "manifest": path,
+        "sha256": sha256,
+        "advisories_examined": len(ghsa),
+        "cve_ids": len(cves),
+        "case_files": len(files),
+        "ghsa_ids": sorted(ghsa),
+    }
+    return PriorSets(ghsa, cves, files, (source,))
 
 
 _HUNK_RE = re.compile(r"^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@")

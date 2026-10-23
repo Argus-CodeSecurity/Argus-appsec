@@ -2,9 +2,10 @@
 
 ``scan`` runs Nephilex, Bandit and Semgrep on both versions of every fetched
 case and then scores. ``score`` re-scores from the committed per-case files in
-``benchmarks/results/heldout/cases`` without running any tool.
+``benchmarks/results/<set>/cases`` without running any tool. Both take
+``--set`` (``cli.SETS``); the default is the v1 held-out set.
 
-Layout under ``benchmarks/.corpora/heldout`` (git ignored):
+Layout under ``benchmarks/.corpora/<set cache>`` (git ignored):
 
 * ``files/<case_id>/{vulnerable,patched}/<path>``: the downloaded files.
 * ``raw/<tool>/``: each tool's raw JSON output and run metadata.
@@ -32,6 +33,7 @@ from typing import Any
 
 from benchmarks.heldout import cli, fetch, report
 from benchmarks.heldout import scoring as hs
+from benchmarks.heldout.cli import BenchSet
 from benchmarks.heldout.selection import from_ranges
 from benchmarks.public import mapping
 from benchmarks.public import tools as ptools
@@ -47,9 +49,6 @@ APPLIES: dict[str, frozenset[str]] = {
 }
 _AST_TIER = {"python": "ast-python", "javascript": "ast-js", "typescript": "ast-js"}
 
-RAW = cli.CACHE / "raw"
-CASES_OUT = cli.RESULTS / "cases"
-
 
 def _now() -> str:
     return _dt.datetime.now(_dt.timezone.utc).replace(microsecond=0).isoformat()
@@ -62,7 +61,9 @@ def _sha256(path: Path) -> str:
 # --- case loading -------------------------------------------------------------
 
 
-def scored_cases(doc: dict[str, Any]) -> tuple[list[dict[str, Any]], dict[str, str]]:
+def scored_cases(
+    doc: dict[str, Any], bs: BenchSet = cli.V1
+) -> tuple[list[dict[str, Any]], dict[str, str]]:
     """Cases with both versions fetched and verified, plus excluded ones with reasons."""
     excluded = dict((doc.get("fetch") or {}).get("excluded_cases") or {})
     ok = []
@@ -71,7 +72,7 @@ def scored_cases(doc: dict[str, Any]) -> tuple[list[dict[str, Any]], dict[str, s
             continue
         content = case.get("content") or {}
         for version in fetch.VERSIONS:
-            path = fetch.case_file(cli.FILES, case, version)
+            path = fetch.case_file(bs.files, case, version)
             want = (content.get(version) or {}).get("sha256")
             if not path.is_file():
                 excluded[case["case_id"]] = f"{version} file not fetched"
@@ -102,9 +103,9 @@ def to_case(c: dict[str, Any]) -> hs.Case:
 Found = dict[str, dict[str, list[Finding]]]
 
 
-def _nephilex_one(case: dict[str, Any], version: str) -> dict[str, Any]:
-    root = cli.FILES / case["case_id"] / version
-    out_dir = RAW / "nephilex"
+def _nephilex_one(bs: BenchSet, case: dict[str, Any], version: str) -> dict[str, Any]:
+    root = bs.files / case["case_id"] / version
+    out_dir = bs.raw / "nephilex"
     raw = out_dir / f"{case['case_id']}.{version}.json"
     cmd = [
         sys.executable,
@@ -147,13 +148,15 @@ def _nephilex_one(case: dict[str, Any], version: str) -> dict[str, Any]:
     }
 
 
-def run_nephilex(cases: list[dict[str, Any]], jobs: int) -> tuple[dict[str, Any], Found]:
-    (RAW / "nephilex").mkdir(parents=True, exist_ok=True)
+def run_nephilex(
+    cases: list[dict[str, Any]], jobs: int, bs: BenchSet = cli.V1
+) -> tuple[dict[str, Any], Found]:
+    (bs.raw / "nephilex").mkdir(parents=True, exist_ok=True)
     started = _now()
     work = [(c, v) for c in cases for v in fetch.VERSIONS]
     t0 = time.perf_counter()
     with ThreadPoolExecutor(max_workers=jobs) as pool:
-        results = list(pool.map(lambda cv: _nephilex_one(*cv), work))
+        results = list(pool.map(lambda cv: _nephilex_one(bs, *cv), work))
     found: Found = {}
     failed: dict[str, list[str]] = {}
     versions = set()
@@ -198,9 +201,9 @@ def _attribute(findings: Iterable[Finding]) -> Found:
     return found
 
 
-def _error_paths(errors: Iterable[dict[str, Any]], key: str) -> list[str]:
+def _error_paths(errors: Iterable[dict[str, Any]], key: str, files_root: Path) -> list[str]:
     out = set()
-    root = str(cli.FILES).replace("\\", "/").rstrip("/") + "/"
+    root = str(files_root).replace("\\", "/").rstrip("/") + "/"
     for e in errors:
         path = str(e.get(key) or "").replace("\\", "/")
         if path.lower().startswith(root.lower()):
@@ -210,16 +213,18 @@ def _error_paths(errors: Iterable[dict[str, Any]], key: str) -> list[str]:
     return sorted(out)
 
 
-def run_bandit(exe: str | None) -> tuple[dict[str, Any], Found]:
-    out_dir = RAW / "bandit"
+def run_bandit(exe: str | None, bs: BenchSet = cli.V1) -> tuple[dict[str, Any], Found]:
+    out_dir = bs.raw / "bandit"
     opts = ptools.ToolOptions(bandit=exe, corpora=cli.CORPORA)
-    meta = ptools.run_tool("bandit", cli.FILES, out_dir, opts)
+    meta = ptools.run_tool("bandit", bs.files, out_dir, opts)
     raw = json.loads((out_dir / "bandit.json").read_text(encoding="utf-8"))
-    meta["parse_errors"] = _error_paths(raw.get("errors") or [], "filename")
-    return meta, _attribute(ptools.parse_bandit(raw, cli.FILES))
+    meta["parse_errors"] = _error_paths(raw.get("errors") or [], "filename", bs.files)
+    return meta, _attribute(ptools.parse_bandit(raw, bs.files))
 
 
-def run_semgrep(exe: str | None, refresh: bool) -> tuple[dict[str, Any], Found]:
+def run_semgrep(
+    exe: str | None, refresh: bool, bs: BenchSet = cli.V1
+) -> tuple[dict[str, Any], Found]:
     path = ptools._resolve(exe, "NEPHILEX_BENCH_SEMGREP", "semgrep")
     env = ptools._clean_env()
     rulesets = []
@@ -231,7 +236,7 @@ def run_semgrep(exe: str | None, refresh: bool) -> tuple[dict[str, Any], Found]:
         rules, rules_meta = ptools._semgrep_rules(opts)
         rulesets.append(rules_meta)
         rule_files.append(rules)
-    out_dir = RAW / "semgrep"
+    out_dir = bs.raw / "semgrep"
     out_dir.mkdir(parents=True, exist_ok=True)
     raw_path = out_dir / "semgrep.json"
     raw_path.unlink(missing_ok=True)
@@ -247,7 +252,7 @@ def run_semgrep(exe: str | None, refresh: bool) -> tuple[dict[str, Any], Found]:
         "-o",
         str(raw_path),
         "--quiet",
-        str(cli.FILES),
+        str(bs.files),
     ]
     started = _now()
     # Run from the ruleset directory with bare file names so registry rule ids
@@ -263,16 +268,16 @@ def run_semgrep(exe: str | None, refresh: bool) -> tuple[dict[str, Any], Found]:
         "started_at": started,
         "raw_sha256": _sha256(raw_path),
         "version": ptools._version([path, "--version"], env),
-        "command": ptools._portable(cmd, cli.FILES, raw_path, subs),
+        "command": ptools._portable(cmd, bs.files, raw_path, subs),
         "exit_code": code,
         "seconds": round(seconds, 1),
         "rulesets": rulesets,
         "semgrep_errors": len(raw.get("errors") or []),
-        "parse_errors": _error_paths(raw.get("errors") or [], "path"),
+        "parse_errors": _error_paths(raw.get("errors") or [], "path", bs.files),
         "notes": "registry rulesets cached locally; Semgrep CE engine; default settings",
     }
     (out_dir / "semgrep.meta.json").write_text(json.dumps(meta, indent=2), encoding="utf-8")
-    return meta, _attribute(ptools.parse_semgrep(raw, cli.FILES))
+    return meta, _attribute(ptools.parse_semgrep(raw, bs.files))
 
 
 def nephilex_commit() -> dict[str, Any]:
@@ -305,12 +310,13 @@ def write_case_files(
     excluded: dict[str, str],
     found_by_tool: dict[str, Found],
     errors_by_tool: dict[str, set[str]],
+    bs: BenchSet = cli.V1,
 ) -> None:
     """One JSON per case: manifest entry plus every tool's findings (no code)."""
-    CASES_OUT.mkdir(parents=True, exist_ok=True)
-    for old in CASES_OUT.glob("*.json"):
+    bs.cases_out.mkdir(parents=True, exist_ok=True)
+    for old in bs.cases_out.glob("*.json"):
         old.unlink()
-    doc = cli.load_manifest()
+    doc = cli.load_manifest(bs)
     by_id = {c["case_id"]: c for c in cases}
     for case in doc["cases"]:
         cid = case["case_id"]
@@ -333,15 +339,17 @@ def write_case_files(
                     ),
                     "findings": {v: _rows(per.get(v, [])) for v in fetch.VERSIONS},
                 }
-        path = CASES_OUT / f"{cid}.json"
+        path = bs.cases_out / f"{cid}.json"
         path.write_text(cli.dump_json(record) + "\n", encoding="utf-8", newline="\n")
 
 
-def read_case_files() -> tuple[list[dict[str, Any]], dict[str, str], dict[str, Found]]:
+def read_case_files(
+    bs: BenchSet = cli.V1,
+) -> tuple[list[dict[str, Any]], dict[str, str], dict[str, Found]]:
     cases: list[dict[str, Any]] = []
     excluded: dict[str, str] = {}
     found_by_tool: dict[str, Found] = {}
-    for path in sorted(CASES_OUT.glob("*.json")):
+    for path in sorted(bs.cases_out.glob("*.json")):
         record = json.loads(path.read_text(encoding="utf-8"))
         case = record["case"]
         if record["status"] != "scored":
@@ -413,8 +421,9 @@ def write_results(
     runs: dict[str, dict[str, Any]],
     nephilex_src: dict[str, Any],
     mode: str,
+    bs: BenchSet = cli.V1,
 ) -> dict[str, Any]:
-    manifest = cli.load_manifest()
+    manifest = cli.load_manifest(bs)
     tools: dict[str, Any] = {}
     per_case: dict[str, dict[str, Any]] = {}
     for tool in TOOLS:
@@ -424,44 +433,58 @@ def write_results(
         scored = score_tool(tool, cases, found_by_tool[tool])
         per_case[tool] = scored.pop("per_case")
         tools[tool] = {"status": "ok", "run": runs.get(tool, {}), **scored}
-    _add_outcomes(per_case)
-    doc = {
-        "schema_version": cli.SCHEMA_VERSION,
-        "generated_at": _now(),
-        "mode": mode,
-        "host": {"os": platform.system(), "python": platform.python_version()},
-        "nephilex_source": nephilex_src,
-        "manifest": {
-            "path": "benchmarks/heldout/manifest.json",
-            "sha256": _sha256(cli.MANIFEST),
-            "selected_at": manifest.get("selected_at"),
-            "cases_selected": len(manifest["cases"]),
-            "cases_scored": len(cases),
-            "cases_excluded": dict(sorted(excluded.items())),
-            "advisories_scored": len({c["ghsa_id"] for c in cases}),
-            "languages": _count(c["language"] for c in cases),
-            "ecosystems": _count(c["ecosystem"] for c in cases),
-        },
-        "scoring": {
-            "window": hs.WINDOW,
-            "sensitivity_windows": list(hs.SENSITIVITY_WINDOWS),
-            "modes": list(hs.MODES),
-            "applies": {k: sorted(v) for k, v in APPLIES.items()},
-            "mapping": mapping.tables_snapshot(),
-        },
-        "tools": tools,
-    }
-    cli.RESULTS.mkdir(parents=True, exist_ok=True)
-    out = cli.RESULTS / "heldout.json"
+    _add_outcomes(per_case, bs)
+    doc: dict[str, Any] = {"schema_version": cli.SCHEMA_VERSION}
+    if bs.name != "v1":
+        doc["set"] = bs.name
+        doc["note"] = bs.note
+    doc.update(
+        {
+            "generated_at": _now(),
+            "mode": mode,
+            "host": {"os": platform.system(), "python": platform.python_version()},
+            "nephilex_source": nephilex_src,
+            "manifest": {
+                "path": cli.rel(bs.manifest),
+                "sha256": _sha256(bs.manifest),
+                "selected_at": manifest.get("selected_at"),
+                "cases_selected": len(manifest["cases"]),
+                "cases_scored": len(cases),
+                "cases_excluded": dict(sorted(excluded.items())),
+                "advisories_scored": len({c["ghsa_id"] for c in cases}),
+                "languages": _count(c["language"] for c in cases),
+                "ecosystems": _count(c["ecosystem"] for c in cases),
+            },
+            "scoring": {
+                "window": hs.WINDOW,
+                "sensitivity_windows": list(hs.SENSITIVITY_WINDOWS),
+                "modes": list(hs.MODES),
+                "applies": {k: sorted(v) for k, v in APPLIES.items()},
+                "mapping": mapping.tables_snapshot(),
+            },
+            "tools": tools,
+        }
+    )
+    bs.results.mkdir(parents=True, exist_ok=True)
+    out = bs.results / bs.results_file
     out.write_text(cli.dump_json(doc) + "\n", encoding="utf-8", newline="\n")
-    summary = report.write_summary(doc, cli.RESULTS / "SUMMARY.md")
-    print(f"wrote {out.relative_to(cli.BENCH.parent)} and {summary.relative_to(cli.BENCH.parent)}")
+    # The development set is studied: its summary lists every case's outcome.
+    studied = bs.name == "dev"
+    summary = report.write_summary(
+        doc,
+        bs.results / "SUMMARY.md",
+        bs.title,
+        bs.note,
+        cases if studied else None,
+        per_case if studied else None,
+    )
+    print(f"wrote {cli.rel(out)} and {cli.rel(summary)}")
     return doc
 
 
-def _add_outcomes(per_case: dict[str, dict[str, Any]]) -> None:
+def _add_outcomes(per_case: dict[str, dict[str, Any]], bs: BenchSet = cli.V1) -> None:
     """Write each tool's outcome into the per-case files."""
-    for path in sorted(CASES_OUT.glob("*.json")):
+    for path in sorted(bs.cases_out.glob("*.json")):
         record = json.loads(path.read_text(encoding="utf-8"))
         if record["status"] != "scored":
             continue
@@ -485,8 +508,18 @@ def _count(values: Iterable[str]) -> dict[str, int]:
 
 
 def cmd_scan(args: argparse.Namespace) -> int:
-    doc = cli.load_manifest()
-    cases, excluded = scored_cases(doc)
+    bs = cli.SETS[args.set]
+    doc = cli.load_manifest(bs)
+    frozen = (doc.get("freeze") or {}).get("rules_frozen_at")
+    if frozen:
+        # A frozen set is scored only with the detection code it was frozen against.
+        problems = cli.src_matches_commit(frozen)
+        if problems:
+            print(f"refusing to scan the {bs.name} set:", file=sys.stderr)
+            for p in problems:
+                print(f"  - {p}", file=sys.stderr)
+            return 2
+    cases, excluded = scored_cases(doc, bs)
     print(f"{len(cases)} cases to scan, {len(excluded)} excluded")
     found_by_tool: dict[str, Found] = {}
     runs: dict[str, dict[str, Any]] = {}
@@ -495,11 +528,11 @@ def cmd_scan(args: argparse.Namespace) -> int:
         print(f"  {tool}: ", end="", flush=True)
         try:
             if tool == "nephilex":
-                meta, found = run_nephilex(cases, args.jobs)
+                meta, found = run_nephilex(cases, args.jobs, bs)
             elif tool == "bandit":
-                meta, found = run_bandit(args.bandit)
+                meta, found = run_bandit(args.bandit, bs)
             else:
-                meta, found = run_semgrep(args.semgrep, args.refresh_semgrep_rules)
+                meta, found = run_semgrep(args.semgrep, args.refresh_semgrep_rules, bs)
         except ptools.ToolUnavailable as exc:
             print(f"not run ({exc})")
             runs[tool] = {"status": "not_run", "reason": str(exc)}
@@ -509,27 +542,29 @@ def cmd_scan(args: argparse.Namespace) -> int:
         errors[tool] = set(meta.get("parse_errors") or [])
         total = sum(len(v) for per in found.values() for v in per.values())
         print(f"{total} findings in cases ({meta.get('version')}, {meta.get('seconds')} s)")
-    write_case_files(cases, excluded, found_by_tool, errors)
-    (cli.RESULTS / "runs.json").write_text(
+    write_case_files(cases, excluded, found_by_tool, errors, bs)
+    (bs.results / "runs.json").write_text(
         cli.dump_json({"nephilex_source": nephilex_commit(), "runs": runs}) + "\n",
         encoding="utf-8",
         newline="\n",
     )
-    write_results(cases, excluded, found_by_tool, runs, nephilex_commit(), "live")
+    write_results(cases, excluded, found_by_tool, runs, nephilex_commit(), "live", bs)
     return 0
 
 
 def cmd_score(args: argparse.Namespace) -> int:
-    cases, excluded, found_by_tool = read_case_files()
-    runs_doc = json.loads((cli.RESULTS / "runs.json").read_text(encoding="utf-8"))
+    bs = cli.SETS[args.set]
+    cases, excluded, found_by_tool = read_case_files(bs)
+    runs_doc = json.loads((bs.results / "runs.json").read_text(encoding="utf-8"))
     write_results(
-        cases, excluded, found_by_tool, runs_doc["runs"], runs_doc["nephilex_source"], "rescore"
+        cases, excluded, found_by_tool, runs_doc["runs"], runs_doc["nephilex_source"], "rescore", bs
     )
     return 0
 
 
 def add_parsers(sub: Any) -> None:
     s = sub.add_parser("scan", help="run Nephilex, Bandit and Semgrep on the cases, then score")
+    cli.add_set_arg(s)
     s.add_argument("--bandit", help="path to bandit (or NEPHILEX_BENCH_BANDIT)")
     s.add_argument("--semgrep", help="path to semgrep (or NEPHILEX_BENCH_SEMGREP)")
     s.add_argument("--jobs", type=int, default=4, help="parallel Nephilex runs (default 4)")
@@ -539,4 +574,5 @@ def add_parsers(sub: Any) -> None:
     s.set_defaults(func=cmd_scan)
 
     r = sub.add_parser("score", help="re-score from the committed per-case results")
+    cli.add_set_arg(r)
     r.set_defaults(func=cmd_score)
