@@ -148,7 +148,9 @@ target-version = "py310"
 src = ["src", "tests"]
 # The example app contains deliberately insecure, non-idiomatic code so the
 # scanners have something to find. Linting it is meaningless, exclude it.
-extend-exclude = ["examples"]
+# The labeled agent-security corpus is benchmark data: realistic snippets that
+# import packages the project does not install, not code to lint.
+extend-exclude = ["examples", "benchmarks/agent/corpus"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM"]

