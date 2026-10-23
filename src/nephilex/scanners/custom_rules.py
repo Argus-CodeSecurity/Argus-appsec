@@ -268,7 +268,7 @@ def _str_list(value) -> list[str]:
 def _load_file(path: Path) -> list[Rule]:
     try:
         data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
-    except (OSError, yaml.YAMLError) as exc:
+    except (OSError, UnicodeDecodeError, yaml.YAMLError, RecursionError) as exc:
         log.warning("could not read custom rules from %s: %s", path, exc)
         return []
     raw_rules = data.get("rules") if isinstance(data, dict) else None

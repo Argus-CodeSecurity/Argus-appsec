@@ -1,0 +1,49 @@
+# Coverage-guided fuzzing of the parsers that read untrusted input: SARIF from
+# other tools, .nephilex.yml and .nephilex/context.yml (fuzz/fuzz_*.py).
+# ClusterFuzzLite builds the atheris harnesses in .clusterfuzzlite/ and reports
+# any crash, hang or unexpected exception as a failed job with the input that
+# triggered it. tests/test_fuzz_harnesses.py runs the same harnesses on seeds in
+# the normal test suite.
+name: Fuzz
+
+on:
+  pull_request:
+    paths:
+      - "src/nephilex/importers/**"
+      - "src/nephilex/core/config.py"
+      - "src/nephilex/context/**"
+      - "fuzz/**"
+      - ".clusterfuzzlite/**"
+      - ".github/workflows/fuzz.yml"
+  schedule:
+    - cron: "17 3 * * 1" # weekly, Monday 03:17 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fuzz-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  fuzz:
+    name: Fuzz parsers
+    runs-on: ubuntu-latest
+    steps:
+      - name: Build fuzzers
+        uses: google/clusterfuzzlite/actions/build_fuzzers@884713a6c30a92e5e8544c39945cd7cb630abcd1 # v1
+        with:
+          language: python
+          sanitizer: address
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Run fuzzers
+        uses: google/clusterfuzzlite/actions/run_fuzzers@884713a6c30a92e5e8544c39945cd7cb630abcd1 # v1
+        with:
+          language: python
+          sanitizer: address
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          # Pull requests get a short run on the changed code; the weekly run
+          # fuzzes every harness for longer.
+          mode: ${{ github.event_name == 'pull_request' && 'code-change' || 'batch' }}
+          fuzz-seconds: ${{ github.event_name == 'pull_request' && 300 || 1800 }}

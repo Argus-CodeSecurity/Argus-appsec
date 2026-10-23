@@ -503,6 +503,8 @@ def parse_context(text: str, *, source: str = CONTEXT_PATH) -> ProjectContext:
         data = yaml.safe_load(text)
     except yaml.YAMLError as exc:
         raise ConfigError(f"{source}: invalid YAML: {exc}") from exc
+    except RecursionError as exc:
+        raise ConfigError(f"{source}: invalid YAML: nested too deeply") from exc
     if data is None:
         return ProjectContext(source=source)
     if not isinstance(data, dict):

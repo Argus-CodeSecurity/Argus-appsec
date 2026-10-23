@@ -46,7 +46,10 @@ def load_agent_config(path: Path) -> AgentConfig:
     """Load agent config from YAML."""
     if not path.is_file():
         raise FileNotFoundError(f"Agent config not found: {path}")
-    data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    try:
+        data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    except (yaml.YAMLError, RecursionError) as exc:
+        raise ValueError(f"Agent config is not valid YAML: {exc!r}") from exc
     if not isinstance(data, dict):
         raise ValueError("Agent config must be a YAML mapping.")
 

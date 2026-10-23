@@ -48,7 +48,7 @@ def load_exceptions(path: Path) -> list[FindingException]:
         return []
     try:
         data = yaml.safe_load(path.read_text(encoding="utf-8"))
-    except (OSError, UnicodeDecodeError, yaml.YAMLError) as exc:
+    except (OSError, UnicodeDecodeError, yaml.YAMLError, RecursionError) as exc:
         raise ConfigError(f"{path}: cannot read exceptions file: {exc}") from exc
     if data is None:
         return []

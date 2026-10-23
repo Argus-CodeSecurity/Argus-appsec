@@ -1,0 +1,65 @@
+# OSV-Scanner configuration for the deliberately vulnerable demo app.
+#
+# requirements.txt here pins old flask, requests and pyyaml on purpose: the
+# dependency scanner and the docs demonstrate against them, and Dependabot is
+# told never to upgrade them (.github/dependabot.yml). This app is never
+# installed or shipped; Nephilex's own dependencies are in requirements.lock and
+# requirements/, which this file does not cover.
+#
+# Each advisory is listed under its PYSEC and GHSA ids.
+
+[[IgnoredVulns]]
+id = "PYSEC-2026-2151"
+reason = "Intentional: flask 2.0.1 is a demo target in examples/vulnerable-app; never installed or shipped."
+
+[[IgnoredVulns]]
+id = "GHSA-68rp-wp8r-4726"
+reason = "Intentional: flask 2.0.1 is a demo target in examples/vulnerable-app; never installed or shipped."
+
+[[IgnoredVulns]]
+id = "PYSEC-2023-62"
+reason = "Intentional: flask 2.0.1 is a demo target in examples/vulnerable-app; never installed or shipped."
+
+[[IgnoredVulns]]
+id = "GHSA-m2qf-hxjv-5gpq"
+reason = "Intentional: flask 2.0.1 is a demo target in examples/vulnerable-app; never installed or shipped."
+
+[[IgnoredVulns]]
+id = "PYSEC-2021-142"
+reason = "Intentional: pyyaml 5.3.1 is a demo target in examples/vulnerable-app; never installed or shipped."
+
+[[IgnoredVulns]]
+id = "GHSA-8q59-q68h-6hv4"
+reason = "Intentional: pyyaml 5.3.1 is a demo target in examples/vulnerable-app; never installed or shipped."
+
+[[IgnoredVulns]]
+id = "PYSEC-2026-1872"
+reason = "Intentional: requests 2.25.0 is a demo target in examples/vulnerable-app; never installed or shipped."
+
+[[IgnoredVulns]]
+id = "GHSA-9hjg-9r4m-mvj7"
+reason = "Intentional: requests 2.25.0 is a demo target in examples/vulnerable-app; never installed or shipped."
+
+[[IgnoredVulns]]
+id = "PYSEC-2026-1873"
+reason = "Intentional: requests 2.25.0 is a demo target in examples/vulnerable-app; never installed or shipped."
+
+[[IgnoredVulns]]
+id = "GHSA-9wx4-h78v-vm56"
+reason = "Intentional: requests 2.25.0 is a demo target in examples/vulnerable-app; never installed or shipped."
+
+[[IgnoredVulns]]
+id = "PYSEC-2026-2275"
+reason = "Intentional: requests 2.25.0 is a demo target in examples/vulnerable-app; never installed or shipped."
+
+[[IgnoredVulns]]
+id = "GHSA-gc5v-m9x4-r6x2"
+reason = "Intentional: requests 2.25.0 is a demo target in examples/vulnerable-app; never installed or shipped."
+
+[[IgnoredVulns]]
+id = "PYSEC-2023-74"
+reason = "Intentional: requests 2.25.0 is a demo target in examples/vulnerable-app; never installed or shipped."
+
+[[IgnoredVulns]]
+id = "GHSA-j8r2-6x86-q33q"
+reason = "Intentional: requests 2.25.0 is a demo target in examples/vulnerable-app; never installed or shipped."

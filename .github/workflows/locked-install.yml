@@ -14,11 +14,13 @@ on:
     branches: [main]
     paths:
       - "requirements.lock"
+      - "requirements/**"
       - "pyproject.toml"
       - ".github/workflows/locked-install.yml"
   pull_request:
     paths:
       - "requirements.lock"
+      - "requirements/**"
       - "pyproject.toml"
       - "Dockerfile"
 
@@ -38,7 +40,12 @@ jobs:
           python-version: "3.11" # matches the interpreter the lock was compiled for
       - name: Install pinned, hash-verified runtime dependencies
         run: pip install --require-hashes -r requirements.lock
+      - name: Build the wheel with the hash-locked build backend
+        run: |
+          python -m venv /tmp/backend
+          /tmp/backend/bin/pip install --require-hashes -r requirements/backend.txt
+          /tmp/backend/bin/pip wheel --no-deps --no-build-isolation --wheel-dir /tmp/wheel .
       - name: Install Nephilex without re-resolving dependencies
-        run: pip install --no-deps .
+        run: pip install --no-deps /tmp/wheel/*.whl
       - name: Smoke test
         run: nephilex --version

@@ -15,13 +15,20 @@ ENV PIP_NO_CACHE_DIR=1 \
 
 WORKDIR /src
 COPY requirements.lock ./
+COPY requirements/backend.txt ./requirements/
 RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 RUN pip install --require-hashes -r requirements.lock
 
+# The build backend comes from a hash lock too, in a throwaway venv the runtime
+# image never copies, so building the wheel fetches nothing unpinned.
+RUN /usr/local/bin/python -m venv /opt/backend \
+ && /opt/backend/bin/pip install --require-hashes -r requirements/backend.txt
+
 COPY pyproject.toml README.md LICENSE NOTICE ./
 COPY src ./src
-RUN pip install --no-deps .
+RUN /opt/backend/bin/pip wheel --no-deps --no-build-isolation --wheel-dir /tmp/wheel . \
+ && pip install --no-deps /tmp/wheel/*.whl
 
 # --- runtime ---------------------------------------------------------------
 FROM ${PYTHON_IMAGE} AS runtime
