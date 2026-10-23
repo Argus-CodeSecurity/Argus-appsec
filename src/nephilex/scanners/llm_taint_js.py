@@ -185,6 +185,21 @@ _CONSTRAINED_ZOD = re.compile(
 )
 _FUNCTION_TYPES = ("arrow_function", "function_expression", "function", "generator_function")
 _MUTATORS = {"push", "unshift", "add", "set"}
+#: Methods whose result is (part of) the string or array they are called on.
+_STRING_METHODS = {
+    "join",
+    "concat",
+    "replace",
+    "replaceAll",
+    "trim",
+    "toString",
+    "slice",
+    "substring",
+    "toLowerCase",
+    "toUpperCase",
+    "padStart",
+    "padEnd",
+}
 
 
 class JsTaint:
@@ -1092,6 +1107,10 @@ class JsTaint:
                 return {f: replace(t, validated=True) for f, t in out.items()}
             # MAP.get(key): the value comes from MAP, not from the key.
             out = recv if last == "get" else _merge(recv, out)
+        if "secret" in out and not (fn.type == "member_expression" and last in _STRING_METHODS):
+            # A client built with a key (new WebClient(token)) is not the key, and neither
+            # is what it returns; only string operations carry the secret value along.
+            out = {f: t for f, t in out.items() if f != "secret"}
         kinds = _SANITIZERS.get(last)
         if kinds:
             out = _strip(out, kinds)

@@ -432,3 +432,44 @@ def test_express_html_response_of_model_output(tmp_path):
     )
     hits = _hits(_scan(tmp_path, code, "a.js"), "insecure-output-handling")
     assert [(h.metadata["sink"], h.location.start_line) for h in hits] == [("html", 8)]
+
+
+def test_client_built_with_a_secret_does_not_taint_its_responses(tmp_path):
+    py = (
+        "import os\nfrom github import Github\nfrom openai import OpenAI\n"
+        "client = OpenAI()\ngh = Github(os.environ['GITHUB_TOKEN'])\n"
+        "def triage(repo, n):\n"
+        "    issue = gh.get_repo(repo).get_issue(n)\n"
+        "    return client.chat.completions.create(model='m', messages=["
+        "{'role': 'user', 'content': issue.body}])\n"
+    )
+    assert _hits(_scan(tmp_path, py), "secret-sent-to-model") == []
+    js = (
+        'const { WebClient } = require("@slack/web-api");\nconst OpenAI = require("openai");\n'
+        "const slack = new WebClient(process.env.SLACK_BOT_TOKEN);\nconst openai = new OpenAI();\n"
+        "async function digest(channel) {\n"
+        "  const h = await slack.conversations.history({ channel });\n"
+        "  const text = h.messages.map((m) => m.text).join('\\n');\n"
+        "  return openai.chat.completions.create({ model: 'm', messages: "
+        "[{ role: 'user', content: text }] });\n"
+        "}\n"
+    )
+    assert _hits(_scan(tmp_path, js, "digest.js"), "secret-sent-to-model") == []
+
+
+def test_tool_object_over_loaded_documents_is_not_a_tool_selection(tmp_path):
+    code = (
+        "import sqlite3\n"
+        "from llama_index.core import SimpleDirectoryReader, VectorStoreIndex\n"
+        "from llama_index.core.agent import ReActAgent\n"
+        "from llama_index.core.tools import FunctionTool, QueryEngineTool\n"
+        "from llama_index.llms.openai import OpenAI\n"
+        "DB = sqlite3.connect('x.db')\n"
+        "def lookup(i: int) -> str:\n"
+        "    '''Look up a row.'''\n"
+        "    return str(DB.execute('SELECT * FROM t WHERE id = ?', (i,)).fetchone())\n"
+        "docs = SimpleDirectoryReader('uploads').load_data()\n"
+        "search = QueryEngineTool.from_defaults(VectorStoreIndex.from_documents(docs).as_query_engine())\n"
+        "agent = ReActAgent.from_tools([search, FunctionTool.from_defaults(fn=lookup)], llm=OpenAI())\n"
+    )
+    assert _hits(_scan(tmp_path, code), "untrusted-tool-selection") == []

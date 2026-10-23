@@ -375,6 +375,21 @@ _GAPI_WRITE = {"insert", "patch", "update", "delete", "send", "modify", "trash",
 _HTTP_WRITE_VERBS = {"post", "put", "patch", "delete"}
 _HTTP_BODY_KWARGS = ("json", "data", "params", "content", "files", "body")
 _EMAIL_HEADERS = {"to", "cc", "bcc"}
+#: Methods whose result is (part of) the string they are called on or given.
+_STRING_METHODS = {
+    "format",
+    "join",
+    "replace",
+    "strip",
+    "lstrip",
+    "rstrip",
+    "lower",
+    "upper",
+    "encode",
+    "decode",
+    "removeprefix",
+    "removesuffix",
+}
 
 # --- sanitizers --------------------------------------------------------------
 
@@ -1631,6 +1646,10 @@ class PyTaint:
             out = _merge(recv_t, self._union(pos, kw, scope))
         else:
             out = self._union(pos, kw, scope)
+        if "secret" in out and not (fn.type == "attribute" and last in _STRING_METHODS):
+            # A client built with a key (Github(token)) is not the key, and neither is
+            # what it returns; only string operations carry the secret value along.
+            out = {f: t for f, t in out.items() if f != "secret"}
         if removed:
             out = _strip(out, removed)
         return out
@@ -2160,7 +2179,10 @@ class PyTaint:
         if tools_node is None:
             return
         ts = self._eval(tools_node, scope)
-        t = ts.get("selector") or ts.get("untrusted")
+        # A tool list chosen by untrusted data, or raw request data used as the list.
+        # (A tool object that merely reads untrusted documents does not choose anything.)
+        raw = ts.get("untrusted")
+        t = ts.get("selector") or (raw if raw and raw.structural and not raw.external else None)
         if t is None:
             return
         tools = self._resolve_tools(tools_node)
