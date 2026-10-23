@@ -415,7 +415,8 @@ Git history shows the order. In full:
 4. **Files.** From each fix commit, every modified or renamed `.py`, `.js`,
    `.mjs`, `.cjs`, `.jsx`, `.ts`, `.mts`, `.cts` or `.tsx` file, except tests
    (`test`/`tests`/`spec`/`__tests__`/`e2e` directories, `test_*.py`,
-   `*_test.py`, `conftest.py`, `*.test.js`, `*.spec.ts` and similar),
+   `*_test.py`, `test.py`, `tests.py`, `conftest.py`, `*.test.js`, `*.spec.ts`
+   and similar),
    documentation and examples (`doc`, `docs`, `example(s)`, `sample(s)`),
    vendored or build output (`vendor`, `third_party`, `node_modules`, `dist`,
    `build`, `coverage`, ...), minified or generated files (`*.min.js`,
@@ -453,14 +454,24 @@ Snapshot taken on 2026-10-23:
 | Withdrawn | 88 | 82 |
 | No GitHub fix commit reference | 789 | 737 |
 | Candidates | 1005 | 1055 |
-| Examined in sample order before the budget was reached | 97 | 51 |
+| Examined in sample order before the budget was reached | 99 | 51 |
 | Dropped: fix touches more than 5 source files | 18 | 7 |
 | Dropped: no eligible source file in the fix commits | 5 | 2 |
 | Dropped: fix commit not retrievable | 0 | 1 |
-| Selected advisories | 74 | 41 |
-| Selected cases (files) | 121 | 81 |
+| Selected advisories | 76 | 41 |
+| Selected cases (files) | 120 | 81 |
 
-The 202 cases are 119 Python, 48 JavaScript and 35 TypeScript files.
+The 201 cases (117 advisories) are 118 Python, 48 JavaScript and 35 TypeScript files.
+
+**Amendment, made before any score existed.** The first committed selection
+missed test modules named `test.py` or `tests.py` (the Django convention):
+three of its 202 cases were such files (Weblate `weblate/api/tests.py`,
+xml2rfc `test.py`, Taguette `tests.py`). The scan was stopped while Nephilex was
+still on its first cases, its partial output was deleted unread, `tests?.py`
+and `tests?.js` were added to the test-file rule, and the selection was re-run
+on the cached API responses. The same sampling order then added two files from
+the next advisories (wlc `wlc/main.py`, picklescan
+`src/picklescan/scanner.py`). Both manifests are in git history.
 
 ### Scoring
 

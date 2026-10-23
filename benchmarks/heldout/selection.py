@@ -121,8 +121,12 @@ _COMMIT_RE = re.compile(
 _TEST_DIRS = frozenset(
     {"test", "tests", "testing", "__tests__", "__test__", "spec", "specs", "e2e", "__mocks__"}
 )
+# ``tests?.py`` (the Django convention) and ``tests?.js`` were added on
+# 2026-10-23 after the first selection, before any score existed: three
+# selected cases were test modules (see docs/benchmarks.md, "Amendment").
 _TEST_FILE_RE = re.compile(
-    r"(^test_.*\.py$|.*_test\.py$|^conftest\.py$|.*\.(test|spec)\.[cm]?[jt]sx?$)"
+    r"(^test_.*\.py$|.*_test\.py$|^conftest\.py$|^tests?\.py$"
+    r"|^tests?\.[cm]?[jt]sx?$|.*\.(test|spec)\.[cm]?[jt]sx?$)"
 )
 _DOC_DIRS = frozenset({"doc", "docs", "documentation", "example", "examples", "sample", "samples"})
 _VENDOR_DIRS = frozenset(
