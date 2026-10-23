@@ -1,0 +1,151 @@
+{
+ "case": {
+  "ghsa_id": "GHSA-238w-f66p-w349",
+  "cve_id": "CVE-2026-9353",
+  "ecosystem": "pip",
+  "packages": [
+   "hermes-agent"
+  ],
+  "published_at": "2026-05-26T13:30:30Z",
+  "advisory_cwes": [74],
+  "html_url": "https://github.com/advisories/GHSA-238w-f66p-w349",
+  "label_cwes": [74],
+  "repo": "NousResearch/hermes-agent",
+  "fix_sha": "7ebebfbb8d10937cbf2219b4cf5e121b71e67428",
+  "parent_sha": "0a2ee71cccbf98ef9bcc1f1cd093c08357ebcd89",
+  "path_vulnerable": "tools/skills_guard.py",
+  "path_patched": "tools/skills_guard.py",
+  "language": "python",
+  "vulnerable_lines": [
+   [173, 173],
+   [477, 477]
+  ],
+  "patched_lines": [
+   [173, 173],
+   [477, 477]
+  ],
+  "commit_url": "https://github.com/NousResearch/hermes-agent/commit/7ebebfbb8d10937cbf2219b4cf5e121b71e67428",
+  "case_id": "101-GHSA-238w-f66p-w349",
+  "content": {
+   "vulnerable": {
+    "sha256": "56dfb046add83dddaa7ab9fd1d3d2691e5bf68a331254748e51c45c83f20794c",
+    "bytes": 38209
+   },
+   "patched": {
+    "sha256": "cf09a2a7af0bfcb5b11bb1fb1eb71bed862528c953dd864d759b6474152402fa",
+    "bytes": 38264
+   }
+  }
+ },
+ "status": "scored",
+ "tools": {
+  "nephilex": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [
+     [
+      269,
+      "malware.reverse-shell-bash",
+      [94]
+     ],
+     [
+      367,
+      "malware.cryptominer",
+      [506]
+     ]
+    ],
+    "patched": [
+     [
+      269,
+      "malware.reverse-shell-bash",
+      [94]
+     ],
+     [
+      367,
+      "malware.cryptominer",
+      [506]
+     ]
+    ]
+   }
+  },
+  "bandit": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [
+     [
+      362,
+      "B108",
+      [377]
+     ]
+    ],
+    "patched": [
+     [
+      362,
+      "B108",
+      [377]
+     ]
+    ]
+   }
+  },
+  "semgrep": {
+   "status": "ok",
+   "parse_error_versions": [
+    "patched",
+    "vulnerable"
+   ],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  }
+ },
+ "outcomes": {
+  "nephilex": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  },
+  "bandit": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  },
+  "semgrep": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  }
+ }
+}

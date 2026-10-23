@@ -1,0 +1,93 @@
+{
+ "case": {
+  "ghsa_id": "GHSA-2w6w-674q-4c4q",
+  "cve_id": "CVE-2026-33937",
+  "ecosystem": "npm",
+  "packages": [
+   "handlebars"
+  ],
+  "published_at": "2026-03-27T18:19:58Z",
+  "advisory_cwes": [94, 843],
+  "html_url": "https://github.com/advisories/GHSA-2w6w-674q-4c4q",
+  "label_cwes": [94],
+  "repo": "handlebars-lang/handlebars.js",
+  "fix_sha": "68d8df5a88e0a26fe9e6084c5c6aaebe67b07da2",
+  "parent_sha": "b2a083136b11e1da9f0f47a11f749a9830a49328",
+  "path_vulnerable": "lib/handlebars/compiler/javascript-compiler.js",
+  "path_patched": "lib/handlebars/compiler/javascript-compiler.js",
+  "language": "javascript",
+  "vulnerable_lines": [
+   [691, 691]
+  ],
+  "patched_lines": [
+   [689, 697],
+   [700, 700]
+  ],
+  "commit_url": "https://github.com/handlebars-lang/handlebars.js/commit/68d8df5a88e0a26fe9e6084c5c6aaebe67b07da2",
+  "case_id": "160-GHSA-2w6w-674q-4c4q",
+  "content": {
+   "vulnerable": {
+    "sha256": "94b7d659f244a0ce5d93814be362527b136a47b3b003f047d9ad72da99fc056b",
+    "bytes": 34350
+   },
+   "patched": {
+    "sha256": "09327fcbfc4c14fc9efaf13a326c946e974cb6c466da08a37f8013a9cb9cff78",
+    "bytes": 34852
+   }
+  }
+ },
+ "status": "scored",
+ "tools": {
+  "nephilex": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  },
+  "bandit": {
+   "status": "not_applicable"
+  },
+  "semgrep": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  }
+ },
+ "outcomes": {
+  "nephilex": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  },
+  "semgrep": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  }
+ }
+}

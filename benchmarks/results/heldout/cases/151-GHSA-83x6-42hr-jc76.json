@@ -1,0 +1,110 @@
+{
+ "case": {
+  "ghsa_id": "GHSA-83x6-42hr-jc76",
+  "cve_id": "CVE-2026-73845",
+  "ecosystem": "npm",
+  "packages": [
+   "@aborruso/ckan-mcp-server"
+  ],
+  "published_at": "2026-09-02T14:52:21Z",
+  "advisory_cwes": [20, 625, 918],
+  "html_url": "https://github.com/advisories/GHSA-83x6-42hr-jc76",
+  "label_cwes": [918],
+  "repo": "ondata/ckan-mcp-server",
+  "fix_sha": "8e1522f9bbfa1f3b21550f17887f60f133e24151",
+  "parent_sha": "ccfecb8f0504babf49655d02169e505908d32bff",
+  "path_vulnerable": "src/utils/http.ts",
+  "path_patched": "src/utils/http.ts",
+  "language": "typescript",
+  "vulnerable_lines": [
+   [74, 76],
+   [159, 160],
+   [213, 213],
+   [215, 215],
+   [217, 217],
+   [223, 223],
+   [592, 593],
+   [645, 647]
+  ],
+  "patched_lines": [
+   [73, 80],
+   [82, 84],
+   [168, 170],
+   [221, 221],
+   [225, 225],
+   [227, 227],
+   [229, 229],
+   [235, 235],
+   [239, 240],
+   [607, 608],
+   [662, 665],
+   [667, 669]
+  ],
+  "commit_url": "https://github.com/ondata/ckan-mcp-server/commit/8e1522f9bbfa1f3b21550f17887f60f133e24151",
+  "case_id": "151-GHSA-83x6-42hr-jc76",
+  "content": {
+   "vulnerable": {
+    "sha256": "b4fafb410667a4693b4a4ba3a4520f37de24c3fb275445fbaf053e86122a76d3",
+    "bytes": 23804
+   },
+   "patched": {
+    "sha256": "2ca6f8fb3a9f9a6392c2e8d9506a715a3bc061dee56810f90895ed8ce6dd1d32",
+    "bytes": 25301
+   }
+  }
+ },
+ "status": "scored",
+ "tools": {
+  "nephilex": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  },
+  "bandit": {
+   "status": "not_applicable"
+  },
+  "semgrep": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  }
+ },
+ "outcomes": {
+  "nephilex": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  },
+  "semgrep": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  }
+ }
+}

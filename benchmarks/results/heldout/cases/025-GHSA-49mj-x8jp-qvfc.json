@@ -1,0 +1,124 @@
+{
+ "case": {
+  "ghsa_id": "GHSA-49mj-x8jp-qvfc",
+  "cve_id": "CVE-2025-58180",
+  "ecosystem": "pip",
+  "packages": [
+   "octoprint"
+  ],
+  "published_at": "2025-09-09T19:22:22Z",
+  "advisory_cwes": [78],
+  "html_url": "https://github.com/advisories/GHSA-49mj-x8jp-qvfc",
+  "label_cwes": [78],
+  "repo": "OctoPrint/OctoPrint",
+  "fix_sha": "c3a940962f4658a8e035a00388781b1cbd768841",
+  "parent_sha": "6d717711d7dc394d3ff19472c32c41417868a771",
+  "path_vulnerable": "src/octoprint/util/files.py",
+  "path_patched": "src/octoprint/util/files.py",
+  "language": "python",
+  "vulnerable_lines": [
+   [11, 12],
+   [14, 14],
+   [16, 20],
+   [46, 46],
+   [65, 65],
+   [67, 67]
+  ],
+  "patched_lines": [
+   [9, 9],
+   [11, 15],
+   [17, 22],
+   [25, 26],
+   [52, 52],
+   [68, 69],
+   [73, 73],
+   [75, 75]
+  ],
+  "commit_url": "https://github.com/OctoPrint/OctoPrint/commit/c3a940962f4658a8e035a00388781b1cbd768841",
+  "case_id": "025-GHSA-49mj-x8jp-qvfc",
+  "content": {
+   "vulnerable": {
+    "sha256": "c320078f244121a8041857349ddc0819870f28f9be4903cfa4054846fec86128",
+    "bytes": 13579
+   },
+   "patched": {
+    "sha256": "65df6beabe2818a7cd4fb7b43cb5311773b32a41912a778b666a66ac04ac2938",
+    "bytes": 13895
+   }
+  }
+ },
+ "status": "scored",
+ "tools": {
+  "nephilex": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  },
+  "bandit": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  },
+  "semgrep": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  }
+ },
+ "outcomes": {
+  "nephilex": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  },
+  "bandit": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  },
+  "semgrep": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  }
+ }
+}

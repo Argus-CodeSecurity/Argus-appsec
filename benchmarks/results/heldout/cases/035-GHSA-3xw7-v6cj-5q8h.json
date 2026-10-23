@@ -1,0 +1,239 @@
+{
+ "case": {
+  "ghsa_id": "GHSA-3xw7-v6cj-5q8h",
+  "cve_id": "CVE-2025-55201",
+  "ecosystem": "pip",
+  "packages": [
+   "copier"
+  ],
+  "published_at": "2025-08-18T21:00:23Z",
+  "advisory_cwes": [22],
+  "html_url": "https://github.com/advisories/GHSA-3xw7-v6cj-5q8h",
+  "label_cwes": [22],
+  "repo": "copier-org/copier",
+  "fix_sha": "3feea3b3ff3c20d80cbb16a2f3b9567ffc5606d1",
+  "parent_sha": "0e7fb3661f91e8d49fff8af564a4fd99c3e5487d",
+  "path_vulnerable": "copier/_main.py",
+  "path_patched": "copier/_main.py",
+  "language": "python",
+  "vulnerable_lines": [
+   [16, 16],
+   [402, 404],
+   [665, 668]
+  ],
+  "patched_lines": [
+   [16, 16],
+   [402, 404],
+   [662, 669],
+   [673, 673]
+  ],
+  "commit_url": "https://github.com/copier-org/copier/commit/3feea3b3ff3c20d80cbb16a2f3b9567ffc5606d1",
+  "case_id": "035-GHSA-3xw7-v6cj-5q8h",
+  "content": {
+   "vulnerable": {
+    "sha256": "d9116378f86307e4dd202cbd914d492b22451086e75ff5765d35f4db1408e350",
+    "bytes": 59698
+   },
+   "patched": {
+    "sha256": "9a3963d299d64b05c6241b44b1b317a7edc02b8a8cb68d18bc5e0cf29189d355",
+    "bytes": 59889
+   }
+  }
+ },
+ "status": "scored",
+ "tools": {
+  "nephilex": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  },
+  "bandit": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [
+     [
+      7,
+      "B404",
+      [78]
+     ],
+     [
+      394,
+      "B602",
+      [78]
+     ],
+     [
+      448,
+      "B101",
+      [703]
+     ],
+     [
+      500,
+      "B101",
+      [703]
+     ],
+     [
+      501,
+      "B101",
+      [703]
+     ],
+     [
+      524,
+      "B101",
+      [703]
+     ],
+     [
+      746,
+      "B101",
+      [703]
+     ],
+     [
+      747,
+      "B101",
+      [703]
+     ],
+     [
+      792,
+      "B101",
+      [703]
+     ],
+     [
+      793,
+      "B101",
+      [703]
+     ],
+     [
+      832,
+      "B101",
+      [703]
+     ],
+     [
+      1160,
+      "B101",
+      [703]
+     ]
+    ],
+    "patched": [
+     [
+      7,
+      "B404",
+      [78]
+     ],
+     [
+      394,
+      "B602",
+      [78]
+     ],
+     [
+      448,
+      "B101",
+      [703]
+     ],
+     [
+      500,
+      "B101",
+      [703]
+     ],
+     [
+      501,
+      "B101",
+      [703]
+     ],
+     [
+      524,
+      "B101",
+      [703]
+     ],
+     [
+      751,
+      "B101",
+      [703]
+     ],
+     [
+      752,
+      "B101",
+      [703]
+     ],
+     [
+      797,
+      "B101",
+      [703]
+     ],
+     [
+      798,
+      "B101",
+      [703]
+     ],
+     [
+      837,
+      "B101",
+      [703]
+     ],
+     [
+      1165,
+      "B101",
+      [703]
+     ]
+    ]
+   }
+  },
+  "semgrep": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  }
+ },
+ "outcomes": {
+  "nephilex": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  },
+  "bandit": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  },
+  "semgrep": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  }
+ }
+}

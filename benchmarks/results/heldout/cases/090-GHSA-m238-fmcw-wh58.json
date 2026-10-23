@@ -1,0 +1,132 @@
+{
+ "case": {
+  "ghsa_id": "GHSA-m238-fmcw-wh58",
+  "cve_id": "CVE-2025-25297",
+  "ecosystem": "pip",
+  "packages": [
+   "label-studio"
+  ],
+  "published_at": "2025-02-14T15:26:56Z",
+  "advisory_cwes": [918],
+  "html_url": "https://github.com/advisories/GHSA-m238-fmcw-wh58",
+  "label_cwes": [918],
+  "repo": "HumanSignal/label-studio",
+  "fix_sha": "06a2b29c1208e1878ccae66e6b84c8b24598fa79",
+  "parent_sha": "728f903fe7be58d3fc2b471353a663013686f52b",
+  "path_vulnerable": "label_studio/io_storages/s3/models.py",
+  "path_patched": "label_studio/io_storages/s3/models.py",
+  "language": "python",
+  "vulnerable_lines": [
+   [23, 23],
+   [56, 57],
+   [82, 83],
+   [128, 129],
+   [148, 149],
+   [159, 160],
+   [176, 177],
+   [179, 180],
+   [182, 183],
+   [203, 204],
+   [230, 231]
+  ],
+  "patched_lines": [
+   [23, 23],
+   [57, 57],
+   [84, 84],
+   [131, 131],
+   [152, 152],
+   [164, 164],
+   [182, 182],
+   [186, 186],
+   [190, 190],
+   [212, 212],
+   [240, 240]
+  ],
+  "commit_url": "https://github.com/HumanSignal/label-studio/commit/06a2b29c1208e1878ccae66e6b84c8b24598fa79",
+  "case_id": "090-GHSA-m238-fmcw-wh58",
+  "content": {
+   "vulnerable": {
+    "sha256": "7cf85f0b428b8254b0c6c155116e92f11cdde02c07cfc674f15c33b23700b95e",
+    "bytes": 11787
+   },
+   "patched": {
+    "sha256": "49d3f12e123bfc66e5167145f383da5f1913f721faeabf75f125f53c1184b7fb",
+    "bytes": 12146
+   }
+  }
+ },
+ "status": "scored",
+ "tools": {
+  "nephilex": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  },
+  "bandit": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  },
+  "semgrep": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  }
+ },
+ "outcomes": {
+  "nephilex": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  },
+  "bandit": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  },
+  "semgrep": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  }
+ }
+}

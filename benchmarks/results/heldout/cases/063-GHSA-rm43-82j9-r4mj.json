@@ -1,0 +1,135 @@
+{
+ "case": {
+  "ghsa_id": "GHSA-rm43-82j9-r4mj",
+  "cve_id": null,
+  "ecosystem": "pip",
+  "packages": [
+   "atomic-agents-stack"
+  ],
+  "published_at": "2026-08-13T14:17:13Z",
+  "advisory_cwes": [22],
+  "html_url": "https://github.com/advisories/GHSA-rm43-82j9-r4mj",
+  "label_cwes": [22],
+  "repo": "dep0we/atomic-agents-stack",
+  "fix_sha": "ec474f458122c5c0ca718d0df3078c8080338b2c",
+  "parent_sha": "da861310c27c87e1a0187e71ea7ff53817e54648",
+  "path_vulnerable": "atomic_agents/dashboard/serve.py",
+  "path_patched": "atomic_agents/dashboard/serve.py",
+  "language": "python",
+  "vulnerable_lines": [
+   [21, 23],
+   [43, 43],
+   [45, 50],
+   [57, 57],
+   [62, 63],
+   [67, 68],
+   [73, 76],
+   [79, 81],
+   [84, 84],
+   [95, 95],
+   [100, 100]
+  ],
+  "patched_lines": [
+   [22, 22],
+   [24, 24],
+   [39, 41],
+   [48, 48],
+   [50, 55],
+   [62, 62],
+   [67, 67],
+   [71, 84],
+   [89, 91],
+   [94, 107],
+   [109, 109],
+   [111, 116],
+   [127, 129],
+   [134, 136]
+  ],
+  "commit_url": "https://github.com/dep0we/atomic-agents-stack/commit/ec474f458122c5c0ca718d0df3078c8080338b2c",
+  "case_id": "063-GHSA-rm43-82j9-r4mj",
+  "content": {
+   "vulnerable": {
+    "sha256": "fdfbd6bece4004125a97db06ab156a7566de24fc59eacab14e070c3d0a262fa0",
+    "bytes": 5852
+   },
+   "patched": {
+    "sha256": "4065e2be0aee80c50318b6e01867b075ed7ff841bdec5b2fd265b837024f4ea0",
+    "bytes": 7364
+   }
+  }
+ },
+ "status": "scored",
+ "tools": {
+  "nephilex": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  },
+  "bandit": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  },
+  "semgrep": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  }
+ },
+ "outcomes": {
+  "nephilex": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  },
+  "bandit": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  },
+  "semgrep": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  }
+ }
+}

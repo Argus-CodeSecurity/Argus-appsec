@@ -1,0 +1,105 @@
+{
+ "case": {
+  "ghsa_id": "GHSA-m44r-7c5h-m6mj",
+  "cve_id": "CVE-2026-53728",
+  "ecosystem": "npm",
+  "packages": [
+   "@medplum/core"
+  ],
+  "published_at": "2026-08-17T13:36:17Z",
+  "advisory_cwes": [345, 601],
+  "html_url": "https://github.com/advisories/GHSA-m44r-7c5h-m6mj",
+  "label_cwes": [601],
+  "repo": "medplum/medplum",
+  "fix_sha": "7ae10035ddadde4dba7b18d3156553940465b3a1",
+  "parent_sha": "5d4a8654b02aa67c444f96ae1eb5663c09854006",
+  "path_vulnerable": "packages/server/src/oauth/clients.ts",
+  "path_patched": "packages/server/src/oauth/clients.ts",
+  "language": "typescript",
+  "vulnerable_lines": [
+   [69, 69]
+  ],
+  "patched_lines": [
+   [69, 69],
+   [77, 88]
+  ],
+  "commit_url": "https://github.com/medplum/medplum/commit/7ae10035ddadde4dba7b18d3156553940465b3a1",
+  "case_id": "133-GHSA-m44r-7c5h-m6mj",
+  "content": {
+   "vulnerable": {
+    "sha256": "b55b3431eb234432f6972b802a344fca60d1d2404c8e7105797306d9b9c7be9f",
+    "bytes": 3242
+   },
+   "patched": {
+    "sha256": "2416292c620f4917bb1e29ba9b6ea07a2ad2e957a5a6ffb6c691d01def5bfde7",
+    "bytes": 3776
+   }
+  }
+ },
+ "status": "scored",
+ "tools": {
+  "nephilex": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [
+     [
+      48,
+      "authz.oauth-missing-state",
+      [352]
+     ]
+    ],
+    "patched": [
+     [
+      48,
+      "authz.oauth-missing-state",
+      [352]
+     ]
+    ]
+   }
+  },
+  "bandit": {
+   "status": "not_applicable"
+  },
+  "semgrep": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  }
+ },
+ "outcomes": {
+  "nephilex": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  },
+  "semgrep": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  }
+ }
+}

@@ -1,0 +1,136 @@
+{
+ "case": {
+  "ghsa_id": "GHSA-2943-9672-r45w",
+  "cve_id": "CVE-2026-33264",
+  "ecosystem": "pip",
+  "packages": [
+   "apache-airflow"
+  ],
+  "published_at": "2026-07-07T12:31:35Z",
+  "advisory_cwes": [502],
+  "html_url": "https://github.com/advisories/GHSA-2943-9672-r45w",
+  "label_cwes": [502],
+  "repo": "apache/airflow",
+  "fix_sha": "69b6c54ef17b048ebb0e9a656d0d9e1c99480d6b",
+  "parent_sha": "6d5174494dfae7d81bc32b4d0edd4c06e8314392",
+  "path_vulnerable": "airflow-core/src/airflow/models/trigger.py",
+  "path_patched": "airflow-core/src/airflow/models/trigger.py",
+  "language": "python",
+  "vulnerable_lines": [
+   [37, 38],
+   [149, 149]
+  ],
+  "patched_lines": [
+   [38, 38],
+   [150, 150]
+  ],
+  "commit_url": "https://github.com/apache/airflow/commit/69b6c54ef17b048ebb0e9a656d0d9e1c99480d6b",
+  "case_id": "094-GHSA-2943-9672-r45w",
+  "content": {
+   "vulnerable": {
+    "sha256": "0907f45c1986babff47673a66ffda432e7dfc28c52303c7a390bbde48306c6fa",
+    "bytes": 22507
+   },
+   "patched": {
+    "sha256": "a202390a398bd4a69b18c47b14f4d1d090003c94a9a5e017b5cd62d9aa7af09f",
+    "bytes": 22625
+   }
+  }
+ },
+ "status": "scored",
+ "tools": {
+  "nephilex": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  },
+  "bandit": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [
+     [
+      173,
+      "B101",
+      [703]
+     ],
+     [
+      491,
+      "B101",
+      [703]
+     ]
+    ],
+    "patched": [
+     [
+      174,
+      "B101",
+      [703]
+     ],
+     [
+      492,
+      "B101",
+      [703]
+     ]
+    ]
+   }
+  },
+  "semgrep": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  }
+ },
+ "outcomes": {
+  "nephilex": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  },
+  "bandit": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  },
+  "semgrep": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  }
+ }
+}

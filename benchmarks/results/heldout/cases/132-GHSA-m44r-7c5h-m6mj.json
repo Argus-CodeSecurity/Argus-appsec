@@ -1,0 +1,110 @@
+{
+ "case": {
+  "ghsa_id": "GHSA-m44r-7c5h-m6mj",
+  "cve_id": "CVE-2026-53728",
+  "ecosystem": "npm",
+  "packages": [
+   "@medplum/core"
+  ],
+  "published_at": "2026-08-17T13:36:17Z",
+  "advisory_cwes": [345, 601],
+  "html_url": "https://github.com/advisories/GHSA-m44r-7c5h-m6mj",
+  "label_cwes": [601],
+  "repo": "medplum/medplum",
+  "fix_sha": "7ae10035ddadde4dba7b18d3156553940465b3a1",
+  "parent_sha": "5d4a8654b02aa67c444f96ae1eb5663c09854006",
+  "path_vulnerable": "packages/server/src/auth/external.ts",
+  "path_patched": "packages/server/src/auth/external.ts",
+  "language": "typescript",
+  "vulnerable_lines": [
+   [13, 13],
+   [124, 133],
+   [283, 284]
+  ],
+  "patched_lines": [
+   [13, 13],
+   [19, 19],
+   [125, 131],
+   [138, 143],
+   [288, 298]
+  ],
+  "commit_url": "https://github.com/medplum/medplum/commit/7ae10035ddadde4dba7b18d3156553940465b3a1",
+  "case_id": "132-GHSA-m44r-7c5h-m6mj",
+  "content": {
+   "vulnerable": {
+    "sha256": "3ab597c5f268210f56232b07094d80771dce0bc3b78996e9246bb31a0930bd53",
+    "bytes": 9117
+   },
+   "patched": {
+    "sha256": "74cc58f9a399550945d7a2266c8bd4dac48a852378e4eea56fb5f2a1deb72084",
+    "bytes": 9855
+   }
+  }
+ },
+ "status": "scored",
+ "tools": {
+  "nephilex": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [
+     [
+      20,
+      "authz.oauth-missing-state",
+      [352]
+     ]
+    ],
+    "patched": [
+     [
+      21,
+      "authz.oauth-missing-state",
+      [352]
+     ]
+    ]
+   }
+  },
+  "bandit": {
+   "status": "not_applicable"
+  },
+  "semgrep": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  }
+ },
+ "outcomes": {
+  "nephilex": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": true
+   }
+  },
+  "semgrep": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  }
+ }
+}

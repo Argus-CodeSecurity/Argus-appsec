@@ -1,0 +1,113 @@
+{
+ "nephilex_source": {
+  "commit": "200a227a5424c1e6394643456a4fd71cc164528f",
+  "src_nephilex_modified": false
+ },
+ "runs": {
+  "nephilex": {
+   "tool": "nephilex",
+   "started_at": "2026-10-23T07:14:11+00:00",
+   "version": "0.10.0",
+   "command": [
+    "nephilex",
+    "scan",
+    "<case>/<version>",
+    "--no-ai",
+    "--no-cache",
+    "--quiet",
+    "-f",
+    "json",
+    "-o",
+    "<raw_output>"
+   ],
+   "runs": 402,
+   "seconds": 471.8,
+   "scanners_failed": {},
+   "notes": "one run per case and version; offline heuristic provider (--no-ai); default scanners incl. the [ast] tier"
+  },
+  "bandit": {
+   "tool": "bandit",
+   "started_at": "2026-10-23T07:22:03+00:00",
+   "raw_sha256": "883597a828a1d250a60407ecebce76b0b6755e7cccaffd72c4c7b768eb354352",
+   "version": "bandit 1.9.4",
+   "command": [
+    "bandit",
+    "-r",
+    "<dataset_root>",
+    "-f",
+    "json",
+    "-o",
+    "<raw_output>",
+    "-q"
+   ],
+   "exit_code": 1,
+   "seconds": 26.0,
+   "notes": "default configuration (all plugins, all severities and confidences)",
+   "parse_errors": []
+  },
+  "semgrep": {
+   "tool": "semgrep",
+   "started_at": "2026-10-23T07:22:30+00:00",
+   "raw_sha256": "5cff4f5ee95cade68effa17b3169e689e06820837365677acaf05c05d460b735",
+   "version": "1.182.1",
+   "command": [
+    "semgrep",
+    "scan",
+    "--config",
+    "p/python",
+    "--config",
+    "p/javascript",
+    "--metrics=off",
+    "--disable-version-check",
+    "--no-git-ignore",
+    "--json",
+    "-o",
+    "<raw_output>",
+    "--quiet",
+    "<dataset_root>"
+   ],
+   "exit_code": 0,
+   "seconds": 214.8,
+   "rulesets": [
+    {
+     "ruleset": "p/python",
+     "ruleset_sha256": "de5bc79d074c3b4146338a0bf95830406f169bd91ac590a2f1ef111f162e23f5",
+     "ruleset_rules": 151,
+     "ruleset_fetched_at": "2026-10-23T07:22:30+00:00"
+    },
+    {
+     "ruleset": "p/javascript",
+     "ruleset_sha256": "1bcb61b57b5c9ee521d5e1db2d80062fe90b64fc788650564dc1f1c5243419c2",
+     "ruleset_rules": 74,
+     "ruleset_fetched_at": "2026-10-23T07:22:30+00:00"
+    }
+   ],
+   "semgrep_errors": 36,
+   "parse_errors": [
+    "019-GHSA-2jrp-274c-jhv3/patched",
+    "023-GHSA-4h8q-hh2j-755w/patched",
+    "023-GHSA-4h8q-hh2j-755w/vulnerable",
+    "027-GHSA-2q2q-jr9g-v9rf/patched",
+    "027-GHSA-2q2q-jr9g-v9rf/vulnerable",
+    "052-GHSA-4v28-j6q3-5m4r/vulnerable",
+    "064-GHSA-5x7x-4c3c-qf5w/patched",
+    "064-GHSA-5x7x-4c3c-qf5w/vulnerable",
+    "071-GHSA-qh4c-xf7m-gxfc/patched",
+    "071-GHSA-qh4c-xf7m-gxfc/vulnerable",
+    "084-GHSA-rf8c-3f5p-xv45/patched",
+    "084-GHSA-rf8c-3f5p-xv45/vulnerable",
+    "089-GHSA-m238-fmcw-wh58/patched",
+    "089-GHSA-m238-fmcw-wh58/vulnerable",
+    "101-GHSA-238w-f66p-w349/patched",
+    "101-GHSA-238w-f66p-w349/vulnerable",
+    "114-GHSA-q27c-j6j9-53w3/patched",
+    "114-GHSA-q27c-j6j9-53w3/vulnerable",
+    "128-GHSA-j5mf-6rh3-rhgg/patched",
+    "128-GHSA-j5mf-6rh3-rhgg/vulnerable",
+    "170-GHSA-jfrq-hj9f-c8qx/patched",
+    "170-GHSA-jfrq-hj9f-c8qx/vulnerable"
+   ],
+   "notes": "registry rulesets cached locally; Semgrep CE engine; default settings"
+  }
+ }
+}

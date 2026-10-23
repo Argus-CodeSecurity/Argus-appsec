@@ -1,0 +1,155 @@
+{
+ "case": {
+  "ghsa_id": "GHSA-339r-cjv9-x78g",
+  "cve_id": "CVE-2024-11958",
+  "ecosystem": "pip",
+  "packages": [
+   "llama-index-retrievers-duckdb-retriever"
+  ],
+  "published_at": "2025-03-20T12:32:42Z",
+  "advisory_cwes": [89],
+  "html_url": "https://github.com/advisories/GHSA-339r-cjv9-x78g",
+  "label_cwes": [89],
+  "repo": "run-llama/llama_index",
+  "fix_sha": "35bd221e948e40458052d30c6ef2779bc965b6d0",
+  "parent_sha": "b71d4f76837728adf8d6e390192a3e0ce2497c21",
+  "path_vulnerable": "llama-index-integrations/retrievers/llama-index-retrievers-duckdb-retriever/llama_index/retrievers/duckdb_retriever/base.py",
+  "path_patched": "llama-index-integrations/retrievers/llama-index-retrievers-duckdb-retriever/llama_index/retrievers/duckdb_retriever/base.py",
+  "language": "python",
+  "vulnerable_lines": [
+   [8, 8],
+   [11, 11],
+   [21, 26],
+   [31, 33],
+   [43, 44],
+   [52, 54],
+   [62, 64],
+   [105, 105],
+   [113, 113]
+  ],
+  "patched_lines": [
+   [5, 5],
+   [9, 9],
+   [21, 23],
+   [44, 46],
+   [54, 56],
+   [97, 97],
+   [105, 105]
+  ],
+  "commit_url": "https://github.com/run-llama/llama_index/commit/35bd221e948e40458052d30c6ef2779bc965b6d0",
+  "case_id": "057-GHSA-339r-cjv9-x78g",
+  "content": {
+   "vulnerable": {
+    "sha256": "a05dabfd6573eeb07eebdab062b1e2d13f74fdfe5565749e0887d9c749bd8517",
+    "bytes": 4678
+   },
+   "patched": {
+    "sha256": "3550f6140804a1704331e6915165dfd80df0688b5db651b041b90fcb5ac2c336",
+    "bytes": 4326
+   }
+  }
+ },
+ "status": "scored",
+ "tools": {
+  "nephilex": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [
+     [
+      97,
+      "ast-python.ast-sql-string-building",
+      [89]
+     ],
+     [
+      113,
+      "ast-python.ast-sql-string-building",
+      [89]
+     ]
+    ],
+    "patched": [
+     [
+      89,
+      "ast-python.ast-sql-string-building",
+      [89]
+     ]
+    ]
+   }
+  },
+  "bandit": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [
+     [
+      103,
+      "B608",
+      [89]
+     ]
+    ],
+    "patched": [
+     [
+      95,
+      "B608",
+      [89]
+     ]
+    ]
+   }
+  },
+  "semgrep": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  }
+ },
+ "outcomes": {
+  "nephilex": {
+   "window": 3,
+   "mapped": {
+    "detected": true,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": true,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": true,
+    "flagged_after_fix": false
+   }
+  },
+  "bandit": {
+   "window": 3,
+   "mapped": {
+    "detected": true,
+    "flagged_after_fix": true
+   },
+   "strict": {
+    "detected": true,
+    "flagged_after_fix": true
+   },
+   "any": {
+    "detected": true,
+    "flagged_after_fix": true
+   }
+  },
+  "semgrep": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  }
+ }
+}

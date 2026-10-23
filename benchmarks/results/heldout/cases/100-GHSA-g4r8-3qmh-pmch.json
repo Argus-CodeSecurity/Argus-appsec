@@ -1,0 +1,116 @@
+{
+ "case": {
+  "ghsa_id": "GHSA-g4r8-3qmh-pmch",
+  "cve_id": "CVE-2025-12765",
+  "ecosystem": "pip",
+  "packages": [
+   "pgadmin4"
+  ],
+  "published_at": "2025-11-13T15:30:30Z",
+  "advisory_cwes": [295],
+  "html_url": "https://github.com/advisories/GHSA-g4r8-3qmh-pmch",
+  "label_cwes": [295],
+  "repo": "pgadmin-org/pgadmin4",
+  "fix_sha": "09d2b7eeb0e330df73b1aef0cba57788fde52b6b",
+  "parent_sha": "e374edc69239b3e02ecde895e27d9f9e488b87ee",
+  "path_vulnerable": "web/pgadmin/authenticate/ldap.py",
+  "path_patched": "web/pgadmin/authenticate/ldap.py",
+  "language": "python",
+  "vulnerable_lines": [
+   [18, 19],
+   [215, 218],
+   [281, 282]
+  ],
+  "patched_lines": [
+   [19, 19],
+   [216, 217],
+   [280, 283]
+  ],
+  "commit_url": "https://github.com/pgadmin-org/pgadmin4/commit/09d2b7eeb0e330df73b1aef0cba57788fde52b6b",
+  "case_id": "100-GHSA-g4r8-3qmh-pmch",
+  "content": {
+   "vulnerable": {
+    "sha256": "4e73f5ef20d406b27641a4b804a98983ada7462057afe28481464d4a2c827434",
+    "bytes": 12018
+   },
+   "patched": {
+    "sha256": "0de70a75a066bab6e40394d9d7d03b5da963b0cc2c00bda542dd093f3c014ac1",
+    "bytes": 12096
+   }
+  }
+ },
+ "status": "scored",
+ "tools": {
+  "nephilex": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  },
+  "bandit": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  },
+  "semgrep": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  }
+ },
+ "outcomes": {
+  "nephilex": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  },
+  "bandit": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  },
+  "semgrep": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  }
+ }
+}

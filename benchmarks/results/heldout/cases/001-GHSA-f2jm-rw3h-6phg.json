@@ -1,0 +1,168 @@
+{
+ "case": {
+  "ghsa_id": "GHSA-f2jm-rw3h-6phg",
+  "cve_id": "CVE-2024-5998",
+  "ecosystem": "pip",
+  "packages": [
+   "langchain-community"
+  ],
+  "published_at": "2024-09-17T12:30:32Z",
+  "advisory_cwes": [502],
+  "html_url": "https://github.com/advisories/GHSA-f2jm-rw3h-6phg",
+  "label_cwes": [502],
+  "repo": "langchain-ai/langchain",
+  "fix_sha": "77209f315efd13442ec51c67719ba37dfaa44511",
+  "parent_sha": "ce0b0f22a175139df8f41cdcfb4d2af411112009",
+  "path_vulnerable": "libs/community/langchain_community/vectorstores/faiss.py",
+  "path_patched": "libs/community/langchain_community/vectorstores/faiss.py",
+  "language": "python",
+  "vulnerable_lines": [
+   [1107, 1108],
+   [1110, 1111]
+  ],
+  "patched_lines": [
+   [1108, 1109],
+   [1113, 1125]
+  ],
+  "commit_url": "https://github.com/langchain-ai/langchain/commit/77209f315efd13442ec51c67719ba37dfaa44511",
+  "case_id": "001-GHSA-f2jm-rw3h-6phg",
+  "content": {
+   "vulnerable": {
+    "sha256": "f243bb9ec5cea0fe63b0bc3b22d775c575647950fb51292643c5d283bb7e1f88",
+    "bytes": 45826
+   },
+   "patched": {
+    "sha256": "e3ed7f03d1f1003c9b37ae9a4b88fdcc06a1f2dc17e1e209d6f2e71a9b6a9261",
+    "bytes": 46752
+   }
+  }
+ },
+ "status": "scored",
+ "tools": {
+  "nephilex": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [
+     [
+      1096,
+      "patterns.python-pickle-loads",
+      [502]
+     ],
+     [
+      1111,
+      "patterns.python-pickle-loads",
+      [502]
+     ]
+    ],
+    "patched": [
+     [
+      1096,
+      "patterns.python-pickle-loads",
+      [502]
+     ],
+     [
+      1126,
+      "patterns.python-pickle-loads",
+      [502]
+     ]
+    ]
+   }
+  },
+  "bandit": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [
+     [
+      6,
+      "B403",
+      [502]
+     ],
+     [
+      1096,
+      "B301",
+      [502]
+     ],
+     [
+      1111,
+      "B301",
+      [502]
+     ]
+    ],
+    "patched": [
+     [
+      6,
+      "B403",
+      [502]
+     ],
+     [
+      1096,
+      "B301",
+      [502]
+     ],
+     [
+      1126,
+      "B301",
+      [502]
+     ]
+    ]
+   }
+  },
+  "semgrep": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  }
+ },
+ "outcomes": {
+  "nephilex": {
+   "window": 3,
+   "mapped": {
+    "detected": true,
+    "flagged_after_fix": true
+   },
+   "strict": {
+    "detected": true,
+    "flagged_after_fix": true
+   },
+   "any": {
+    "detected": true,
+    "flagged_after_fix": true
+   }
+  },
+  "bandit": {
+   "window": 3,
+   "mapped": {
+    "detected": true,
+    "flagged_after_fix": true
+   },
+   "strict": {
+    "detected": true,
+    "flagged_after_fix": true
+   },
+   "any": {
+    "detected": true,
+    "flagged_after_fix": true
+   }
+  },
+  "semgrep": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  }
+ }
+}

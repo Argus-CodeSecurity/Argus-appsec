@@ -1,0 +1,114 @@
+{
+ "case": {
+  "ghsa_id": "GHSA-m238-fmcw-wh58",
+  "cve_id": "CVE-2025-25297",
+  "ecosystem": "pip",
+  "packages": [
+   "label-studio"
+  ],
+  "published_at": "2025-02-14T15:26:56Z",
+  "advisory_cwes": [918],
+  "html_url": "https://github.com/advisories/GHSA-m238-fmcw-wh58",
+  "label_cwes": [918],
+  "repo": "HumanSignal/label-studio",
+  "fix_sha": "06a2b29c1208e1878ccae66e6b84c8b24598fa79",
+  "parent_sha": "728f903fe7be58d3fc2b471353a663013686f52b",
+  "path_vulnerable": "label_studio/io_storages/s3/utils.py",
+  "path_patched": "label_studio/io_storages/s3/utils.py",
+  "language": "python",
+  "vulnerable_lines": [
+   [12, 13],
+   [137, 138]
+  ],
+  "patched_lines": [
+   [13, 13],
+   [139, 171]
+  ],
+  "commit_url": "https://github.com/HumanSignal/label-studio/commit/06a2b29c1208e1878ccae66e6b84c8b24598fa79",
+  "case_id": "091-GHSA-m238-fmcw-wh58",
+  "content": {
+   "vulnerable": {
+    "sha256": "b320020f97b9c22a1194d2bf3adef9f6e65c02087a6a9a75fe1db1e7aa4eb85c",
+    "bytes": 5319
+   },
+   "patched": {
+    "sha256": "f2bc320c835449c0046537d043ff8362b608bebca7635c75b9937edb1ef39d84",
+    "bytes": 6628
+   }
+  }
+ },
+ "status": "scored",
+ "tools": {
+  "nephilex": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  },
+  "bandit": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  },
+  "semgrep": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  }
+ },
+ "outcomes": {
+  "nephilex": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  },
+  "bandit": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  },
+  "semgrep": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  }
+ }
+}

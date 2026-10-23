@@ -1,0 +1,109 @@
+{
+ "case": {
+  "ghsa_id": "GHSA-jfrq-hj9f-c8qx",
+  "cve_id": "CVE-2026-26862",
+  "ecosystem": "npm",
+  "packages": [
+   "clevertap-web-sdk"
+  ],
+  "published_at": "2026-02-27T18:31:06Z",
+  "advisory_cwes": [79],
+  "html_url": "https://github.com/advisories/GHSA-jfrq-hj9f-c8qx",
+  "label_cwes": [79],
+  "repo": "CleverTap/clevertap-web-sdk",
+  "fix_sha": "766f75f0c9082a27eb0b59c9fa4b0d9b19ba3d10",
+  "parent_sha": "123788a6a21000f1f82acd17b59c7d624ab48895",
+  "path_vulnerable": "clevertap.js",
+  "path_patched": "clevertap.js",
+  "language": "javascript",
+  "vulnerable_lines": [
+   [11626, 11626],
+   [11642, 11642],
+   [11646, 11646],
+   [11648, 11648],
+   [12488, 12489],
+   [13224, 13224],
+   [15355, 15355],
+   [17204, 17204]
+  ],
+  "patched_lines": [
+   [11626, 11626],
+   [11642, 11642],
+   [11646, 11648],
+   [11650, 11650],
+   [12491, 12494],
+   [13230, 13232],
+   [15363, 15363],
+   [17212, 17212]
+  ],
+  "commit_url": "https://github.com/CleverTap/clevertap-web-sdk/commit/766f75f0c9082a27eb0b59c9fa4b0d9b19ba3d10",
+  "case_id": "170-GHSA-jfrq-hj9f-c8qx",
+  "content": {
+   "vulnerable": {
+    "sha256": "c4376aa4b476a1342a2383411fbac0eccdf658cdedccd44c6bb968ef9453c951",
+    "bytes": 633930
+   },
+   "patched": {
+    "sha256": "5a5fc9fe722e6cd5afba76119ece2eede5b8c7463f4c71a2794895d4e2c5422b",
+    "bytes": 634314
+   }
+  }
+ },
+ "status": "scored",
+ "tools": {
+  "nephilex": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  },
+  "bandit": {
+   "status": "not_applicable"
+  },
+  "semgrep": {
+   "status": "ok",
+   "parse_error_versions": [
+    "patched",
+    "vulnerable"
+   ],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  }
+ },
+ "outcomes": {
+  "nephilex": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  },
+  "semgrep": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  }
+ }
+}

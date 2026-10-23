@@ -1,0 +1,162 @@
+{
+ "case": {
+  "ghsa_id": "GHSA-q27c-j6j9-53w3",
+  "cve_id": "CVE-2024-22231",
+  "ecosystem": "pip",
+  "packages": [
+   "salt"
+  ],
+  "published_at": "2024-06-27T09:30:39Z",
+  "advisory_cwes": [22],
+  "html_url": "https://github.com/advisories/GHSA-q27c-j6j9-53w3",
+  "label_cwes": [22],
+  "repo": "saltstack/salt",
+  "fix_sha": "e0cdb80b55123f4a024759ffcf2b3f0e0788e7ab",
+  "parent_sha": "f89ef9204fe91b2dafbab2f6a15516302b9fec53",
+  "path_vulnerable": "salt/master.py",
+  "path_patched": "salt/master.py",
+  "language": "python",
+  "vulnerable_lines": [
+   [1039, 1039],
+   [1744, 1744]
+  ],
+  "patched_lines": [
+   [1039, 1042],
+   [1744, 1747],
+   [1751, 1753]
+  ],
+  "commit_url": "https://github.com/saltstack/salt/commit/e0cdb80b55123f4a024759ffcf2b3f0e0788e7ab",
+  "case_id": "114-GHSA-q27c-j6j9-53w3",
+  "content": {
+   "vulnerable": {
+    "sha256": "b784a52ddc3f8d16f66d9e6e5fd2c2ddfa82b799eab77b7b1204d795c9a24fe8",
+    "bytes": 94254
+   },
+   "patched": {
+    "sha256": "7a0b51ad0fec444e0ae0a9b2aaa336e3187ccb851369bc9b7762c9cc43a15dc8",
+    "bytes": 94580
+   }
+  }
+ },
+ "status": "scored",
+ "tools": {
+  "nephilex": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  },
+  "bandit": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [
+     [
+      986,
+      "B110",
+      [703]
+     ],
+     [
+      994,
+      "B110",
+      [703]
+     ]
+    ],
+    "patched": [
+     [
+      986,
+      "B110",
+      [703]
+     ],
+     [
+      994,
+      "B110",
+      [703]
+     ]
+    ]
+   }
+  },
+  "semgrep": {
+   "status": "ok",
+   "parse_error_versions": [
+    "patched",
+    "vulnerable"
+   ],
+   "findings": {
+    "vulnerable": [
+     [
+      1287,
+      "python.lang.security.audit.logging.logger-credential-leak.python-logger-credential-disclosure",
+      [532]
+     ],
+     [
+      2278,
+      "python.lang.security.audit.logging.logger-credential-leak.python-logger-credential-disclosure",
+      [532]
+     ]
+    ],
+    "patched": [
+     [
+      1290,
+      "python.lang.security.audit.logging.logger-credential-leak.python-logger-credential-disclosure",
+      [532]
+     ],
+     [
+      2287,
+      "python.lang.security.audit.logging.logger-credential-leak.python-logger-credential-disclosure",
+      [532]
+     ]
+    ]
+   }
+  }
+ },
+ "outcomes": {
+  "nephilex": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  },
+  "bandit": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  },
+  "semgrep": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  }
+ }
+}

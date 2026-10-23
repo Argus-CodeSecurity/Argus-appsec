@@ -1,0 +1,92 @@
+{
+ "case": {
+  "ghsa_id": "GHSA-j386-3444-qgwg",
+  "cve_id": "CVE-2025-21610",
+  "ecosystem": "npm",
+  "packages": [
+   "trix"
+  ],
+  "published_at": "2025-01-03T16:29:58Z",
+  "advisory_cwes": [79],
+  "html_url": "https://github.com/advisories/GHSA-j386-3444-qgwg",
+  "label_cwes": [79],
+  "repo": "basecamp/trix",
+  "fix_sha": "180c8d337f18e1569cea6ef29b4d03ffff5b5faa",
+  "parent_sha": "f4d64c24c82cc4b4810b00dda131bfc2267a79cf",
+  "path_vulnerable": "src/trix/config/toolbar.js",
+  "path_patched": "src/trix/config/toolbar.js",
+  "language": "javascript",
+  "vulnerable_lines": [
+   [38, 38]
+  ],
+  "patched_lines": [
+   [38, 38]
+  ],
+  "commit_url": "https://github.com/basecamp/trix/commit/180c8d337f18e1569cea6ef29b4d03ffff5b5faa",
+  "case_id": "153-GHSA-j386-3444-qgwg",
+  "content": {
+   "vulnerable": {
+    "sha256": "77cc927be648ccf43e06c8ff32dd485cdec0414fc5868556802367436859e6b4",
+    "bytes": 4128
+   },
+   "patched": {
+    "sha256": "dc27d0e9c7222a2df22b30be80a8263c0b37cf7259f0e731a94a1041d5a93250",
+    "bytes": 4152
+   }
+  }
+ },
+ "status": "scored",
+ "tools": {
+  "nephilex": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  },
+  "bandit": {
+   "status": "not_applicable"
+  },
+  "semgrep": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  }
+ },
+ "outcomes": {
+  "nephilex": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  },
+  "semgrep": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  }
+ }
+}

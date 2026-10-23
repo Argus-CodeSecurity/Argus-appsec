@@ -1,0 +1,102 @@
+{
+ "case": {
+  "ghsa_id": "GHSA-4wcm-7hjf-6xw5",
+  "cve_id": "CVE-2025-59046",
+  "ecosystem": "npm",
+  "packages": [
+   "interactive-git-checkout"
+  ],
+  "published_at": "2025-09-10T21:37:00Z",
+  "advisory_cwes": [77],
+  "html_url": "https://github.com/advisories/GHSA-4wcm-7hjf-6xw5",
+  "label_cwes": [77],
+  "repo": "ninofiliu/interactive-git-checkout",
+  "fix_sha": "8dd832dd302af287a61611f4f85e157cd1c6bb41",
+  "parent_sha": "4909d93947bb182a236d6efc5e4451feedf14d24",
+  "path_vulnerable": "src/checkout.js",
+  "path_patched": "src/checkout.js",
+  "language": "javascript",
+  "vulnerable_lines": [
+   [1, 1],
+   [4, 4],
+   [7, 7]
+  ],
+  "patched_lines": [
+   [1, 1],
+   [4, 4],
+   [7, 7]
+  ],
+  "commit_url": "https://github.com/ninofiliu/interactive-git-checkout/commit/8dd832dd302af287a61611f4f85e157cd1c6bb41",
+  "case_id": "123-GHSA-4wcm-7hjf-6xw5",
+  "content": {
+   "vulnerable": {
+    "sha256": "ade948d510396694c08bd5cd9dd9d8ed85dab1e0a739e3d960fecb678408ee50",
+    "bytes": 313
+   },
+   "patched": {
+    "sha256": "e3651a5a8fd0a05771cd21e46a5a890aaa15aa12ec9a3fb9a28245f32b6da800",
+    "bytes": 336
+   }
+  }
+ },
+ "status": "scored",
+ "tools": {
+  "nephilex": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [
+     [
+      7,
+      "patterns.js-child-process-exec",
+      [78]
+     ]
+    ],
+    "patched": []
+   }
+  },
+  "bandit": {
+   "status": "not_applicable"
+  },
+  "semgrep": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  }
+ },
+ "outcomes": {
+  "nephilex": {
+   "window": 3,
+   "mapped": {
+    "detected": true,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": true,
+    "flagged_after_fix": false
+   }
+  },
+  "semgrep": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  }
+ }
+}

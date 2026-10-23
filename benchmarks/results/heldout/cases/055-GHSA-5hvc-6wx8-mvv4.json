@@ -1,0 +1,154 @@
+{
+ "case": {
+  "ghsa_id": "GHSA-5hvc-6wx8-mvv4",
+  "cve_id": "CVE-2026-22608",
+  "ecosystem": "pip",
+  "packages": [
+   "fickling"
+  ],
+  "published_at": "2026-01-09T21:05:13Z",
+  "advisory_cwes": [184, 502],
+  "html_url": "https://github.com/advisories/GHSA-5hvc-6wx8-mvv4",
+  "label_cwes": [502],
+  "repo": "trailofbits/fickling",
+  "fix_sha": "b793563e60a5e039c5837b09d7f4f6b92e6040d1",
+  "parent_sha": "dc8ae12966edee27a78fe05c5745171a2b138d43",
+  "path_vulnerable": "fickling/fickle.py",
+  "path_patched": "fickling/fickle.py",
+  "language": "python",
+  "vulnerable_lines": [
+   [882, 883]
+  ],
+  "patched_lines": [
+   [883, 884]
+  ],
+  "commit_url": "https://github.com/trailofbits/fickling/commit/b793563e60a5e039c5837b09d7f4f6b92e6040d1",
+  "case_id": "055-GHSA-5hvc-6wx8-mvv4",
+  "content": {
+   "vulnerable": {
+    "sha256": "74ed8dfc328d83447e15efebbb6145cdb7d30386ef10dedf4ab683fcb92b984c",
+    "bytes": 63024
+   },
+   "patched": {
+    "sha256": "124a2ecb06e7cdd74376a909fbac68bca91f0e92e5e17df345db763d0436cd6f",
+    "bytes": 63075
+   }
+  }
+ },
+ "status": "scored",
+ "tools": {
+  "nephilex": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  },
+  "bandit": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [
+     [
+      13,
+      "B403",
+      [502]
+     ],
+     [
+      742,
+      "B101",
+      [703]
+     ],
+     [
+      1225,
+      "B101",
+      [703]
+     ],
+     [
+      1518,
+      "B101",
+      [703]
+     ]
+    ],
+    "patched": [
+     [
+      13,
+      "B403",
+      [502]
+     ],
+     [
+      742,
+      "B101",
+      [703]
+     ],
+     [
+      1227,
+      "B101",
+      [703]
+     ],
+     [
+      1520,
+      "B101",
+      [703]
+     ]
+    ]
+   }
+  },
+  "semgrep": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  }
+ },
+ "outcomes": {
+  "nephilex": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  },
+  "bandit": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  },
+  "semgrep": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  }
+ }
+}

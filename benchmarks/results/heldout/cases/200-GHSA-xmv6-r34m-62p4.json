@@ -1,0 +1,94 @@
+{
+ "case": {
+  "ghsa_id": "GHSA-xmv6-r34m-62p4",
+  "cve_id": null,
+  "ecosystem": "npm",
+  "packages": [
+   "openclaw"
+  ],
+  "published_at": "2026-03-03T22:08:54Z",
+  "advisory_cwes": [22, 59],
+  "html_url": "https://github.com/advisories/GHSA-xmv6-r34m-62p4",
+  "label_cwes": [22],
+  "repo": "openclaw/openclaw",
+  "fix_sha": "496a76c03ba85e15ea715e5a583e498ae04d36e3",
+  "parent_sha": "e56b0cf1a04f992ac6ebc775899f48ea31687640",
+  "path_vulnerable": "src/browser/routes/agent.debug.ts",
+  "path_patched": "src/browser/routes/agent.debug.ts",
+  "language": "typescript",
+  "vulnerable_lines": [
+   [11, 11],
+   [125, 125]
+  ],
+  "patched_lines": [
+   [11, 11],
+   [125, 125]
+  ],
+  "commit_url": "https://github.com/openclaw/openclaw/commit/496a76c03ba85e15ea715e5a583e498ae04d36e3",
+  "case_id": "200-GHSA-xmv6-r34m-62p4",
+  "content": {
+   "vulnerable": {
+    "sha256": "4258d461c2515a868163a93fceeb76c5df63a556362450ce01eafbea245a5dfd",
+    "bytes": 4341
+   },
+   "patched": {
+    "sha256": "e7573e930ee660877b337d84f4d806c420254b68031847b154808aae6dba866e",
+    "bytes": 4363
+   }
+  }
+ },
+ "status": "scored",
+ "tools": {
+  "nephilex": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  },
+  "bandit": {
+   "status": "not_applicable"
+  },
+  "semgrep": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  }
+ },
+ "outcomes": {
+  "nephilex": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  },
+  "semgrep": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  }
+ }
+}

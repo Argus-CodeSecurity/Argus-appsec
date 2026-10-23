@@ -1,0 +1,164 @@
+{
+ "case": {
+  "ghsa_id": "GHSA-jjpw-65fv-8g48",
+  "cve_id": "CVE-2026-25586",
+  "ecosystem": "npm",
+  "packages": [
+   "@nyariv/sandboxjs"
+  ],
+  "published_at": "2026-02-05T21:04:58Z",
+  "advisory_cwes": [74],
+  "html_url": "https://github.com/advisories/GHSA-jjpw-65fv-8g48",
+  "label_cwes": [74],
+  "repo": "nyariv/SandboxJS",
+  "fix_sha": "67cb186c41c78c51464f70405504e8ef0a6e43c3",
+  "parent_sha": "6103d7147c4666fe48cfda58a4d5f37005b43754",
+  "path_vulnerable": "src/executor.ts",
+  "path_patched": "src/executor.ts",
+  "language": "typescript",
+  "vulnerable_lines": [
+   [3, 4],
+   [212, 212],
+   [215, 215],
+   [220, 221],
+   [224, 224],
+   [227, 227],
+   [230, 230],
+   [232, 232],
+   [235, 235],
+   [243, 243],
+   [252, 252],
+   [255, 255],
+   [304, 304],
+   [306, 306],
+   [308, 309],
+   [315, 321],
+   [323, 324],
+   [331, 331],
+   [334, 342],
+   [347, 348],
+   [351, 361],
+   [363, 364],
+   [368, 369],
+   [377, 377],
+   [382, 397],
+   [403, 404],
+   [407, 408],
+   [414, 414],
+   [417, 417],
+   [518, 518],
+   [651, 651],
+   [757, 757],
+   [766, 766],
+   [771, 772],
+   [776, 776],
+   [779, 780]
+  ],
+  "patched_lines": [
+   [4, 4],
+   [213, 213],
+   [216, 216],
+   [221, 222],
+   [225, 225],
+   [228, 228],
+   [231, 231],
+   [233, 233],
+   [236, 236],
+   [244, 244],
+   [253, 253],
+   [256, 256],
+   [305, 314],
+   [316, 325],
+   [327, 328],
+   [335, 339],
+   [343, 350],
+   [354, 354],
+   [357, 357],
+   [362, 362],
+   [365, 372],
+   [374, 376],
+   [380, 381],
+   [389, 389],
+   [394, 404],
+   [406, 408],
+   [413, 417],
+   [420, 423],
+   [429, 429],
+   [432, 432],
+   [533, 540],
+   [673, 673],
+   [675, 686],
+   [791, 791],
+   [800, 800],
+   [805, 806],
+   [810, 810],
+   [813, 814]
+  ],
+  "commit_url": "https://github.com/nyariv/SandboxJS/commit/67cb186c41c78c51464f70405504e8ef0a6e43c3",
+  "case_id": "193-GHSA-jjpw-65fv-8g48",
+  "content": {
+   "vulnerable": {
+    "sha256": "1a7d242eb861df85400f1a43d2af5cf91b6de32ef62fed406c61d892ca354d43",
+    "bytes": 46870
+   },
+   "patched": {
+    "sha256": "08acd939eba613b21c55b832362492bb57ddff114a300fca2035491d82250e49",
+    "bytes": 47873
+   }
+  }
+ },
+ "status": "scored",
+ "tools": {
+  "nephilex": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  },
+  "bandit": {
+   "status": "not_applicable"
+  },
+  "semgrep": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  }
+ },
+ "outcomes": {
+  "nephilex": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  },
+  "semgrep": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  }
+ }
+}

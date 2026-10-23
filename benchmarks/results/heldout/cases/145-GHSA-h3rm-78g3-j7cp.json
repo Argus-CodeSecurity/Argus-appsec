@@ -1,0 +1,122 @@
+{
+ "case": {
+  "ghsa_id": "GHSA-h3rm-78g3-j7cp",
+  "cve_id": null,
+  "ecosystem": "npm",
+  "packages": [
+   "@better-auth/stripe"
+  ],
+  "published_at": "2026-07-24T15:43:22Z",
+  "advisory_cwes": [639, 863],
+  "html_url": "https://github.com/advisories/GHSA-h3rm-78g3-j7cp",
+  "label_cwes": [639],
+  "repo": "better-auth/better-auth",
+  "fix_sha": "29fbcb573261242d8a05b131a9d39c9ae4352b06",
+  "parent_sha": "82cbbd6f1d9ccb1e7ee7fe54a2153c40c13442f3",
+  "path_vulnerable": "packages/stripe/src/routes.ts",
+  "path_patched": "packages/stripe/src/routes.ts",
+  "language": "typescript",
+  "vulnerable_lines": [
+   [22, 23],
+   [89, 122],
+   [307, 307],
+   [320, 322],
+   [1290, 1290],
+   [1303, 1303],
+   [1308, 1311],
+   [1454, 1454],
+   [1467, 1467],
+   [1471, 1474],
+   [1670, 1670],
+   [1683, 1683],
+   [1687, 1690],
+   [1947, 1947],
+   [1960, 1960],
+   [1967, 1969]
+  ],
+  "patched_lines": [
+   [21, 22],
+   [86, 87],
+   [271, 271],
+   [284, 284],
+   [1251, 1252],
+   [1264, 1264],
+   [1269, 1269],
+   [1411, 1412],
+   [1424, 1424],
+   [1428, 1428],
+   [1623, 1624],
+   [1636, 1636],
+   [1640, 1640],
+   [1896, 1897],
+   [1909, 1909],
+   [1916, 1916]
+  ],
+  "commit_url": "https://github.com/better-auth/better-auth/commit/29fbcb573261242d8a05b131a9d39c9ae4352b06",
+  "case_id": "145-GHSA-h3rm-78g3-j7cp",
+  "content": {
+   "vulnerable": {
+    "sha256": "4941f4bb13df3d6337cc22630e2f349561fd628800eaeaf7213e85fdea834a71",
+    "bytes": 58776
+   },
+   "patched": {
+    "sha256": "fe0bc0eb0925bcb6f1916b3729697a77f2118e5c65a22cecb778ebc63bc453b6",
+    "bytes": 57103
+   }
+  }
+ },
+ "status": "scored",
+ "tools": {
+  "nephilex": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  },
+  "bandit": {
+   "status": "not_applicable"
+  },
+  "semgrep": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  }
+ },
+ "outcomes": {
+  "nephilex": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  },
+  "semgrep": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  }
+ }
+}

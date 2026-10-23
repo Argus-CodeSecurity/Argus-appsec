@@ -1,0 +1,163 @@
+{
+ "case": {
+  "ghsa_id": "GHSA-f2mf-q878-gh58",
+  "cve_id": "CVE-2026-21892",
+  "ecosystem": "pip",
+  "packages": [
+   "parsl"
+  ],
+  "published_at": "2026-01-06T18:04:21Z",
+  "advisory_cwes": [89],
+  "html_url": "https://github.com/advisories/GHSA-f2mf-q878-gh58",
+  "label_cwes": [89],
+  "repo": "Parsl/parsl",
+  "fix_sha": "013a928461e70f38a33258bd525a351ed828e974",
+  "parent_sha": "2c37ae3e75137095302dac5f9cd3ca956cb51a47",
+  "path_vulnerable": "parsl/monitoring/visualization/views.py",
+  "path_patched": "parsl/monitoring/visualization/views.py",
+  "language": "python",
+  "vulnerable_lines": [
+   [1, 2],
+   [146, 146],
+   [148, 148],
+   [169, 172]
+  ],
+  "patched_lines": [
+   [2, 2],
+   [147, 147],
+   [149, 149],
+   [170, 174]
+  ],
+  "commit_url": "https://github.com/Parsl/parsl/commit/013a928461e70f38a33258bd525a351ed828e974",
+  "case_id": "021-GHSA-f2mf-q878-gh58",
+  "content": {
+   "vulnerable": {
+    "sha256": "800abb92efc22fbce5c3686c808620a8edd7d44ef1ac5ab3cb1454c850e58476",
+    "bytes": 8213
+   },
+   "patched": {
+    "sha256": "d4c8e40bb31b4bdb3d299ad3e7690e1578ef438ac9dfab16021fad115807ef3c",
+    "bytes": 8215
+   }
+  }
+ },
+ "status": "scored",
+ "tools": {
+  "nephilex": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [
+     [
+      58,
+      "logic.state-transition",
+      [840]
+     ]
+    ],
+    "patched": [
+     [
+      59,
+      "logic.state-transition",
+      [840]
+     ]
+    ]
+   }
+  },
+  "bandit": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [
+     [
+      135,
+      "B101",
+      [703]
+     ],
+     [
+      138,
+      "B608",
+      [89]
+     ],
+     [
+      169,
+      "B608",
+      [89]
+     ]
+    ],
+    "patched": [
+     [
+      136,
+      "B101",
+      [703]
+     ]
+    ]
+   }
+  },
+  "semgrep": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [
+     [
+      138,
+      "python.flask.security.injection.tainted-sql-string.tainted-sql-string",
+      [704]
+     ],
+     [
+      169,
+      "python.flask.security.injection.tainted-sql-string.tainted-sql-string",
+      [704]
+     ]
+    ],
+    "patched": []
+   }
+  }
+ },
+ "outcomes": {
+  "nephilex": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  },
+  "bandit": {
+   "window": 3,
+   "mapped": {
+    "detected": true,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": true,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": true,
+    "flagged_after_fix": false
+   }
+  },
+  "semgrep": {
+   "window": 3,
+   "mapped": {
+    "detected": true,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": true,
+    "flagged_after_fix": false
+   }
+  }
+ }
+}

@@ -1,0 +1,119 @@
+{
+ "case": {
+  "ghsa_id": "GHSA-c2j3-45gr-mqc4",
+  "cve_id": "CVE-2026-66010",
+  "ecosystem": "npm",
+  "packages": [
+   "dompurify"
+  ],
+  "published_at": "2026-07-21T19:41:07Z",
+  "advisory_cwes": [79, 184, 693],
+  "html_url": "https://github.com/advisories/GHSA-c2j3-45gr-mqc4",
+  "label_cwes": [79],
+  "repo": "cure53/DOMPurify",
+  "fix_sha": "a9ca1e537422319a557a9a2aa61f003b23b4a197",
+  "parent_sha": "0cae5187403132f96a6d357649e4b15633fc210a",
+  "path_vulnerable": "src/purify.ts",
+  "path_patched": "src/purify.ts",
+  "language": "typescript",
+  "vulnerable_lines": [
+   [1190, 1191],
+   [1329, 1330],
+   [1664, 1666],
+   [1751, 1751],
+   [1771, 1772],
+   [1787, 1787],
+   [1848, 1849],
+   [2188, 2188],
+   [2393, 2394],
+   [2404, 2405],
+   [2421, 2422],
+   [2492, 2492],
+   [2506, 2506],
+   [2521, 2522]
+  ],
+  "patched_lines": [
+   [1191, 1198],
+   [1338, 1431],
+   [1766, 1774],
+   [1859, 1860],
+   [1864, 1869],
+   [1887, 1905],
+   [1921, 1938],
+   [2000, 2035],
+   [2375, 2375],
+   [2581, 2586],
+   [2598, 2601],
+   [2619, 2623],
+   [2694, 2695],
+   [2709, 2709],
+   [2725, 2732]
+  ],
+  "commit_url": "https://github.com/cure53/DOMPurify/commit/a9ca1e537422319a557a9a2aa61f003b23b4a197",
+  "case_id": "158-GHSA-c2j3-45gr-mqc4",
+  "content": {
+   "vulnerable": {
+    "sha256": "8a032c5a6ae0b6e373090b403512e3352b42253eaa271916bf90dd0efe6ca093",
+    "bytes": 95004
+   },
+   "patched": {
+    "sha256": "cd71d3e2d10ac95ebdc7447e73f74f18bb0b94e1fce9132aa0c18c3e21f6c313",
+    "bytes": 104848
+   }
+  }
+ },
+ "status": "scored",
+ "tools": {
+  "nephilex": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  },
+  "bandit": {
+   "status": "not_applicable"
+  },
+  "semgrep": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  }
+ },
+ "outcomes": {
+  "nephilex": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  },
+  "semgrep": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  }
+ }
+}

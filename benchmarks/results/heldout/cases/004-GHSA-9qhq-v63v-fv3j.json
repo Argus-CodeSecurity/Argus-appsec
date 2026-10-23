@@ -1,0 +1,120 @@
+{
+ "case": {
+  "ghsa_id": "GHSA-9qhq-v63v-fv3j",
+  "cve_id": "CVE-2026-41497",
+  "ecosystem": "pip",
+  "packages": [
+   "praisonai"
+  ],
+  "published_at": "2026-04-17T22:23:50Z",
+  "advisory_cwes": [77, 78],
+  "html_url": "https://github.com/advisories/GHSA-9qhq-v63v-fv3j",
+  "label_cwes": [77, 78],
+  "repo": "MervinPraison/PraisonAI",
+  "fix_sha": "47bff65413beaa3c21bf633c1fae4e684348368c",
+  "parent_sha": "66bd9ee2a9c8c1e14514fe4d135b7e73e96a66fc",
+  "path_vulnerable": "src/praisonai/praisonai/cli/features/mcp.py",
+  "path_patched": "src/praisonai/praisonai/cli/features/mcp.py",
+  "language": "python",
+  "vulnerable_lines": [
+   [7, 8],
+   [11, 12],
+   [58, 59],
+   [67, 68],
+   [97, 97]
+  ],
+  "patched_lines": [
+   [8, 8],
+   [13, 26],
+   [74, 76],
+   [86, 93],
+   [123, 127]
+  ],
+  "commit_url": "https://github.com/MervinPraison/PraisonAI/commit/47bff65413beaa3c21bf633c1fae4e684348368c",
+  "case_id": "004-GHSA-9qhq-v63v-fv3j",
+  "content": {
+   "vulnerable": {
+    "sha256": "c7f1cf5fea60e321a1d1299b6a071276f0fc6beb5f836dfae8855ca58850a144",
+    "bytes": 5493
+   },
+   "patched": {
+    "sha256": "093c7805ee3e07dde044929b653fdc472c5f8f284891ea69cf69f3ac86a49765",
+    "bytes": 6538
+   }
+  }
+ },
+ "status": "scored",
+ "tools": {
+  "nephilex": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  },
+  "bandit": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  },
+  "semgrep": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  }
+ },
+ "outcomes": {
+  "nephilex": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  },
+  "bandit": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  },
+  "semgrep": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  }
+ }
+}

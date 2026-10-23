@@ -1,0 +1,101 @@
+{
+ "case": {
+  "ghsa_id": "GHSA-j5mf-6rh3-rhgg",
+  "cve_id": "CVE-2026-26861",
+  "ecosystem": "npm",
+  "packages": [
+   "clevertap-web-sdk"
+  ],
+  "published_at": "2026-02-27T18:31:06Z",
+  "advisory_cwes": [79, 346],
+  "html_url": "https://github.com/advisories/GHSA-j5mf-6rh3-rhgg",
+  "label_cwes": [79],
+  "repo": "CleverTap/clevertap-web-sdk",
+  "fix_sha": "84695b726a751614ddc3a4f71382c239c5833e03",
+  "parent_sha": "5e4504572136c9b918f3fe084303bd5f73d3f008",
+  "path_vulnerable": "clevertap.js",
+  "path_patched": "clevertap.js",
+  "language": "javascript",
+  "vulnerable_lines": [
+   [11646, 11646],
+   [11649, 11650],
+   [12491, 12491],
+   [13330, 13331]
+  ],
+  "patched_lines": [
+   [11646, 11646],
+   [11649, 11649],
+   [12490, 12490],
+   [13330, 13333]
+  ],
+  "commit_url": "https://github.com/CleverTap/clevertap-web-sdk/commit/84695b726a751614ddc3a4f71382c239c5833e03",
+  "case_id": "128-GHSA-j5mf-6rh3-rhgg",
+  "content": {
+   "vulnerable": {
+    "sha256": "5a5fc9fe722e6cd5afba76119ece2eede5b8c7463f4c71a2794895d4e2c5422b",
+    "bytes": 634314
+   },
+   "patched": {
+    "sha256": "60c3d337806cfa82f8c9c9f3e4cac112b362dae1b4ef56d75cded58491bd5fa3",
+    "bytes": 634320
+   }
+  }
+ },
+ "status": "scored",
+ "tools": {
+  "nephilex": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  },
+  "bandit": {
+   "status": "not_applicable"
+  },
+  "semgrep": {
+   "status": "ok",
+   "parse_error_versions": [
+    "patched",
+    "vulnerable"
+   ],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  }
+ },
+ "outcomes": {
+  "nephilex": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  },
+  "semgrep": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  }
+ }
+}

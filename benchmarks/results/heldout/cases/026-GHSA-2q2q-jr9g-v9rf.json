@@ -1,0 +1,135 @@
+{
+ "case": {
+  "ghsa_id": "GHSA-2q2q-jr9g-v9rf",
+  "cve_id": "CVE-2026-55228",
+  "ecosystem": "pip",
+  "packages": [
+   "Weblate"
+  ],
+  "published_at": "2026-08-28T18:47:29Z",
+  "advisory_cwes": [639],
+  "html_url": "https://github.com/advisories/GHSA-2q2q-jr9g-v9rf",
+  "label_cwes": [639],
+  "repo": "WeblateOrg/weblate",
+  "fix_sha": "19babc99b05f2cc299b5090f90f79d8181f25d79",
+  "parent_sha": "51fa620ae65a0bc3cb224dfd12790654d47444c6",
+  "path_vulnerable": "weblate/api/serializers.py",
+  "path_patched": "weblate/api/serializers.py",
+  "language": "python",
+  "vulnerable_lines": [
+   [34, 35],
+   [477, 478],
+   [656, 658],
+   [751, 751],
+   [754, 754],
+   [759, 759],
+   [761, 761]
+  ],
+  "patched_lines": [
+   [35, 35],
+   [479, 497],
+   [676, 676],
+   [771, 774],
+   [780, 786],
+   [789, 799]
+  ],
+  "commit_url": "https://github.com/WeblateOrg/weblate/commit/19babc99b05f2cc299b5090f90f79d8181f25d79",
+  "case_id": "026-GHSA-2q2q-jr9g-v9rf",
+  "content": {
+   "vulnerable": {
+    "sha256": "c43c0a81011d74997ca09536c6d3dd52c9c1542f48323ebd4c27c05d4a315a78",
+    "bytes": 106654
+   },
+   "patched": {
+    "sha256": "f6cf82fc020c9be3eb3a29d9f364852aac5e857614a4760f7ea3edfbed724153",
+    "bytes": 108017
+   }
+  }
+ },
+ "status": "scored",
+ "tools": {
+  "nephilex": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  },
+  "bandit": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [
+     [
+      2966,
+      "B105",
+      [259]
+     ]
+    ],
+    "patched": [
+     [
+      3002,
+      "B105",
+      [259]
+     ]
+    ]
+   }
+  },
+  "semgrep": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  }
+ },
+ "outcomes": {
+  "nephilex": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  },
+  "bandit": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  },
+  "semgrep": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  }
+ }
+}

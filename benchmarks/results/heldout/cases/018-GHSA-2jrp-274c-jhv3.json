@@ -1,0 +1,183 @@
+{
+ "case": {
+  "ghsa_id": "GHSA-2jrp-274c-jhv3",
+  "cve_id": "CVE-2026-25580",
+  "ecosystem": "pip",
+  "packages": [
+   "pydantic-ai",
+   "pydantic-ai-slim"
+  ],
+  "published_at": "2026-02-06T18:32:39Z",
+  "advisory_cwes": [918],
+  "html_url": "https://github.com/advisories/GHSA-2jrp-274c-jhv3",
+  "label_cwes": [918],
+  "repo": "pydantic/pydantic-ai",
+  "fix_sha": "d398bc9d39aecca6530fa7486a410d5cce936301",
+  "parent_sha": "06c77f46591c5bb5efacb170d203b9e3f4b1b413",
+  "path_vulnerable": "pydantic_ai_slim/pydantic_ai/messages.py",
+  "path_patched": "pydantic_ai_slim/pydantic_ai/messages.py",
+  "language": "python",
+  "vulnerable_lines": [
+   [113, 114],
+   [170, 171],
+   [173, 174],
+   [202, 202],
+   [266, 266],
+   [325, 325],
+   [372, 372],
+   [418, 418]
+  ],
+  "patched_lines": [
+   [114, 122],
+   [179, 180],
+   [182, 185],
+   [213, 213],
+   [277, 277],
+   [336, 336],
+   [383, 383],
+   [429, 429]
+  ],
+  "commit_url": "https://github.com/pydantic/pydantic-ai/commit/d398bc9d39aecca6530fa7486a410d5cce936301",
+  "case_id": "018-GHSA-2jrp-274c-jhv3",
+  "content": {
+   "vulnerable": {
+    "sha256": "5fe34e2cf5270b7695807564751f2e3f79f5874a7d3aae6ad10c77402081ef99",
+    "bytes": 79520
+   },
+   "patched": {
+    "sha256": "78ae09921cb1c85adf6f68210074c6a0aa66c8ef6608081e0f2b08eebc3090ae",
+    "bytes": 80402
+   }
+  }
+ },
+ "status": "scored",
+ "tools": {
+  "nephilex": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [
+     [
+      158,
+      "patterns.weak-hash-md5-sha1",
+      [327]
+     ]
+    ],
+    "patched": [
+     [
+      167,
+      "patterns.weak-hash-md5-sha1",
+      [327]
+     ]
+    ]
+   }
+  },
+  "bandit": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [
+     [
+      158,
+      "B324",
+      [327]
+     ],
+     [
+      1229,
+      "B101",
+      [703]
+     ],
+     [
+      1403,
+      "B101",
+      [703]
+     ]
+    ],
+    "patched": [
+     [
+      167,
+      "B324",
+      [327]
+     ],
+     [
+      1240,
+      "B101",
+      [703]
+     ],
+     [
+      1414,
+      "B101",
+      [703]
+     ]
+    ]
+   }
+  },
+  "semgrep": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [
+     [
+      158,
+      "python.lang.security.insecure-hash-algorithms.insecure-hash-algorithm-sha1",
+      [327]
+     ]
+    ],
+    "patched": [
+     [
+      167,
+      "python.lang.security.insecure-hash-algorithms.insecure-hash-algorithm-sha1",
+      [327]
+     ]
+    ]
+   }
+  }
+ },
+ "outcomes": {
+  "nephilex": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  },
+  "bandit": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  },
+  "semgrep": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  }
+ }
+}

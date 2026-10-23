@@ -1,0 +1,180 @@
+{
+ "case": {
+  "ghsa_id": "GHSA-5923-r76v-mprm",
+  "cve_id": "CVE-2025-67502",
+  "ecosystem": "pip",
+  "packages": [
+   "taguette"
+  ],
+  "published_at": "2025-12-09T14:26:34Z",
+  "advisory_cwes": [601],
+  "html_url": "https://github.com/advisories/GHSA-5923-r76v-mprm",
+  "label_cwes": [601],
+  "repo": "remram44/taguette",
+  "fix_sha": "67de2d2612e7e2572c61cd9627f89c2bfd0f2a36",
+  "parent_sha": "b34e2156a49a313c8af13885d9b0ae6fe3b1b93e",
+  "path_vulnerable": "taguette/web/views.py",
+  "path_patched": "taguette/web/views.py",
+  "language": "python",
+  "vulnerable_lines": [
+   [82, 84],
+   [141, 143]
+  ],
+  "patched_lines": [
+   [82, 82],
+   [139, 139]
+  ],
+  "commit_url": "https://github.com/remram44/taguette/commit/67de2d2612e7e2572c61cd9627f89c2bfd0f2a36",
+  "case_id": "081-GHSA-5923-r76v-mprm",
+  "content": {
+   "vulnerable": {
+    "sha256": "08883a6c4e54122ee68f670e2f157d84e5644b76c4ec97f5417e98366f157cce",
+    "bytes": 28099
+   },
+   "patched": {
+    "sha256": "33a7b7f50e39deacda86dba1bde136da8bac26fa42eef5128e6bd51c513e1dd0",
+    "bytes": 28011
+   }
+  }
+ },
+ "status": "scored",
+ "tools": {
+  "nephilex": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [
+     [
+      81,
+      "authz.cookie-missing-httponly",
+      [1004]
+     ],
+     [
+      81,
+      "authz.insecure-session-cookie",
+      [614]
+     ]
+    ],
+    "patched": [
+     [
+      81,
+      "authz.cookie-missing-httponly",
+      [1004]
+     ],
+     [
+      81,
+      "authz.insecure-session-cookie",
+      [614]
+     ]
+    ]
+   }
+  },
+  "bandit": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [
+     [
+      226,
+      "B704",
+      [79]
+     ],
+     [
+      723,
+      "B704",
+      [79]
+     ]
+    ],
+    "patched": [
+     [
+      222,
+      "B704",
+      [79]
+     ],
+     [
+      719,
+      "B704",
+      [79]
+     ]
+    ]
+   }
+  },
+  "semgrep": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [
+     [
+      355,
+      "python.lang.security.audit.logging.logger-credential-leak.python-logger-credential-disclosure",
+      [532]
+     ],
+     [
+      364,
+      "python.lang.security.audit.logging.logger-credential-leak.python-logger-credential-disclosure",
+      [532]
+     ]
+    ],
+    "patched": [
+     [
+      351,
+      "python.lang.security.audit.logging.logger-credential-leak.python-logger-credential-disclosure",
+      [532]
+     ],
+     [
+      360,
+      "python.lang.security.audit.logging.logger-credential-leak.python-logger-credential-disclosure",
+      [532]
+     ]
+    ]
+   }
+  }
+ },
+ "outcomes": {
+  "nephilex": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": true,
+    "flagged_after_fix": true
+   }
+  },
+  "bandit": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  },
+  "semgrep": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  }
+ }
+}
