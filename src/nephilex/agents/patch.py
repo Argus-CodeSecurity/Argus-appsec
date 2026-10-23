@@ -20,20 +20,17 @@ patch and opening a pull request is an explicit, separate action.
 
 from __future__ import annotations
 
-import difflib
 import re
 
 from nephilex.agents.base import UNTRUSTED_NOTICE, Agent, AgentContext, fence_untrusted
 from nephilex.core.models import Finding, Remediation
-from nephilex.remediation.rewrites import fix_line, verify_line_fixed
+from nephilex.remediation.patches import attach_deterministic_patch, unified_diff
 
 _SYSTEM = (
     "You are a secure-coding assistant. Given a vulnerable code snippet and the "
     "issue, return ONLY a minimal corrected version of the snippet that resolves "
     "the vulnerability while preserving behavior. Do not add commentary.\n" + UNTRUSTED_NOTICE
 )
-
-_HUNK_HEADER = re.compile(r"^@@ -(\d+)((?:,\d+)?) \+(\d+)((?:,\d+)?) @@")
 
 
 class PatchAgent(Agent):
@@ -42,32 +39,24 @@ class PatchAgent(Agent):
     def process(self, finding: Finding, ctx: AgentContext) -> Finding:
         if finding.remediation is None:
             finding.remediation = Remediation(summary="See remediation guidance.")
+        if attach_deterministic_patch(finding):
+            return finding
 
         original = finding.location.snippet or ""
-        fixed = fix_line(finding.rule_id, original)
-        verified = False
-        source = "deterministic"
-
+        if not (original and self._uses_real_model(ctx)):
+            return finding
+        # AI-proposed tier: a draft for a human to review. Never marked
+        # verified and never auto-applied.
+        fixed = self._model_fix(finding, ctx, original)
         if fixed and fixed != original:
-            verified = verify_line_fixed(finding.rule_id, fixed)
-        elif self._uses_real_model(ctx) and original:
-            # AI-proposed tier: a draft for a human to review. Never marked
-            # verified and never auto-applied.
-            fixed = self._model_fix(finding, ctx, original)
-            source = "ai-proposed"
-
-        if fixed and fixed != original:
-            finding.remediation.patch = self._unified_diff(
+            finding.remediation.patch = unified_diff(
                 finding.location.path, original, fixed, start_line=finding.location.start_line or 1
             )
-            finding.remediation.verified = verified
-            finding.metadata["patch_source"] = source
-            if source == "ai-proposed":
-                finding.metadata["patch_review"] = "human-review-required"
-                note = "Machine-proposed fix, review before merging. (Not automatically verified.)"
-                finding.remediation.guidance = (
-                    note + "\n\n" + finding.remediation.guidance
-                ).strip()
+            finding.remediation.verified = False
+            finding.metadata["patch_source"] = "ai-proposed"
+            finding.metadata["patch_review"] = "human-review-required"
+            note = "Machine-proposed fix, review before merging. (Not automatically verified.)"
+            finding.remediation.guidance = (note + "\n\n" + finding.remediation.guidance).strip()
         return finding
 
     def _model_fix(self, finding: Finding, ctx: AgentContext, original: str) -> str | None:
@@ -88,26 +77,4 @@ class PatchAgent(Agent):
         out = re.sub(r"^```[a-zA-Z]*\n?|\n?```$", "", out).strip()
         return out or None
 
-    @staticmethod
-    def _unified_diff(path: str, before: str, after: str, start_line: int) -> str:
-        """A unified diff replacing ``before`` with ``after`` at ``start_line``.
-
-        Built with difflib so multi-line snippets get correct per-line markers
-        and hunk lengths; hunk headers are shifted to the snippet's real line.
-        """
-        offset = max(start_line, 1) - 1
-        out: list[str] = []
-        for line in difflib.unified_diff(
-            before.split("\n"),
-            after.split("\n"),
-            fromfile=f"a/{path}",
-            tofile=f"b/{path}",
-            lineterm="",
-        ):
-            m = _HUNK_HEADER.match(line)
-            if m:
-                old_start = int(m.group(1)) + offset
-                new_start = int(m.group(3)) + offset
-                line = f"@@ -{old_start}{m.group(2)} +{new_start}{m.group(4)} @@"
-            out.append(line)
-        return "\n".join(out) + "\n"
+    _unified_diff = staticmethod(unified_diff)
