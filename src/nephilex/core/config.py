@@ -90,6 +90,32 @@ def _non_negative_int(data: dict[str, Any], key: str, default: int, *, prefix: s
     return value
 
 
+def _check_test_settings(autofix: dict[str, Any]) -> None:
+    """Validate ``autofix.test_command`` and ``autofix.test_timeout`` when present.
+
+    They are used by ``nephilex fix --verify-with-tests``, and only when the
+    project config is trusted (see ``remediation.testverify``).
+    """
+    command = autofix.get("test_command")
+    if command is not None and not (
+        (isinstance(command, str) and command.strip())
+        or (
+            isinstance(command, list) and command and all(isinstance(a, str) and a for a in command)
+        )
+    ):
+        raise ConfigError(
+            "autofix.test_command: expected a command string or a non-empty list of "
+            f"strings, got {command!r}"
+        )
+    timeout = autofix.get("test_timeout")
+    if timeout is not None and (
+        isinstance(timeout, bool) or not isinstance(timeout, (int, float)) or timeout <= 0
+    ):
+        raise ConfigError(
+            f"autofix.test_timeout: expected a positive number of seconds, got {timeout!r}"
+        )
+
+
 def _severity(value: Any, key: str) -> Severity:
     try:
         return Severity.parse(value)
@@ -267,6 +293,7 @@ class Config:
         cfg.allow = _dict_list(data, "allow")
         cfg.policies = _dict_list(data, "policies")
         cfg.autofix = _mapping(data, "autofix")
+        _check_test_settings(cfg.autofix)
 
         if data.get("min_severity") not in (None, ""):
             cfg.min_severity = _severity(data["min_severity"], "min_severity")

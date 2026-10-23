@@ -13,7 +13,7 @@ before relying on it as evidence.
 
 | Action | When |
 |---|---|
-| `fix.applied` | `nephilex fix` (or `apply_fixes`) wrote a deterministic fix to a file. One record per fix. |
+| `fix.applied` | `nephilex fix` (or `apply_fixes`) wrote a deterministic fix to a file. One record per fix. With `--verify-with-tests`, `details.tests` records the test result (`passed`; fixes whose tests did not pass are never applied). |
 | `fix.pr_opened` | `nephilex fix --open-pr` opened a pull request for the fixes. One record per fix, with the PR URL. |
 | `suppression.added` | Nephilex saw a suppression definition for the first time: an allowlist entry, a `.nephilex/exceptions.yml` entry, an inline `nephilex-ignore` comment (when it first hides a finding), or a baseline file. |
 | `suppression.matched` | A suppression hid or accepted a finding. `kind` is `allowlist`, `exception`, `inline` or `baseline`. |

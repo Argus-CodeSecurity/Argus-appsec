@@ -47,6 +47,11 @@ class AppliedFix:
     # The finding's fingerprint, taken before the fix (it is keyed on the
     # offending code); used by the audit log.
     fingerprint: str = ""
+    # Outcome of `nephilex fix --verify-with-tests` (passed, failed or
+    # not_verified; see remediation.testverify), kept apart from the rule
+    # check in ``verified``. None when the tests were not run.
+    tests: str | None = None
+    tests_reason: str = ""
 
     def unified_diff(self) -> str:
         return "".join(
@@ -241,8 +246,15 @@ def record_fix_events(
             fingerprint=fix.fingerprint or None,
             rule=fix.rule_id,
             path=fix.path,
-            reason=("verified" if fix.verified else "unverified") + " deterministic fix",
-            details={"line": fix.line, "verified": fix.verified, **details},
+            reason=("verified" if fix.verified else "unverified")
+            + " deterministic fix"
+            + (f", tests {fix.tests.replace('_', ' ')}" if fix.tests else ""),
+            details={
+                "line": fix.line,
+                "verified": fix.verified,
+                **({"tests": fix.tests} if fix.tests else {}),
+                **details,
+            },
         )
         for fix in fixes
     ]

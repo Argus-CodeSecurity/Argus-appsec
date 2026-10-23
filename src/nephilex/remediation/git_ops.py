@@ -26,8 +26,10 @@ from nephilex.core.gitexec import git_available
 __all__ = [
     "GitError",
     "RepoInfo",
+    "add_worktree",
     "branch_exists",
     "checkout",
+    "clean_untracked",
     "commit",
     "create_branch",
     "current_branch",
@@ -39,8 +41,10 @@ __all__ = [
     "inspect",
     "is_git_repo",
     "path_prefix",
+    "prune_worktrees",
     "push",
     "remote_url",
+    "remove_worktree",
     "reset_hard",
     "rev_parse",
     "show_file",
@@ -230,6 +234,47 @@ def delete_branch(root: Path, name: str) -> None:
 def reset_hard(root: Path) -> None:
     """Discard staged and unstaged changes to tracked files."""
     _run(root, "reset", "--hard", "-q", "HEAD")
+
+
+def clean_untracked(root: Path) -> None:
+    """Delete untracked and ignored files under ``root``.
+
+    Only for the temporary worktrees Nephilex creates to run a project's tests,
+    where everything untracked is an artifact of an earlier test run. Never call
+    this on the operator's own checkout.
+    """
+    _run(root, "clean", "-ffdxq")
+
+
+def add_worktree(root: Path, path: Path, commit: str) -> None:
+    """Check out ``commit`` into a new, detached worktree at ``path``.
+
+    The repository's hooks are switched off for this call (``post-checkout``
+    would otherwise run): creating a throwaway checkout is not an action the
+    operator's hooks are meant to see.
+    """
+    if not _safe_ref(commit):
+        raise GitError(f"refusing unsafe ref: {commit!r}")
+    _run(
+        root,
+        "worktree",
+        "add",
+        "--detach",
+        "--quiet",
+        str(path),
+        commit,
+        config=(f"core.hooksPath={os.devnull}",),
+    )
+
+
+def remove_worktree(root: Path, path: Path) -> None:
+    """Remove the worktree at ``path``, even if it has changes or is locked."""
+    _run(root, "worktree", "remove", "--force", "--force", str(path))
+
+
+def prune_worktrees(root: Path) -> None:
+    """Forget worktrees whose directories no longer exist (best effort)."""
+    _run(root, "worktree", "prune", check=False)
 
 
 def branch_exists(root: Path, name: str) -> bool:
