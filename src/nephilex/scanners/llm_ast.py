@@ -281,6 +281,8 @@ class ModelIndex:
     #: model name -> {field name -> True if the field's value is constrained}
     models: dict[str, dict[str, bool]] = field(default_factory=dict)
     enums: set[str] = field(default_factory=set)
+    #: model name -> {field name -> in-file model the field holds (``list[Item]``)}
+    refs: dict[str, dict[str, str]] = field(default_factory=dict)
 
     def field_constrained(self, model: str | None, attr: str) -> bool | None:
         """True/False for a known model's field, None when it cannot be told."""
@@ -348,6 +350,11 @@ def model_index(root, src: Src) -> ModelIndex:
             if ann_text.startswith("constr(") and _PATTERN_CONSTRAINT.search(ann_text):
                 constrained = True
             fields[src.text(left)] = constrained
+            inner_models = [
+                w for w in re.findall(r"[A-Za-z_]\w*", ann_text) if w in model_names and w != name
+            ]
+            if inner_models and not constrained:
+                index.refs.setdefault(name, {})[src.text(left)] = inner_models[0]
         index.models[name] = fields
     return index
 

@@ -33,3 +33,26 @@ corpus commit recorded so every number is attributable.
   are very welcome.
 - Numbers that get worse are published anyway, a benchmark that only ever
   improves is marketing, not measurement.
+
+## Labeled LLM and agent corpus (`agent/`)
+
+`agent/corpus/` holds small, realistic LLM-application and agent snippets
+(OpenAI and Anthropic SDKs, LangChain, LlamaIndex, MCP servers, Vercel AI SDK,
+plain HTTP fetches into prompts) in Python, JavaScript and TypeScript. Each
+scenario is a vulnerable case and a safe case that does the same thing
+correctly, labeled in `agent/corpus/manifest.json` with the OWASP Top 10 for
+LLM Applications 2025 ids a correct report may carry, plus CWEs. The corpus
+was written by a separate author who did not read the scanner code.
+
+```bash
+python benchmarks/agent/run.py                  # dev and held-out summary
+python benchmarks/agent/run.py --details dev    # per-case outcomes, dev split
+```
+
+Scenarios are split into **dev** and **held-out** by a fixed rule: a scenario
+is held out when the SHA-256 of its id is divisible by 3. The corpus and the
+split were committed, with a baseline score, before any rule was written
+against them, and rule work looked only at the dev split. A vulnerable case
+counts as caught only when a finding from the `llm` or `agent-config` scanner
+carries one of its expected OWASP ids; any such finding on a safe case is a
+false positive. Results are in `agent/results/`.
