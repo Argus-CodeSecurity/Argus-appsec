@@ -32,13 +32,27 @@ def _fix_yaml_load(ln: str) -> str | None:
     return ln.replace("yaml.load(", "yaml.safe_load(")
 
 
+# A fast hash is the wrong fix for a password or other low-entropy secret: those
+# need a key-derivation function (bcrypt, scrypt, Argon2, PBKDF2), which cannot
+# be swapped in on one line. Such lines get no deterministic fix.
+_SECRET_HASH_INPUT = re.compile(
+    r"(?<![a-z])(?:password|passwd|passphrase|pwd|pin|credentials?|secret)(?![a-z])",
+    re.IGNORECASE,
+)
+
+
 def _fix_weak_hash(ln: str) -> str | None:
     """Upgrade weak hashes to SHA-256, but only at the actual call sites.
 
     A blanket string replace would corrupt identifiers or strings that merely
     contain ``md5``/``sha1`` (e.g. a variable named ``md5_util``), so each
-    substitution is anchored to the recognized construction pattern.
+    substitution is anchored to the recognized construction pattern. A line that
+    hashes a password or secret is left alone (see ``_SECRET_HASH_INPUT``): the
+    line is all this rewrite sees, so the finding keeps its KDF guidance instead
+    of a fix that would be marked verified while still being wrong.
     """
+    if _SECRET_HASH_INPUT.search(ln):
+        return None
     replacements = (
         (r"hashlib\.md5\(", "hashlib.sha256("),
         (r"hashlib\.sha1\(", "hashlib.sha256("),

@@ -31,6 +31,28 @@ def test_fix_line_transforms_known_rules():
     )
 
 
+@pytest.mark.parametrize(
+    "line",
+    [
+        "    return hashlib.md5(password.encode()).hexdigest()",
+        "h = hashlib.sha1(user_pwd)",
+        "key = hashlib.md5(api_secret)",
+        "digest = hashlib.md5(passphrase.encode())",
+    ],
+)
+def test_weak_hash_of_a_password_gets_no_deterministic_fix(line):
+    # SHA-256 is still a fast hash; passwords need a KDF, so no fix is offered
+    # (and none is marked verified) rather than a wrong one.
+    assert fix_line("patterns.weak-hash-md5-sha1", line) is None
+
+
+@pytest.mark.parametrize(
+    "line", ["etag = hashlib.md5(body).hexdigest()", "x = hashlib.sha1(spinner)  # compass"]
+)
+def test_weak_hash_of_other_data_is_still_fixed(line):
+    assert "sha256" in fix_line("patterns.weak-hash-md5-sha1", line)
+
+
 def test_fix_line_unknown_rule_returns_none():
     assert fix_line("patterns.nonexistent", "whatever") is None
 
