@@ -144,6 +144,15 @@ class Scanner(abc.ABC):
         """Return True if this scanner is relevant to the project. Default: yes."""
         return True
 
+    def unavailable_reason(self, project: Project) -> str | None:
+        """Why this scanner is skipped although the project has files for it.
+
+        Return None when it is skipped only because there is nothing for it to
+        scan. The engine shows the reason, so a missing optional dependency is
+        not mistaken for an empty project.
+        """
+        return None
+
     def cacheable(self, ctx: ScannerContext) -> bool:
         """Whether findings may be served from the per-file cache for this run.
 

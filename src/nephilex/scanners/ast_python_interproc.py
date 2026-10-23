@@ -139,6 +139,11 @@ class ASTPythonInterprocScanner(Scanner):
     def applies_to(self, project) -> bool:
         return is_available() and len(project.files_matching("*.py")) > 0
 
+    def unavailable_reason(self, project) -> str | None:
+        if is_available() or not project.files_matching("*.py"):
+            return None
+        return 'needs the [ast] extra: pip install "nephilex[ast]"'
+
     def scan(self, ctx: ScannerContext) -> Iterable[Finding]:
         # Own parser instance: this scanner runs on its own worker thread while
         # ast-python runs on another, and a tree-sitter Parser is not safe to
