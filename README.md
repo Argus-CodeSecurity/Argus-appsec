@@ -232,6 +232,23 @@ Only deterministic, self-verified fixes are applied by default. Examples: unsafe
 removed, `debug=True` becomes `debug=False`, and `torch.load` gains
 `weights_only=True`. See [docs/fixing.md](docs/fixing.md).
 
+## Accuracy
+
+Nephilex, Bandit and Semgrep are run on two public Python datasets, and the raw
+findings and scoring scripts are in the repository, so anyone can rerun them.
+
+| Dataset | Nephilex | Bandit | Semgrep (`p/python`) |
+| --- | --- | --- | --- |
+| OWASP BenchmarkPython, score (TPR minus FPR) | +89.4 | +18.6 | +14.2 |
+| SecurityEval, samples detected out of 121 | 32 | 32 | 13 |
+
+Read these with their caveats. The Python rules were developed with OWASP
+BenchmarkPython visible, so it is not an independent test of Nephilex.
+SecurityEval is closer to one: without five detections from rules written after
+reading its misses, Nephilex finds 27 of 121, behind Bandit's 32. Methodology,
+per-category results and a false-positive check on real projects are in
+[docs/benchmarks.md](docs/benchmarks.md).
+
 ## Roadmap
 
 **Implemented.** Project analysis; secrets, dependency, SAST, and IaC scanners; a
