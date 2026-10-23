@@ -37,6 +37,41 @@ python benchmarks/heldout/run.py score     # re-score committed results, no tool
 The selection rule, scoring and results are in `docs/benchmarks.md`
 ("Held-out benchmark: real fix commits"); outputs go to `results/heldout/`.
 
+### Three sets
+
+Every `run.py` command takes `--set` (default `v1`). The rule and scoring are
+shared; `docs/benchmarks.md` ("Three benchmark sets") explains what each set
+is for and who may look at it.
+
+| Set | Manifest | Results | Purpose |
+|---|---|---|---|
+| `v1` | `heldout/manifest.json` | `results/heldout/` | frozen held-out set, 201 cases |
+| `dev` | `heldout/sets/dev/manifest.json` | `results/dev/` | development set, read every miss |
+| `timesplit` | `heldout/sets/timesplit/manifest.json` (not selected yet) | `results/timesplit/` | release headline number |
+
+Development set:
+
+```bash
+python benchmarks/heldout/run.py fetch --set dev
+python benchmarks/heldout/run.py scan --set dev --bandit PATH --semgrep PATH
+python benchmarks/heldout/run.py score --set dev     # re-score committed results
+```
+
+Time-split test set, only after the detection rules for the release are
+frozen (`heldout/sets/timesplit/README.md`):
+
+```bash
+python benchmarks/heldout/run.py select --set timesplit \
+    --until YYYY-MM-DD --rules-frozen-at <full commit sha> --api-command "..."
+python benchmarks/heldout/run.py fetch --set timesplit
+python benchmarks/heldout/run.py scan --set timesplit --bandit PATH --semgrep PATH
+```
+
+`select` refuses to overwrite an existing `v1` or `dev` manifest unless
+`--replace` is given, and never selects the time-split set twice.
+Downloads go to `.corpora/heldout/`, `.corpora/dev/` or `.corpora/timesplit/`
+(git-ignored); they are scanned as data and never executed.
+
 ## Methodology and honesty notes
 
 - Scans run with `--no-ai --no-cache` so numbers are deterministic and
