@@ -384,6 +384,111 @@ are in [Scanners](scanners.md).
   `requirements.txt`; those findings fall outside the test cases and do not
   affect the scores.
 
+## Held-out benchmark: real fix commits
+
+The public datasets above have a known weakness: Nephilex's Python rules were
+revised with OWASP BenchmarkPython visible. This benchmark answers that with
+code nobody tuned anything on: real vulnerabilities from real projects, taken
+as before/after pairs from the commits that fixed them.
+
+### Selection rule
+
+The rule was written down and committed (in `benchmarks/heldout/selection.py`,
+with the resulting manifest) before any tool was run on the selected files.
+Git history shows the order. In full:
+
+1. **Source.** GitHub Advisory Database, reviewed advisories only, ecosystems
+   `pip` and `npm`, published from 2024-01-01 to 2026-09-30, not withdrawn.
+2. **CWE.** The advisory lists at least one CWE that Nephilex's Python or
+   JavaScript/TypeScript source-code rules report, or a member of the
+   equivalence group that contains one (`benchmarks/public/mapping.py`). The
+   claimed CWEs, with the scanner modules that report them, are recorded in the
+   manifest: 22, 73, 74, 77, 78, 79, 80, 89, 90, 94, 95, 295, 306, 327, 330, 338,
+   347, 352, 489, 501, 502, 598, 601, 611, 614, 639, 643, 918, 1004, 1336. With
+   their groups the target set adds 23, 36, 88, 99, 297, 328, 331, 564, 776 and
+   916. CWEs reported only by configuration, infrastructure, dependency, CI,
+   secret, other-language or LLM-misuse rules (for example 200, 250, 732) are
+   not claimed here: those rules detect them only in narrow contexts. A case's
+   label is the subset of its advisory's CWEs that is in the target set.
+3. **Fix commit.** At least one advisory reference is a GitHub commit URL
+   (`/commit/<sha>` or `/pull/<n>/commits/<sha>`). All such commits are used.
+4. **Files.** From each fix commit, every modified or renamed `.py`, `.js`,
+   `.mjs`, `.cjs`, `.jsx`, `.ts`, `.mts`, `.cts` or `.tsx` file, except tests
+   (`test`/`tests`/`spec`/`__tests__`/`e2e` directories, `test_*.py`,
+   `*_test.py`, `conftest.py`, `*.test.js`, `*.spec.ts` and similar),
+   documentation and examples (`doc`, `docs`, `example(s)`, `sample(s)`),
+   vendored or build output (`vendor`, `third_party`, `node_modules`, `dist`,
+   `build`, `coverage`, ...), minified or generated files (`*.min.js`,
+   bundles, `*_pb2.py`) and TypeScript declarations (`*.d.ts`). Files the fix
+   added or deleted have no before/after pair and are skipped. Within one
+   advisory a path is taken once, from the first commit that touches it; a file
+   and commit already used by another advisory is not used twice.
+5. **Localized fixes.** An advisory whose fix touches more than 5 eligible
+   files is dropped as a refactor: most of its changed lines would not be the
+   vulnerable code.
+6. **Sampling.** Candidate advisories are ordered by SHA-256 of their GHSA id,
+   a fixed order nobody chose, and taken until 120 `pip` and 80 `npm` cases
+   are reached. Nothing in the order depends on any tool.
+
+A **case** is one file of one advisory. The vulnerable version is the file at
+the fix commit's first parent; the patched version is the file at the fix
+commit. The manifest (`benchmarks/heldout/manifest.json`) records for each case
+the advisory id, CVE, CWEs, repository, parent and fix SHAs, paths, the changed
+line ranges on both sides and the SHA-256 of both versions, so anyone can
+re-fetch and verify exactly the same files. It also lists every dropped
+advisory and file with its reason.
+
+Changed lines come from the fix commit's unified diff: removed lines on the
+vulnerable side and added lines on the patched side. A hunk that only inserts
+lines marks the two vulnerable-side lines around the insertion point, and a
+hunk that only deletes marks the two patched-side lines around the deletion.
+
+### Selection counts
+
+Snapshot taken on 2026-10-23:
+
+| Step | pip | npm |
+| --- | --- | --- |
+| Reviewed advisories in the window with a target CWE (API filter) | 1882 | 1874 |
+| Withdrawn | 88 | 82 |
+| No GitHub fix commit reference | 789 | 737 |
+| Candidates | 1005 | 1055 |
+| Examined in sample order before the budget was reached | 97 | 51 |
+| Dropped: fix touches more than 5 source files | 18 | 7 |
+| Dropped: no eligible source file in the fix commits | 5 | 2 |
+| Dropped: fix commit not retrievable | 0 | 1 |
+| Selected advisories | 74 | 41 |
+| Selected cases (files) | 121 | 81 |
+
+The 202 cases are 119 Python, 48 JavaScript and 35 TypeScript files.
+
+### Scoring
+
+Fixed with the selection rule, before any tool ran:
+
+- **Window.** A finding belongs to a case when it is in the case's file and its
+  line is within 3 lines of a changed line on that side. Windows of 0 and 10
+  lines are published as a sensitivity check.
+- **CWE match.** `mapped` (primary): the finding's CWEs, plus the documented
+  rule overrides, intersect the equivalence group of one of the case's label
+  CWEs, exactly as in the public benchmark (`benchmarks/public/mapping.py`,
+  unchanged). `strict`: a finding CWE equals a label CWE. `any`: any finding in
+  the window, whatever its CWE.
+- **Detected.** The vulnerable version has a matching finding in the window
+  around its changed lines.
+- **Flagged after the fix.** The patched version has a matching finding in the
+  window around its changed lines. **Still flagged** counts detected cases
+  that are also flagged after the fix.
+- **Recall** = detected / cases. **Fix-aware recall** = (detected and not
+  flagged after the fix) / cases: the tool told the vulnerable version apart
+  from the patched one.
+- **Precision proxy** = detected / (detected + flagged after the fix), treating
+  every match on fixed code as a false positive. Real advisories have no
+  labeled safe code, so this is a proxy, not precision (see Limitations).
+- Results are given per case (file) and per advisory (an advisory is detected
+  when any of its files is), by CWE, language and ecosystem, with raw counts.
+  A case with two label CWEs counts once in each CWE row.
+
 ## Public reference apps (finding inventory)
 
 The larger harness scans real, known-vulnerable applications:
