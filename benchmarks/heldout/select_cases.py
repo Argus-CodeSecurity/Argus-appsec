@@ -1,8 +1,9 @@
 """Apply the selection rule in ``selection.py`` and write the manifest.
 
 Network access is read-only GitHub REST API calls, cached under
-``benchmarks/.corpora/heldout/api``. The manifest lists every selected case
-and every exclusion with its reason.
+``benchmarks/.corpora/<set>/api``. The manifest lists every selected case
+and every exclusion with its reason. ``client`` only needs an ``api(path)``
+method, so the tests drive ``select`` with synthetic advisories.
 """
 
 from __future__ import annotations
@@ -31,15 +32,17 @@ def _advisory_query(ecosystem: str, start: _dt.date, end: _dt.date) -> str:
     return "/advisories?" + urllib.parse.urlencode(params, safe=",.")
 
 
-def list_advisories(client: Client, ecosystem: str) -> list[dict[str, Any]]:
-    """Every reviewed advisory in the window with a target CWE.
+def list_advisories(
+    client: Client, ecosystem: str, window: tuple[str, str] = sel.PUBLISHED_WINDOW
+) -> list[dict[str, Any]]:
+    """Every reviewed advisory in ``window`` with a target CWE.
 
     The advisories endpoint pages with an opaque cursor in the ``Link`` header,
     so instead the date range is split until each slice returns fewer than one
     full page. That keeps every request a plain, cacheable GET.
     """
-    start = _dt.date.fromisoformat(sel.PUBLISHED_WINDOW[0])
-    end = _dt.date.fromisoformat(sel.PUBLISHED_WINDOW[1])
+    start = _dt.date.fromisoformat(window[0])
+    end = _dt.date.fromisoformat(window[1])
     out: dict[str, dict[str, Any]] = {}
     stack = [(start, end)]
     while stack:
@@ -81,7 +84,17 @@ def _commit_files(client: Client, fc: sel.FixCommit) -> dict[str, Any]:
     return client.api(f"/repos/{owner}/{name}/commits/{fc.sha}")
 
 
-def select(client: Client) -> dict[str, Any]:
+def select(
+    client: Client, rule: sel.SetRule = sel.V1_RULE, prior: sel.PriorSets | None = None
+) -> dict[str, Any]:
+    """Apply the rule for one set. ``prior`` lists what earlier sets examined.
+
+    An advisory an earlier set examined (or that shares a CVE id with one) is
+    skipped before sampling, and a file and commit that is already an earlier
+    case is never a case again. With ``rule=V1_RULE`` and no ``prior`` this is
+    the v1 selection unchanged.
+    """
+    prior = prior or sel.PriorSets()
     cases: list[dict[str, Any]] = []
     excluded: list[dict[str, Any]] = []
     file_exclusions: list[dict[str, Any]] = []
@@ -89,10 +102,17 @@ def select(client: Client) -> dict[str, Any]:
     seen_files: set[tuple[str, str, str]] = set()
 
     for eco in sel.ECOSYSTEMS:
-        advisories = list_advisories(client, eco)
+        advisories = list_advisories(client, eco, rule.published_window)
         stats: Counter[str] = Counter(listed=len(advisories))
         candidates = []
         for adv in advisories:
+            if not rule.in_window(adv.get("published_at")):
+                stats["outside_published_window"] += 1
+                continue
+            prior_reason = prior.reason(adv)
+            if prior_reason:
+                stats[f"skipped: {prior_reason}"] += 1
+                continue
             if adv.get("withdrawn_at"):
                 stats["withdrawn"] += 1
                 continue
@@ -104,18 +124,20 @@ def select(client: Client) -> dict[str, Any]:
             if not commits:
                 stats["no_fix_commit_reference"] += 1
                 continue
-            candidates.append((sel.sample_order(adv["ghsa_id"]), adv, label, commits))
+            candidates.append((rule.order_key(adv["ghsa_id"]), adv, label, commits))
         stats["candidates"] = len(candidates)
         candidates.sort(key=lambda t: t[0])
 
         taken = 0
         for _, adv, label, commits in candidates:
-            if taken >= sel.CASE_BUDGET[eco]:
+            if taken >= rule.case_budget[eco]:
                 stats["not_sampled_budget_reached"] += 1
                 continue
             stats["examined"] += 1
             slim = _slim(adv, eco)
-            new_cases, reason, per_file = _advisory_cases(client, slim, label, commits, seen_files)
+            new_cases, reason, per_file = _advisory_cases(
+                client, slim, label, commits, seen_files, prior.files
+            )
             file_exclusions.extend(per_file)
             if reason:
                 excluded.append({**slim, "reason": reason})
@@ -143,6 +165,7 @@ def _advisory_cases(
     label: list[int],
     commits: list[sel.FixCommit],
     seen_files: set[tuple[str, str, str]],
+    prior_files: frozenset[tuple[str, str, str]] = frozenset(),
 ) -> tuple[list[dict[str, Any]], str | None, list[dict[str, Any]]]:
     out: list[dict[str, Any]] = []
     file_excl: list[dict[str, Any]] = []
@@ -181,6 +204,8 @@ def _advisory_cases(
                 reason = "path already taken from an earlier fix commit of this advisory"
             if reason is None and (repo.lower(), full_sha, path) in seen_files:
                 reason = "same file and commit already a case of another advisory"
+            if reason is None and (repo.lower(), full_sha.lower(), path) in prior_files:
+                reason = "same file and commit already a case in an earlier set"
             if reason is not None:
                 if sel.language_of(path) is not None:  # only log source files
                     file_excl.append(_fx(slim, repo, full_sha, path, reason))
