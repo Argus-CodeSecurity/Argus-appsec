@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 import pytest
@@ -14,6 +15,8 @@ from nephilex.core.models import ScanResult
 runner = CliRunner()
 FIXTURES = Path(__file__).parent / "fixtures" / "sarif"
 TOOLS = ("semgrep", "codeql", "gitleaks", "trivy", "bandit")
+# CI terminals get colored help, and the escape codes can split an option name.
+_ANSI = re.compile(r"\x1b\[[0-9;]*m")
 
 
 def _files(*names: str) -> list[str]:
@@ -32,7 +35,7 @@ def test_import_is_registered():
     res = runner.invoke(app, ["--help"])
     assert "import" in res.output
     res = runner.invoke(app, ["import", "--help"])
-    assert res.exit_code == 0 and "--project" in res.output
+    assert res.exit_code == 0 and "--project" in _ANSI.sub("", res.output)
 
 
 def test_import_json_report(vulnerable_project):
