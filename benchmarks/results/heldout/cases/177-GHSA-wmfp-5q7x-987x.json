@@ -1,0 +1,92 @@
+{
+ "case": {
+  "ghsa_id": "GHSA-wmfp-5q7x-987x",
+  "cve_id": "CVE-2026-30952",
+  "ecosystem": "npm",
+  "packages": [
+   "liquidjs"
+  ],
+  "published_at": "2026-03-10T01:04:34Z",
+  "advisory_cwes": [22],
+  "html_url": "https://github.com/advisories/GHSA-wmfp-5q7x-987x",
+  "label_cwes": [22],
+  "repo": "harttle/liquidjs",
+  "fix_sha": "3cd024d652dc883c46307581e979fe32302adbac",
+  "parent_sha": "85233e0568e5bfe7d5b9d8673335e4872ad21e88",
+  "path_vulnerable": "demo/esm/index.mjs",
+  "path_patched": "demo/esm/index.mjs",
+  "language": "javascript",
+  "vulnerable_lines": [
+   [11, 11]
+  ],
+  "patched_lines": [
+   [11, 11]
+  ],
+  "commit_url": "https://github.com/harttle/liquidjs/commit/3cd024d652dc883c46307581e979fe32302adbac",
+  "case_id": "177-GHSA-wmfp-5q7x-987x",
+  "content": {
+   "vulnerable": {
+    "sha256": "466d5326b8419e8a572b0afc59f6c78bbc81df44512fd4898dc7c6043a39970d",
+    "bytes": 846
+   },
+   "patched": {
+    "sha256": "9d4277d7c8f5b2af0b58a28cd637f07f19c185056d9bc15870b218b9a08bb609",
+    "bytes": 864
+   }
+  }
+ },
+ "status": "scored",
+ "tools": {
+  "nephilex": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  },
+  "bandit": {
+   "status": "not_applicable"
+  },
+  "semgrep": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  }
+ },
+ "outcomes": {
+  "nephilex": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  },
+  "semgrep": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  }
+ }
+}

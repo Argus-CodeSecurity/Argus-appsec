@@ -1,0 +1,92 @@
+{
+ "case": {
+  "ghsa_id": "GHSA-jrvm-mcxc-mf6m",
+  "cve_id": "CVE-2024-21541",
+  "ecosystem": "npm",
+  "packages": [
+   "dom-iterator"
+  ],
+  "published_at": "2024-11-13T06:30:29Z",
+  "advisory_cwes": [94],
+  "html_url": "https://github.com/advisories/GHSA-jrvm-mcxc-mf6m",
+  "label_cwes": [94],
+  "repo": "matthewmueller/dom-iterator",
+  "fix_sha": "9e0e0fad5a251de5b42feb326c4204eb04080805",
+  "parent_sha": "91121a41d04a09d28bcd4d0e8cd535b8582d2c08",
+  "path_vulnerable": "index.js",
+  "path_patched": "index.js",
+  "language": "javascript",
+  "vulnerable_lines": [
+   [270, 270]
+  ],
+  "patched_lines": [
+   [270, 270]
+  ],
+  "commit_url": "https://github.com/matthewmueller/dom-iterator/commit/9e0e0fad5a251de5b42feb326c4204eb04080805",
+  "case_id": "126-GHSA-jrvm-mcxc-mf6m",
+  "content": {
+   "vulnerable": {
+    "sha256": "2326083824655b734b5fe5fa0637ded5fa36b0325a21dae7c554480be808f254",
+    "bytes": 5935
+   },
+   "patched": {
+    "sha256": "f3c5fe748ac6d08296b1db8fe9c52ecdcae14c721bbb28399d8df56b75b6f940",
+    "bytes": 5956
+   }
+  }
+ },
+ "status": "scored",
+ "tools": {
+  "nephilex": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  },
+  "bandit": {
+   "status": "not_applicable"
+  },
+  "semgrep": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  }
+ },
+ "outcomes": {
+  "nephilex": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  },
+  "semgrep": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  }
+ }
+}

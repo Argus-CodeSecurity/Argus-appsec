@@ -1,0 +1,158 @@
+{
+ "case": {
+  "ghsa_id": "GHSA-m9jh-jf9h-x3h2",
+  "cve_id": "CVE-2025-48067",
+  "ecosystem": "pip",
+  "packages": [
+   "OctoPrint"
+  ],
+  "published_at": "2025-06-10T20:13:40Z",
+  "advisory_cwes": [73],
+  "html_url": "https://github.com/advisories/GHSA-m9jh-jf9h-x3h2",
+  "label_cwes": [73],
+  "repo": "OctoPrint/OctoPrint",
+  "fix_sha": "9984b20773f5895a432f965b759999b16c57f7d8",
+  "parent_sha": "494f5cf6bef6f44b2dcace078908f2f436f6afc8",
+  "path_vulnerable": "src/octoprint/server/util/tornado.py",
+  "path_patched": "src/octoprint/server/util/tornado.py",
+  "language": "python",
+  "vulnerable_lines": [
+   [555, 556]
+  ],
+  "patched_lines": [
+   [551, 557],
+   [559, 569],
+   [573, 573]
+  ],
+  "commit_url": "https://github.com/OctoPrint/OctoPrint/commit/9984b20773f5895a432f965b759999b16c57f7d8",
+  "case_id": "108-GHSA-m9jh-jf9h-x3h2",
+  "content": {
+   "vulnerable": {
+    "sha256": "39691641ac05ada4d698d42202ca6b69f56163e9dda847519443a73ebd760cc6",
+    "bytes": 72956
+   },
+   "patched": {
+    "sha256": "2b23e06a12f6a0cbd16d9c92292147d5ae883de95b78eec228ab4ec90010e579",
+    "bytes": 73517
+   }
+  }
+ },
+ "status": "scored",
+ "tools": {
+  "nephilex": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [
+     [
+      1211,
+      "authz.cookie-missing-httponly",
+      [1004]
+     ],
+     [
+      1211,
+      "authz.insecure-session-cookie",
+      [614]
+     ]
+    ],
+    "patched": [
+     [
+      1228,
+      "authz.cookie-missing-httponly",
+      [1004]
+     ],
+     [
+      1228,
+      "authz.insecure-session-cookie",
+      [614]
+     ]
+    ]
+   }
+  },
+  "bandit": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [
+     [
+      822,
+      "B101",
+      [703]
+     ],
+     [
+      1261,
+      "B101",
+      [703]
+     ]
+    ],
+    "patched": [
+     [
+      839,
+      "B101",
+      [703]
+     ],
+     [
+      1278,
+      "B101",
+      [703]
+     ]
+    ]
+   }
+  },
+  "semgrep": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  }
+ },
+ "outcomes": {
+  "nephilex": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  },
+  "bandit": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  },
+  "semgrep": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  }
+ }
+}

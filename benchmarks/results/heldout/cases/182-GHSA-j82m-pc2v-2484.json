@@ -1,0 +1,93 @@
+{
+ "case": {
+  "ghsa_id": "GHSA-j82m-pc2v-2484",
+  "cve_id": "CVE-2025-24981",
+  "ecosystem": "npm",
+  "packages": [
+   "@nuxtjs/mdc"
+  ],
+  "published_at": "2025-02-06T17:16:27Z",
+  "advisory_cwes": [79],
+  "html_url": "https://github.com/advisories/GHSA-j82m-pc2v-2484",
+  "label_cwes": [79],
+  "repo": "nuxt-content/mdc",
+  "fix_sha": "99097738b5561639e9bf247c55d8103236618bf3",
+  "parent_sha": "8a59ae36c09259c6f845217be837f2f522542f9c",
+  "path_vulnerable": "src/runtime/parser/utils/props.ts",
+  "path_patched": "src/runtime/parser/utils/props.ts",
+  "language": "typescript",
+  "vulnerable_lines": [
+   [18, 18]
+  ],
+  "patched_lines": [
+   [12, 29],
+   [36, 36]
+  ],
+  "commit_url": "https://github.com/nuxt-content/mdc/commit/99097738b5561639e9bf247c55d8103236618bf3",
+  "case_id": "182-GHSA-j82m-pc2v-2484",
+  "content": {
+   "vulnerable": {
+    "sha256": "49c7e9c8640f805ae8fbe8bc10dc3b6bcd4b8ec6863db26f5124c460a81a7085",
+    "bytes": 1057
+   },
+   "patched": {
+    "sha256": "13d0d00408f396695887a3a29f44db39c18342ccf9a813ff33e185f333462696",
+    "bytes": 1448
+   }
+  }
+ },
+ "status": "scored",
+ "tools": {
+  "nephilex": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  },
+  "bandit": {
+   "status": "not_applicable"
+  },
+  "semgrep": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  }
+ },
+ "outcomes": {
+  "nephilex": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  },
+  "semgrep": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  }
+ }
+}

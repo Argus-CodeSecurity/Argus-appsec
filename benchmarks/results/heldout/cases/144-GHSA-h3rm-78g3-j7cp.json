@@ -1,0 +1,107 @@
+{
+ "case": {
+  "ghsa_id": "GHSA-h3rm-78g3-j7cp",
+  "cve_id": null,
+  "ecosystem": "npm",
+  "packages": [
+   "@better-auth/stripe"
+  ],
+  "published_at": "2026-07-24T15:43:22Z",
+  "advisory_cwes": [639, 863],
+  "html_url": "https://github.com/advisories/GHSA-h3rm-78g3-j7cp",
+  "label_cwes": [639],
+  "repo": "better-auth/better-auth",
+  "fix_sha": "29fbcb573261242d8a05b131a9d39c9ae4352b06",
+  "parent_sha": "82cbbd6f1d9ccb1e7ee7fe54a2153c40c13442f3",
+  "path_vulnerable": "packages/stripe/src/middleware.ts",
+  "path_patched": "packages/stripe/src/middleware.ts",
+  "language": "typescript",
+  "vulnerable_lines": [
+   [8, 9],
+   [25, 25],
+   [36, 36],
+   [70, 70],
+   [73, 76],
+   [78, 80],
+   [96, 96]
+  ],
+  "patched_lines": [
+   [9, 9],
+   [26, 26],
+   [30, 30],
+   [38, 39],
+   [41, 41],
+   [74, 74],
+   [77, 77],
+   [79, 81],
+   [97, 97],
+   [105, 105]
+  ],
+  "commit_url": "https://github.com/better-auth/better-auth/commit/29fbcb573261242d8a05b131a9d39c9ae4352b06",
+  "case_id": "144-GHSA-h3rm-78g3-j7cp",
+  "content": {
+   "vulnerable": {
+    "sha256": "0bd4e2c2376c5d5d0ce52eeb96caafdd4ae9935aed020323d42eaf0ec3c57fba",
+    "bytes": 2838
+   },
+   "patched": {
+    "sha256": "4af6a5afee5b3b1f6b126a503b307d1d08df69489ad6622d4cdfdf2315929d18",
+    "bytes": 3096
+   }
+  }
+ },
+ "status": "scored",
+ "tools": {
+  "nephilex": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  },
+  "bandit": {
+   "status": "not_applicable"
+  },
+  "semgrep": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  }
+ },
+ "outcomes": {
+  "nephilex": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  },
+  "semgrep": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  }
+ }
+}

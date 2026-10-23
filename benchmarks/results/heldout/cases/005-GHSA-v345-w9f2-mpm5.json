@@ -1,0 +1,134 @@
+{
+ "case": {
+  "ghsa_id": "GHSA-v345-w9f2-mpm5",
+  "cve_id": "CVE-2024-45606",
+  "ecosystem": "pip",
+  "packages": [
+   "sentry"
+  ],
+  "published_at": "2024-09-17T17:55:38Z",
+  "advisory_cwes": [639],
+  "html_url": "https://github.com/advisories/GHSA-v345-w9f2-mpm5",
+  "label_cwes": [639],
+  "repo": "getsentry/sentry",
+  "fix_sha": "e8e71708758e1f9f56ce815ace73fe60d9e608dc",
+  "parent_sha": "ca59242c563d2e006686a8b56e372d7f7ab0ae7e",
+  "path_vulnerable": "src/sentry/api/endpoints/rule_snooze.py",
+  "path_patched": "src/sentry/api/endpoints/rule_snooze.py",
+  "language": "python",
+  "vulnerable_lines": [
+   [5, 5],
+   [25, 43],
+   [79, 79],
+   [81, 81],
+   [83, 83],
+   [85, 85],
+   [87, 87],
+   [93, 93],
+   [136, 136],
+   [147, 149],
+   [183, 183]
+  ],
+  "patched_lines": [
+   [2, 2],
+   [6, 6],
+   [25, 26],
+   [57, 75],
+   [79, 80],
+   [82, 84],
+   [86, 90],
+   [92, 92],
+   [94, 94],
+   [96, 98],
+   [146, 146],
+   [157, 157],
+   [191, 191]
+  ],
+  "commit_url": "https://github.com/getsentry/sentry/commit/e8e71708758e1f9f56ce815ace73fe60d9e608dc",
+  "case_id": "005-GHSA-v345-w9f2-mpm5",
+  "content": {
+   "vulnerable": {
+    "sha256": "aadd8b0e4837813da72f74876e788868454ed80335ef6e347f807937188b9881",
+    "bytes": 7957
+   },
+   "patched": {
+    "sha256": "a621ad7015d64ea905e8468042c1f62b82a84a7faba58180beb9be768f3cd41a",
+    "bytes": 8422
+   }
+  }
+ },
+ "status": "scored",
+ "tools": {
+  "nephilex": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  },
+  "bandit": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  },
+  "semgrep": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  }
+ },
+ "outcomes": {
+  "nephilex": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  },
+  "bandit": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  },
+  "semgrep": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  }
+ }
+}

@@ -1,0 +1,96 @@
+{
+ "case": {
+  "ghsa_id": "GHSA-jjpw-65fv-8g48",
+  "cve_id": "CVE-2026-25586",
+  "ecosystem": "npm",
+  "packages": [
+   "@nyariv/sandboxjs"
+  ],
+  "published_at": "2026-02-05T21:04:58Z",
+  "advisory_cwes": [74],
+  "html_url": "https://github.com/advisories/GHSA-jjpw-65fv-8g48",
+  "label_cwes": [74],
+  "repo": "nyariv/SandboxJS",
+  "fix_sha": "67cb186c41c78c51464f70405504e8ef0a6e43c3",
+  "parent_sha": "6103d7147c4666fe48cfda58a4d5f37005b43754",
+  "path_vulnerable": "src/parser.ts",
+  "path_patched": "src/parser.ts",
+  "language": "typescript",
+  "vulnerable_lines": [
+   [2, 2],
+   [1124, 1124],
+   [1233, 1234]
+  ],
+  "patched_lines": [
+   [2, 2],
+   [1124, 1128],
+   [1238, 1242]
+  ],
+  "commit_url": "https://github.com/nyariv/SandboxJS/commit/67cb186c41c78c51464f70405504e8ef0a6e43c3",
+  "case_id": "194-GHSA-jjpw-65fv-8g48",
+  "content": {
+   "vulnerable": {
+    "sha256": "1e33a401242d9d3d7a283be6e92b2b6423dc2556f50b025d6be76da1218fbe9e",
+    "bytes": 60215
+   },
+   "patched": {
+    "sha256": "d9e59a2af266a6f0aac15ab67e38541a2c6a51eb05b2c1145979711829108d9a",
+    "bytes": 60530
+   }
+  }
+ },
+ "status": "scored",
+ "tools": {
+  "nephilex": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  },
+  "bandit": {
+   "status": "not_applicable"
+  },
+  "semgrep": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  }
+ },
+ "outcomes": {
+  "nephilex": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  },
+  "semgrep": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  }
+ }
+}

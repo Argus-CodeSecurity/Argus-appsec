@@ -1,0 +1,173 @@
+{
+ "case": {
+  "ghsa_id": "GHSA-239g-whfq-7xj9",
+  "cve_id": "CVE-2026-87817",
+  "ecosystem": "pip",
+  "packages": [
+   "gitpython"
+  ],
+  "published_at": "2026-09-30T23:27:59Z",
+  "advisory_cwes": [94, 427],
+  "html_url": "https://github.com/advisories/GHSA-239g-whfq-7xj9",
+  "label_cwes": [94],
+  "repo": "gitpython-developers/GitPython",
+  "fix_sha": "c7cf4d13b1ed0a2e70f2a1f3c6b4fc6c2652cf0b",
+  "parent_sha": "d160fb4124a56bd463a542a7bbff623354fb3397",
+  "path_vulnerable": "git/repo/fun.py",
+  "path_patched": "git/repo/fun.py",
+  "language": "python",
+  "vulnerable_lines": [
+   [69, 78],
+   [87, 87],
+   [89, 89],
+   [93, 99],
+   [107, 126]
+  ],
+  "patched_lines": [
+   [63, 67],
+   [74, 117],
+   [126, 126],
+   [128, 128],
+   [132, 139],
+   [147, 158]
+  ],
+  "commit_url": "https://github.com/gitpython-developers/GitPython/commit/c7cf4d13b1ed0a2e70f2a1f3c6b4fc6c2652cf0b",
+  "case_id": "016-GHSA-239g-whfq-7xj9",
+  "content": {
+   "vulnerable": {
+    "sha256": "3c314d92e4d2186a107341041178f11f0dbf29a298bd58c167daeb9301f943a6",
+    "bytes": 23462
+   },
+   "patched": {
+    "sha256": "2de22740ce3137f0ee35c4c9d2f9518634f3801719d66e4eb3dfd13be5dea7ec",
+    "bytes": 24901
+   }
+  }
+ },
+ "status": "scored",
+ "tools": {
+  "nephilex": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  },
+  "bandit": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [
+     [
+      669,
+      "B105",
+      [259]
+     ],
+     [
+      680,
+      "B105",
+      [259]
+     ],
+     [
+      686,
+      "B105",
+      [259]
+     ],
+     [
+      711,
+      "B105",
+      [259]
+     ],
+     [
+      716,
+      "B105",
+      [259]
+     ]
+    ],
+    "patched": [
+     [
+      701,
+      "B105",
+      [259]
+     ],
+     [
+      712,
+      "B105",
+      [259]
+     ],
+     [
+      718,
+      "B105",
+      [259]
+     ],
+     [
+      743,
+      "B105",
+      [259]
+     ],
+     [
+      748,
+      "B105",
+      [259]
+     ]
+    ]
+   }
+  },
+  "semgrep": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  }
+ },
+ "outcomes": {
+  "nephilex": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  },
+  "bandit": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  },
+  "semgrep": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  }
+ }
+}

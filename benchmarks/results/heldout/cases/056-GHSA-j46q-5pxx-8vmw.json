@@ -1,0 +1,290 @@
+{
+ "case": {
+  "ghsa_id": "GHSA-j46q-5pxx-8vmw",
+  "cve_id": "CVE-2024-2928",
+  "ecosystem": "pip",
+  "packages": [
+   "mlflow"
+  ],
+  "published_at": "2024-06-06T21:30:36Z",
+  "advisory_cwes": [22, 29],
+  "html_url": "https://github.com/advisories/GHSA-j46q-5pxx-8vmw",
+  "label_cwes": [22],
+  "repo": "mlflow/mlflow",
+  "fix_sha": "96f0b573a73d8eedd6735a2ce26e08859527be07",
+  "parent_sha": "2e765a65519fa2422328bf868fbc7b7eb0d6cad1",
+  "path_vulnerable": "mlflow/server/handlers.py",
+  "path_patched": "mlflow/server/handlers.py",
+  "language": "python",
+  "vulnerable_lines": [
+   [604, 604],
+   [1729, 1731]
+  ],
+  "patched_lines": [
+   [603, 607],
+   [1733, 1736]
+  ],
+  "commit_url": "https://github.com/mlflow/mlflow/commit/96f0b573a73d8eedd6735a2ce26e08859527be07",
+  "case_id": "056-GHSA-j46q-5pxx-8vmw",
+  "content": {
+   "vulnerable": {
+    "sha256": "9fda65556b5a61d6b12ef43e8f3cba01f06814a2f6ead64c80727a2e3309080d",
+    "bytes": 85614
+   },
+   "patched": {
+    "sha256": "a0742793da70823ebc20fca45f36fa8e835bd3f2c87931768c45528f2c8247ca",
+    "bytes": 85875
+   }
+  }
+ },
+ "status": "scored",
+ "tools": {
+  "nephilex": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [
+     [
+      1411,
+      "ast-python.ast-path-traversal",
+      [22]
+     ],
+     [
+      1413,
+      "ast-python.ast-path-traversal",
+      [22]
+     ],
+     [
+      2021,
+      "ast-python.ast-path-traversal",
+      [22]
+     ]
+    ],
+    "patched": [
+     [
+      1415,
+      "ast-python.ast-path-traversal",
+      [22]
+     ],
+     [
+      1417,
+      "ast-python.ast-path-traversal",
+      [22]
+     ],
+     [
+      2026,
+      "ast-python.ast-path-traversal",
+      [22]
+     ]
+    ]
+   }
+  },
+  "bandit": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [
+     [
+      247,
+      "B101",
+      [703]
+     ],
+     [
+      261,
+      "B101",
+      [703]
+     ],
+     [
+      312,
+      "B101",
+      [703]
+     ],
+     [
+      321,
+      "B101",
+      [703]
+     ],
+     [
+      325,
+      "B101",
+      [703]
+     ],
+     [
+      334,
+      "B101",
+      [703]
+     ],
+     [
+      338,
+      "B101",
+      [703]
+     ],
+     [
+      342,
+      "B101",
+      [703]
+     ],
+     [
+      345,
+      "B101",
+      [703]
+     ],
+     [
+      359,
+      "B101",
+      [703]
+     ],
+     [
+      1001,
+      "B101",
+      [703]
+     ]
+    ],
+    "patched": [
+     [
+      247,
+      "B101",
+      [703]
+     ],
+     [
+      261,
+      "B101",
+      [703]
+     ],
+     [
+      312,
+      "B101",
+      [703]
+     ],
+     [
+      321,
+      "B101",
+      [703]
+     ],
+     [
+      325,
+      "B101",
+      [703]
+     ],
+     [
+      334,
+      "B101",
+      [703]
+     ],
+     [
+      338,
+      "B101",
+      [703]
+     ],
+     [
+      342,
+      "B101",
+      [703]
+     ],
+     [
+      345,
+      "B101",
+      [703]
+     ],
+     [
+      359,
+      "B101",
+      [703]
+     ],
+     [
+      1005,
+      "B101",
+      [703]
+     ]
+    ]
+   }
+  },
+  "semgrep": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [
+     [
+      1273,
+      "python.django.security.injection.ssrf.ssrf-injection-requests.ssrf-injection-requests",
+      [918]
+     ],
+     [
+      1276,
+      "python.flask.security.injection.ssrf-requests.ssrf-requests",
+      [918]
+     ],
+     [
+      1380,
+      "python.django.security.injection.request-data-write.request-data-write",
+      [93]
+     ]
+    ],
+    "patched": [
+     [
+      1277,
+      "python.django.security.injection.ssrf.ssrf-injection-requests.ssrf-injection-requests",
+      [918]
+     ],
+     [
+      1280,
+      "python.flask.security.injection.ssrf-requests.ssrf-requests",
+      [918]
+     ],
+     [
+      1384,
+      "python.django.security.injection.request-data-write.request-data-write",
+      [93]
+     ]
+    ]
+   }
+  }
+ },
+ "outcomes": {
+  "nephilex": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  },
+  "bandit": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  },
+  "semgrep": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  }
+ }
+}

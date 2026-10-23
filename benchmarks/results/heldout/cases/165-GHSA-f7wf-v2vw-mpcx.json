@@ -1,0 +1,129 @@
+{
+ "case": {
+  "ghsa_id": "GHSA-f7wf-v2vw-mpcx",
+  "cve_id": "CVE-2026-54561",
+  "ecosystem": "npm",
+  "packages": [
+   "mcp-memory-keeper"
+  ],
+  "published_at": "2026-07-17T19:23:07Z",
+  "advisory_cwes": [22, 209],
+  "html_url": "https://github.com/advisories/GHSA-f7wf-v2vw-mpcx",
+  "label_cwes": [22],
+  "repo": "mkreyman/mcp-memory-keeper",
+  "fix_sha": "84f6dfa692736a34ff36e2d2cf2188b71facf73b",
+  "parent_sha": "dd53a8fe8941fb1a5b98deffa19d7ccc655961ac",
+  "path_vulnerable": "src/index.ts",
+  "path_patched": "src/index.ts",
+  "language": "typescript",
+  "vulnerable_lines": [
+   [43, 44],
+   [362, 362],
+   [1659, 1659],
+   [1684, 1685],
+   [1694, 1694],
+   [1696, 1696],
+   [1724, 1724],
+   [1726, 1746],
+   [1749, 1768],
+   [1770, 1774],
+   [1776, 1787],
+   [1793, 1797],
+   [1806, 1806],
+   [4344, 4344],
+   [4360, 4360],
+   [4364, 4364]
+  ],
+  "patched_lines": [
+   [44, 131],
+   [446, 458],
+   [463, 463],
+   [1760, 1760],
+   [1781, 1787],
+   [1792, 1794],
+   [1803, 1803],
+   [1805, 1805],
+   [1832, 1835],
+   [1837, 1842],
+   [1844, 1855],
+   [1857, 1861],
+   [1863, 1880],
+   [1882, 1884],
+   [1886, 1886],
+   [1888, 1893],
+   [1898, 1898],
+   [1902, 2039],
+   [2041, 2043],
+   [2048, 2048],
+   [4586, 4589],
+   [4605, 4607],
+   [4611, 4616]
+  ],
+  "commit_url": "https://github.com/mkreyman/mcp-memory-keeper/commit/84f6dfa692736a34ff36e2d2cf2188b71facf73b",
+  "case_id": "165-GHSA-f7wf-v2vw-mpcx",
+  "content": {
+   "vulnerable": {
+    "sha256": "e65d6123324f7bc7e8f3e8c4c6b44600b6e996d48aa0c7f972e1107709492d09",
+    "bytes": 156591
+   },
+   "patched": {
+    "sha256": "31c58e9d96e64bc78f2298023df78498bb60118c04bf755f057936be88a27098",
+    "bytes": 168362
+   }
+  }
+ },
+ "status": "scored",
+ "tools": {
+  "nephilex": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  },
+  "bandit": {
+   "status": "not_applicable"
+  },
+  "semgrep": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  }
+ },
+ "outcomes": {
+  "nephilex": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  },
+  "semgrep": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  }
+ }
+}

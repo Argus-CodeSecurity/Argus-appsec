@@ -1,0 +1,114 @@
+{
+ "case": {
+  "ghsa_id": "GHSA-2943-9672-r45w",
+  "cve_id": "CVE-2026-33264",
+  "ecosystem": "pip",
+  "packages": [
+   "apache-airflow"
+  ],
+  "published_at": "2026-07-07T12:31:35Z",
+  "advisory_cwes": [502],
+  "html_url": "https://github.com/advisories/GHSA-2943-9672-r45w",
+  "label_cwes": [502],
+  "repo": "apache/airflow",
+  "fix_sha": "69b6c54ef17b048ebb0e9a656d0d9e1c99480d6b",
+  "parent_sha": "6d5174494dfae7d81bc32b4d0edd4c06e8314392",
+  "path_vulnerable": "airflow-core/src/airflow/serialization/enums.py",
+  "path_patched": "airflow-core/src/airflow/serialization/enums.py",
+  "language": "python",
+  "vulnerable_lines": [
+   [22, 23],
+   [33, 34]
+  ],
+  "patched_lines": [
+   [23, 23],
+   [35, 59]
+  ],
+  "commit_url": "https://github.com/apache/airflow/commit/69b6c54ef17b048ebb0e9a656d0d9e1c99480d6b",
+  "case_id": "095-GHSA-2943-9672-r45w",
+  "content": {
+   "vulnerable": {
+    "sha256": "b3a7edafd71e736aa4409d42ec982ecca246bb37386cf9c214439ad6849acd5c",
+    "bytes": 2276
+   },
+   "patched": {
+    "sha256": "d409a4f74181a1dfeb2930fbff36af9bef0135a629a8f1cfdc8f7965a8b89b84",
+    "bytes": 3337
+   }
+  }
+ },
+ "status": "scored",
+ "tools": {
+  "nephilex": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  },
+  "bandit": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  },
+  "semgrep": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  }
+ },
+ "outcomes": {
+  "nephilex": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  },
+  "bandit": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  },
+  "semgrep": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  }
+ }
+}

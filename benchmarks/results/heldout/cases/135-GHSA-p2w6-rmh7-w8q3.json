@@ -1,0 +1,97 @@
+{
+ "case": {
+  "ghsa_id": "GHSA-p2w6-rmh7-w8q3",
+  "cve_id": "CVE-2026-33539",
+  "ecosystem": "npm",
+  "packages": [
+   "parse-server"
+  ],
+  "published_at": "2026-03-24T19:12:06Z",
+  "advisory_cwes": [89],
+  "html_url": "https://github.com/advisories/GHSA-p2w6-rmh7-w8q3",
+  "label_cwes": [89],
+  "repo": "parse-community/parse-server",
+  "fix_sha": "03249f9bf5b8783c8b848f84dab791ff0b761b8c",
+  "parent_sha": "ec2cce9e331459515ed1cdf051277117385673e2",
+  "path_vulnerable": "src/Adapters/Storage/Postgres/PostgresStorageAdapter.js",
+  "path_patched": "src/Adapters/Storage/Postgres/PostgresStorageAdapter.js",
+  "language": "javascript",
+  "vulnerable_lines": [
+   [235, 236],
+   [246, 246],
+   [2165, 2165]
+  ],
+  "patched_lines": [
+   [236, 241],
+   [252, 257],
+   [2171, 2176],
+   [2182, 2182]
+  ],
+  "commit_url": "https://github.com/parse-community/parse-server/commit/03249f9bf5b8783c8b848f84dab791ff0b761b8c",
+  "case_id": "135-GHSA-p2w6-rmh7-w8q3",
+  "content": {
+   "vulnerable": {
+    "sha256": "d352f57ab8e7a8b7278411703716ea21243b59b5997bfa0590f411f4a72eb32d",
+    "bytes": 94720
+   },
+   "patched": {
+    "sha256": "066b37be5fd8d3acd4bca5b94d846f796f0e7da87e3176a3588ce43f9ba86155",
+    "bytes": 95377
+   }
+  }
+ },
+ "status": "scored",
+ "tools": {
+  "nephilex": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  },
+  "bandit": {
+   "status": "not_applicable"
+  },
+  "semgrep": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  }
+ },
+ "outcomes": {
+  "nephilex": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  },
+  "semgrep": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  }
+ }
+}

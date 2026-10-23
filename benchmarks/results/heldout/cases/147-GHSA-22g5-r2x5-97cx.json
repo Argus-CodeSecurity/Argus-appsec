@@ -1,0 +1,92 @@
+{
+ "case": {
+  "ghsa_id": "GHSA-22g5-r2x5-97cx",
+  "cve_id": "CVE-2026-59710",
+  "ecosystem": "npm",
+  "packages": [
+   "showdown"
+  ],
+  "published_at": "2026-07-07T00:30:59Z",
+  "advisory_cwes": [79],
+  "html_url": "https://github.com/advisories/GHSA-22g5-r2x5-97cx",
+  "label_cwes": [79],
+  "repo": "showdownjs/showdown",
+  "fix_sha": "e5cab1e9a5dcea2bb3cbf888863fa7e65ab37edf",
+  "parent_sha": "35a67a44977bdb82885d38a586c3e8ac5c222353",
+  "path_vulnerable": "src/subParsers/makehtml/table.js",
+  "path_patched": "src/subParsers/makehtml/table.js",
+  "language": "javascript",
+  "vulnerable_lines": [
+   [343, 345]
+  ],
+  "patched_lines": [
+   [343, 343]
+  ],
+  "commit_url": "https://github.com/showdownjs/showdown/commit/e5cab1e9a5dcea2bb3cbf888863fa7e65ab37edf",
+  "case_id": "147-GHSA-22g5-r2x5-97cx",
+  "content": {
+   "vulnerable": {
+    "sha256": "289a3e49f5f124929494d14b115f18742a8d7639e592ca333c2b80891eb92c5e",
+    "bytes": 12171
+   },
+   "patched": {
+    "sha256": "aacfcd6a26fe567d92d459e2b8645ff7f2b5dc072845519e50282587fccbec1a",
+    "bytes": 11947
+   }
+  }
+ },
+ "status": "scored",
+ "tools": {
+  "nephilex": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  },
+  "bandit": {
+   "status": "not_applicable"
+  },
+  "semgrep": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  }
+ },
+ "outcomes": {
+  "nephilex": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  },
+  "semgrep": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  }
+ }
+}

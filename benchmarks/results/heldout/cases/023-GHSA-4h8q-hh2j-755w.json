@@ -1,0 +1,478 @@
+{
+ "case": {
+  "ghsa_id": "GHSA-4h8q-hh2j-755w",
+  "cve_id": "CVE-2026-66004",
+  "ecosystem": "pip",
+  "packages": [
+   "blender-mcp"
+  ],
+  "published_at": "2026-07-24T15:33:04Z",
+  "advisory_cwes": [22],
+  "html_url": "https://github.com/advisories/GHSA-4h8q-hh2j-755w",
+  "label_cwes": [22],
+  "repo": "ahujasid/mcp-for-blender",
+  "fix_sha": "30a3308446cd8f81a9446e5a2ed657c0d8d86072",
+  "parent_sha": "584e892695deb28d8f09b258db981006bbb1b229",
+  "path_vulnerable": "addon.py",
+  "path_patched": "addon.py",
+  "language": "python",
+  "vulnerable_lines": [
+   [825, 825]
+  ],
+  "patched_lines": [
+   [824, 837],
+   [839, 839]
+  ],
+  "commit_url": "https://github.com/ahujasid/mcp-for-blender/commit/30a3308446cd8f81a9446e5a2ed657c0d8d86072",
+  "case_id": "023-GHSA-4h8q-hh2j-755w",
+  "content": {
+   "vulnerable": {
+    "sha256": "4d2a9b84e5545e5628cfe2917a00660be54a1cc36a4cd026e9be316ad958a695",
+    "bytes": 118979
+   },
+   "patched": {
+    "sha256": "299de52a818b456b71553f6786dd417ff955628f7e9acbe9b38fe51ec7e89147",
+    "bytes": 120036
+   }
+  }
+ },
+ "status": "scored",
+ "tools": {
+  "nephilex": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  },
+  "bandit": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [
+     [
+      148,
+      "B110",
+      [703]
+     ],
+     [
+      157,
+      "B110",
+      [703]
+     ],
+     [
+      235,
+      "B110",
+      [703]
+     ],
+     [
+      252,
+      "B110",
+      [703]
+     ],
+     [
+      501,
+      "B102",
+      [78]
+     ],
+     [
+      516,
+      "B113",
+      [400]
+     ],
+     [
+      538,
+      "B113",
+      [400]
+     ],
+     [
+      558,
+      "B113",
+      [400]
+     ],
+     [
+      578,
+      "B113",
+      [400]
+     ],
+     [
+      624,
+      "B112",
+      [703]
+     ],
+     [
+      645,
+      "B110",
+      [703]
+     ],
+     [
+      674,
+      "B113",
+      [400]
+     ],
+     [
+      690,
+      "B110",
+      [703]
+     ],
+     [
+      695,
+      "B110",
+      [703]
+     ],
+     [
+      703,
+      "B110",
+      [703]
+     ],
+     [
+      751,
+      "B110",
+      [703]
+     ],
+     [
+      756,
+      "B110",
+      [703]
+     ],
+     [
+      811,
+      "B113",
+      [400]
+     ],
+     [
+      829,
+      "B113",
+      [400]
+     ],
+     [
+      904,
+      "B110",
+      [703]
+     ],
+     [
+      909,
+      "B110",
+      [703]
+     ],
+     [
+      978,
+      "B110",
+      [703]
+     ],
+     [
+      983,
+      "B110",
+      [703]
+     ],
+     [
+      1282,
+      "B113",
+      [400]
+     ],
+     [
+      1313,
+      "B113",
+      [400]
+     ],
+     [
+      1340,
+      "B113",
+      [400]
+     ],
+     [
+      1359,
+      "B113",
+      [400]
+     ],
+     [
+      1449,
+      "B113",
+      [400]
+     ],
+     [
+      1470,
+      "B113",
+      [400]
+     ],
+     [
+      1518,
+      "B113",
+      [400]
+     ],
+     [
+      1535,
+      "B113",
+      [400]
+     ],
+     [
+      2206,
+      "B113",
+      [400]
+     ],
+     [
+      2253,
+      "B113",
+      [400]
+     ],
+     [
+      2268,
+      "B113",
+      [400]
+     ],
+     [
+      2333,
+      "B113",
+      [400]
+     ],
+     [
+      2366,
+      "B113",
+      [400]
+     ]
+    ],
+    "patched": [
+     [
+      148,
+      "B110",
+      [703]
+     ],
+     [
+      157,
+      "B110",
+      [703]
+     ],
+     [
+      235,
+      "B110",
+      [703]
+     ],
+     [
+      252,
+      "B110",
+      [703]
+     ],
+     [
+      501,
+      "B102",
+      [78]
+     ],
+     [
+      516,
+      "B113",
+      [400]
+     ],
+     [
+      538,
+      "B113",
+      [400]
+     ],
+     [
+      558,
+      "B113",
+      [400]
+     ],
+     [
+      578,
+      "B113",
+      [400]
+     ],
+     [
+      624,
+      "B112",
+      [703]
+     ],
+     [
+      645,
+      "B110",
+      [703]
+     ],
+     [
+      674,
+      "B113",
+      [400]
+     ],
+     [
+      690,
+      "B110",
+      [703]
+     ],
+     [
+      695,
+      "B110",
+      [703]
+     ],
+     [
+      703,
+      "B110",
+      [703]
+     ],
+     [
+      751,
+      "B110",
+      [703]
+     ],
+     [
+      756,
+      "B110",
+      [703]
+     ],
+     [
+      811,
+      "B113",
+      [400]
+     ],
+     [
+      843,
+      "B113",
+      [400]
+     ],
+     [
+      918,
+      "B110",
+      [703]
+     ],
+     [
+      923,
+      "B110",
+      [703]
+     ],
+     [
+      992,
+      "B110",
+      [703]
+     ],
+     [
+      997,
+      "B110",
+      [703]
+     ],
+     [
+      1296,
+      "B113",
+      [400]
+     ],
+     [
+      1327,
+      "B113",
+      [400]
+     ],
+     [
+      1354,
+      "B113",
+      [400]
+     ],
+     [
+      1373,
+      "B113",
+      [400]
+     ],
+     [
+      1463,
+      "B113",
+      [400]
+     ],
+     [
+      1484,
+      "B113",
+      [400]
+     ],
+     [
+      1532,
+      "B113",
+      [400]
+     ],
+     [
+      1549,
+      "B113",
+      [400]
+     ],
+     [
+      2220,
+      "B113",
+      [400]
+     ],
+     [
+      2267,
+      "B113",
+      [400]
+     ],
+     [
+      2282,
+      "B113",
+      [400]
+     ],
+     [
+      2347,
+      "B113",
+      [400]
+     ],
+     [
+      2380,
+      "B113",
+      [400]
+     ]
+    ]
+   }
+  },
+  "semgrep": {
+   "status": "ok",
+   "parse_error_versions": [
+    "patched",
+    "vulnerable"
+   ],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  }
+ },
+ "outcomes": {
+  "nephilex": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  },
+  "bandit": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  },
+  "semgrep": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  }
+ }
+}

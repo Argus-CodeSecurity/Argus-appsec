@@ -1,0 +1,126 @@
+{
+ "case": {
+  "ghsa_id": "GHSA-jfrq-hj9f-c8qx",
+  "cve_id": "CVE-2026-26862",
+  "ecosystem": "npm",
+  "packages": [
+   "clevertap-web-sdk"
+  ],
+  "published_at": "2026-02-27T18:31:06Z",
+  "advisory_cwes": [79],
+  "html_url": "https://github.com/advisories/GHSA-jfrq-hj9f-c8qx",
+  "label_cwes": [79],
+  "repo": "CleverTap/clevertap-web-sdk",
+  "fix_sha": "766f75f0c9082a27eb0b59c9fa4b0d9b19ba3d10",
+  "parent_sha": "123788a6a21000f1f82acd17b59c7d624ab48895",
+  "path_vulnerable": "src/modules/visualBuilder/pageBuilder.js",
+  "path_patched": "src/modules/visualBuilder/pageBuilder.js",
+  "language": "javascript",
+  "vulnerable_lines": [
+   [50, 50],
+   [56, 57]
+  ],
+  "patched_lines": [
+   [53, 55],
+   [58, 58]
+  ],
+  "commit_url": "https://github.com/CleverTap/clevertap-web-sdk/commit/766f75f0c9082a27eb0b59c9fa4b0d9b19ba3d10",
+  "case_id": "172-GHSA-jfrq-hj9f-c8qx",
+  "content": {
+   "vulnerable": {
+    "sha256": "1a57ba52d0e4db6a14851ad8b9a9f249d629e708cb22ec7816cccc2860b09065",
+    "bytes": 14880
+   },
+   "patched": {
+    "sha256": "9836abc97fb16363604316c96fdb1aa730b93926e02222b8021e1e1d03ec11b0",
+    "bytes": 14985
+   }
+  }
+ },
+ "status": "scored",
+ "tools": {
+  "nephilex": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  },
+  "bandit": {
+   "status": "not_applicable"
+  },
+  "semgrep": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [
+     [
+      19,
+      "javascript.browser.security.wildcard-postmessage-configuration.wildcard-postmessage-configuration",
+      [345]
+     ],
+     [
+      26,
+      "javascript.browser.security.wildcard-postmessage-configuration.wildcard-postmessage-configuration",
+      [345]
+     ],
+     [
+      33,
+      "javascript.browser.security.wildcard-postmessage-configuration.wildcard-postmessage-configuration",
+      [345]
+     ]
+    ],
+    "patched": [
+     [
+      19,
+      "javascript.browser.security.wildcard-postmessage-configuration.wildcard-postmessage-configuration",
+      [345]
+     ],
+     [
+      26,
+      "javascript.browser.security.wildcard-postmessage-configuration.wildcard-postmessage-configuration",
+      [345]
+     ],
+     [
+      33,
+      "javascript.browser.security.wildcard-postmessage-configuration.wildcard-postmessage-configuration",
+      [345]
+     ]
+    ]
+   }
+  }
+ },
+ "outcomes": {
+  "nephilex": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  },
+  "semgrep": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  }
+ }
+}

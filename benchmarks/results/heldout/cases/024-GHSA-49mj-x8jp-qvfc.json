@@ -1,0 +1,193 @@
+{
+ "case": {
+  "ghsa_id": "GHSA-49mj-x8jp-qvfc",
+  "cve_id": "CVE-2025-58180",
+  "ecosystem": "pip",
+  "packages": [
+   "octoprint"
+  ],
+  "published_at": "2025-09-09T19:22:22Z",
+  "advisory_cwes": [78],
+  "html_url": "https://github.com/advisories/GHSA-49mj-x8jp-qvfc",
+  "label_cwes": [78],
+  "repo": "OctoPrint/OctoPrint",
+  "fix_sha": "be4201ef58d9a7c03593252398c16eada90a258b",
+  "parent_sha": "c3a940962f4658a8e035a00388781b1cbd768841",
+  "path_vulnerable": "src/octoprint/events.py",
+  "path_patched": "src/octoprint/events.py",
+  "language": "python",
+  "vulnerable_lines": [
+   [9, 10],
+   [328, 328],
+   [330, 330],
+   [332, 332],
+   [355, 358],
+   [367, 367],
+   [371, 374],
+   [379, 379],
+   [383, 385],
+   [403, 403],
+   [405, 411],
+   [414, 415],
+   [418, 422],
+   [424, 433],
+   [435, 456],
+   [458, 460],
+   [462, 468],
+   [470, 470],
+   [472, 472],
+   [488, 488],
+   [496, 496],
+   [510, 510],
+   [512, 513],
+   [516, 519],
+   [521, 523],
+   [525, 528],
+   [530, 530],
+   [536, 536]
+  ],
+  "patched_lines": [
+   [10, 10],
+   [329, 329],
+   [331, 331],
+   [333, 333],
+   [355, 358],
+   [360, 363],
+   [372, 373],
+   [377, 389],
+   [394, 394],
+   [398, 398],
+   [416, 416],
+   [418, 418],
+   [421, 421],
+   [425, 429],
+   [431, 431],
+   [433, 436],
+   [438, 440],
+   [442, 448],
+   [450, 450],
+   [473, 473],
+   [487, 487],
+   [489, 490],
+   [493, 496],
+   [498, 500],
+   [502, 505],
+   [507, 507],
+   [513, 572]
+  ],
+  "commit_url": "https://github.com/OctoPrint/OctoPrint/commit/be4201ef58d9a7c03593252398c16eada90a258b",
+  "case_id": "024-GHSA-49mj-x8jp-qvfc",
+  "content": {
+   "vulnerable": {
+    "sha256": "5bcb53b471df1d002eac24674425cc03389308b0aaca92dd45bfc1629670c4fd",
+    "bytes": 18741
+   },
+   "patched": {
+    "sha256": "a7bc0816d3fdea4fdb5babe41c06612ba6cd3ae3b938a0dd2ce2d27e1e60c9f0",
+    "bytes": 19858
+   }
+  }
+ },
+ "status": "scored",
+ "tools": {
+  "nephilex": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  },
+  "bandit": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [
+     [
+      10,
+      "B404",
+      [78]
+     ],
+     [
+      433,
+      "B602",
+      [78]
+     ]
+    ],
+    "patched": [
+     [
+      11,
+      "B404",
+      [78]
+     ],
+     [
+      553,
+      "B602",
+      [78]
+     ]
+    ]
+   }
+  },
+  "semgrep": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [
+     [
+      433,
+      "python.lang.security.audit.subprocess-shell-true.subprocess-shell-true",
+      [78]
+     ]
+    ],
+    "patched": []
+   }
+  }
+ },
+ "outcomes": {
+  "nephilex": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  },
+  "bandit": {
+   "window": 3,
+   "mapped": {
+    "detected": true,
+    "flagged_after_fix": true
+   },
+   "strict": {
+    "detected": true,
+    "flagged_after_fix": true
+   },
+   "any": {
+    "detected": true,
+    "flagged_after_fix": true
+   }
+  },
+  "semgrep": {
+   "window": 3,
+   "mapped": {
+    "detected": true,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": true,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": true,
+    "flagged_after_fix": false
+   }
+  }
+ }
+}

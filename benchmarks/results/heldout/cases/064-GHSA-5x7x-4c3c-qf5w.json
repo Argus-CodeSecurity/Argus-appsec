@@ -1,0 +1,321 @@
+{
+ "case": {
+  "ghsa_id": "GHSA-5x7x-4c3c-qf5w",
+  "cve_id": "CVE-2026-88001",
+  "ecosystem": "pip",
+  "packages": [
+   "open-webui"
+  ],
+  "published_at": "2026-09-09T23:54:08Z",
+  "advisory_cwes": [918],
+  "html_url": "https://github.com/advisories/GHSA-5x7x-4c3c-qf5w",
+  "label_cwes": [918],
+  "repo": "open-webui/open-webui",
+  "fix_sha": "e3e4bd87df6fc629e7e22081d980d55a7632b8b7",
+  "parent_sha": "ca4e07a40b4ff11989a25d84b517d3d0049f93ae",
+  "path_vulnerable": "backend/open_webui/config.py",
+  "path_patched": "backend/open_webui/config.py",
+  "language": "python",
+  "vulnerable_lines": [
+   [1113, 1114],
+   [1119, 1120]
+  ],
+  "patched_lines": [
+   [1114, 1114],
+   [1121, 1133]
+  ],
+  "commit_url": "https://github.com/open-webui/open-webui/commit/e3e4bd87df6fc629e7e22081d980d55a7632b8b7",
+  "case_id": "064-GHSA-5x7x-4c3c-qf5w",
+  "content": {
+   "vulnerable": {
+    "sha256": "35f5dcfaf8bfbf7c90c5a0c65d5d06c21d41a42e43bc00cb2ef355c4a2e8f7ed",
+    "bytes": 128991
+   },
+   "patched": {
+    "sha256": "b7342b17ce705043cf4bcc1d8678ee879c22dcdce75eff518d00356b5591e336",
+    "bytes": 129873
+   }
+  }
+ },
+ "status": "scored",
+ "tools": {
+  "nephilex": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [
+     [
+      2483,
+      "authz.oauth-missing-state",
+      [352]
+     ],
+     [
+      2547,
+      "authz.oauth-missing-state",
+      [352]
+     ],
+     [
+      2696,
+      "secrets.high-entropy-string",
+      [798]
+     ],
+     [
+      2697,
+      "secrets.high-entropy-string",
+      [798]
+     ],
+     [
+      2726,
+      "authz.oauth-missing-state",
+      [352]
+     ],
+     [
+      2743,
+      "secrets.high-entropy-string",
+      [798]
+     ],
+     [
+      3152,
+      "authz.oauth-missing-state",
+      [352]
+     ],
+     [
+      3158,
+      "authz.oauth-missing-state",
+      [352]
+     ],
+     [
+      3165,
+      "authz.oauth-missing-state",
+      [352]
+     ],
+     [
+      3169,
+      "authz.oauth-missing-state",
+      [352]
+     ],
+     [
+      3174,
+      "authz.oauth-missing-state",
+      [352]
+     ],
+     [
+      3188,
+      "authz.oauth-missing-state",
+      [352]
+     ]
+    ],
+    "patched": [
+     [
+      2497,
+      "authz.oauth-missing-state",
+      [352]
+     ],
+     [
+      2561,
+      "authz.oauth-missing-state",
+      [352]
+     ],
+     [
+      2710,
+      "secrets.high-entropy-string",
+      [798]
+     ],
+     [
+      2711,
+      "secrets.high-entropy-string",
+      [798]
+     ],
+     [
+      2740,
+      "authz.oauth-missing-state",
+      [352]
+     ],
+     [
+      2757,
+      "secrets.high-entropy-string",
+      [798]
+     ],
+     [
+      3166,
+      "authz.oauth-missing-state",
+      [352]
+     ],
+     [
+      3172,
+      "authz.oauth-missing-state",
+      [352]
+     ],
+     [
+      3179,
+      "authz.oauth-missing-state",
+      [352]
+     ],
+     [
+      3183,
+      "authz.oauth-missing-state",
+      [352]
+     ],
+     [
+      3188,
+      "authz.oauth-missing-state",
+      [352]
+     ],
+     [
+      3202,
+      "authz.oauth-missing-state",
+      [352]
+     ]
+    ]
+   }
+  },
+  "bandit": {
+   "status": "ok",
+   "parse_error_versions": [],
+   "findings": {
+    "vulnerable": [
+     [
+      104,
+      "B110",
+      [703]
+     ],
+     [
+      106,
+      "B110",
+      [703]
+     ],
+     [
+      195,
+      "B113",
+      [400]
+     ],
+     [
+      203,
+      "B113",
+      [400]
+     ],
+     [
+      212,
+      "B113",
+      [400]
+     ],
+     [
+      362,
+      "B110",
+      [703]
+     ],
+     [
+      2696,
+      "B106",
+      [259]
+     ],
+     [
+      2742,
+      "B106",
+      [259]
+     ]
+    ],
+    "patched": [
+     [
+      104,
+      "B110",
+      [703]
+     ],
+     [
+      106,
+      "B110",
+      [703]
+     ],
+     [
+      195,
+      "B113",
+      [400]
+     ],
+     [
+      203,
+      "B113",
+      [400]
+     ],
+     [
+      212,
+      "B113",
+      [400]
+     ],
+     [
+      362,
+      "B110",
+      [703]
+     ],
+     [
+      2710,
+      "B106",
+      [259]
+     ],
+     [
+      2756,
+      "B106",
+      [259]
+     ]
+    ]
+   }
+  },
+  "semgrep": {
+   "status": "ok",
+   "parse_error_versions": [
+    "patched",
+    "vulnerable"
+   ],
+   "findings": {
+    "vulnerable": [],
+    "patched": []
+   }
+  }
+ },
+ "outcomes": {
+  "nephilex": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  },
+  "bandit": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  },
+  "semgrep": {
+   "window": 3,
+   "mapped": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "strict": {
+    "detected": false,
+    "flagged_after_fix": false
+   },
+   "any": {
+    "detected": false,
+    "flagged_after_fix": false
+   }
+  }
+ }
+}
