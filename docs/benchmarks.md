@@ -114,7 +114,7 @@ change is reported as a warning while the commit pin fixes the content.
 
 | Tool | Version measured | Configuration |
 | --- | --- | --- |
-| Nephilex | 0.9.2 plus the accuracy changes described below (the version string is unchanged until the next release) | `nephilex scan <root> --no-ai --no-cache -f json`: offline heuristic provider, default scanner set; the harness refuses to run if the `ast-python` tier is missing |
+| Nephilex | 0.10.0 (measured on the release code before its version number was set, so the raw results record 0.9.2) | `nephilex scan <root> --no-ai --no-cache -f json`: offline heuristic provider, default scanner set; the harness refuses to run if the `ast-python` tier is missing |
 | Bandit | 1.9.4 | `bandit -r <root> -f json`: default plugins, all severities and confidences |
 | Semgrep | 1.182.1 (Community Edition) | `semgrep scan --config p/python --metrics=off --no-git-ignore --json`: registry ruleset `p/python`, 151 rules, cached locally with its SHA-256 recorded because registry rulesets are not version-pinned |
 

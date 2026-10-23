@@ -7,6 +7,11 @@ include breaking changes, noted explicitly).
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-10-23
+
+The first release under the Nephilex name. It contains the 0.9.0 security
+hardening, the 0.9.2 fixes, which were never published, and the changes below.
+
 ### Breaking changes
 - **The project is now Nephilex.** Everything that carries the product name
   changed with it, with no aliases for the earlier names:
@@ -93,12 +98,12 @@ include breaking changes, noted explicitly).
 - `nephilex mcp --help` lists every MCP tool.
 - A fresh `import nephilex.inventory` no longer fails on a circular import.
 
-## [0.9.2] - 2026-10-22
+## 0.9.2 (not released)
 
-0.9.2 is the first PyPI release with the 0.9.0 security hardening. The 0.9.0
-upload was rejected by PyPI tooling (see below), and the v0.9.1 tag was
-created on the 0.9.0 commit by mistake. It contains every 0.9.0 change plus
-these fixes.
+Prepared but never published: the PyPI project under the earlier name was
+archived before it shipped, and these fixes ship in 0.10.0. The 0.9.0 upload
+was rejected by PyPI tooling (see below), and the v0.9.1 tag was created on
+the 0.9.0 commit by mistake.
 
 ### Fixed
 - Packages declare core metadata 2.4 instead of 2.5, and releases upload with
@@ -117,7 +122,7 @@ these fixes.
 
 Tagged on the 0.9.0 commit by mistake. The PyPI release check refused to
 publish it, so it is not on PyPI; its container image contains 0.9.0. Use
-0.9.2.
+0.10.0.
 
 ## [0.9.0] - 2026-10-22
 
@@ -420,8 +425,8 @@ Simulation Mode; deterministic verified auto-fix with branch + pull-request
 creation (`nephilex fix`); JSON, SARIF, Markdown, HTML, and CSV reporters; plugin
 entry-point system for scanners, reporters, and providers.
 
-[Unreleased]: https://github.com/nephilex/nephilex/compare/v0.9.2...HEAD
-[0.9.2]: https://github.com/nephilex/nephilex/compare/v0.9.0...v0.9.2
+[Unreleased]: https://github.com/nephilex/nephilex/compare/v0.10.0...HEAD
+[0.10.0]: https://github.com/nephilex/nephilex/compare/v0.9.0...v0.10.0
 [0.9.1]: https://github.com/nephilex/nephilex/compare/v0.9.0...v0.9.1
 [0.9.0]: https://github.com/nephilex/nephilex/compare/v0.8.1...v0.9.0
 [0.8.1]: https://github.com/nephilex/nephilex/compare/v0.8.0...v0.8.1
