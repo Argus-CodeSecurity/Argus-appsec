@@ -84,9 +84,19 @@ jobs:
           /tmp/cdxenv/bin/cyclonedx-py environment /tmp/sbomenv -o sbom/nephilex.cdx.json
 
       - name: Attest build provenance for the distributions
+        id: provenance
         uses: actions/attest-build-provenance@520d128f165991a6c774bcb264f323e3d70747f4 # v2.2.0
         with:
           subject-path: "dist/*"
+
+      # The signed provenance bundle also goes on the release, so it can be
+      # verified without GitHub's attestation API:
+      #   gh attestation verify <file> --bundle nephilex-<version>.intoto.jsonl --owner Nephilex
+      - name: Keep the provenance bundle for the release
+        env:
+          BUNDLE: ${{ steps.provenance.outputs.bundle-path }}
+          TAG: ${{ github.event.release.tag_name }}
+        run: cp "$BUNDLE" "sbom/nephilex-${TAG#v}.intoto.jsonl"
 
       - name: Attest the SBOM for the distributions
         uses: actions/attest-sbom@bd218ad0dbcb3e146bd073d1d9c6d78e08aa8a0b # v2.4.0
@@ -124,20 +134,20 @@ jobs:
         uses: pypa/gh-action-pypi-publish@7245906fb61fa33a13554f9d5fb856fe61758086 # v1.14.3
 
   attach-sbom:
-    name: Attach SBOM to the release
+    name: Attach SBOM and provenance to the release
     needs: build
     runs-on: ubuntu-latest
     permissions:
-      contents: write # upload the SBOM as a release asset
+      contents: write # upload the SBOM and provenance as release assets
     steps:
       - uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
         with:
           name: sbom
           path: sbom/
-      - name: Upload SBOM to the release
+      - name: Upload SBOM and provenance to the release
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ github.event.release.tag_name }}
           REPO: ${{ github.repository }}
         run: |
-          gh release upload "$TAG" sbom/nephilex.cdx.json --repo "$REPO" --clobber
+          gh release upload "$TAG" sbom/* --repo "$REPO" --clobber
