@@ -7,6 +7,11 @@ include breaking changes, noted explicitly).
 
 ## [Unreleased]
 
+### Added
+- Documentation for pinning the GitHub Action by commit SHA, and for giving
+  `--open-pr` a least-privilege token on GitHub, GitLab and Bitbucket
+  (Bitbucket's `BITBUCKET_TOKEN` was supported but undocumented).
+
 ### Changed
 - Releases go through a staging phase. A release candidate (`0.12.0rc1`, a
   GitHub pre-release) publishes to TestPyPI and the `rc` image tag; only a

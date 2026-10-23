@@ -151,18 +151,37 @@ run its tests yourself in a disposable container or VM.
 
 ## Opening a pull request
 
-`--open-pr` pushes the branch and opens a PR through the host's API. It needs a
-token in the environment:
+`--open-pr` pushes the branch with your normal git credentials, then opens a PR
+through the host's API with a token from the environment:
 
 | Host | Token |
 |------|-------|
 | GitHub | `GITHUB_TOKEN` |
 | GitLab | `GITLAB_TOKEN` |
+| Bitbucket | `BITBUCKET_TOKEN` |
 
 ```bash
-export GITHUB_TOKEN=ghp_...
+export GITHUB_TOKEN=github_pat_...
 nephilex fix . --open-pr --base main
 ```
+
+### Give the token as little as possible
+
+The token is only used to create the pull request (the push uses your git
+remote's own credentials), so it does not need broad access:
+
+| Host | Token to create | Permissions |
+|------|-----------------|-------------|
+| GitHub | Fine-grained personal access token, limited to the one repository | **Pull requests: Read and write** (Metadata: Read is added automatically). Add **Contents: Read and write** only if this same token is also what your git remote pushes with |
+| GitHub Actions | The workflow's built-in `GITHUB_TOKEN` | `permissions: { contents: write, pull-requests: write }` on that one job, nothing at workflow level |
+| GitLab | Project access token, role Developer | Scope **`api`** (creating a merge request needs it); `write_repository` only if it also pushes |
+| Bitbucket | Repository access token | **Pull requests: Write**; **Repositories: Write** only if it also pushes |
+
+Avoid a classic GitHub token with the `repo` scope: it can read and write every
+repository you can. Set an expiry on whichever token you create, keep it in your
+secret store rather than a shell profile, and never put it in `.nephilex.yml`.
+Nephilex reads the token only to call the host's API, never prints it, and
+removes it from the environment of `--verify-with-tests` runs.
 
 The PR description lists every change with its file, line, rule, and whether it
 was verified, plus the diffs in a collapsible section.
