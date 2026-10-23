@@ -11,8 +11,12 @@ Two tiers:
   parsed and analyzed by :mod:`nephilex.scanners.llm_taint` (model output into a
   dangerous sink, LLM05; tool arguments into a shell or ``eval``, LLM06;
   untrusted input into a system prompt, LLM01; secrets and internal URLs in
-  system prompts, LLM07), :mod:`nephilex.scanners.llm_taint_js` (LLM05 for JS/TS)
-  and :mod:`nephilex.scanners.llm_agency` (excessive agent tools, LLM06).
+  system prompts, LLM07), :mod:`nephilex.scanners.llm_taint_js` (the same flows
+  for JS/TS) and :mod:`nephilex.scanners.llm_agency` (excessive agent tools,
+  LLM06). Both taint passes also report the agent trust-boundary rules in
+  :mod:`nephilex.scanners.llm_agent`: indirect prompt injection, tool arguments
+  reaching sinks, caller-controlled message roles and tool selection, and
+  secrets sent to the model.
 * **Line signatures (always on).** Well-known, high-precision signatures:
   ``trust_remote_code=True`` and ``torch.load`` without ``weights_only`` and
   plaintext model downloads (LLM03 Supply Chain), credentials in prompt strings
