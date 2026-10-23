@@ -23,6 +23,7 @@ not tuned against.
 
     python benchmarks/agent/run.py                 # dev and held-out summary
     python benchmarks/agent/run.py --details dev   # per-case results for dev
+    python benchmarks/agent/run.py --only dev      # score the dev split alone
     python benchmarks/agent/run.py --json results/after.json
 """
 
@@ -208,6 +209,8 @@ def print_summary(report: dict[str, Any]) -> None:
     print("-" * 66)
     for split in (*SPLITS, "all"):
         s = report["splits"][split]
+        if not s["vulnerable"] and not s["safe"]:
+            continue
         print(
             f"{split:<9} {s['vulnerable']:>5} {s['safe']:>5} {s['TP']:>4} {s['FN']:>4} "
             f"{s['FP']:>4} {_fmt(s['recall']):>8} {_fmt(s['precision']):>10}"
@@ -234,12 +237,18 @@ def main(argv: Sequence[str] | None = None) -> int:
         default=[],
         help="print per-case outcomes for a split (repeatable)",
     )
+    parser.add_argument(
+        "--only",
+        choices=SPLITS,
+        help="scan and score one split only (rule work uses --only dev, so the "
+        "held-out split stays unseen until the final run)",
+    )
     args = parser.parse_args(argv)
 
     from nephilex.plugins import register_builtins
 
     register_builtins()
-    results = [scan_case(c) for c in load_cases()]
+    results = [scan_case(c) for c in load_cases() if args.only in (None, c.split)]
     report = summarize(results)
     print_summary(report)
     for split in args.details:

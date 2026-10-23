@@ -57,7 +57,7 @@ _LLM_STACK = re.compile(
     r"chat\s*completions?|messages\.create|system_prompt|"
     r"model_dump|trust_remote_code|torch\.load"
     r")\b"
-    r"|\.invoke\(|@ai-sdk/|@anthropic-ai/|@langchain/|@google/genai|@google/generative-ai|"
+    r"|\.invoke\(|@ai-sdk/|@anthropic-ai/|@langchain/|@modelcontextprotocol/|@openai/agents|@google/genai|@google/generative-ai|"
     r"\bfrom\s+['\"]ai['\"]"
 )
 
