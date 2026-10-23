@@ -195,7 +195,9 @@ def print_fix_outcome(outcome: FixOutcome, *, open_pr: bool, dry_run: bool) -> N
     from rich.table import Table
 
     report = outcome.applied
-    if report.fixes:
+    if outcome.verification is not None and outcome.verification.fixes:
+        _print_tested_fixes(outcome)
+    elif report.fixes:
         table = Table(title="Fixes" + (" (dry run)" if dry_run else ""))
         table.add_column("File", style="bold")
         table.add_column("Line", justify="right")
@@ -229,4 +231,43 @@ def print_fix_outcome(outcome: FixOutcome, *, open_pr: bool, dry_run: bool) -> N
         )
 
     if outcome.error:
-        err_console.print(f"[red]Stopped:[/red] {outcome.error}")
+        err_console.print(f"[red]Stopped:[/red] {escape(outcome.error)}")
+
+
+def _print_tested_fixes(outcome: FixOutcome) -> None:
+    """The fix table with each fix's test result (``--verify-with-tests``)."""
+    from rich.table import Table
+
+    from nephilex.remediation.testverify import TEST_STATUS_LABELS
+
+    verification = outcome.verification
+    assert verification is not None
+    committed = {f.finding_id for f in outcome.applied.fixes} if outcome.committed else set()
+    colors = {"passed": "green", "failed": "red", "not_verified": "yellow"}
+    table = Table(title="Fixes (verified with tests)")
+    table.add_column("File", style="bold")
+    table.add_column("Line", justify="right")
+    table.add_column("Rule", style="dim")
+    table.add_column("Rule check", justify="center")
+    table.add_column("Tests", justify="center")
+    table.add_column("Committed", justify="center")
+    table.add_column("Why not", style="dim")
+    for f in verification.fixes:
+        status = f.tests or "not_verified"
+        color = colors.get(status, "yellow")
+        table.add_row(
+            escape(f.path),
+            str(f.line),
+            escape(f.rule_id),
+            "[green]yes[/green]" if f.verified else "[yellow]no[/yellow]",
+            f"[{color}]{TEST_STATUS_LABELS.get(status, status)}[/{color}]",
+            "yes" if f.finding_id in committed else "no",
+            "" if status == "passed" else escape(f.tests_reason),
+        )
+    console.print(table)
+    counts = verification.counts()
+    console.print(
+        f"Tests: {counts['passed']} passed, {counts['failed']} failed, "
+        f"{counts['not_verified']} could not verify. Only fixes whose tests passed "
+        "are committed."
+    )
