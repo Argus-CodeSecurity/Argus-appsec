@@ -37,16 +37,47 @@ jobs:
 
       # The image is tagged from the release tag, so a tag created on the
       # wrong commit would publish mislabeled images. Same check as publish.yml.
-      - name: Release tag matches the package version
-        if: github.event_name == 'release'
+      # A manual run builds the development image (:edge) from the selected
+      # ref and never touches a release tag or :latest.
+      - name: Release tag matches the package version, and pick the channel
+        id: version
         env:
+          EVENT: ${{ github.event_name }}
           TAG: ${{ github.event.release.tag_name }}
+          PRERELEASE: ${{ github.event.release.prerelease }}
         run: |
           version="$(sed -n 's/^__version__ = "\(.*\)"$/\1/p' src/nephilex/__init__.py)"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "minor=$(echo "$version" | cut -d. -f1,2)" >> "$GITHUB_OUTPUT"
+          if [ "$EVENT" != release ]; then
+            echo "channel=development" >> "$GITHUB_OUTPUT"
+            echo "Release channel: development"
+            exit 0
+          fi
           if [ "${TAG#v}" != "$version" ]; then
             echo "::error::Release tag '$TAG' does not match package version '$version'."
             exit 1
           fi
+          # Same rule as publish.yml: the version decides the channel and the
+          # GitHub release must agree.
+          if [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            channel=production
+          elif [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(a|b|rc)[0-9]+$ ]]; then
+            channel=staging
+          else
+            echo "::error::Version '$version' is neither X.Y.Z nor X.Y.Z{a,b,rc}N."
+            exit 1
+          fi
+          if [ "$channel" = staging ] && [ "$PRERELEASE" != true ]; then
+            echo "::error::$version is a pre-release: mark the GitHub release as a pre-release."
+            exit 1
+          fi
+          if [ "$channel" = production ] && [ "$PRERELEASE" = true ]; then
+            echo "::error::$version is a final version: do not mark the GitHub release as a pre-release."
+            exit 1
+          fi
+          echo "channel=$channel" >> "$GITHUB_OUTPUT"
+          echo "Release channel: $channel"
 
       - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
 
@@ -62,11 +93,15 @@ jobs:
         uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
         with:
           images: ghcr.io/${{ github.repository_owner }}/nephilex
+          # production: 0.12.0, 0.12, latest   staging: 0.12.0rc1, rc
+          # development (manual run): edge, sha-<commit>
           tags: |
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=raw,value=latest,enable={{is_default_branch}}
-            type=raw,value=latest,enable=${{ github.event_name == 'release' }}
+            type=raw,value=${{ steps.version.outputs.version }},enable=${{ steps.version.outputs.channel != 'development' }}
+            type=raw,value=${{ steps.version.outputs.minor }},enable=${{ steps.version.outputs.channel == 'production' }}
+            type=raw,value=latest,enable=${{ steps.version.outputs.channel == 'production' }}
+            type=raw,value=rc,enable=${{ steps.version.outputs.channel == 'staging' }}
+            type=raw,value=edge,enable=${{ steps.version.outputs.channel == 'development' }}
+            type=sha,enable=${{ steps.version.outputs.channel == 'development' }}
 
       - name: Build and push
         id: push

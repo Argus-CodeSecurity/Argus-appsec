@@ -4,12 +4,16 @@
 #
 # The cooldown holds back brand-new releases for a few days, which is when most
 # compromised package versions are caught and yanked.
+#
+# Routine updates are monthly and grouped, to match the release rhythm (one
+# feature release about every four weeks, see RELEASING.md). Security updates
+# for known vulnerabilities are separate and are not held to this schedule.
 version: 2
 updates:
   - package-ecosystem: pip
     directory: "/"
     schedule:
-      interval: weekly
+      interval: monthly
     open-pull-requests-limit: 5
     cooldown:
       default-days: 5
@@ -21,7 +25,7 @@ updates:
   - package-ecosystem: github-actions
     directory: "/"
     schedule:
-      interval: weekly
+      interval: monthly
     open-pull-requests-limit: 5
     cooldown:
       default-days: 5
@@ -33,7 +37,7 @@ updates:
   - package-ecosystem: docker
     directory: "/"
     schedule:
-      interval: weekly
+      interval: monthly
     cooldown:
       default-days: 5
 
