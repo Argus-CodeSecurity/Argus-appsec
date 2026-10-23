@@ -54,6 +54,24 @@ All inputs are optional; the useful ones:
 | `nephilex-version` | *(the action's own version)* | Install a specific nephilex version from PyPI instead |
 | `extra-args` | *(none)* | Anything else `nephilex scan` accepts |
 
+#### Pin the Action by commit
+
+A tag such as `v0.11.0` is a pointer, and on GitHub a pointer can in principle be
+moved to other code. Nephilex's release tags are protected against that, but a
+security gate in your pipeline should not depend on someone else's repository
+settings. Pin the full commit SHA, and keep the tag as a comment so you can see
+the version:
+
+```yaml
+      - uses: nephilex/nephilex@9a03d39553e8dc9c42c548d7dc2b0596e6535d6e # v0.11.0
+```
+
+That is the commit `v0.11.0` points to; check it with
+`git ls-remote https://github.com/nephilex/nephilex refs/tags/v0.11.0`.
+Dependabot's `github-actions` updates understand this form and move both the
+SHA and the comment when a new release comes out. Do the same for the other
+actions in the workflow (`actions/checkout` and so on).
+
 ### Hand-rolled workflow
 
 If you need more control, a ready-to-copy workflow lives at
