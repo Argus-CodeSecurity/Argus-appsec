@@ -42,9 +42,13 @@ jobs:
 
       - name: Install Nephilex
         # Install with the [ast] extra so the self-scan runs the full taint tier
-        # (the AST analysis clears regex false positives). In your own project,
-        # replace this with `pip install "nephilex[ast]"`.
-        run: pip install ".[ast]"
+        # (the AST analysis clears regex false positives). Dependencies come
+        # from hash locks and the wheel is built with the locked backend. In
+        # your own project, replace this with `pip install "nephilex[ast]"`.
+        run: |
+          pip install --require-hashes -r requirements/scan.txt -r requirements/backend.txt
+          pip wheel --no-deps --no-build-isolation --wheel-dir /tmp/nephilex-wheel .
+          pip install --no-deps /tmp/nephilex-wheel/*.whl
 
       # On a pull request, scan the base branch first to establish a baseline of
       # pre-existing findings. Uses a separate worktree so the PR checkout is
@@ -98,7 +102,11 @@ jobs:
       - uses: actions/setup-python@0b93645e9fea7318ecaed2b359559ac225c90a2b # v5.3.0
         with:
           python-version: "3.12"
-      - run: pip install ".[ast]"
+      - name: Install Nephilex
+        run: |
+          pip install --require-hashes -r requirements/scan.txt -r requirements/backend.txt
+          pip wheel --no-deps --no-build-isolation --wheel-dir /tmp/nephilex-wheel .
+          pip install --no-deps /tmp/nephilex-wheel/*.whl
       - name: Fail on newly introduced High+ findings
         run: |
           nephilex scan . --diff "origin/${GITHUB_BASE_REF}...HEAD" \

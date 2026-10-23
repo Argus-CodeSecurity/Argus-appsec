@@ -32,7 +32,11 @@ jobs:
           python-version: "3.12"
 
       - name: Install
-        run: pip install -e ".[dev,ast]"
+        # Dependencies come from a hash lock; the project itself installs
+        # editable without re-resolving or fetching a build backend.
+        run: |
+          pip install --require-hashes -r requirements/dev.txt
+          pip install --no-deps --no-build-isolation -e .
 
       - name: Release tag matches the package version
         env:
@@ -65,8 +69,8 @@ jobs:
 
       - name: Build sdist and wheel
         run: |
-          python -m pip install "build==1.6.1" "twine==7.0.0"
-          python -m build
+          python -m pip install --require-hashes -r requirements/build.txt
+          python -m build --no-isolation
           python -m twine check --strict dist/*
 
       - name: Generate CycloneDX SBOM (resolved runtime dependencies)
@@ -74,9 +78,10 @@ jobs:
           python -m venv /tmp/sbomenv
           /tmp/sbomenv/bin/pip install --require-hashes -r requirements.lock
           /tmp/sbomenv/bin/pip install --no-deps dist/*.whl
-          python -m pip install "cyclonedx-bom==7.5.0"
+          python -m venv /tmp/cdxenv
+          /tmp/cdxenv/bin/pip install --require-hashes -r requirements/sbom.txt
           mkdir -p sbom
-          cyclonedx-py environment /tmp/sbomenv -o sbom/nephilex.cdx.json
+          /tmp/cdxenv/bin/cyclonedx-py environment /tmp/sbomenv -o sbom/nephilex.cdx.json
 
       - name: Attest build provenance for the distributions
         uses: actions/attest-build-provenance@520d128f165991a6c774bcb264f323e3d70747f4 # v2.2.0

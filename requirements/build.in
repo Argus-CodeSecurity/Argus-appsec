@@ -1,0 +1,4 @@
+# Release tooling: build the sdist and wheel, then check them.
+-r backend.in
+build==1.6.1
+twine==7.0.0

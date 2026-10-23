@@ -1,0 +1,6 @@
+# The build backend from pyproject.toml [build-system]. Installed from a hash lock
+# so Nephilex can build with --no-build-isolation instead of letting pip fetch
+# an unpinned backend at build time. hatchling needs `editables` only for
+# editable installs (`pip install -e .`).
+hatchling>=1.27
+editables

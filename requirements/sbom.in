@@ -1,0 +1,2 @@
+# Generates the CycloneDX SBOM attached to each release.
+cyclonedx-bom==7.5.0
