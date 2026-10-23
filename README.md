@@ -15,7 +15,7 @@ and checks that the fix actually works.
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
 [![CI](https://github.com/nephilex/nephilex/actions/workflows/ci.yml/badge.svg)](https://github.com/nephilex/nephilex/actions/workflows/ci.yml)
 [![Self-scan](https://github.com/nephilex/nephilex/actions/workflows/nephilex-scan.yml/badge.svg)](https://github.com/nephilex/nephilex/actions/workflows/nephilex-scan.yml)
-[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/nephilex/nephilex/badge)](https://securityscorecards.dev/viewer/?uri=github.com/nephilex/nephilex)
+[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/Nephilex/nephilex/badge)](https://securityscorecards.dev/viewer/?uri=github.com/Nephilex/nephilex)
 [![OWASP LLM Top 10](https://img.shields.io/badge/OWASP-LLM%20Top%2010-111c33)](https://genai.owasp.org/llm-top-10/)
 
 [Install](#install) | [Quick start](#quick-start) | [How it works](#how-it-works) | [Docs](https://nephilex.github.io/nephilex/) | [Roadmap](#roadmap)

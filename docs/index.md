@@ -8,7 +8,7 @@ the fix and checks that the fix actually works.
 [![PyPI](https://img.shields.io/pypi/v/nephilex?color=6366f1&label=pypi)](https://pypi.org/project/nephilex/)
 [![Python](https://img.shields.io/pypi/pyversions/nephilex)](https://pypi.org/project/nephilex/)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue)](https://github.com/nephilex/nephilex/blob/main/LICENSE)
-[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/nephilex/nephilex/badge)](https://securityscorecards.dev/viewer/?uri=github.com/nephilex/nephilex)
+[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/Nephilex/nephilex/badge)](https://securityscorecards.dev/viewer/?uri=github.com/Nephilex/nephilex)
 
 ![Nephilex scanning a project from the terminal](assets/demo.svg){ loading=lazy }
 
