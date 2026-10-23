@@ -142,10 +142,14 @@ Security engineers trust tools that state their limits:
   JavaScript/TypeScript and needs the `[ast]` extra. Cross-file analysis is
   Python only and follows one call hop. Other languages get pattern rules,
   not data-flow analysis.
-- **Fix verification is a local re-check, not a test run.** "Verified" means
-  the rule no longer fires on the rewritten line and the file still parses. It
-  does not run your tests or prove the new code is correct; see the
-  [example finding](example-finding.md) for what that means in practice.
+- **Fix verification is a local re-check unless you ask for tests.** By
+  default, "verified" means the rule no longer fires on the rewritten line and
+  the file still parses; it does not prove the new code is correct.
+  `nephilex fix --verify-with-tests` also runs your test suite in a temporary
+  copy of the repository before and after the fixes and commits only fixes that
+  keep it passing (see [Fixing & pull requests](fixing.md)). Neither runs the
+  application itself; see the [example finding](example-finding.md) for what
+  that means in practice.
 - **Not a full enterprise ASPM.** No ticketing and no SSO. Policies
   (`nephilex policy check`, see [Policy](policy.md)) gate a scan in CI; they
   are not organization-wide governance. It is a scanner and a fixer, not a
