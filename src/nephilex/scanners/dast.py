@@ -67,7 +67,7 @@ def _project_declared_urls(root: Path) -> set[str]:
             if not path.is_file():
                 continue
             data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
-        except (OSError, yaml.YAMLError, UnicodeDecodeError):
+        except (OSError, yaml.YAMLError, UnicodeDecodeError, RecursionError):
             continue
         opts = data.get("scanner_options") if isinstance(data, dict) else None
         dast = opts.get("dast") if isinstance(opts, dict) else None
