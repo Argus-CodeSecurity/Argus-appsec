@@ -60,6 +60,8 @@ markdown_extensions:
 nav:
   - Home: index.md
   - Getting started:
+      - Quickstart: quickstart.md
+      - Example finding: example-finding.md
       - Understanding scan results: understanding-results.md
       - Scanners & coverage: scanners.md
       - Configuration: configuration.md
@@ -85,6 +87,7 @@ nav:
       - Writing plugins: plugins.md
       - Performance: performance.md
   - Trust:
+      - Trust and limits: trust.md
       - Benchmarks & accuracy: benchmarks.md
       - How Nephilex compares: comparison.md
       - Security & threat model: security.md
