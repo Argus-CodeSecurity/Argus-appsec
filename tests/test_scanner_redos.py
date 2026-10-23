@@ -84,6 +84,13 @@ ADVERSARIAL = [
     ("secrets assignment, repeated keyword", secrets._ASSIGNMENT, _fit("secret")),
     ("secrets assignment, long key", secrets._ASSIGNMENT, _fit("a_token_")),
     ("shared curl-pipe", CURL_PIPE_SHELL_RE, _fit("curl ")),
+    # The repetition CodeQL's py/redos names for the optional sudo flags.
+    ("shared curl-pipe, sudo flags", CURL_PIPE_SHELL_RE, "curl x | sudo " + _fit("-!\x7f- ")[:-14]),
+    (
+        "shared curl-pipe, sudo flags no space",
+        CURL_PIPE_SHELL_RE,
+        "curl x | sudo " + _fit("-!\x7f-")[:-14],
+    ),
     ("lang-sast curl-pipe", lang_sast._RULES[".sh"][0][1], "curl " + " " * (MAX_SCAN_LINE - 5)),
     ("cicd hardcoded-secret", cicd._RULES[4][2], _fit("password:")),
     (
