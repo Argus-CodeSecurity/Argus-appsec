@@ -4,7 +4,7 @@ This is the page to read before you rely on Nephilex. It covers how accuracy
 is measured, what Nephilex does on your machine and on the network, what each
 scanner covers and how deeply, and where established tools are stronger.
 
-Facts on this page were checked against Nephilex **0.10.0** on **2026-10-23**,
+Facts on this page were checked against Nephilex **0.11.0** on **2026-10-23**,
 by running the commands shown and reading the code in `src/nephilex/`.
 
 ## How accuracy is measured
@@ -127,7 +127,7 @@ page.
 Built from `nephilex scanners`, `nephilex reporters` and the scanner modules in
 `src/nephilex/scanners/`.
 
-**Nephilex 0.10.0. Last verified 2026-10-23.**
+**Nephilex 0.11.0. Last verified 2026-10-23.**
 
 Analysis depth:
 
@@ -147,7 +147,7 @@ Status, as assessed for this page:
   lookup.
 - **Experimental**: works and has tests, but no published accuracy
   measurement, or the code describes it as a foundation or heuristic.
-- **Planned**: listed in the README roadmap as planned; not in 0.10.0.
+- **Planned**: listed in the README roadmap as planned; not in 0.11.0.
 
 ### Code
 
@@ -192,7 +192,7 @@ Findings with the rule prefix `chains.` (for example
 `chains.secret-plus-injection`) are not a separate scanner: the engine adds
 them when findings from different scanners combine into a worse outcome.
 
-### Planned (not in 0.10.0)
+### Planned (not in 0.11.0)
 
 From the [README roadmap](https://github.com/nephilex/nephilex#roadmap):
 
@@ -205,7 +205,7 @@ From the [README roadmap](https://github.com/nephilex/nephilex#roadmap):
 
 ### Report formats
 
-`nephilex reporters` in 0.10.0:
+`nephilex reporters` in 0.11.0:
 
 | Format | Extension | Description |
 | --- | --- | --- |

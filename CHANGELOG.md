@@ -7,6 +7,8 @@ include breaking changes, noted explicitly).
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-10-23
+
 ### Added
 - **Test-verified fixes.** `nephilex fix --verify-with-tests` (with
   `--test-command`, or `autofix.test_command` from a trusted config) runs the
@@ -481,7 +483,8 @@ Simulation Mode; deterministic verified auto-fix with branch + pull-request
 creation (`nephilex fix`); JSON, SARIF, Markdown, HTML, and CSV reporters; plugin
 entry-point system for scanners, reporters, and providers.
 
-[Unreleased]: https://github.com/nephilex/nephilex/compare/v0.10.0...HEAD
+[Unreleased]: https://github.com/nephilex/nephilex/compare/v0.11.0...HEAD
+[0.11.0]: https://github.com/nephilex/nephilex/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/nephilex/nephilex/compare/v0.9.0...v0.10.0
 [0.9.1]: https://github.com/nephilex/nephilex/compare/v0.9.0...v0.9.1
 [0.9.0]: https://github.com/nephilex/nephilex/compare/v0.8.1...v0.9.0

@@ -1,9 +1,11 @@
 # Quickstart
 
 This page takes you from nothing to a scan, two report files, a CI gate and an
-editor hook in about five minutes. Every command below was run with Nephilex
-0.10.0 (installed from PyPI) on Windows 11 with Python 3.11 on 2026-10-23, and
-the output shown is what it printed. Trimmed output is marked as trimmed.
+editor hook in about five minutes. Every command below was run on Windows 11
+with Python 3.11 on 2026-10-23, first with Nephilex 0.10.0 from PyPI and again
+with the 0.11.0 code where 0.11.0 changed the output (the `check` example and
+the missing `[ast]` messages). The output shown is what it printed. Trimmed
+output is marked as trimmed.
 
 All scans here use `--no-ai`, which turns off finding enrichment so the output
 is reproducible. You never need an API key: without `--no-ai` Nephilex uses its
@@ -35,7 +37,7 @@ nephilex --version
 ```
 
 ```text
-Nephilex v0.10.0
+Nephilex v0.11.0
 ```
 
 ## 2. Scan the demo app
@@ -279,7 +281,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0     # full history enables diff-aware PR scanning
-      - uses: nephilex/nephilex@v0.10.0
+      - uses: nephilex/nephilex@v0.11.0
         with:
           fail-on: high      # block merges on newly introduced High+ findings
 ```
