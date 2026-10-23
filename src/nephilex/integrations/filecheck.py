@@ -129,8 +129,10 @@ def check_config(base: Config, *, ai: bool = False, cache: bool = True) -> Confi
     The scanner selection is narrowed to file-local scanners (honouring
     ``scanners`` / ``exclude_scanners`` from the config), secret verification
     and history scanning are dropped, the AI agents run only when ``ai`` is
-    set (and the config has not disabled them), and attack simulation, patch
-    generation and live targets are off.
+    set (and the config has not disabled them), and attack simulation and live
+    targets are off. Without the AI agents, findings still get Nephilex's
+    deterministic, locally verified fixes, which are cheap and let an editor
+    offer them in place; model-written patches are never generated here.
     """
     cfg = copy.deepcopy(base)
     available = file_local_scanners()
@@ -150,7 +152,7 @@ def check_config(base: Config, *, ai: bool = False, cache: bool = True) -> Confi
         }
     cfg.ai.enabled = bool(ai and cfg.ai.enabled)
     cfg.attack_simulation = False
-    cfg.generate_patches = False
+    cfg.generate_patches = not cfg.ai.enabled
     cfg.dast_url = None
     if not cache:
         cfg.cache = False

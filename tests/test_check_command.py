@@ -65,6 +65,25 @@ def test_json_output_is_the_scan_schema(project: Path) -> None:
     assert set(doc["scanners_run"]) <= set(filecheck.file_local_scanners())
 
 
+def test_json_output_carries_the_deterministic_fix(project: Path) -> None:
+    # Editors apply this patch in place, so it must match the line as written.
+    res = runner.invoke(app, ["check", "app.py", "-f", "json"])
+    doc = json.loads(res.stdout)
+    (finding,) = [f for f in doc["findings"] if f["rule_id"] == "patterns.python-yaml-load"]
+    remediation = finding["remediation"]
+    assert remediation["verified"] is True
+    assert "-    return yaml.load(raw)\n" in remediation["patch"]
+    assert "+    return yaml.safe_load(raw)\n" in remediation["patch"]
+    assert finding["metadata"]["patch_source"] == "deterministic"
+
+
+def test_check_config_never_asks_the_model_for_patches() -> None:
+    base = Config()
+    base.ai.enabled = True
+    assert filecheck.check_config(base, ai=True).generate_patches is False
+    assert filecheck.check_config(base, ai=False).generate_patches is True
+
+
 def test_hook_format_matches_the_problem_matcher_regexp(project: Path) -> None:
     res = runner.invoke(app, ["check", "app.py", "-f", "hook"])
     assert res.exit_code == 1

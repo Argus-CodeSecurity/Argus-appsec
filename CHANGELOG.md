@@ -80,7 +80,8 @@ include breaking changes, noted explicitly).
   output, virtual environments, local `.env` files).
 - Inline `nephilex-ignore` comments are recognised in `--`, `<!-- -->` and `;`
   comment styles as well as `#` and `//`.
-- Deterministic fix patches are attached when AI is off.
+- Deterministic fix patches are attached when AI is off, including by
+  `nephilex check`, so editors can offer the verified fix in place.
 - Reporters, model clients and HTTP libraries are imported on first use, so
   the CLI starts faster.
 - The regex tier asks the taint engine about its payload, so `shell=True`,
