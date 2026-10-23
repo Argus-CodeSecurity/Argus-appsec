@@ -104,8 +104,8 @@ Expected output (trimmed: 18 of the 20 table rows are left out):
 What to look for:
 
 - `Running scanner: ast-python` confirms the `[ast]` extra is installed. If it
-  says `Skipping scanner 'ast-python' (not applicable)` instead, see
-  [Common problems](#common-problems).
+  says `Skipping scanner 'ast-python' (needs the [ast] extra: ...)` instead,
+  see [Common problems](#common-problems).
 - "Not applicable" means the project has no files that scanner reads (no CI
   workflows, no Terraform, no LLM client code, and so on).
 - The five dependency findings come from live [OSV](https://osv.dev) data, so
@@ -290,12 +290,8 @@ request introduces, and it reads `.nephilex.yml` from the base branch so a pull
 request cannot loosen its own gate. The inputs are listed in
 [CI/CD integration](ci-cd.md#the-official-action-recommended).
 
-!!! warning "The Action does not install the `[ast]` extra"
-    `action.yml` installs Nephilex with `pip install` and no extras, so the
-    `ast-python`, `ast-python-xfile` and `ast-js` taint scanners are skipped
-    in the Action; the pattern rules and the other scanners still run. If you
-    want taint analysis in CI, use a hand-rolled workflow that installs
-    `nephilex[ast]` (see [CI/CD integration](ci-cd.md#hand-rolled-workflow)).
+The Action installs `nephilex[ast]`, so the `ast-python`, `ast-python-xfile`
+and `ast-js` taint scanners run in CI as they do locally.
 
 This snippet was copied from the docs and `action.yml`; it was not run for
 this page.
@@ -354,12 +350,12 @@ nephilex check app.py
 ```text
 app.py:19  critical  secrets.aws-access-key-id  Hardcoded credential: aws access key id
     Fix: Remove the secret from source and rotate it.
-app.py:45  high  ast-python.ast-unsafe-deserialization  Unsafe deserialization of untrusted data
-    Fix: Never unpickle untrusted bytes; use JSON or yaml.safe_load with a schema.
 app.py:37  high  ast-python.ast-command-injection  OS command injection (tainted value reaches a shell command)
     Fix: Pass arguments as a list without a shell, and validate/quote input.
 app.py:29  high  ast-python.ast-sql-injection  SQL injection (tainted value reaches a database query)
     Fix: Use parameterized queries / bound parameters and never build SQL from input, even across intermediate variables.
+app.py:45  high  patterns.python-yaml-load  Unsafe yaml.load without SafeLoader
+    Fix: Use yaml.safe_load, or yaml.load(..., Loader=yaml.SafeLoader).
 app.py:20  high  secrets.high-entropy-string  Possible hardcoded secret in 'API_TOKEN'
     Fix: Remove the secret from source and rotate it.
 app.py:19  high  chains.secret-plus-injection  Attack chain: injection foothold beside an exposed credential
@@ -375,10 +371,9 @@ app.py:55  medium  patterns.flask-debug-true  Flask app running with debug=True
 
 `nephilex check` exits 1 here because findings are at or above its default
 gate, `high`. It runs only file-local scanners, so dependency findings are left
-to `nephilex scan`. Note that the `yaml.load` line is reported under the taint
-rule `ast-python.ast-unsafe-deserialization` here, while `nephilex scan`
-reports the same line as `patterns.python-yaml-load`. Hook formats, strict mode
-and speed are covered in [Editors & AI assistants](editors.md).
+to `nephilex scan`. It reports the same rule for a line as `nephilex scan`
+does. Hook formats, strict mode and speed are covered in
+[Editors & AI assistants](editors.md).
 
 ## Common problems
 
@@ -388,17 +383,17 @@ Each of these was reproduced for this page.
 `pip install nephilex`, the scan's progress lines include:
 
 ```text
-- Skipping scanner 'ast-python' (not applicable).
+- Skipping scanner 'ast-python' (needs the [ast] extra: pip install "nephilex[ast]").
 - Skipping scanner 'ast-js' (not applicable).
-- Skipping scanner 'ast-python-xfile' (not applicable).
+- Skipping scanner 'ast-python-xfile' (needs the [ast] extra: pip install "nephilex[ast]").
 ```
 
-and reports 19 findings on the demo app instead of 20: SQL injection and
+(`ast-js` is "not applicable" here only because the demo app has no
+JavaScript.) The scan then reports 19 findings on the demo app instead of 20: SQL injection and
 command injection come from the regex rules (`patterns.python-sql-format`,
 `patterns.python-shell-true`) instead of the taint rules, the cross-site
 scripting finding is missing, and `yaml.load` is reported with Medium instead
-of High confidence. "Not applicable" is the same message used for scanners
-that have nothing to read, so check for it. Fix: `pip install "nephilex[ast]"`
+of High confidence. Fix: `pip install "nephilex[ast]"`
 (or `pipx install --force "nephilex[ast]"`).
 
 **Python is too old.** On Python 3.9, `pip install nephilex` fails with:

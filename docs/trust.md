@@ -9,8 +9,8 @@ by running the commands shown and reading the code in `src/nephilex/`.
 
 ## How accuracy is measured
 
-Nephilex publishes three kinds of measurement, with methodology and caveats,
-on [Benchmarks & accuracy](benchmarks.md):
+Nephilex publishes five kinds of measurement, with methodology and caveats,
+on [Benchmarks & accuracy](benchmarks.md) and [LLM / AI security](llm-security.md):
 
 1. **A labeled corpus in the repository.** Small single-file cases, each either
    vulnerable (Nephilex must report it) or safe (Nephilex must stay quiet). It
@@ -20,7 +20,18 @@ on [Benchmarks & accuracy](benchmarks.md):
    scored for Nephilex, Bandit and Semgrep by the same code, with the dataset
    commits, tool versions and every finding recorded so the scoring can be
    re-run.
-3. **Finding inventories on reference apps** (OWASP Juice Shop, DVWA, WebGoat):
+3. **A held-out benchmark of real fix commits.** 201 files from 117 GitHub
+   advisories (pip and npm, 2024 to 2026), each scanned before and after its
+   fix. The selection rule was committed before any tool ran, and no rule was
+   changed for it. This is the closest to real-world accuracy, and the result
+   is low for every tool: Nephilex 2.0% recall (4 of 201), Semgrep 2.0%, and
+   Bandit 10.2% on the Python cases. Each case is a single file, so flows that
+   cross files are invisible here.
+4. **An LLM and agent-security corpus** of 38 vulnerable and safe pairs, with a
+   held-out split scored once after the rules were frozen: 64.3% recall and
+   69.2% precision on the held-out cases, against 100% on the cases the rules
+   were written for.
+5. **Finding inventories on reference apps** (OWASP Juice Shop, DVWA, WebGoat):
    counts by scanner and severity per release. These show coverage shape and
    regressions; they are not precision or recall.
 
@@ -51,7 +62,8 @@ Read the benchmark page before quoting any number. In short:
 
 - The Python rules were revised with OWASP Benchmark for Python visible, so
   that dataset is not an independent test. SecurityEval is closer to one, and
-  Nephilex's results there are much lower.
+  the held-out fix commits are closest; Nephilex's results drop sharply on
+  both. Quote the held-out number, not the OWASP one.
 - The public datasets measure only the Python SAST and taint scanners. Every
   case in the in-repo `sast` and `taint` domains is Python too. Nothing
   published measures the JavaScript/TypeScript taint scanner, and the secrets,
@@ -214,9 +226,9 @@ From the [README roadmap](https://github.com/nephilex/nephilex#roadmap):
   scanner loses its data-flow rules, and pattern findings are not graded by
   data flow. On the demo app that is 19 findings instead of 20; see
   [Common problems](quickstart.md#common-problems).
-- **The official GitHub Action** installs Nephilex without the `[ast]` extra
-  (see `action.yml`), so the taint scanners do not run in it. A hand-rolled
-  workflow that installs `nephilex[ast]` runs them.
+- **The official GitHub Action** installs `nephilex[ast]` (see `action.yml`),
+  so the taint scanners run in CI as they do locally. Releases up to 0.10.0
+  installed it without the extra, so pin a later version to get them.
 
 ## Security of Nephilex itself
 

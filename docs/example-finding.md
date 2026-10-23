@@ -161,10 +161,10 @@ Two other results point at the same line:
 
 - The taint scanner reports `ast-python.ast-xss` on line 45 (Medium): the
   parsed request data is returned from a Flask view as the response body.
-- `nephilex check app.py` reports line 45 as
-  `ast-python.ast-unsafe-deserialization`, the taint rule for the same
-  problem. In a full `nephilex scan` only the pattern finding above is listed
-  for it.
+- The taint scanner also traces the request data into `yaml.load` on this
+  line. Both tiers report the same weakness, so Nephilex keeps one finding: the
+  pattern finding, because it carries the deterministic fix. `nephilex scan`
+  and `nephilex check` make the same choice.
 
 ## The proposed fix
 
@@ -182,14 +182,13 @@ nephilex fix --dry-run
 ```text
 - Done: 21 finding(s), highest severity Critical.
                      Fixes (dry run)
-┌────────┬──────┬─────────────────────────────┬──────────┐
-│ File   │ Line │ Rule                        │ Verified │
-├────────┼──────┼─────────────────────────────┼──────────┤
-│ app.py │   45 │ patterns.python-yaml-load   │   yes    │
-│ app.py │   50 │ patterns.weak-hash-md5-sha1 │   yes    │
-│ app.py │   55 │ patterns.flask-debug-true   │   yes    │
-└────────┴──────┴─────────────────────────────┴──────────┘
-- would fix 3 finding(s) across 1 file(s) (dry run, no files written)
+┌────────┬──────┬───────────────────────────┬──────────┐
+│ File   │ Line │ Rule                      │ Verified │
+├────────┼──────┼───────────────────────────┼──────────┤
+│ app.py │   45 │ patterns.python-yaml-load │   yes    │
+│ app.py │   55 │ patterns.flask-debug-true │   yes    │
+└────────┴──────┴───────────────────────────┴──────────┘
+- would fix 2 finding(s) across 1 file(s) (dry run, no files written)
 ```
 
 (Trimmed: the progress lines are left out. The count is 21 rather than 20
@@ -204,15 +203,14 @@ nephilex fix -q
 
 ```text
                           Fixes
-┌────────┬──────┬─────────────────────────────┬──────────┐
-│ File   │ Line │ Rule                        │ Verified │
-├────────┼──────┼─────────────────────────────┼──────────┤
-│ app.py │   45 │ patterns.python-yaml-load   │   yes    │
-│ app.py │   50 │ patterns.weak-hash-md5-sha1 │   yes    │
-│ app.py │   55 │ patterns.flask-debug-true   │   yes    │
-└────────┴──────┴─────────────────────────────┴──────────┘
+┌────────┬──────┬───────────────────────────┬──────────┐
+│ File   │ Line │ Rule                      │ Verified │
+├────────┼──────┼───────────────────────────┼──────────┤
+│ app.py │   45 │ patterns.python-yaml-load │   yes    │
+│ app.py │   55 │ patterns.flask-debug-true │   yes    │
+└────────┴──────┴───────────────────────────┴──────────┘
 - Created branch 'nephilex/security-fixes' at 'master'.
-- Committed 3 fix(es) as c8a5bead.
+- Committed 2 fix(es) as cb497e04.
 - Branch committed locally. Re-run with --open-pr to push and open a pull request.
 Fixes committed to the branch. Add --open-pr to push and open a pull request.
 ```
@@ -220,19 +218,19 @@ Fixes committed to the branch. Add --open-pr to push and open a pull request.
 The commit changes `app.py` (trimmed to the hunk for this finding):
 
 ```diff
-@@ -42,14 +42,14 @@ def ping():
+@@ -42,7 +42,7 @@ def ping():
  def load_config():
-     # Unsafe deserialization (patterns scanner: CWE-502).
+     # Unsafe deserialization (CWE-502: patterns; ast-python also traces request data here).
      raw = request.args.get("data")
 -    return str(yaml.load(raw))
 +    return str(yaml.safe_load(raw))
 ```
 
 and adds a record to the tamper-evident audit log `.nephilex/audit.log` (one
-of three lines shown):
+of two lines shown):
 
 ```json
-{"action":"fix.applied","actor":"demo <demo@example.com>","details":{"line":45,"verified":true},"fingerprint":"patterns.python-yaml-load|app.py|ee7664839c3a","hash":"4a079b5a844891f7d91632721af98d6804c661b98cc4f46954e69b8093f61ae9","kind":null,"path":"app.py","prev_hash":"0000000000000000000000000000000000000000000000000000000000000000","reason":"verified deterministic fix","rule":"patterns.python-yaml-load","seq":1,"ts":"2026-10-23T06:44:35.583Z","v":1}
+{"action":"fix.applied","actor":"demo <demo@example.com>","details":{"line":45,"verified":true},"fingerprint":"patterns.python-yaml-load|app.py|ee7664839c3a","hash":"c4e252bddef65fff1890a078d926f0f21073c09c7bdb5d7caff6d745ab19f254","kind":null,"path":"app.py","prev_hash":"0000000000000000000000000000000000000000000000000000000000000000","reason":"verified deterministic fix","rule":"patterns.python-yaml-load","seq":1,"ts":"2026-10-23T07:42:27.940Z","v":1}
 ```
 
 Nothing was pushed. `--open-pr` would push the branch and open a pull request;
@@ -248,8 +246,12 @@ see [Fixing & pull requests](fixing.md) and [Audit log](audit-log.md).
 2. `nephilex fix` also re-parses the whole changed file for Python, JSON and
    YAML files, and drops all fixes for a file that would no longer parse.
 
-It does not run your tests, start the application, or prove that the new code
-behaves the same. Review the change as you would any other pull request.
+By default it does not run your tests, start the application, or prove that
+the new code behaves the same. `nephilex fix --verify-with-tests` adds that
+check: it runs your test command before and after the fixes in a temporary
+copy of the repository and commits only fixes that keep the tests passing (see
+[Fixing & pull requests](fixing.md)). Either way, review the change as you
+would any other pull request.
 
 The re-scan of the fixed branch (`nephilex scan . --no-ai -q`), trimmed to the
 summary and the rows for `app.py:45`. The first line is the folder name, which
@@ -258,25 +260,26 @@ was `fixrepo` in this run:
 ```text
 ┌────────────────────────────────────────────── Nephilex scan ──────────────────────────────────────────────┐
 │ fixrepo                                                                                                   │
-│ Aggregate risk: 99.7/100   Findings: 18                                                                   │
-│ Critical: 2 | High: 7 | Medium: 8 | Low: 1 | Info: 0                                                      │
+│ Aggregate risk: 99.7/100   Findings: 19                                                                   │
+│ Critical: 2 | High: 7 | Medium: 9 | Low: 1 | Info: 0                                                      │
 └───────────────────────────────────────────────────────────────────────────────────────────────────────────┘
 │ Medium   │ 44.3 │ Cross-site scripting (tainted     │ app.py:45        │ ast-python.ast-xss               │
 │          │      │ value returned as HTML)           │                  │                                  │
 ```
 
-The `yaml.load` finding is gone, and so are the two other fixed findings
-(21 before, 18 after). The cross-site scripting finding on the same line is
+The `yaml.load` finding is gone, and so is the other fixed finding
+(21 before, 19 after). The cross-site scripting finding on the same line is
 still there: `safe_load` stops object construction, but the view still returns
 request data as HTML. One fixed finding does not make the line safe.
 
-!!! note "A verified fix can still need more work"
-    The weak-hash fix in the same commit changes `hashlib.md5` to
-    `hashlib.sha256` in `hash_password`, and it verifies because the MD5/SHA-1
-    rule no longer matches. For password storage the rule's own remediation
-    recommends a slow key-derivation function (bcrypt, scrypt or Argon2),
-    which a one-line rewrite cannot introduce. Treat verified fixes as a
-    correct first step, not the last one.
+!!! note "Why the weak hash on line 50 is not fixed"
+    `hash_password` hashes a password with MD5. Swapping in SHA-256 would make
+    the rule stop matching, but SHA-256 is also a fast hash, so stored
+    passwords would stay easy to crack. Password storage needs a slow
+    key-derivation function (bcrypt, scrypt or Argon2), which a one-line
+    rewrite cannot introduce. Nephilex therefore offers no automatic fix for a
+    line that hashes a password or secret, and the finding stays with that
+    guidance. Treat verified fixes as a correct first step, not the last one.
 
 ## Reproduce it
 
