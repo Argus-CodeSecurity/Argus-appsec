@@ -7,6 +7,23 @@ include breaking changes, noted explicitly).
 
 ## [Unreleased]
 
+### Fixed
+- Deeply nested YAML in `.nephilex.yml`, `.nephilex/context.yml`,
+  `.nephilex/exceptions.yml`, custom rule files, a scanned project's own config
+  (read by the DAST scanner) or the agent config no longer crashes the run with
+  a `RecursionError`. Configuration files fail with their normal error, and
+  rule or project files are skipped. Found by the new fuzz tests.
+
+### Security
+- CI, the release workflow, the container image and the fuzzing build install
+  every dependency from hash-locked files (`requirements/`), and Nephilex is
+  built without fetching an unpinned build backend.
+- Each release carries its signed build provenance (`nephilex-<version>.intoto.jsonl`)
+  next to the SBOM, verifiable with
+  `gh attestation verify <file> --bundle nephilex-<version>.intoto.jsonl --owner Nephilex`.
+- Coverage-guided fuzzing (ClusterFuzzLite with atheris) of the SARIF,
+  config and context parsers runs on pull requests and weekly.
+
 ## [0.10.0] - 2026-10-23
 
 The first release under the Nephilex name. It contains the 0.9.0 security
