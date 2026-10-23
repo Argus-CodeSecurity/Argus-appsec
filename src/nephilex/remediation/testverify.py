@@ -423,7 +423,7 @@ def _kill_tree(proc: subprocess.Popen[bytes]) -> None:
         root = os.environ.get("SYSTEMROOT", r"C:\Windows")
         taskkill = os.path.join(root, "System32", "taskkill.exe")
         with suppress(OSError, subprocess.SubprocessError):
-            subprocess.run(
+            subprocess.run(  # nephilex-ignore: ast-command-injection reason="argv list, no shell; taskkill.exe from the operator's own SYSTEMROOT"
                 [taskkill, "/F", "/T", "/PID", str(proc.pid)],
                 stdin=subprocess.DEVNULL,
                 stdout=subprocess.DEVNULL,
@@ -462,7 +462,7 @@ def run_test_command(
         extra["start_new_session"] = True  # its own process group, killed as one
     started = time.monotonic()
     try:
-        proc = subprocess.Popen(  # noqa: S603 - argv list, no shell, operator-chosen program
+        proc = subprocess.Popen(  # noqa: S603  # nephilex-ignore: ast-command-injection reason="runs the operator's --test-command as an argv list, no shell; never from untrusted config"
             argv,
             cwd=cwd,
             env=dict(env),
