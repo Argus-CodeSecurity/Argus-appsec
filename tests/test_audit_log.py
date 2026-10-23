@@ -77,6 +77,16 @@ def test_records_are_chained_and_verify(tmp_path: Path) -> None:
     assert result.ok and result.records == 5 and result.head == _records(tmp_path)[-1]["hash"]
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX file modes")
+def test_new_log_is_readable_by_its_owner_only(tmp_path: Path) -> None:
+    old = os.umask(0)
+    try:
+        append_events(tmp_path, _events(1), actor=ACTOR)
+    finally:
+        os.umask(old)
+    assert (tmp_path / AUDIT_PATH).stat().st_mode & 0o777 == 0o600
+
+
 def test_edited_record_is_detected(tmp_path: Path) -> None:
     append_events(tmp_path, _events(4), actor=ACTOR)
     lines = _lines(tmp_path)

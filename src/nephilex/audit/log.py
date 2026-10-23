@@ -368,7 +368,9 @@ def append_events(
             | getattr(os, "O_BINARY", 0)
             | getattr(os, "O_NOFOLLOW", 0)
         )
-        fd = os.open(path, flags, 0o644)
+        # Owner-only, like the dashboard database: the log names findings,
+        # suppressions and who made them.
+        fd = os.open(path, flags, 0o600)
     except (OSError, AuditLogError) as exc:
         result.warning = f"audit log not written: {exc}"
         return result
