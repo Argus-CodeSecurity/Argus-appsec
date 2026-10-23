@@ -235,20 +235,33 @@ removed, `debug=True` becomes `debug=False`, and `torch.load` gains
 
 ## Accuracy
 
-Nephilex, Bandit and Semgrep are run on two public Python datasets, and the raw
-findings and scoring scripts are in the repository, so anyone can rerun them.
+Nephilex, Bandit and Semgrep are scored by the same code on the same data, and
+the raw findings and scoring scripts are in the repository, so anyone can rerun
+them. The most independent test comes first.
 
-| Dataset | Nephilex | Bandit | Semgrep (`p/python`) |
+| Test | Nephilex | Bandit | Semgrep |
 | --- | --- | --- | --- |
-| OWASP BenchmarkPython, score (TPR minus FPR) | +89.4 | +18.6 | +14.2 |
+| **Held-out: real fix commits**, 201 files from 117 GitHub advisories (2024 to 2026), recall | **2.0%** (4) | 10.2% (12 of 118, Python only) | 2.0% (4) |
 | SecurityEval, samples detected out of 121 | 32 | 32 | 13 |
+| OWASP BenchmarkPython, score (TPR minus FPR) | +89.4 | +18.6 | +14.2 |
 
-Read these with their caveats. The Python rules were developed with OWASP
-BenchmarkPython visible, so it is not an independent test of Nephilex.
-SecurityEval is closer to one: without five detections from rules written after
-reading its misses, Nephilex finds 27 of 121, behind Bandit's 32. Methodology,
-per-category results and a false-positive check on real projects are in
-[docs/benchmarks.md](docs/benchmarks.md).
+How to read this:
+
+- **The held-out test is the one to quote.** Its cases were chosen by a rule
+  committed before any tool ran, and no Nephilex rule was changed for them.
+  Every tool finds little there, partly because each case is a single file, so
+  flows that cross files are invisible.
+- **The OWASP score is not an independent test.** The Python rules were
+  developed with that dataset visible; the gap between it and the held-out
+  result is the size of that effect.
+- SecurityEval sits between the two. Without five detections from rules written
+  after reading its misses, Nephilex finds 27 of 121, behind Bandit's 32.
+
+The LLM and agent rules are measured separately on a labeled corpus with a
+held-out split: 64.3% recall and 69.2% precision on the held-out cases. See
+[docs/benchmarks.md](docs/benchmarks.md) and
+[docs/llm-security.md](docs/llm-security.md) for methodology, per-class results
+and limits.
 
 ## Roadmap
 

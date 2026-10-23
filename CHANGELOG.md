@@ -7,7 +7,46 @@ include breaking changes, noted explicitly).
 
 ## [Unreleased]
 
+### Added
+- **Test-verified fixes.** `nephilex fix --verify-with-tests` (with
+  `--test-command`, or `autofix.test_command` from a trusted config) runs the
+  project's tests in a temporary git worktree before and after the fixes,
+  re-scans, and commits only fixes that keep the tests passing. The command
+  runs without a shell, with a timeout and capped output, and with tokens and
+  keys removed from its environment. Results appear in the summary, the commit,
+  the pull request body and the audit log.
+- **Agent-security rules.** `llm.indirect-prompt-injection` (external content
+  in the prompt of a model whose tools or output can act on it),
+  `llm.tool-argument-to-sink`, `llm.untrusted-message-role`,
+  `llm.untrusted-tool-selection` and `llm.secret-sent-to-model`, with
+  JavaScript/TypeScript coverage for untrusted system prompts and tool handlers.
+- **Benchmarks with held-out data.** `benchmarks/heldout/` scores Nephilex,
+  Bandit and Semgrep on 201 files from real GitHub advisory fix commits,
+  before and after each fix; `benchmarks/agent/` scores the LLM and agent
+  rules on a labeled corpus with a held-out split. Both publish raw results.
+- Documentation: a quickstart, one finding followed from detection to fix, and
+  a "Trust and limits" page with a capability matrix.
+- `Scanner.unavailable_reason()` lets a scanner say why it is skipped.
+
+### Changed
+- The GitHub Action installs `nephilex[ast]`, so the taint scanners run in CI.
+  Earlier versions installed it without the extra and skipped them.
+- A scan without the `[ast]` extra says the taint scanners need it, instead of
+  calling them "not applicable".
+- When two tiers report one weakness with equal confidence and severity, the
+  finding with a deterministic fix is kept, then the AST one. The choice no
+  longer depends on scanner order, so `scan` and `check` report the same rule
+  and `check` keeps the fix an editor applies.
+- The weak-hash fix is not applied to a line that hashes a password or other
+  secret: SHA-256 is still a fast hash, and passwords need a key-derivation
+  function. Such findings keep that guidance instead of a "verified" patch.
+
 ### Fixed
+- `--format` help on `scan` and `import` now lists `junit`.
+- Documentation that did not match the code: the number of report formats,
+  `--live-target` described as checking TLS (it checks HTTPS and the redirect),
+  and dependency reachability and VEX `not_affected`, which need
+  `--reachability`.
 - Deeply nested YAML in `.nephilex.yml`, `.nephilex/context.yml`,
   `.nephilex/exceptions.yml`, custom rule files, a scanned project's own config
   (read by the DAST scanner) or the agent config no longer crashes the run with
