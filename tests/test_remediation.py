@@ -8,14 +8,14 @@ from pathlib import Path
 
 import pytest
 
-from argus.core.config import Config
-from argus.core.engine import ScanEngine
-from argus.core.models import Finding, Location, Severity
-from argus.remediation import git_ops
-from argus.remediation.applier import apply_fixes
-from argus.remediation.hosting import parse_remote
-from argus.remediation.pullrequest import FixOptions, run_fix_workflow
-from argus.remediation.rewrites import fix_line, verify_line_fixed
+from nephilex.core.config import Config
+from nephilex.core.engine import ScanEngine
+from nephilex.core.models import Finding, Location, Severity
+from nephilex.remediation import git_ops
+from nephilex.remediation.applier import apply_fixes
+from nephilex.remediation.hosting import parse_remote
+from nephilex.remediation.pullrequest import FixOptions, run_fix_workflow
+from nephilex.remediation.rewrites import fix_line, verify_line_fixed
 
 git_missing = shutil.which("git") is None
 
@@ -61,16 +61,16 @@ def test_verify_line_fixed():
 
 # --- patch agent tiers -----------------------------------------------------
 def _agent_ctx(ai, tmp_path):
-    from argus.core.project import Project
+    from nephilex.core.project import Project
 
-    return __import__("argus.agents.base", fromlist=["AgentContext"]).AgentContext(
+    return __import__("nephilex.agents.base", fromlist=["AgentContext"]).AgentContext(
         project=Project.from_path(tmp_path), config=Config(), ai=ai
     )
 
 
 def test_patch_deterministic_tier_labeled(tmp_path):
-    from argus.agents.patch import PatchAgent
-    from argus.ai.heuristic import HeuristicProvider
+    from nephilex.agents.patch import PatchAgent
+    from nephilex.ai.heuristic import HeuristicProvider
 
     f = Finding(
         id="x",
@@ -88,8 +88,8 @@ def test_patch_deterministic_tier_labeled(tmp_path):
 
 
 def test_patch_ai_tier_labeled_for_review(tmp_path):
-    from argus.agents.patch import PatchAgent
-    from argus.ai.base import AIProvider
+    from nephilex.agents.patch import PatchAgent
+    from nephilex.ai.base import AIProvider
 
     class _FakeModel(AIProvider):
         name = "fake-model"
@@ -136,7 +136,7 @@ def _finding(rule_id: str, path: str, line: int) -> Finding:
 def test_apply_fixes_preserves_indentation(tmp_path: Path):
     src = tmp_path / "m.py"
     src.write_text("def f():\n    return yaml.load(data)\n", encoding="utf-8")
-    from argus.core.project import Project
+    from nephilex.core.project import Project
 
     project = Project.from_path(tmp_path)
     findings = [_finding("patterns.python-yaml-load", "m.py", 2)]
@@ -152,7 +152,7 @@ def test_apply_fixes_dry_run_writes_nothing(tmp_path: Path):
     src = tmp_path / "m.py"
     original = "yaml.load(x)\n"
     src.write_text(original, encoding="utf-8")
-    from argus.core.project import Project
+    from nephilex.core.project import Project
 
     project = Project.from_path(tmp_path)
     report = apply_fixes(project, [_finding("patterns.python-yaml-load", "m.py", 1)], dry_run=True)
@@ -164,7 +164,7 @@ def test_apply_fixes_skips_unverifiable_without_flag(tmp_path: Path):
     """A line that doesn't actually contain the pattern won't verify -> skipped."""
     src = tmp_path / "m.py"
     src.write_text("a = 1\n", encoding="utf-8")
-    from argus.core.project import Project
+    from nephilex.core.project import Project
 
     project = Project.from_path(tmp_path)
     report = apply_fixes(project, [_finding("patterns.python-yaml-load", "m.py", 1)])
@@ -173,7 +173,7 @@ def test_apply_fixes_skips_unverifiable_without_flag(tmp_path: Path):
 
 
 def test_syntax_error_helper():
-    from argus.remediation.applier import _syntax_error
+    from nephilex.remediation.applier import _syntax_error
 
     assert _syntax_error("m.py", "x = 1\n") is None
     assert _syntax_error("m.py", "def (:\n") is not None
@@ -183,12 +183,12 @@ def test_syntax_error_helper():
 
 def test_apply_fixes_reverts_syntax_breaking_change(tmp_path: Path, monkeypatch):
     """A rewrite that clears the detection but breaks the file must be reverted."""
-    import argus.remediation.rewrites as rw
+    import nephilex.remediation.rewrites as rw
 
     src = tmp_path / "m.py"
     original = "x = yaml.load(data)\n"
     src.write_text(original, encoding="utf-8")
-    from argus.core.project import Project
+    from nephilex.core.project import Project
 
     # Emit code that no longer trips the detector but is not valid Python.
     monkeypatch.setitem(rw.REWRITES, "patterns.python-yaml-load", lambda ln: "x = (")
@@ -238,7 +238,7 @@ def _git_repo(tmp_path: Path) -> Path:
 
 @pytest.mark.skipif(git_missing, reason="git not available")
 def test_fix_workflow_creates_branch_and_commits(tmp_path: Path):
-    from argus.core.project import Project
+    from nephilex.core.project import Project
 
     repo = _git_repo(tmp_path)
     project = Project.from_path(repo)
@@ -248,18 +248,18 @@ def test_fix_workflow_creates_branch_and_commits(tmp_path: Path):
     outcome = run_fix_workflow(
         project,
         result.findings,
-        FixOptions(branch="argus/test-fixes", open_pr=False),
+        FixOptions(branch="nephilex/test-fixes", open_pr=False),
     )
     assert outcome.committed
     assert outcome.applied.any_changes
-    assert git_ops.branch_exists(repo, "argus/test-fixes")
+    assert git_ops.branch_exists(repo, "nephilex/test-fixes")
     # The file on the branch is fixed.
     assert "safe_load" in (repo / "app.py").read_text(encoding="utf-8")
 
 
 @pytest.mark.skipif(git_missing, reason="git not available")
 def test_fix_workflow_dry_run_no_git_needed(tmp_path: Path):
-    from argus.core.project import Project
+    from nephilex.core.project import Project
 
     (tmp_path / "app.py").write_text("import yaml\nyaml.load(x)\n", encoding="utf-8")
     project = Project.from_path(tmp_path)
@@ -273,7 +273,7 @@ def test_fix_workflow_dry_run_no_git_needed(tmp_path: Path):
 
 @pytest.mark.skipif(git_missing, reason="git not available")
 def test_fix_workflow_errors_on_non_repo(tmp_path: Path):
-    from argus.core.project import Project
+    from nephilex.core.project import Project
 
     (tmp_path / "app.py").write_text("yaml.load(x)\n", encoding="utf-8")
     project = Project.from_path(tmp_path)

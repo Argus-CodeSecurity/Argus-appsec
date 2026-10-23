@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from argus.analysis.verification import assign_verification_state
-from argus.core.models import Finding, Location, Remediation, Severity
-from argus.core.project import Project
-from argus.remediation.applier import APPLIED_KEY, apply_fixes
+from nephilex.analysis.verification import assign_verification_state
+from nephilex.core.models import Finding, Location, Remediation, Severity
+from nephilex.core.project import Project
+from nephilex.remediation.applier import APPLIED_KEY, apply_fixes
 
 RULE = "patterns.python-yaml-load"
 

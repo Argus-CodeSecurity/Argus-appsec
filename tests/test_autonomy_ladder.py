@@ -4,12 +4,12 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from argus.core.config import Config
-from argus.core.engine import ScanEngine
-from argus.core.project import Project
-from argus.remediation.applier import apply_fixes
-from argus.remediation.pullrequest import FixOptions, run_fix_workflow
-from argus.remediation.rewrites import AUTO_APPLY, auto_apply_rules
+from nephilex.core.config import Config
+from nephilex.core.engine import ScanEngine
+from nephilex.core.project import Project
+from nephilex.remediation.applier import apply_fixes
+from nephilex.remediation.pullrequest import FixOptions, run_fix_workflow
+from nephilex.remediation.rewrites import AUTO_APPLY, auto_apply_rules
 
 
 def test_default_auto_set_is_conservative():

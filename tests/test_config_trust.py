@@ -7,11 +7,11 @@ from pathlib import Path
 import pytest
 from typer.testing import CliRunner
 
-import argus.targets
-from argus.cli.main import app
-from argus.core.config import Config, load_project_config
-from argus.core.project import Project
-from argus.targets import ResolvedTarget
+import nephilex.targets
+from nephilex.cli.main import app
+from nephilex.core.config import Config, load_project_config
+from nephilex.core.project import Project
+from nephilex.targets import ResolvedTarget
 
 runner = CliRunner()
 
@@ -22,7 +22,7 @@ _SECRET = 'AWS_SECRET = "AKIAIOSFODNN7EXAMPLE"\n'
 
 def _repo(tmp_path: Path) -> Path:
     tmp_path.mkdir(parents=True, exist_ok=True)
-    (tmp_path / ".argus.yml").write_text(_HOSTILE_CONFIG, encoding="utf-8")
+    (tmp_path / ".nephilex.yml").write_text(_HOSTILE_CONFIG, encoding="utf-8")
     (tmp_path / "settings.py").write_text(_SECRET, encoding="utf-8")
     return tmp_path
 
@@ -69,7 +69,7 @@ def remote_repo(tmp_path: Path, monkeypatch) -> Path:
     def fake_resolve(target: str, *, branch: str | None = None) -> ResolvedTarget:
         return ResolvedTarget(project=Project.from_path(repo, origin="github"))
 
-    monkeypatch.setattr(argus.targets, "resolve", fake_resolve)
+    monkeypatch.setattr(nephilex.targets, "resolve", fake_resolve)
     return repo
 
 
@@ -99,7 +99,7 @@ def test_scan_ignores_remote_config(remote_repo: Path) -> None:
 
 def test_policy_check_ignores_remote_policies(remote_repo: Path) -> None:
     # A permissive in-repo policy set must not be what the gate evaluates.
-    (remote_repo / ".argus.yml").write_text(
+    (remote_repo / ".nephilex.yml").write_text(
         "policies:\n  - id: only-warn\n    when:\n      scanner: secrets\n    action: warn\n",
         encoding="utf-8",
     )
@@ -116,18 +116,18 @@ def test_baseline_create_ignores_remote_config(remote_repo: Path, tmp_path: Path
     assert '"secrets' in out.read_text(encoding="utf-8")
 
 
-# --- in-tree suppressions (inline comments, .argus/exceptions.yml) ----------
-_SHELL = 'import subprocess\nsubprocess.run("x", shell=True)  # argus-ignore reason="ok"\n'
+# --- in-tree suppressions (inline comments, .nephilex/exceptions.yml) ----------
+_SHELL = 'import subprocess\nsubprocess.run(cmd, shell=True)  # nephilex-ignore reason="ok"\n'
 
 
 def _suppression_repo(tmp_path: Path) -> Path:
-    from argus.core.models import Finding
+    from nephilex.core.models import Finding
 
     (tmp_path / "app.py").write_text(_SHELL, encoding="utf-8")
     (tmp_path / "keys.py").write_text(_SECRET, encoding="utf-8")
     # Suppress every secrets finding by fingerprint via the exceptions file.
     project = Project.from_path(tmp_path)
-    from argus.core.engine import ScanEngine
+    from nephilex.core.engine import ScanEngine
 
     cfg = Config(scanners=["secrets"], cache=False)
     cfg.ai.enabled = False
@@ -138,13 +138,15 @@ def _suppression_repo(tmp_path: Path) -> Path:
         f"    reason: accepted\n    owner: me\n"
         for f in found
     )
-    (tmp_path / ".argus").mkdir()
-    (tmp_path / ".argus" / "exceptions.yml").write_text("exceptions:\n" + entries, encoding="utf-8")
+    (tmp_path / ".nephilex").mkdir()
+    (tmp_path / ".nephilex" / "exceptions.yml").write_text(
+        "exceptions:\n" + entries, encoding="utf-8"
+    )
     return tmp_path
 
 
 def _scan(project: Project, *, trusted: bool):
-    from argus.core.engine import ScanEngine
+    from nephilex.core.engine import ScanEngine
 
     cfg = Config(scanners=["patterns", "secrets"], cache=False, trust_project_config=trusted)
     cfg.ai.enabled = False

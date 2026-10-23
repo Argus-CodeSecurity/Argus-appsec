@@ -5,19 +5,19 @@ from __future__ import annotations
 import pytest
 from typer.testing import CliRunner
 
-from argus.cli.main import app
+from nephilex.cli.main import app
 
 runner = CliRunner()
 
 
 def test_dashboard_refuses_public_bind_without_token(monkeypatch):
     pytest.importorskip("fastapi")
-    monkeypatch.delenv("ARGUS_DASHBOARD_TOKEN", raising=False)
+    monkeypatch.delenv("NEPHILEX_DASHBOARD_TOKEN", raising=False)
     served: list[str] = []
-    monkeypatch.setattr("argus.dashboard.app.serve", lambda **kw: served.append("x"))
+    monkeypatch.setattr("nephilex.dashboard.app.serve", lambda **kw: served.append("x"))
     result = runner.invoke(app, ["dashboard", "--host", "0.0.0.0"])
     assert result.exit_code == 2
-    assert "ARGUS_DASHBOARD_TOKEN" in result.output
+    assert "NEPHILEX_DASHBOARD_TOKEN" in result.output
     # No URL is announced and nothing is served for a refused bind.
     assert "http://0.0.0.0" not in result.output
     assert served == []
@@ -28,13 +28,13 @@ def test_fix_passes_no_verify_to_the_workflow(tmp_path, monkeypatch):
     seen = {}
 
     def fake_workflow(project, findings, options):
-        from argus.remediation.applier import ApplyReport
-        from argus.remediation.pullrequest import FixOutcome
+        from nephilex.remediation.applier import ApplyReport
+        from nephilex.remediation.pullrequest import FixOutcome
 
         seen["no_verify"] = options.no_verify
         return FixOutcome(applied=ApplyReport(dry_run=True))
 
-    monkeypatch.setattr("argus.remediation.pullrequest.run_fix_workflow", fake_workflow)
+    monkeypatch.setattr("nephilex.remediation.pullrequest.run_fix_workflow", fake_workflow)
     result = runner.invoke(app, ["fix", str(tmp_path), "--dry-run", "--no-verify", "-q"])
     assert result.exit_code == 0, result.output
     assert seen["no_verify"] is True

@@ -8,20 +8,24 @@ from unittest.mock import patch
 
 import httpx
 
-from argus.analysis import reachability
-from argus.analysis.attack_chains import find_chains
-from argus.core.config import Config
-from argus.core.models import Finding, Location, Severity
-from argus.core.plugin import ScannerContext
-from argus.core.project import Project
-from argus.inventory.dependency_diff import diff_packages
-from argus.profiles import apply_profile
-from argus.sbom.spdx import build_spdx
-from argus.scanners.authz import AuthzScanner
-from argus.scanners.dependency_diff import DependencyDiffScanner
-from argus.scanners.malware import MalwareScanner
-from argus.supply_chain.behavior import BehaviorFingerprint, compare_fingerprints, npm_fingerprint
-from argus.supply_chain.intel import is_malicious, load_malicious_packages
+from nephilex.analysis import reachability
+from nephilex.analysis.attack_chains import find_chains
+from nephilex.core.config import Config
+from nephilex.core.models import Finding, Location, Severity
+from nephilex.core.plugin import ScannerContext
+from nephilex.core.project import Project
+from nephilex.inventory.dependency_diff import diff_packages
+from nephilex.profiles import apply_profile
+from nephilex.sbom.spdx import build_spdx
+from nephilex.scanners.authz import AuthzScanner
+from nephilex.scanners.dependency_diff import DependencyDiffScanner
+from nephilex.scanners.malware import MalwareScanner
+from nephilex.supply_chain.behavior import (
+    BehaviorFingerprint,
+    compare_fingerprints,
+    npm_fingerprint,
+)
+from nephilex.supply_chain.intel import is_malicious, load_malicious_packages
 
 
 def _git(repo: Path, *args: str) -> None:
@@ -108,7 +112,7 @@ def test_npm_fingerprint_mocked():
     transport = httpx.MockTransport(handler)
     with (
         httpx.Client(transport=transport) as client,
-        patch("argus.supply_chain.behavior.httpx.Client") as mock_cls,
+        patch("httpx.Client") as mock_cls,
     ):
         mock_cls.return_value.__enter__.return_value = client
         fp = npm_fingerprint("evil-pkg", "1.0.0")
@@ -192,6 +196,14 @@ def test_deep_profile_uses_ast_python_xfile():
     assert "ast-python-xfile" in scanners
     assert "ast-python-interproc" not in scanners
     assert "malware" in scanners
+
+
+def test_deep_profile_includes_agent_config_and_only_known_scanners():
+    from nephilex.core.plugin import registry
+
+    scanners = apply_profile("deep")
+    assert "agent-config" in scanners
+    assert set(scanners) <= set(registry.scanners())
 
 
 def test_malware_flags_obfuscated_python(tmp_path: Path):

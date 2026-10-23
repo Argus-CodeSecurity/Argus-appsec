@@ -1,4 +1,4 @@
-"""Tests for `argus learn` (findings rendered as security lessons)."""
+"""Tests for `nephilex learn` (findings rendered as security lessons)."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-from argus.core.models import (
+from nephilex.core.models import (
     ExploitScenario,
     Finding,
     Location,
@@ -15,14 +15,16 @@ from argus.core.models import (
     ScanResult,
     Severity,
 )
-from argus.reporting.learn import render_lessons
+from nephilex.reporting.learn import render_lessons
 
 _FIXTURE = Path(__file__).parent / "fixtures" / "golden_app"
 
 
 def _result_with_finding() -> ScanResult:
     r = ScanResult(
-        target="/proj", started_at=datetime(2026, 1, 1, tzinfo=timezone.utc), argus_version="0.7.0"
+        target="/proj",
+        started_at=datetime(2026, 1, 1, tzinfo=timezone.utc),
+        nephilex_version="0.7.0",
     )
     r.findings = [
         Finding(
@@ -58,14 +60,14 @@ def test_render_lessons_has_structure():
 
 def test_render_lessons_empty():
     r = ScanResult(
-        target="/p", started_at=datetime(2026, 1, 1, tzinfo=timezone.utc), argus_version="0.7.0"
+        target="/p", started_at=datetime(2026, 1, 1, tzinfo=timezone.utc), nephilex_version="0.7.0"
     )
     assert "No findings to learn from" in render_lessons(r)
 
 
 def test_learn_cli_smoke():
     proc = subprocess.run(
-        [sys.executable, "-m", "argus", "learn", str(_FIXTURE), "--quiet"],
+        [sys.executable, "-m", "nephilex", "learn", str(_FIXTURE), "--quiet"],
         capture_output=True,
         text=True,
         timeout=120,

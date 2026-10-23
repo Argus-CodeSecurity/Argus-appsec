@@ -5,9 +5,9 @@ from __future__ import annotations
 import json
 from datetime import datetime, timezone
 
-from argus.analysis.drift import compare_scans
-from argus.core.models import Finding, Location, ScanResult, Severity
-from argus.reporting.gitlab import GitLabReporter
+from nephilex.analysis.drift import compare_scans
+from nephilex.core.models import Finding, Location, ScanResult, Severity
+from nephilex.reporting.gitlab import GitLabReporter
 
 
 def _f(line: int) -> Finding:

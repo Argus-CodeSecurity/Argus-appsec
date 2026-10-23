@@ -16,17 +16,17 @@ from pathlib import Path
 
 import pytest
 
-from argus.core.config import Config
-from argus.core.models import Severity
-from argus.core.plugin import ScannerContext, registry
-from argus.plugins import register_builtins
+from nephilex.core.config import Config
+from nephilex.core.models import Severity
+from nephilex.core.plugin import ScannerContext, registry
+from nephilex.plugins import register_builtins
 
 register_builtins()
 
 
 def _run_patterns(tmp_path: Path, rel_path: str, content: str):
-    from argus.analysis.repository import RepositoryAnalyzer
-    from argus.core.project import Project
+    from nephilex.analysis.repository import RepositoryAnalyzer
+    from nephilex.core.project import Project
 
     target = tmp_path / rel_path
     target.parent.mkdir(parents=True, exist_ok=True)
@@ -56,7 +56,7 @@ def test_os_system_dynamic_command_still_flagged(tmp_path):
 
 def test_missing_explicit_config_path_errors():
     with pytest.raises(FileNotFoundError):
-        Config.load(path="/tmp/argus-nonexistent-config-xyz.yml")
+        Config.load(path="/tmp/nephilex-nonexistent-config-xyz.yml")
 
 
 def test_missing_config_without_explicit_path_uses_defaults():
@@ -65,7 +65,7 @@ def test_missing_config_without_explicit_path_uses_defaults():
 
 
 def test_js_eval_sink_does_not_match_lookalikes():
-    from argus.scanners.ast_js import CALL_SINKS
+    from nephilex.scanners.ast_js import CALL_SINKS
 
     sink = next(s for s in CALL_SINKS if s.id == "ast-code-injection")
     assert sink.fn.search("eval")
@@ -76,14 +76,14 @@ def test_js_eval_sink_does_not_match_lookalikes():
 
 
 def test_tostring_is_not_a_js_sanitizer():
-    from argus.scanners.ast_js import _SANITIZERS
+    from nephilex.scanners.ast_js import _SANITIZERS
 
     assert "toString" not in _SANITIZERS
     assert "encodeURIComponent" in _SANITIZERS  # real ones still present
 
 
 def test_cvss_vector_string_bands_correctly():
-    from argus.scanners.osv import _cvss_band
+    from nephilex.scanners.osv import _cvss_band
 
     # A vector-only 9.8 advisory must band CRITICAL, not default to MEDIUM.
     assert _cvss_band("CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H") == Severity.CRITICAL
@@ -94,7 +94,7 @@ def test_cvss_vector_string_bands_correctly():
 
 
 def test_secret_verify_403_is_unknown_not_invalid():
-    from argus.scanners import secret_verify as sv
+    from nephilex.scanners import secret_verify as sv
 
     assert sv._status_verdict(401) == sv.INVALID
     assert sv._status_verdict(403) == sv.UNKNOWN

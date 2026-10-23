@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from datetime import date
 
-from argus.core.models import Finding, Location, Severity
-from argus.scanners import secret_verify
-from argus.scanners.secret_rotation import RotationTracker, track_rotations
+from nephilex.core.models import Finding, Location, Severity
+from nephilex.scanners import secret_verify
+from nephilex.scanners.secret_rotation import RotationTracker, track_rotations
 
 
 def _live_finding() -> Finding:

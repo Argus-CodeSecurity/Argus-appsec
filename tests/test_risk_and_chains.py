@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from argus.analysis.attack_chains import find_chains
-from argus.analysis.risk_engine import enrich_contextual_risk
-from argus.core.models import Confidence, Finding, Location, ScanResult, Severity
-from argus.scanners.secrets import SecretsScanner
+from nephilex.analysis.attack_chains import find_chains
+from nephilex.analysis.risk_engine import enrich_contextual_risk
+from nephilex.core.models import Confidence, Finding, Location, ScanResult, Severity
+from nephilex.scanners.secrets import SecretsScanner
 
 
 def _dep(reachability: str) -> Finding:

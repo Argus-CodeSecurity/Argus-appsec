@@ -1,7 +1,7 @@
-# How Argus compares
+# How Nephilex compares
 
-Argus AppSec is not trying to beat every specialist at its own game. The tools
-below are excellent, and if one of them is your whole problem, use it. Argus's bet
+Nephilex is not trying to beat every specialist at its own game. The tools
+below are excellent, and if one of them is your whole problem, use it. Nephilex's bet
 is different: **one tool across the domains, that explains and fixes, and keeps
 your code on your machine.** Here is the honest version.
 
@@ -14,11 +14,11 @@ your code on your machine.** Here is the honest version.
 | **Snyk** | A large curated vulnerability database, first-class IDE and PR integrations, developer UX, and enterprise features (SSO, reporting, policies). |
 | **GitGuardian / TruffleHog** | Dedicated secrets coverage, real-time monitoring, and validated detectors at scale. |
 
-Argus does not out-feature these in their home turf, and it says so.
+Nephilex does not out-feature these in their home turf, and it says so.
 
-## Where Argus is different
+## Where Nephilex is different
 
-| Property | Argus AppSec | Typical specialist |
+| Property | Nephilex | Typical specialist |
 | --- | --- | --- |
 | **Domains in one pass** | Secrets, SCA, SAST, taint, IaC, and LLM together, one severity model, one report | Usually one or two domains; you stitch several tools together |
 | **Explanation** | Every finding: why, attacker path, business impact, CWE/OWASP | Often a rule id and a line number |
@@ -27,7 +27,7 @@ Argus does not out-feature these in their home turf, and it says so.
 | **Privacy** | Offline by default; code never leaves the machine unless you opt into a cloud model | Often cloud-first |
 | **Model** | Open-source core (Apache-2.0), self-hostable | Often proprietary / SaaS |
 
-## When to choose Argus
+## When to choose Nephilex
 
 - You want **one tool** across code, dependencies, secrets, IaC, and AI, instead
   of five dashboards and five bills.
@@ -44,8 +44,8 @@ Argus does not out-feature these in their home turf, and it says so.
   reach for Semgrep.
 - Your problem is container images and registries at scale: reach for Trivy.
 - You need enterprise ASPM (SSO, policy engine, ticketing, dashboards) right now:
-  a commercial platform will serve you better while Argus matures.
+  a commercial platform will serve you better while Nephilex matures.
 
-Honest positioning is the point. Argus is a strong, unified, explainable,
+Honest positioning is the point. Nephilex is a strong, unified, explainable,
 self-hostable scanner and fixer, in early alpha, that is especially good for
 AI-era codebases. Pick the tool that fits the job.

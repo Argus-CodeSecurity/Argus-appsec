@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from argus.targets import _is_safe_clone_url, resolve
+from nephilex.targets import _is_safe_clone_url, resolve
 
 
 @pytest.mark.parametrize(

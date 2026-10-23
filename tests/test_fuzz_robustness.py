@@ -5,10 +5,10 @@ files, huge single lines, and null bytes without raising or hanging.
 
 from __future__ import annotations
 
-from argus.core.config import Config
-from argus.core.engine import ScanEngine
-from argus.core.project import Project
-from argus.scanners import dependencies
+from nephilex.core.config import Config
+from nephilex.core.engine import ScanEngine
+from nephilex.core.project import Project
+from nephilex.scanners import dependencies
 
 
 def _hostile_repo(tmp_path):

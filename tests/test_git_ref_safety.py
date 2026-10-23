@@ -9,12 +9,12 @@ from pathlib import Path
 
 import pytest
 
-import argus.inventory as inventory
-from argus.core.config import Config
-from argus.core.plugin import ScannerContext
-from argus.core.project import Project
-from argus.inventory import collect_packages_at_ref, resolve_commit
-from argus.scanners.dependency_diff import DependencyDiffScanner
+import nephilex.inventory as inventory
+from nephilex.core.config import Config
+from nephilex.core.plugin import ScannerContext
+from nephilex.core.project import Project
+from nephilex.inventory import collect_packages_at_ref, resolve_commit
+from nephilex.scanners.dependency_diff import DependencyDiffScanner
 
 pytestmark = pytest.mark.skipif(shutil.which("git") is None, reason="git not installed")
 

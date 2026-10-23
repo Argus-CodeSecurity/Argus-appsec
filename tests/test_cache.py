@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from argus.core.config import Config
-from argus.core.engine import ScanEngine
-from argus.core.models import Severity
-from argus.core.project import Project
+from nephilex.core.config import Config
+from nephilex.core.engine import ScanEngine
+from nephilex.core.models import Severity
+from nephilex.core.project import Project
 
 
 def _fingerprint(result):
@@ -32,7 +32,7 @@ def test_cache_skips_unchanged_files_and_rescans_changed(vulnerable_project, mon
     ScanEngine(cfg).scan(vulnerable_project)  # populate the cache
 
     # Count which files the secrets scanner actually re-reads on a warm scan.
-    from argus.scanners.secrets import SecretsScanner
+    from nephilex.scanners.secrets import SecretsScanner
 
     scanned: list[str] = []
     original = SecretsScanner.scan
@@ -59,7 +59,7 @@ def test_cache_skips_unchanged_files_and_rescans_changed(vulnerable_project, mon
 def test_no_cache_flag_disables_caching(vulnerable_project, monkeypatch):
     ScanEngine(Config()).scan(vulnerable_project)  # populate
 
-    from argus.scanners.secrets import SecretsScanner
+    from nephilex.scanners.secrets import SecretsScanner
 
     scanned: list[str] = []
     original = SecretsScanner.scan
@@ -97,3 +97,29 @@ def test_remote_projects_are_never_cached(vulnerable_project, monkeypatch):
     vulnerable_project.origin = "github"
     engine = ScanEngine(Config())
     assert engine._open_cache(vulnerable_project) is None
+
+
+def test_changed_nephilex_code_invalidates_the_cache(tmp_path, monkeypatch):
+    # A rule edit in a source checkout changes the code fingerprint but not
+    # __version__; cached findings from the old rule must not be reused.
+    from nephilex.core import cache as cache_mod
+    from nephilex.core.models import Finding, Location, Severity
+
+    monkeypatch.setenv("NEPHILEX_CACHE_DIR", str(tmp_path / "cache"))
+    finding = Finding(
+        id="r:1",
+        rule_id="r",
+        scanner="patterns",
+        title="t",
+        description="",
+        severity=Severity.LOW,
+        location=Location(path="a.py", start_line=1),
+    )
+    monkeypatch.setattr(cache_mod, "code_fingerprint", lambda: "old-rules")
+    first = cache_mod.ScanCache(tmp_path, "0.9.0")
+    first.store("patterns@x", "a.py@y", [finding])
+    first.save()
+    assert cache_mod.ScanCache(tmp_path, "0.9.0").lookup("patterns@x", "a.py@y")
+
+    monkeypatch.setattr(cache_mod, "code_fingerprint", lambda: "new-rules")
+    assert cache_mod.ScanCache(tmp_path, "0.9.0").lookup("patterns@x", "a.py@y") is None

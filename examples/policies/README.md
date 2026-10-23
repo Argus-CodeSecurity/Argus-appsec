@@ -1,9 +1,9 @@
 # Enterprise policy packs
 
-Copy `enterprise.yml` into your repo or merge its `policies:` block into `.argus.yml`.
+Copy `enterprise.yml` into your repo or merge its `policies:` block into `.nephilex.yml`.
 
 ```bash
-argus policy check . --config examples/policies/enterprise.yml
+nephilex policy check . --config examples/policies/enterprise.yml
 ```
 
 Policies are deterministic: they match finding attributes (severity, scanner, rule, tags)

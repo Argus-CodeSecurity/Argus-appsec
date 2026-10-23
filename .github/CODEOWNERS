@@ -1,7 +1,7 @@
 # Code owners are automatically requested for review on pull requests.
 # The owner reviews and merges everything by default. Add more owners for
 # specific paths as the project grows, e.g.:
-#   /src/argus/scanners/  @some-trusted-contributor
+#   /src/nephilex/scanners/  @some-trusted-contributor
 #
 # Reference: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
 

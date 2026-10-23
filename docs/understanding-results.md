@@ -1,20 +1,20 @@
 # Understanding your scan results
 
-Argus gives you **measurable security signals**, not a simple "secure / insecure"
+Nephilex gives you **measurable security signals**, not a simple "secure / insecure"
 badge. This page explains every number and status a user sees (in the terminal,
-in CI, and in Argus Cloud) so you can decide whether your project meets **your**
+in CI, and in Nephilex Cloud) so you can decide whether your project meets **your**
 policy.
 
 !!! tip "The one-minute version"
-    Run `argus scan . --fail-on high`. **Exit code 0** and **zero Critical/High
-    findings** means you pass the most common team bar. Push to Argus Cloud to
+    Run `nephilex scan . --fail-on high`. **Exit code 0** and **zero Critical/High
+    findings** means you pass the most common team bar. Push to Nephilex Cloud to
     track whether posture **improves or regresses** over time.
 
 ---
 
-## What "secure" means with Argus
+## What "secure" means with Nephilex
 
-Security is **posture**, not perfection. Argus answers:
+Security is **posture**, not perfection. Nephilex answers:
 
 > "Given the checks we can run on this target, are there issues at or above the
 > severity my team cares about, and are we getting better or worse?"
@@ -32,7 +32,7 @@ A **passing** scan **does** mean:
 - Your CI gate (if configured) stays green
 - You have a recorded baseline to compare against on the next run
 
-Argus is explicit about this in every scan: findings are **strong signals to
+Nephilex is explicit about this in every scan: findings are **strong signals to
 review**, not legal proof of safety.
 
 ---
@@ -42,7 +42,7 @@ review**, not legal proof of safety.
 After every scan you see a box like this:
 
 ```
-╭──────────────────────────── Argus scan ────────────────────────────╮
+╭──────────────────────────── Nephilex scan ────────────────────────────╮
 │ my-app                                                             │
 │ Aggregate risk: 44.9/100   Findings: 26                            │
 │ Critical: 0 | High: 0 | Medium: 26 | Low: 0 | Info: 0            │
@@ -64,7 +64,7 @@ Failing: findings at/above High.
 
 and exits with code **1** (see [Exit codes](#exit-codes)).
 
-After the findings table, Argus prints a **Security posture** panel summarizing
+After the findings table, Nephilex prints a **Security posture** panel summarizing
 pass/fail, what to fix first, and your risk score, so you do not have to
 interpret raw numbers alone.
 
@@ -105,16 +105,16 @@ Your **gate** is your choice. Common defaults:
 
 ```bash
 # Block on High and Critical (most teams)
-argus scan . --fail-on high
+nephilex scan . --fail-on high
 
 # Stricter: also block Medium
-argus scan . --fail-on medium
+nephilex scan . --fail-on medium
 
 # Report only: never fail the command
-argus scan .
+nephilex scan .
 ```
 
-Set a project default in `.argus.yml`:
+Set a project default in `.nephilex.yml`:
 
 ```yaml
 fail_on: high
@@ -141,7 +141,7 @@ Full CI details: [CI/CD integration](ci-cd.md).
 ### Developer (terminal)
 
 ```bash
-argus scan . --profile standard --fail-on high
+nephilex scan . --profile standard --fail-on high
 echo $?   # 0 = pass for today
 ```
 
@@ -150,15 +150,15 @@ Also check the severity line: **Critical: 0 | High: 0**.
 Re-render for different readers:
 
 ```bash
-argus scan . --audience dev      # what to fix and where (default table)
-argus scan . --audience exec     # business summary, top 5 risks
-argus scan . --audience auditor  # CWE / OWASP taxonomy for evidence
+nephilex scan . --audience dev      # what to fix and where (default table)
+nephilex scan . --audience exec     # business summary, top 5 risks
+nephilex scan . --audience auditor  # CWE / OWASP taxonomy for evidence
 ```
 
 ### CI/CD (automatic on every PR)
 
 ```yaml
-- uses: Argus-CodeSecurity/Argus-appsec@v0.9.0
+- uses: nephilex/nephilex@v0.10.0
   with:
     fail-on: high
     profile: ci
@@ -169,9 +169,9 @@ argus scan . --audience auditor  # CWE / OWASP taxonomy for evidence
 | Green check | No High+ findings in that commit |
 | Red build | High or Critical present; merge blocked |
 
-### Team lead (Argus Cloud dashboard)
+### Team lead (Nephilex Cloud dashboard)
 
-After `argus push`, open **Dashboard > Overview**:
+After `nephilex push`, open **Dashboard > Overview**:
 
 | Widget | "Good" signal |
 |--------|----------------|
@@ -190,7 +190,7 @@ Open **Scan detail** for one run:
 
 ### Security / compliance (export)
 
-Paid Argus Cloud plans: **Dashboard > Compliance** exports CSV/JSON with
+Paid Nephilex Cloud plans: **Dashboard > Compliance** exports CSV/JSON with
 findings, severities, CWEs, and timestamps for auditors.
 
 ---
@@ -200,10 +200,10 @@ findings, severities, CWEs, and timestamps for auditors.
 One scan is a snapshot. **Drift** compares two snapshots:
 
 ```bash
-argus scan . -f json -o before.json
+nephilex scan . -f json -o before.json
 # … make changes …
-argus scan . -f json -o after.json
-argus drift before.json after.json --fail-on high
+nephilex scan . -f json -o after.json
+nephilex drift before.json after.json --fail-on high
 ```
 
 | Drift column | Meaning |
@@ -215,11 +215,11 @@ argus drift before.json after.json --fail-on high
 Continuous monitoring:
 
 ```bash
-argus watch . --interval 300 --fail-on-drift high
-argus agent --init   # server paths; see agent.md
+nephilex watch . --interval 300 --fail-on-drift high
+nephilex agent --init   # server paths; see agent.md
 ```
 
-Argus Cloud shows the same drift on each scan detail page automatically when
+Nephilex Cloud shows the same drift on each scan detail page automatically when
 you push consecutive scans for the same target.
 
 ---
@@ -228,9 +228,9 @@ you push consecutive scans for the same target.
 
 Not every alert is a bug. Use:
 
-- **`allow:` in `.argus.yml`**: documented suppressions with optional expiry
-- **`# argus-ignore:` comments**: inline, with required reason
-- **Dashboard > Exceptions** (Argus Cloud): org-wide VEX by fingerprint
+- **`allow:` in `.nephilex.yml`**: documented suppressions with optional expiry
+- **`# nephilex-ignore:` comments**: inline, with required reason
+- **Dashboard > Exceptions** (Nephilex Cloud): org-wide VEX by fingerprint
 
 See [Triage & baselines](triage.md) for full syntax.
 
@@ -239,7 +239,7 @@ once suppressed. A finding you **ignored without documenting** still counts.
 
 ---
 
-## What Argus scans (and what it skips)
+## What Nephilex scans (and what it skips)
 
 ### Scanned by default
 
@@ -254,17 +254,19 @@ Common noise paths: `node_modules/`, `.venv/`, `dist/`, `.git/`, and similar.
 ### Configure exclusions
 
 ```yaml
-# .argus.yml
+# .nephilex.yml
 exclude_paths:
   - "tests/fixtures/**"
   - "vendor/**"
 ```
 
 !!! warning "Local secrets vs repository secrets"
-    Argus scans **files on disk**, including gitignored files like `.env` if
-    they exist locally. A Critical finding in `.env` on your laptop is **not**
-    the same as a secret committed to git. Exclude local-only files in
-    `.argus.yml`, or scan in CI where `.env` does not exist:
+    In a git work tree Nephilex skips untracked files that git ignores, so a
+    gitignored `.env` on your laptop is not scanned. Outside a git work tree,
+    or with `--include-ignored`, Nephilex scans **every file on disk**, and a
+    Critical finding in a local `.env` is **not** the same as a secret
+    committed to git. Exclude local-only files in `.nephilex.yml`, or scan in CI
+    where `.env` does not exist:
 
     ```yaml
     exclude_paths:
@@ -279,9 +281,9 @@ exclude_paths:
 Use this after every release candidate:
 
 ```
-[ ] argus scan . --fail-on high          -> exit 0
+[ ] nephilex scan . --fail-on high          -> exit 0
 [ ] Critical count = 0, High count = 0   -> in terminal summary
-[ ] CI Argus job green on main branch
+[ ] CI Nephilex job green on main branch
 [ ] Dashboard: no new High+ drift since last deploy
 [ ] Known false positives documented in allow: or Exceptions
 [ ] Dependency CVEs reviewed (even if Medium/Low)
@@ -328,11 +330,11 @@ inflate counts dramatically. **Scan each deployable app separately**, or use
 |----------|---------------|
 | Did I pass my policy? | Exit code + `Failing:` line + Critical/High counts |
 | How bad is it overall? | Aggregate risk score (trend, not absolute) |
-| What regressed? | `argus drift` or Cloud scan detail > Drift |
+| What regressed? | `nephilex drift` or Cloud scan detail > Drift |
 | What should I fix first? | Table sorted by severity; `--audience exec` for top 5 |
 | How do I reduce noise? | [Triage & baselines](triage.md) |
 | How do I gate CI? | [CI/CD integration](ci-cd.md) |
-| Cloud history & teams? | Push with `argus push`; see Argus Cloud dashboard |
+| Cloud history & teams? | Push with `nephilex push`; see Nephilex Cloud dashboard |
 
 ---
 

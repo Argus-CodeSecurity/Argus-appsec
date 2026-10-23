@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from argus.analysis.repository import RepositoryAnalyzer
-from argus.core.config import Config
-from argus.core.plugin import ScannerContext, registry
-from argus.core.project import Project
+from nephilex.analysis.repository import RepositoryAnalyzer
+from nephilex.core.config import Config
+from nephilex.core.plugin import ScannerContext, registry
+from nephilex.core.project import Project
 
 
 def _scan_go(tmp_path, content: str, name: str = "main.go") -> set[str]:

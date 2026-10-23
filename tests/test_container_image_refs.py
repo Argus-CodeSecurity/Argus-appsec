@@ -4,11 +4,11 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from argus.core.config import Config
-from argus.core.plugin import ScannerContext
-from argus.core.project import Project
-from argus.scanners import container_image
-from argus.scanners.container_image import ContainerImageScanner, _from_refs
+from nephilex.core.config import Config
+from nephilex.core.plugin import ScannerContext
+from nephilex.core.project import Project
+from nephilex.scanners import container_image
+from nephilex.scanners.container_image import ContainerImageScanner, _from_refs
 
 
 def test_from_skips_flags_stages_and_args():

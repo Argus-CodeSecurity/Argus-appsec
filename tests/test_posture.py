@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from argus.core.models import Finding, Location, ScanResult, Severity
-from argus.reporting.posture import PostureStatus, evaluate_posture
+from nephilex.core.models import Finding, Location, ScanResult, Severity
+from nephilex.reporting.posture import PostureStatus, evaluate_posture
 
 
 def _finding(sev: Severity) -> Finding:

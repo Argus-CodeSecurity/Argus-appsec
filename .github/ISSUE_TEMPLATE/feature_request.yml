@@ -13,7 +13,7 @@ body:
     id: proposal
     attributes:
       label: Proposed solution
-      description: What you'd like Argus to do. If it's a new scanner/rule, note the
+      description: What you'd like Nephilex to do. If it's a new scanner/rule, note the
         language and the vulnerability class (and a CWE if you know it).
     validations:
       required: true

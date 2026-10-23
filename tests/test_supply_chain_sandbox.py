@@ -7,12 +7,12 @@ import subprocess
 
 import pytest
 
-from argus.core.config import Config
-from argus.core.plugin import ScannerContext
-from argus.core.project import Project
-from argus.inventory.dependency_diff import PackageChange
-from argus.scanners import dependency_diff
-from argus.supply_chain import sandbox
+from nephilex.core.config import Config
+from nephilex.core.plugin import ScannerContext
+from nephilex.core.project import Project
+from nephilex.inventory.dependency_diff import PackageChange
+from nephilex.scanners import dependency_diff
+from nephilex.supply_chain import sandbox
 
 
 @pytest.mark.parametrize("name", ["-x", "--registry=https://evil.invalid", "@scope/-x", "a b", ""])

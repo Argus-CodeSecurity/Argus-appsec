@@ -2,14 +2,14 @@
 
 from __future__ import annotations
 
-from argus.agents.base import AgentContext, parse_sections
-from argus.agents.enrichment import EnrichmentAgent
-from argus.agents.exploit import AttackSimulationAgent
-from argus.agents.patch import PatchAgent
-from argus.ai.base import AIProvider
-from argus.core.config import Config
-from argus.core.models import Finding, Location, Severity
-from argus.core.project import Project
+from nephilex.agents.base import AgentContext, parse_sections
+from nephilex.agents.enrichment import EnrichmentAgent
+from nephilex.agents.exploit import AttackSimulationAgent
+from nephilex.agents.patch import PatchAgent
+from nephilex.ai.base import AIProvider
+from nephilex.core.config import Config
+from nephilex.core.models import Finding, Location, Severity
+from nephilex.core.project import Project
 
 
 class _Recorder(AIProvider):

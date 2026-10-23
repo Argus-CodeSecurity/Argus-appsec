@@ -6,8 +6,8 @@ from pathlib import Path
 
 import pytest
 
-from argus.agent import host_posture
-from argus.core.models import Severity
+from nephilex.agent import host_posture
+from nephilex.core.models import Severity
 
 SS_OUTPUT = """\
 State  Recv-Q Send-Q Local Address:Port  Peer Address:Port Process

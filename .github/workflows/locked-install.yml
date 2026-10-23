@@ -38,7 +38,7 @@ jobs:
           python-version: "3.11" # matches the interpreter the lock was compiled for
       - name: Install pinned, hash-verified runtime dependencies
         run: pip install --require-hashes -r requirements.lock
-      - name: Install Argus without re-resolving dependencies
+      - name: Install Nephilex without re-resolving dependencies
         run: pip install --no-deps .
       - name: Smoke test
-        run: argus --version
+        run: nephilex --version

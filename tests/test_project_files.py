@@ -7,8 +7,8 @@ from pathlib import Path
 
 import pytest
 
-import argus.core.project as project_mod
-from argus.core.project import FileRef, Project
+import nephilex.core.project as project_mod
+from nephilex.core.project import FileRef, Project
 
 
 @pytest.mark.skipif(not hasattr(os, "mkfifo"), reason="FIFOs need POSIX")

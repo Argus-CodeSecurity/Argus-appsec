@@ -1,0 +1,38 @@
+# Nephilex scanning itself (dogfooding). A security tool that visibly scans its own
+# source with a clean result is its own best advertisement, see the self-scan
+# CI workflow (.github/workflows/nephilex-scan.yml).
+#
+# The only exclusions here are paths that necessarily *contain* attack patterns
+# as data rather than as vulnerabilities:
+#   - the scanners' own rule definitions embed the very strings they detect
+#     (e.g. the LLM rule text mentions `trust_remote_code=True`);
+#   - the example app is deliberately vulnerable so the scanners have targets;
+#   - benchmark corpora are third-party vulnerable apps cloned locally.
+exclude_paths:
+  - "examples/**"
+  # The whole benchmarks tree is corpus/harness data, not shipped product code:
+  # the labeled accuracy corpus (accuracy.py) embeds vulnerable snippets and
+  # example secrets as data, run_benchmarks.py clones third-party vulnerable
+  # apps, and results/*.json are recorded finding inventories. Excluded for the
+  # same reason as tests/** below.
+  - "benchmarks/**"
+  - "tests/**"
+  # Rule/replacement definitions necessarily embed the patterns they detect
+  # (the LLM rule text mentions `trust_remote_code=True`; the fix engine's
+  # rewrites map `yaml.load`, `verify=False`, weak hashes, …).
+  - "src/nephilex/scanners/llm.py"
+  - "src/nephilex/scanners/patterns.py"
+  - "src/nephilex/scanners/secrets.py"
+  - "src/nephilex/scanners/authz.py"
+  - "src/nephilex/scanners/malware.py"
+  - "src/nephilex/remediation/rewrites.py"
+  # The AST scanners carry deliberately-vulnerable SQL/eval examples in their
+  # module docstrings to illustrate what the taint analysis detects.
+  - "src/nephilex/scanners/ast_python.py"
+  - "src/nephilex/scanners/ast_python_interproc.py"
+  # Reviewed-safe: a list-form, protocol-restricted, env-hardened git clone.
+  # The URL is validated before this call; the taint tier cannot see that
+  # across the function. (An inline-suppression mechanism is on the roadmap.)
+  - "src/nephilex/targets.py"
+
+fail_on: high

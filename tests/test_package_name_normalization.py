@@ -7,8 +7,8 @@ popular package must not be reported as a typosquat of it.
 
 from __future__ import annotations
 
-from argus.scanners import supply_chain
-from argus.supply_chain import intel
+from nephilex.scanners import supply_chain
+from nephilex.supply_chain import intel
 
 
 def test_normalize_name():

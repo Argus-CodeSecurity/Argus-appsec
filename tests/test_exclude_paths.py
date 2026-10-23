@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from argus.core.project import Project
+from nephilex.core.project import Project
 
 
 def _make_tree(tmp_path):

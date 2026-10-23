@@ -16,11 +16,21 @@ from pathlib import Path
 
 import pytest
 
-from argus.core.config import Config
-from argus.core.plugin import ScannerContext
-from argus.core.project import Project
-from argus.scanners import authz, cicd, cloud, container, iac, lang_sast, malware, patterns, secrets
-from argus.scanners._text import (
+from nephilex.core.config import Config
+from nephilex.core.plugin import ScannerContext
+from nephilex.core.project import Project
+from nephilex.scanners import (
+    authz,
+    cicd,
+    cloud,
+    container,
+    iac,
+    lang_sast,
+    malware,
+    patterns,
+    secrets,
+)
+from nephilex.scanners._text import (
     CURL_PIPE_SHELL_RE,
     MAX_SCAN_LINE,
     iter_scan_lines,
@@ -74,6 +84,13 @@ ADVERSARIAL = [
     ("secrets assignment, repeated keyword", secrets._ASSIGNMENT, _fit("secret")),
     ("secrets assignment, long key", secrets._ASSIGNMENT, _fit("a_token_")),
     ("shared curl-pipe", CURL_PIPE_SHELL_RE, _fit("curl ")),
+    # The repetition CodeQL's py/redos names for the optional sudo flags.
+    ("shared curl-pipe, sudo flags", CURL_PIPE_SHELL_RE, "curl x | sudo " + _fit("-!\x7f- ")[:-14]),
+    (
+        "shared curl-pipe, sudo flags no space",
+        CURL_PIPE_SHELL_RE,
+        "curl x | sudo " + _fit("-!\x7f-")[:-14],
+    ),
     ("lang-sast curl-pipe", lang_sast._RULES[".sh"][0][1], "curl " + " " * (MAX_SCAN_LINE - 5)),
     ("cicd hardcoded-secret", cicd._RULES[4][2], _fit("password:")),
     (

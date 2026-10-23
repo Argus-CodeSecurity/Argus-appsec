@@ -2,7 +2,7 @@
   "corpus": "juice-shop",
   "source": "https://github.com/juice-shop/juice-shop",
   "commit": "33518f5a0911e25d9df747b1e70fb7af279a755c",
-  "argus_version": "0.7.0",
+  "nephilex_version": "0.7.0",
   "scan_seconds": 49.67,
   "total_findings": 141,
   "by_scanner": {

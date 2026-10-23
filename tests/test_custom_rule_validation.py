@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from argus.scanners.custom_rules import _coerce_rule, _is_catastrophic, load_custom_rules
+from nephilex.scanners.custom_rules import _coerce_rule, _is_catastrophic, load_custom_rules
 
 
 @pytest.mark.parametrize(

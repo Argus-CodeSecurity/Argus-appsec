@@ -1,8 +1,8 @@
-# Enterprise policy pack for Argus
+# Enterprise policy pack for Nephilex
 #
-# Copy into your repo as `.argus.yml` or merge the `policies:` block into an
+# Copy into your repo as `.nephilex.yml` or merge the `policies:` block into an
 # existing config. Run with:
-#   argus policy check . --config examples/policies/enterprise.yml
+#   nephilex policy check . --config examples/policies/enterprise.yml
 #
 # Policies are deterministic: they match finding attributes only, never LLM output.
 

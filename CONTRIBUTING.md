@@ -1,6 +1,6 @@
-# Contributing to Argus
+# Contributing to Nephilex
 
-Thanks for considering a contribution. Argus is designed so that most
+Thanks for considering a contribution. Nephilex is designed so that most
 additions (new scanners, languages, compliance rules, report formats) land as
 plugins and never touch the core. That keeps the barrier low and the core
 stable.
@@ -15,8 +15,8 @@ contribution is accepted under the same terms. Please read the
 Requirements: Python 3.10 or newer and git.
 
 ```bash
-git clone https://github.com/Argus-CodeSecurity/Argus-appsec
-cd Argus-appsec
+git clone https://github.com/nephilex/nephilex
+cd nephilex
 python -m venv .venv
 . .venv/bin/activate          # Windows: .venv\Scripts\activate
 pip install -e ".[dev,ast]"
@@ -29,7 +29,7 @@ CI runs all of these on every pull request. Run them locally first:
 ```bash
 ruff check .                  # lint
 ruff format --check .         # formatting
-mypy src/argus                # type check
+mypy src/nephilex                # type check
 pytest                        # tests
 python benchmarks/accuracy.py # detection accuracy regression gate
 ```
@@ -94,7 +94,7 @@ it cannot be merged.
 - **New scanners and rules.** The highest-value contributions. See
   [docs/plugins.md](docs/plugins.md). Simple rules can be written in YAML
   without any Python.
-- **Language support.** Extend `argus/analysis/languages.py` and add
+- **Language support.** Extend `nephilex/analysis/languages.py` and add
   language-specific rules or a dedicated scanner.
 - **Report formats.** Subclass `Reporter`.
 - **AI providers.** Wrap another model backend behind `AIProvider`.
@@ -106,13 +106,13 @@ it cannot be merged.
   write into the repository; use pytest's `tmp_path`.
 - **Every finding carries a CWE and OWASP mapping** and, ideally, the reasoning
   fields so it is useful without a model.
-- **Treat the scanned repository as hostile.** Argus runs on untrusted pull
+- **Treat the scanned repository as hostile.** Nephilex runs on untrusted pull
   requests. Bound regex work and file sizes, never execute or import code from
   the target, pass subprocess arguments as lists, and make sure a crash or
   misconfiguration fails the gate rather than producing a clean result. See
   [THREAT_MODEL.md](THREAT_MODEL.md).
 - **Keep the core dependency-light.** New heavy dependencies belong behind an
-  optional extra (`pip install argus-appsec[...]`).
+  optional extra (`pip install nephilex[...]`).
 - **Follow the house style.** Ruff enforces formatting and imports; follow the
   patterns in the existing scanners. Write plain technical English in code,
   comments, and docs.
@@ -122,7 +122,7 @@ it cannot be merged.
 - Attack Simulation is **educational and non-executing** by design. Do not add
   anything that runs generated exploits or sends traffic to live targets
   without an explicit, opt-in design agreed in an issue first.
-- If you find a vulnerability *in Argus itself*, report it privately as
+- If you find a vulnerability *in Nephilex itself*, report it privately as
   described in [SECURITY.md](SECURITY.md) rather than opening a public issue.
 
 ## Pull request process

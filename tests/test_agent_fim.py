@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from argus.agent import fim
+from nephilex.agent import fim
 
 
 def test_fim_alerts_when_absent_path_appears(tmp_path: Path):

@@ -13,11 +13,11 @@ from pathlib import Path
 
 import pytest
 
-from argus.core.config import Config
-from argus.core.plugin import ScannerContext, registry
-from argus.core.project import Project
-from argus.scanners import ast_python
-from argus.scanners.ast_python import is_available
+from nephilex.core.config import Config
+from nephilex.core.plugin import ScannerContext, registry
+from nephilex.core.project import Project
+from nephilex.scanners import ast_python
+from nephilex.scanners.ast_python import is_available
 
 DEPTH = 3000  # well past the default recursion limit of 1000
 
@@ -29,7 +29,7 @@ needs_ast = pytest.mark.skipif(
 def _scan(tmp_path: Path, scanner: str, files: dict[str, str], options=None) -> list:
     for name, body in files.items():
         (tmp_path / name).write_text(body, encoding="utf-8")
-    from argus.analysis.repository import RepositoryAnalyzer
+    from nephilex.analysis.repository import RepositoryAnalyzer
 
     project = Project.from_path(tmp_path)
     RepositoryAnalyzer().analyze(project)
@@ -100,7 +100,7 @@ def test_ast_python_xfile_survives_deep_nesting(tmp_path):
 
 
 def _js_available() -> bool:
-    from argus.scanners.ast_js import is_available as js_ok
+    from nephilex.scanners.ast_js import is_available as js_ok
 
     return js_ok()
 
@@ -129,7 +129,7 @@ def test_ast_js_survives_deep_nesting(tmp_path):
 
 
 def test_secrets_history_failure_keeps_working_tree_findings(tmp_path, monkeypatch):
-    from argus.scanners import secrets_history
+    from nephilex.scanners import secrets_history
 
     def explode(root):
         raise OSError("git exploded")

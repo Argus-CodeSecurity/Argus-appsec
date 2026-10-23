@@ -4,10 +4,10 @@ from __future__ import annotations
 
 import json
 
-from argus.core.config import Config
-from argus.core.engine import ScanEngine
-from argus.core.models import Finding, Location, docs_url_for
-from argus.core.plugin import registry
+from nephilex.core.config import Config
+from nephilex.core.engine import ScanEngine
+from nephilex.core.models import Finding, Location, docs_url_for
+from nephilex.core.plugin import registry
 
 
 def _finding(scanner: str) -> Finding:
@@ -47,3 +47,7 @@ def test_docs_url_in_csv(vulnerable_project):
     result = ScanEngine(Config()).scan(vulnerable_project)
     csv_text = registry.get_reporter("csv")().render(result)
     assert "docs_url" in csv_text.splitlines()[0]
+
+
+def test_agent_config_has_a_docs_anchor():
+    assert docs_url_for("agent-config").endswith("/scanners/#agent-config")

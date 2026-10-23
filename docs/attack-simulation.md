@@ -1,6 +1,6 @@
 # Attack Simulation Mode
 
-Most scanners stop at "this endpoint is vulnerable to SQL injection." Argus goes
+Most scanners stop at "this endpoint is vulnerable to SQL injection." Nephilex goes
 further: for each meaningful finding it produces a safe, self-contained
 demonstration of the weakness, aimed at the developer who owns the code.
 
@@ -8,7 +8,7 @@ Enable it with `--attack-sim` or `attack_simulation: true` in config.
 
 ## What it produces
 
-For every finding at Medium severity or above, Argus generates an
+For every finding at Medium severity or above, Nephilex generates an
 `ExploitScenario` with six parts:
 
 1. **Discovery**, how an attacker would find the weakness in the first place.
@@ -25,7 +25,7 @@ the JSON output under each finding's `exploit` field.
 
 The simulation is **descriptive, not executed**:
 
-- Argus never sends traffic to a live target.
+- Nephilex never sends traffic to a live target.
 - It never runs generated exploit code.
 - With a real model, the prompt constrains output to an educational,
   non-weaponized walkthrough rather than a copy-paste exploit.
@@ -41,7 +41,7 @@ was contacted.
   command injection, hardcoded secrets, and so on) and completely deterministic.
 - **With a model (anthropic/openai/ollama):** the agent writes a scenario tailored
   to the specific code, framework, and data flow, which reads more like a real
-  penetration-test note. If the model call fails, Argus falls back to the template
+  penetration-test note. If the model call fails, Nephilex falls back to the template
   so the report is never left incomplete.
 
 ## Example
@@ -65,5 +65,5 @@ For a SQL injection finding, the offline simulation reads roughly:
 Run it yourself against the bundled example:
 
 ```bash
-argus scan examples/vulnerable-app --attack-sim -f markdown -o report.md
+nephilex scan examples/vulnerable-app --attack-sim -f markdown -o report.md
 ```

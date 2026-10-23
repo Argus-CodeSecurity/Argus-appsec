@@ -1,4 +1,4 @@
-"""`argus fix` git workflow: branch base, rollback, identity, hooks, redaction."""
+"""`nephilex fix` git workflow: branch base, rollback, identity, hooks, redaction."""
 
 from __future__ import annotations
 
@@ -7,11 +7,11 @@ from pathlib import Path
 
 import pytest
 
-from argus.core.models import Finding, Location, Severity
-from argus.core.project import Project
-from argus.remediation import git_ops
-from argus.remediation.hosting import redact_credentials
-from argus.remediation.pullrequest import FixOptions, run_fix_workflow
+from nephilex.core.models import Finding, Location, Severity
+from nephilex.core.project import Project
+from nephilex.remediation import git_ops
+from nephilex.remediation.hosting import redact_credentials
+from nephilex.remediation.pullrequest import FixOptions, run_fix_workflow
 
 pytestmark = pytest.mark.skipif(not git_ops.git_available(), reason="git not installed")
 
@@ -72,7 +72,7 @@ def test_refuses_when_head_is_not_base(tmp_path, isolated_git):
 
 def test_force_branch_resets_stale_branch_to_base(tmp_path, isolated_git):
     root = _repo(tmp_path)
-    _git(root, "checkout", "-q", "-b", "argus/security-fixes")
+    _git(root, "checkout", "-q", "-b", "nephilex/security-fixes")
     (root / "stale.py").write_text("old = 1\n", encoding="utf-8")
     _git(root, *ID, "add", "-A")
     _git(root, *ID, "commit", "-qm", "stale")
@@ -95,7 +95,7 @@ def test_failure_restores_tree_and_branch(tmp_path, isolated_git, monkeypatch):
     assert outcome.error and "simulated" in outcome.error
     assert _git(root, "status", "--porcelain") == ""
     assert _git(root, "rev-parse", "--abbrev-ref", "HEAD") == "main"
-    assert not git_ops.branch_exists(root, "argus/security-fixes")
+    assert not git_ops.branch_exists(root, "nephilex/security-fixes")
     assert "yaml.load(s)" in (root / "a.py").read_text(encoding="utf-8")
     assert "remediation_applied" not in f.metadata
 
@@ -109,11 +109,11 @@ def test_commit_keeps_configured_identity(tmp_path, isolated_git):
     assert _git(root, "log", "-1", "--format=%an <%ae>") == "Real Dev <dev@example.com>"
 
 
-def test_commit_falls_back_to_argus_identity(tmp_path, isolated_git):
+def test_commit_falls_back_to_nephilex_identity(tmp_path, isolated_git):
     root = _repo(tmp_path)
     outcome = run_fix_workflow(Project.from_path(root), [_finding()], FixOptions())
     assert outcome.committed, outcome.error
-    assert _git(root, "log", "-1", "--format=%an <%ae>") == "Argus <argus@localhost>"
+    assert _git(root, "log", "-1", "--format=%an <%ae>") == "Nephilex <nephilex@localhost>"
 
 
 def test_commit_hooks_run_unless_opted_out(tmp_path, isolated_git):

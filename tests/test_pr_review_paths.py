@@ -8,8 +8,8 @@ from pathlib import Path
 
 import pytest
 
-from argus.core.models import Finding, Location, Severity
-from argus.remediation import git_ops, pr_review
+from nephilex.core.models import Finding, Location, Severity
+from nephilex.remediation import git_ops, pr_review
 
 pytestmark = pytest.mark.skipif(shutil.which("git") is None, reason="git is required")
 

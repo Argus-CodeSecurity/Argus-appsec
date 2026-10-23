@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from argus.analysis.auth_map import build_auth_map
-from argus.core.project import Project
+from nephilex.analysis.auth_map import build_auth_map
+from nephilex.core.project import Project
 
 
 def _map(tmp_path: Path, files: dict[str, str]):

@@ -1,29 +1,30 @@
 <div align="center">
 
-<img src="docs/assets/argus-banner.svg" alt="Argus, the open-source AI Security Engineer" width="720">
-
-<h1>Argus</h1>
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/brand/nephilex-wordmark-dark.svg">
+  <img src="docs/assets/brand/nephilex-wordmark-light.svg" alt="Nephilex" width="560">
+</picture>
 
 **Your open-source AI Security Engineer.** Point it at a codebase or a running app.
 It maps the system, runs layered security analysis, explains every finding the way
 a senior application-security engineer would, and where it can, it writes the fix
 and checks that the fix actually works.
 
-[![PyPI version](https://img.shields.io/pypi/v/argus-appsec?color=8b5cf6&label=pypi)](https://pypi.org/project/argus-appsec/)
-[![Python](https://img.shields.io/pypi/pyversions/argus-appsec?color=6ea8fe)](https://pypi.org/project/argus-appsec/)
+[![PyPI version](https://img.shields.io/pypi/v/nephilex?color=8b5cf6&label=pypi)](https://pypi.org/project/nephilex/)
+[![Python](https://img.shields.io/pypi/pyversions/nephilex?color=6ea8fe)](https://pypi.org/project/nephilex/)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
-[![CI](https://github.com/Argus-CodeSecurity/Argus-appsec/actions/workflows/ci.yml/badge.svg)](https://github.com/Argus-CodeSecurity/Argus-appsec/actions/workflows/ci.yml)
-[![Self-scan](https://github.com/Argus-CodeSecurity/Argus-appsec/actions/workflows/argus-scan.yml/badge.svg)](https://github.com/Argus-CodeSecurity/Argus-appsec/actions/workflows/argus-scan.yml)
-[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/Argus-CodeSecurity/Argus-appsec/badge)](https://securityscorecards.dev/viewer/?uri=github.com/Argus-CodeSecurity/Argus-appsec)
+[![CI](https://github.com/nephilex/nephilex/actions/workflows/ci.yml/badge.svg)](https://github.com/nephilex/nephilex/actions/workflows/ci.yml)
+[![Self-scan](https://github.com/nephilex/nephilex/actions/workflows/nephilex-scan.yml/badge.svg)](https://github.com/nephilex/nephilex/actions/workflows/nephilex-scan.yml)
+[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/nephilex/nephilex/badge)](https://securityscorecards.dev/viewer/?uri=github.com/nephilex/nephilex)
 [![OWASP LLM Top 10](https://img.shields.io/badge/OWASP-LLM%20Top%2010-111c33)](https://genai.owasp.org/llm-top-10/)
 
-[Install](#install) | [Quick start](#quick-start) | [How it works](#how-it-works) | [Docs](https://argus-codesecurity.github.io/Argus-appsec/) | [Roadmap](#roadmap)
+[Install](#install) | [Quick start](#quick-start) | [How it works](#how-it-works) | [Docs](https://nephilex.github.io/nephilex/) | [Roadmap](#roadmap)
 
 </div>
 
 ---
 
-Argus is not just another scanner that prints a list. For each finding it tells you
+Nephilex is not just another scanner that prints a list. For each finding it tells you
 *why* it is a vulnerability, *how* an attacker would exploit it, the *business
 impact*, the likelihood and severity, the CWE and OWASP mapping, and concrete
 remediation. Then it can generate a patch and confirm the patch closes the issue.
@@ -33,7 +34,7 @@ remediation. Then it can generate a patch and confirm the patch closes the issue
 > supply chain, LLM/agent), a multi-provider AI layer, cross-file taint analysis, and
 > nine report formats. See the [roadmap](#roadmap).
 
-## Why Argus
+## Why Nephilex
 
 - **Project-aware scanning** - Detects languages and frameworks and builds an architecture map (APIs, auth flows, datastores, third-party services, cloud, containers, CI/CD, dependency manifests) before it scans a single line.
 - **Layered analysis** - Secrets, dependency CVEs (live [OSV](https://osv.dev) data, transitive packages from lockfiles across PyPI, npm, Go, Rust, Ruby, PHP), SAST, tree-sitter taint analysis, infrastructure-as-code, CI/CD pipeline, container, and cloud configuration checks, all in one pass.
@@ -48,48 +49,48 @@ remediation. Then it can generate a patch and confirm the patch closes the issue
 
 ```bash
 # From PyPI
-pip install argus-appsec
+pip install nephilex
 
 # With cloud model support
-pip install "argus-appsec[anthropic,openai]"
+pip install "nephilex[anthropic,openai]"
 
 # With the AST data-flow tier (deeper Python/JS taint analysis, via tree-sitter)
-pip install "argus-appsec[ast]"
+pip install "nephilex[ast]"
 
 # With the optional web dashboard (scan history and risk trends)
-pip install "argus-appsec[dashboard]"
+pip install "nephilex[dashboard]"
 ```
 
 From source, for development:
 
 ```bash
-git clone https://github.com/Argus-CodeSecurity/Argus-appsec
-cd Argus-appsec
+git clone https://github.com/nephilex/nephilex
+cd nephilex
 pip install -e ".[dev]"
 ```
 
-Requires Python 3.10+. The installed command is `argus`.
+Requires Python 3.10+. The installed command is `nephilex`.
 
 ## Quick start
 
 ```bash
 # Scan a local project and print a table
-argus scan ./my-app
+nephilex scan ./my-app
 
 # Turn on the flagship features and write an HTML report
-argus scan ./my-app --attack-sim --patches -f html -o report.html
+nephilex scan ./my-app --attack-sim --patches -f html -o report.html
 
 # Scan a remote repository (shallow-cloned to a temp dir, then cleaned up)
-argus scan https://github.com/org/repo
+nephilex scan https://github.com/org/repo
 
-# Apply Argus's verified fixes to a branch and open a pull request
-argus fix ./my-app --open-pr
+# Apply Nephilex's verified fixes to a branch and open a pull request
+nephilex fix ./my-app --open-pr
 
 # Use a local model so code stays on your machine
-argus scan ./my-app --ai-provider ollama --ai-model llama3.1
+nephilex scan ./my-app --ai-provider ollama --ai-model llama3.1
 
 # Machine-readable output for CI, failing the build on High and above
-argus scan ./my-app -f sarif -o results.sarif --fail-on high
+nephilex scan ./my-app -f sarif -o results.sarif --fail-on high
 ```
 
 **What does pass/fail mean?** See [Understanding scan results](docs/understanding-results.md)
@@ -98,18 +99,18 @@ for risk scores, severities, exit codes, and how to know you are secure enough.
 Explore what is available:
 
 ```bash
-argus scanners     # list scanners
-argus reporters    # list report formats
-argus providers    # list AI providers and whether each is usable right now
-argus init         # write a starter .argus.yml
-argus cicd .       # CI/CD pipeline checks only
-argus container .  # Docker / Compose / K8s manifests
-argus cloud .      # Terraform / CloudFormation
-argus infrastructure .  # all infra scanners
-argus inventory . -o inventory.json  # static asset map
-argus drift before.json after.json   # posture drift
-argus watch . --once                 # continuous local monitoring
-argus agent --init                   # server agent config
+nephilex scanners     # list scanners
+nephilex reporters    # list report formats
+nephilex providers    # list AI providers and whether each is usable right now
+nephilex init         # write a starter .nephilex.yml
+nephilex cicd .       # CI/CD pipeline checks only
+nephilex container .  # Docker / Compose / K8s manifests
+nephilex cloud .      # Terraform / CloudFormation
+nephilex infrastructure .  # all infra scanners
+nephilex inventory . -o inventory.json  # static asset map
+nephilex drift before.json after.json   # posture drift
+nephilex watch . --once                 # continuous local monitoring
+nephilex agent --init                   # server agent config
 ```
 
 ## CI in one block
@@ -125,13 +126,13 @@ permissions:
 steps:
   - uses: actions/checkout@v4
     with: { fetch-depth: 0 }
-  - uses: Argus-CodeSecurity/Argus-appsec@v0.9.0
+  - uses: nephilex/nephilex@v0.10.0
     with:
       fail-on: high
 ```
 
 You also get [pre-commit hooks](docs/ci-cd.md#pre-commit-hook) that block secrets
-before they enter git history, an official Docker image (`ghcr.io/argus-codesecurity/argus`),
+before they enter git history, an official Docker image (`ghcr.io/nephilex/nephilex`),
 and GitLab CI and Bitbucket Pipelines snippets. See [docs/ci-cd.md](docs/ci-cd.md).
 
 ## How it works
@@ -144,7 +145,7 @@ and GitLab CI and Bitbucket Pipelines snippets. See [docs/ci-cd.md](docs/ci-cd.m
 ```
 
 The engine never modifies the target. It returns a `ScanResult`, and its only write
-is to Argus's own cache (`--no-cache` disables even that). Scanners run concurrently
+is to Nephilex's own cache (`--no-cache` disables even that). Scanners run concurrently
 and unchanged files reuse cached findings, so warm scans stay fast
 ([measured numbers](docs/performance.md)) while reports stay deterministic, byte for
 byte. Reporting and any pull-request creation are separate, explicit steps. See
@@ -152,7 +153,7 @@ byte. Reporting and any pull-request creation are separate, explicit steps. See
 
 ## Configuration
 
-Drop a `.argus.yml` in your project root (generate one with `argus init`):
+Drop a `.nephilex.yml` in your project root (generate one with `nephilex init`):
 
 ```yaml
 min_severity: low
@@ -169,12 +170,12 @@ scanner_options:
 
 Full reference: [docs/configuration.md](docs/configuration.md).
 
-## Extending Argus
+## Extending Nephilex
 
 Everything is a plugin. Here is a whole scanner:
 
 ```python
-from argus.plugin_api import Finding, Location, Scanner, ScannerContext, Severity, scanner
+from nephilex.plugin_api import Finding, Location, Scanner, ScannerContext, Severity, scanner
 
 
 @scanner
@@ -198,7 +199,7 @@ class HelloScanner(Scanner):
                     )
 ```
 
-Register it via the `argus.plugins` entry point in your package and Argus picks it up
+Register it via the `nephilex.plugins` entry point in your package and Nephilex picks it up
 automatically. Prefer regex over code? You can add a rule in plain
 [YAML](docs/plugins.md#community-rules-yaml-no-python) instead. Full guide:
 [docs/plugins.md](docs/plugins.md).
@@ -212,18 +213,18 @@ automatically. Prefer regex over code? You can add a rule in plain
 | `anthropic` | cloud    | yes                         | `ANTHROPIC_API_KEY` + `[anthropic]` extra |
 | `openai`    | cloud    | yes                         | `OPENAI_API_KEY` + `[openai]` extra |
 
-If a requested provider is unavailable, Argus warns and falls back to `heuristic` so a
+If a requested provider is unavailable, Nephilex warns and falls back to `heuristic` so a
 scan always completes.
 
 ## Fixing, not just finding
 
-`argus fix` closes the loop. It scans a repository, applies the fixes it can verify
+`nephilex fix` closes the loop. It scans a repository, applies the fixes it can verify
 locally to a fresh branch, commits them, and with `--open-pr` opens a pull request.
 
 ```bash
-argus fix ./my-app --dry-run      # preview the changes, write nothing
-argus fix ./my-app                # apply fixes to a branch and commit locally
-argus fix ./my-app --open-pr      # also push and open a PR (needs GITHUB_TOKEN)
+nephilex fix ./my-app --dry-run      # preview the changes, write nothing
+nephilex fix ./my-app                # apply fixes to a branch and commit locally
+nephilex fix ./my-app --open-pr      # also push and open a PR (needs GITHUB_TOKEN)
 ```
 
 Only deterministic, self-verified fixes are applied by default. Examples: unsafe
@@ -231,42 +232,59 @@ Only deterministic, self-verified fixes are applied by default. Examples: unsafe
 removed, `debug=True` becomes `debug=False`, and `torch.load` gains
 `weights_only=True`. See [docs/fixing.md](docs/fixing.md).
 
+## Accuracy
+
+Nephilex, Bandit and Semgrep are run on two public Python datasets, and the raw
+findings and scoring scripts are in the repository, so anyone can rerun them.
+
+| Dataset | Nephilex | Bandit | Semgrep (`p/python`) |
+| --- | --- | --- | --- |
+| OWASP BenchmarkPython, score (TPR minus FPR) | +89.4 | +18.6 | +14.2 |
+| SecurityEval, samples detected out of 121 | 32 | 32 | 13 |
+
+Read these with their caveats. The Python rules were developed with OWASP
+BenchmarkPython visible, so it is not an independent test of Nephilex.
+SecurityEval is closer to one: without five detections from rules written after
+reading its misses, Nephilex finds 27 of 121, behind Bandit's 32. Methodology,
+per-category results and a false-positive check on real projects are in
+[docs/benchmarks.md](docs/benchmarks.md).
+
 ## Roadmap
 
 **Implemented.** Project analysis; secrets, dependency, SAST, and IaC scanners; a
 first-class LLM and agent security scanner (OWASP LLM Top 10); live OSV vulnerability
 data; multi-provider AI enrichment; Attack Simulation Mode; deterministic patch
 generation with self-verification; automated fix branches and pull requests
-(`argus fix`); baseline and diff-aware scanning; dependency reachability analysis;
+(`nephilex fix`); baseline and diff-aware scanning; dependency reachability analysis;
 opt-in secret verification; safe runtime posture checks for a live URL; per-file
 caching and parallel scanners; and JSON, SARIF, GitLab, Markdown, HTML, and CSV
 reporting.
 
 **Deep code analysis.** AST data-flow scanning ships for Python and
-JavaScript/TypeScript (`pip install "argus-appsec[ast]"`), tree-sitter taint analysis
+JavaScript/TypeScript (`pip install "nephilex[ast]"`), tree-sitter taint analysis
 that follows untrusted input through multiple hops into a sink and treats
 parameterized queries and sanitized values as safe. For Python it also includes a
 cross-file, inter-procedural tier that follows taint one hop across a function and
 file boundary. Go ships SAST rules today, with more languages next.
 
 **Author rules in YAML.** Add SAST rules with only regex and a few fields, no Python,
-via `.argus/rules/*.yml` or `scanner_options.patterns.rules`. See
+via `.nephilex/rules/*.yml` or `scanner_options.patterns.rules`. See
 [docs/plugins.md](docs/plugins.md#community-rules-yaml-no-python).
 
 **Web dashboard.** Scan history and risk trends ship as an optional extra:
-`pip install "argus-appsec[dashboard]"` then `argus dashboard`. See
+`pip install "nephilex[dashboard]"` then `nephilex dashboard`. See
 [docs/dashboard.md](docs/dashboard.md).
 
 **Kubernetes.** The `iac` scanner checks Kubernetes manifests statically as part
 of a normal scan. Live-cluster assessment is out of scope for the core; add-on
-packages can provide it through the `argus.commands` plugin entry point.
+packages can provide it through the `nephilex.commands` plugin entry point.
 
 **Distribution.** An official GitHub Action, pre-commit hooks, and a published Docker
 image. See [docs/ci-cd.md](docs/ci-cd.md).
 
-**Monitoring and drift.** Configuration drift via `argus drift`, static asset
-inventory via `argus inventory`, local continuous monitoring via `argus watch`, and
-a multi-path host agent via `argus agent`.
+**Monitoring and drift.** Configuration drift via `nephilex drift`, static asset
+inventory via `nephilex inventory`, local continuous monitoring via `nephilex watch`, and
+a multi-path host agent via `nephilex agent`.
 
 **Pipelines, containers, cloud.** CI/CD pipeline scanner (GitHub Actions, GitLab
 CI, Jenkinsfile), container and Compose checks, and cloud configuration patterns
@@ -277,7 +295,7 @@ depth (multi-hop cross-file), more deep-analysis languages, and richer complianc
 
 ## Known limitations
 
-Argus is early-stage and honest about what it does not yet do, because a security
+Nephilex is early-stage and honest about what it does not yet do, because a security
 scanner you cannot trust is worse than none:
 
 - **Primarily static analysis.** It reads code rather than running your app. The
@@ -294,7 +312,7 @@ scanner you cannot trust is worse than none:
 - **Dependency coverage depends on OSV.** Offline, it falls back to a small bundled
   advisory seed (PyPI and npm) and tells you so.
 
-Treat Argus as a strong, fast first line of defense, not a replacement for a manual
+Treat Nephilex as a strong, fast first line of defense, not a replacement for a manual
 security review of critical code.
 
 ## Contributing
@@ -320,7 +338,7 @@ welcome, and the plugin model means most additions never touch the core.
 | [SECURITY.md](SECURITY.md) | How to report a vulnerability privately; supported versions |
 | [SUPPORT.md](SUPPORT.md) | Where to ask questions and get help |
 | [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) | Community standards |
-| [THREAT_MODEL.md](THREAT_MODEL.md) | What Argus defends against, and what it does not |
+| [THREAT_MODEL.md](THREAT_MODEL.md) | What Nephilex defends against, and what it does not |
 
 ## License
 

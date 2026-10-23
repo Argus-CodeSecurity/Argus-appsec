@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
-from argus.core.config import Config
-from argus.core.engine import ScanEngine
-from argus.core.project import Project
+from nephilex.core.config import Config
+from nephilex.core.engine import ScanEngine
+from nephilex.core.project import Project
 
-_CODE = 'import subprocess\nsubprocess.run("x", shell=True)\n'
+# The command is not a constant: with a literal one the data-flow tier proves
+# shell=True harmless and the rule (correctly) stays silent.
+_CODE = "import subprocess\nsubprocess.run(cmd, shell=True)\n"
 
 
 def _scan(tmp_path, allow):

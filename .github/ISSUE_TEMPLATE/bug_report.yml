@@ -1,19 +1,19 @@
 name: Bug report
-description: Report something that isn't working as expected in Argus.
+description: Report something that isn't working as expected in Nephilex.
 labels: ["bug"]
 body:
   - type: markdown
     attributes:
       value: |
         Thanks for taking the time to file a bug. Please fill in the sections below.
-        For a security vulnerability *in Argus itself*, do not open a public issue,
+        For a security vulnerability *in Nephilex itself*, do not open a public issue,
         see SECURITY.md.
   - type: textarea
     id: what-happened
     attributes:
       label: What happened?
       description: A clear description of the bug, and what you expected instead.
-      placeholder: When I run `argus scan ...`, I expected X but got Y.
+      placeholder: When I run `nephilex scan ...`, I expected X but got Y.
     validations:
       required: true
   - type: textarea
@@ -22,7 +22,7 @@ body:
       label: Steps to reproduce
       description: The exact command(s) and, if possible, a minimal example.
       placeholder: |
-        1. argus scan ./my-project -s secrets
+        1. nephilex scan ./my-project -s secrets
         2. ...
     validations:
       required: true
@@ -35,9 +35,9 @@ body:
   - type: input
     id: version
     attributes:
-      label: Argus version
-      description: Output of `argus version`.
-      placeholder: Argus v0.1.0
+      label: Nephilex version
+      description: Output of `nephilex version`.
+      placeholder: Nephilex v0.1.0
     validations:
       required: true
   - type: dropdown

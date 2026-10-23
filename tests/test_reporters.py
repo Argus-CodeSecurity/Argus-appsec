@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import json
 
-from argus.core.config import Config
-from argus.core.engine import ScanEngine
-from argus.core.plugin import registry
+from nephilex.core.config import Config
+from nephilex.core.engine import ScanEngine
+from nephilex.core.plugin import registry
 
 
 def _result(project):
@@ -18,7 +18,7 @@ def test_json_reporter_roundtrips(vulnerable_project):
     rendered = registry.get_reporter("json")().render(result)
     data = json.loads(rendered)  # must be valid JSON
     assert data["findings"]
-    assert data["argus_version"]
+    assert data["nephilex_version"]
 
 
 def test_sarif_is_valid_and_maps_levels(vulnerable_project):
@@ -27,7 +27,7 @@ def test_sarif_is_valid_and_maps_levels(vulnerable_project):
     doc = json.loads(rendered)
     assert doc["version"] == "2.1.0"
     run = doc["runs"][0]
-    assert run["tool"]["driver"]["name"] == "Argus"
+    assert run["tool"]["driver"]["name"] == "Nephilex"
     assert run["results"]
     # Every result references a declared rule.
     rule_ids = {r["id"] for r in run["tool"]["driver"]["rules"]}
@@ -41,7 +41,7 @@ def test_sarif_is_valid_and_maps_levels(vulnerable_project):
 def test_markdown_contains_sections(vulnerable_project):
     result = _result(vulnerable_project)
     md = registry.get_reporter("markdown")().render(result)
-    assert "# Argus Security Report" in md
+    assert "# Nephilex Security Report" in md
     assert "## Findings" in md
     assert "Attack simulation" in md
 
@@ -69,7 +69,7 @@ def test_gitlab_sast_report_shape(vulnerable_project):
     doc = json.loads(registry.get_reporter("gitlab")().render(result))
     assert doc["version"].startswith("15.")
     assert doc["scan"]["type"] == "sast"
-    assert doc["scan"]["scanner"]["id"] == "argus"
+    assert doc["scan"]["scanner"]["id"] == "nephilex"
     assert doc["vulnerabilities"]
     for v in doc["vulnerabilities"]:
         assert v["severity"] in {"Info", "Low", "Medium", "High", "Critical"}

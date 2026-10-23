@@ -10,13 +10,13 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from argus.core.config import Config
-from argus.core.plugin import ScannerContext
-from argus.core.project import Project
-from argus.scanners._text import MAX_SCAN_LINE
-from argus.scanners.cicd import CicdScanner
-from argus.scanners.container import ContainerScanner
-from argus.scanners.secrets import SecretsScanner, redact_line
+from nephilex.core.config import Config
+from nephilex.core.plugin import ScannerContext
+from nephilex.core.project import Project
+from nephilex.scanners._text import MAX_SCAN_LINE
+from nephilex.scanners.cicd import CicdScanner
+from nephilex.scanners.container import ContainerScanner
+from nephilex.scanners.secrets import SecretsScanner, redact_line
 
 # Built at runtime so this file does not itself contain token-shaped literals.
 GH_1 = "ghp_" + "A1b2C3d4E5" * 4

@@ -5,14 +5,14 @@ project composition.
 
 ## Scan drift
 
-Save two Argus JSON reports, then diff them:
+Save two Nephilex JSON reports, then diff them:
 
 ```bash
-argus scan . -f json -o baseline.json
+nephilex scan . -f json -o baseline.json
 # ... changes land in the repo ...
-argus scan . -f json -o current.json
-argus drift baseline.json current.json
-argus drift baseline.json current.json --fail-on high -o drift.json
+nephilex scan . -f json -o current.json
+nephilex drift baseline.json current.json
+nephilex drift baseline.json current.json --fail-on high -o drift.json
 ```
 
 Drift uses stable finding **fingerprints** (rule + path + snippet hash), so line
@@ -26,12 +26,12 @@ Output categories:
 
 ## Inventory drift
 
-Compare two `argus inventory` exports for dependency and architecture changes:
+Compare two `nephilex inventory` exports for dependency and architecture changes:
 
 ```bash
-argus inventory . -o inv-before.json
-argus inventory . -o inv-after.json
-argus drift inv-before.json inv-after.json --inventory
+nephilex inventory . -o inv-before.json
+nephilex inventory . -o inv-after.json
+nephilex drift inv-before.json inv-after.json --inventory
 ```
 
 Reports:
@@ -44,34 +44,34 @@ Reports:
 Gate deployments on posture regressions:
 
 ```yaml
-- run: argus scan . -f json -o current.json
-- run: argus drift baseline.json current.json --fail-on high --quiet
+- run: nephilex scan . -f json -o current.json
+- run: nephilex drift baseline.json current.json --fail-on high --quiet
 ```
 
 Store `baseline.json` from the last known-good release tag or scheduled scan.
 
-## Continuous monitoring (`argus watch`)
+## Continuous monitoring (`nephilex watch`)
 
-Run periodic scans locally, keep snapshots under `.argus/watch/`, and detect drift
+Run periodic scans locally, keep snapshots under `.nephilex/watch/`, and detect drift
 between cycles:
 
 ```bash
-argus watch . --interval 300          # scan every 5 minutes
-argus watch . --once                  # single cycle (cron-friendly)
-argus watch . --push                  # upload each scan to Argus Cloud
-argus watch . --fail-on-drift high    # exit non-zero on new High+ findings
+nephilex watch . --interval 300          # scan every 5 minutes
+nephilex watch . --once                  # single cycle (cron-friendly)
+nephilex watch . --push                  # upload each scan to Nephilex Cloud
+nephilex watch . --fail-on-drift high    # exit non-zero on new High+ findings
 ```
 
-Pair with `argus push` and the Argus Cloud dashboard for hosted history and
+Pair with `nephilex push` and the Nephilex Cloud dashboard for hosted history and
 scan-to-scan drift in the UI.
 
-## Server agent (`argus agent`)
+## Server agent (`nephilex agent`)
 
 For hosts that monitor **multiple paths**, use the server agent with a config file:
 
 ```bash
-argus agent --init
-argus agent --once
+nephilex agent --init
+nephilex agent --once
 ```
 
 See [agent.md](agent.md) for systemd and cron deployment examples.

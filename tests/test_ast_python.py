@@ -11,15 +11,15 @@ import pytest
 pytest.importorskip("tree_sitter")
 pytest.importorskip("tree_sitter_python")
 
-from argus.core.config import Config  # noqa: E402
-from argus.core.engine import ScanEngine  # noqa: E402
-from argus.core.plugin import ScannerContext, registry  # noqa: E402
-from argus.scanners import ast_python  # noqa: E402
+from nephilex.core.config import Config  # noqa: E402
+from nephilex.core.engine import ScanEngine  # noqa: E402
+from nephilex.core.plugin import ScannerContext, registry  # noqa: E402
+from nephilex.scanners import ast_python  # noqa: E402
 
 
 def _run_ast(tmp_path, code: str):
-    from argus.analysis.repository import RepositoryAnalyzer
-    from argus.core.project import Project
+    from nephilex.analysis.repository import RepositoryAnalyzer
+    from nephilex.core.project import Project
 
     (tmp_path / "app.py").write_text(code, encoding="utf-8")
     project = Project.from_path(tmp_path)
@@ -125,7 +125,7 @@ def test_engine_dedupes_regex_and_ast(tmp_path):
         "    cursor.execute(query)\n",
         encoding="utf-8",
     )
-    from argus.core.project import Project
+    from nephilex.core.project import Project
 
     result = ScanEngine(Config(scanners=["patterns", "ast-python"])).scan(
         Project.from_path(tmp_path)

@@ -1,18 +1,18 @@
 # Security Policy
 
-Argus is a security tool that runs on untrusted code, so vulnerabilities in
-Argus itself are taken seriously and handled with priority.
+Nephilex is a security tool that runs on untrusted code, so vulnerabilities in
+Nephilex itself are taken seriously and handled with priority.
 
 ## Supported versions
 
-Argus is pre-1.0. Security fixes are released for the latest minor version
+Nephilex is pre-1.0. Security fixes are released for the latest minor version
 only; older versions receive no backports. Upgrade to the latest release to
 receive fixes.
 
 | Version | Supported |
 |---------|-----------|
-| 0.8.x   | Yes       |
-| < 0.8   | No        |
+| 0.10.x  | Yes       |
+| < 0.10  | No        |
 
 ## Reporting a vulnerability
 
@@ -20,13 +20,13 @@ Please report vulnerabilities privately. Do **not** open a public issue, pull
 request, or discussion for a suspected vulnerability.
 
 Preferred channel: GitHub private vulnerability reporting at
-<https://github.com/Argus-CodeSecurity/Argus-appsec/security/advisories/new>.
+<https://github.com/nephilex/nephilex/security/advisories/new>.
 
 Alternative: email haseebfarooq35@gmail.com or abdullah@devfactory.io.
 
 Please include:
 
-- the affected version (`argus --version`) and how Argus was installed;
+- the affected version (`nephilex --version`) and how Nephilex was installed;
 - a description of the issue and its impact;
 - reproduction steps or a proof of concept (a minimal repository or file that
   triggers the behaviour is ideal);
@@ -49,23 +49,23 @@ publishing details, and we will keep you informed throughout.
 
 ## Scope
 
-In scope: the `argus-appsec` package, the official GitHub Action
+In scope: the `nephilex` package, the official GitHub Action
 (`action.yml`), the container image, and the release pipeline in this
 repository. Classes of issue we consider high severity include:
 
-- a scanned repository causing Argus to execute code, read or write files
+- a scanned repository causing Nephilex to execute code, read or write files
   outside the scan root, or make network requests the user did not enable;
 - a scanned repository causing the CI gate to pass when it should fail
   (silencing findings, crashing a scanner into a clean result);
 - secrets or source code leaking into reports, logs, or third-party services
   beyond what is documented.
 
-See [THREAT_MODEL.md](THREAT_MODEL.md) for the trust boundaries Argus defends.
+See [THREAT_MODEL.md](THREAT_MODEL.md) for the trust boundaries Nephilex defends.
 
 Out of scope: findings in the deliberately vulnerable code under `examples/`,
 `benchmarks/`, and `tests/fixtures/`; false positives or false negatives in
 detection (please open a regular issue for those); and issues that require an
-attacker who already controls the user's machine or Argus configuration passed
+attacker who already controls the user's machine or Nephilex configuration passed
 on the command line.
 
 ## Safe harbor
@@ -80,6 +80,6 @@ systems and data they own or are authorized to test.
 - The default `heuristic` provider and the `ollama` provider keep source code
   on your machine. The `anthropic` and `openai` providers send code snippets to
   those services; choose a provider appropriate to your confidentiality
-  requirements (`argus providers` shows which are local and which are remote).
+  requirements (`nephilex providers` shows which are local and which are remote).
 - Attack Simulation Mode is descriptive and non-executing: it does not run
   generated exploit code or contact live targets.

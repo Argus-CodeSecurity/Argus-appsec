@@ -13,12 +13,12 @@ from pathlib import Path
 
 import pytest
 
-from argus.core.config import Config
-from argus.core.plugin import ScannerContext
-from argus.core.project import Project
-from argus.scanners import dependencies
-from argus.scanners.api import ApiScanner
-from argus.scanners.dependencies import (
+from nephilex.core.config import Config
+from nephilex.core.plugin import ScannerContext
+from nephilex.core.project import Project
+from nephilex.scanners import dependencies
+from nephilex.scanners.api import ApiScanner
+from nephilex.scanners.dependencies import (
     _loads,
     _parse_composer_lock,
     _parse_package_json,
@@ -26,8 +26,8 @@ from argus.scanners.dependencies import (
     _parse_pipfile_lock,
     collect_packages,
 )
-from argus.scanners.provenance import ProvenanceScanner
-from argus.scanners.supply_chain import SupplyChainScanner
+from nephilex.scanners.provenance import ProvenanceScanner
+from nephilex.scanners.supply_chain import SupplyChainScanner
 
 DEEP = '{"a":' * 100_000 + "1" + "}" * 100_000
 

@@ -1,4 +1,4 @@
-# Argus container image.
+# Nephilex container image.
 #
 # Multi-stage build: install into a venv in the builder, copy the venv into a
 # slim runtime. Includes git so remote repository targets can be cloned.
@@ -26,10 +26,10 @@ RUN pip install --no-deps .
 # --- runtime ---------------------------------------------------------------
 FROM ${PYTHON_IMAGE} AS runtime
 
-LABEL org.opencontainers.image.title="Argus" \
+LABEL org.opencontainers.image.title="Nephilex" \
       org.opencontainers.image.description="Open-source application security scanner" \
-      org.opencontainers.image.source="https://github.com/Argus-CodeSecurity/Argus-appsec" \
-      org.opencontainers.image.documentation="https://argus-codesecurity.github.io/Argus-appsec/" \
+      org.opencontainers.image.source="https://github.com/nephilex/nephilex" \
+      org.opencontainers.image.documentation="https://nephilex.github.io/nephilex/" \
       org.opencontainers.image.licenses="Apache-2.0"
 
 # git is needed to scan remote repositories.
@@ -43,10 +43,10 @@ ENV PATH="/opt/venv/bin:$PATH" \
     PYTHONUNBUFFERED=1
 
 # Run as a non-root user.
-RUN useradd --create-home --uid 10001 argus
+RUN useradd --create-home --uid 10001 nephilex
 USER 10001
 WORKDIR /work
 
 # Mount the project to scan at /work.
-ENTRYPOINT ["argus"]
+ENTRYPOINT ["nephilex"]
 CMD ["--help"]

@@ -12,9 +12,9 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from argus.core.config import Config
-from argus.core.engine import ScanEngine
-from argus.core.project import Project
+from nephilex.core.config import Config
+from nephilex.core.engine import ScanEngine
+from nephilex.core.project import Project
 
 _FIXTURE = Path(__file__).parent / "fixtures" / "golden_app"
 _GOLDEN = Path(__file__).parent / "fixtures" / "golden_app.expected.json"

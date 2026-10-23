@@ -5,13 +5,13 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from argus.core.config import Config
-from argus.core.plugin import ScannerContext
-from argus.core.project import Project
-from argus.inventory.asset_map import build_inventory
-from argus.scanners.cicd import CicdScanner
-from argus.scanners.cloud import CloudScanner
-from argus.scanners.container import ContainerScanner
+from nephilex.core.config import Config
+from nephilex.core.plugin import ScannerContext
+from nephilex.core.project import Project
+from nephilex.inventory.asset_map import build_inventory
+from nephilex.scanners.cicd import CicdScanner
+from nephilex.scanners.cloud import CloudScanner
+from nephilex.scanners.container import ContainerScanner
 
 
 def _ctx(tmp_path: Path, *files: tuple[str, str]) -> ScannerContext:
@@ -97,7 +97,7 @@ def test_inventory_exports_architecture(tmp_path: Path) -> None:
 def test_cli_infrastructure_commands_registered() -> None:
     import typer
 
-    from argus.cli.main import app
+    from nephilex.cli.main import app
 
     names = set(typer.main.get_command(app).commands)
     assert {"infrastructure", "inventory"}.issubset(names)

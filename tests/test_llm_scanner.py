@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from argus.analysis.repository import RepositoryAnalyzer
-from argus.core.config import Config
-from argus.core.plugin import ScannerContext, registry
-from argus.core.project import Project
+from nephilex.analysis.repository import RepositoryAnalyzer
+from nephilex.core.config import Config
+from nephilex.core.plugin import ScannerContext, registry
+from nephilex.core.project import Project
 
 
 def _scan_llm(tmp_path: Path) -> list:
@@ -49,7 +49,7 @@ def test_insecure_output_handling_eval(tmp_path):
     findings = _scan_llm(tmp_path)
     out = [f for f in findings if f.rule_id == "llm.insecure-output-handling"]
     assert out, "expected an insecure-output-handling finding"
-    assert out[0].owasp == ["LLM02:2025-Insecure Output Handling"]
+    assert out[0].owasp == ["LLM05:2025-Improper Output Handling"]
     assert "CWE-95" in out[0].cwe
 
 
@@ -77,7 +77,7 @@ def test_trust_remote_code(tmp_path):
     findings = _scan_llm(tmp_path)
     assert "llm.trust-remote-code" in _rules(findings)
     f = next(f for f in findings if f.rule_id == "llm.trust-remote-code")
-    assert f.metadata["owasp_llm"].startswith("LLM05")
+    assert f.metadata["owasp_llm"] == "LLM03:2025-Supply Chain"
 
 
 def test_torch_load_pickle_flagged_without_weights_only(tmp_path):
@@ -101,12 +101,29 @@ def test_torch_load_safe_with_weights_only(tmp_path):
 
 
 def test_secret_in_prompt(tmp_path):
+    # A user-role prompt: the line rule (LLM02) reports it, with the key masked.
+    (tmp_path / "p.py").write_text(
+        "import anthropic\n"
+        "prompt = 'Summarize this. Use api_key=\"sk-abc123ABC456def789ghiJKL\"'\n",
+        encoding="utf-8",
+    )
+    findings = _scan_llm(tmp_path)
+    f = next(f for f in findings if f.rule_id == "llm.secret-in-prompt")
+    assert f.owasp == ["LLM02:2025-Sensitive Information Disclosure"]
+    assert "sk-abc123ABC456def789ghiJKL" not in f.location.snippet
+
+
+def test_secret_in_system_prompt_is_reported_once_as_llm07(tmp_path):
+    # In a system prompt the data-flow tier's LLM07 rule replaces the line rule.
     (tmp_path / "p.py").write_text(
         "import anthropic\n"
         "system_prompt = 'You are a bot. Use api_key=\"sk-abc123ABC456def789ghiJKL\"'\n",
         encoding="utf-8",
     )
-    assert "llm.secret-in-prompt" in _rules(_scan_llm(tmp_path))
+    findings = _scan_llm(tmp_path)
+    assert _rules(findings) == {"llm.secret-in-system-prompt"}
+    assert findings[0].owasp == ["LLM07:2025-System Prompt Leakage"]
+    assert "sk-abc123ABC456def789ghiJKL" not in findings[0].location.snippet
 
 
 def test_agent_shell_tool(tmp_path):
@@ -119,7 +136,7 @@ def test_agent_shell_tool(tmp_path):
     findings = _scan_llm(tmp_path)
     assert "llm.agent-shell-tool" in _rules(findings)
     f = next(f for f in findings if f.rule_id == "llm.agent-shell-tool")
-    assert f.metadata["owasp_llm"].startswith("LLM08")
+    assert f.metadata["owasp_llm"] == "LLM06:2025-Excessive Agency"
 
 
 def test_prompt_injection_from_request(tmp_path):

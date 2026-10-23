@@ -6,9 +6,9 @@ from pathlib import Path
 
 import pytest
 
-from argus.core.config import Config
-from argus.core.project import Project
-from argus.plugins import register_builtins
+from nephilex.core.config import Config
+from nephilex.core.project import Project
+from nephilex.plugins import register_builtins
 
 register_builtins()
 
@@ -18,9 +18,9 @@ def _isolated_scan_cache(tmp_path_factory, monkeypatch):
     """Point the scan/OSV caches at a per-session temp dir.
 
     Keeps test runs from reading stale entries out of (or littering) the real
-    ~/.cache/argus. Cache behavior itself is exercised in test_cache.py.
+    ~/.cache/nephilex. Cache behavior itself is exercised in test_cache.py.
     """
-    monkeypatch.setenv("ARGUS_CACHE_DIR", str(tmp_path_factory.mktemp("argus-cache")))
+    monkeypatch.setenv("NEPHILEX_CACHE_DIR", str(tmp_path_factory.mktemp("nephilex-cache")))
 
 
 @pytest.fixture(autouse=True)
@@ -34,7 +34,7 @@ def _offline_osv(request, monkeypatch):
     """
     if request.node.get_closest_marker("osv_network"):
         return
-    from argus.scanners import osv
+    from nephilex.scanners import osv
 
     def _raise(*args, **kwargs):
         raise osv.OSVError("network disabled in tests")
@@ -53,7 +53,7 @@ def _offline_exploit_signals(request, monkeypatch):
     """
     if request.node.get_closest_marker("exploit_network"):
         return
-    from argus.scanners import exploit_signals
+    from nephilex.scanners import exploit_signals
 
     monkeypatch.setattr(exploit_signals, "enrich", lambda *a, **k: {})
 

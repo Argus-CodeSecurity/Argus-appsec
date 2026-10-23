@@ -7,10 +7,10 @@ from pathlib import Path
 
 import pytest
 
-from argus.core.config import Config
-from argus.core.plugin import ScannerContext, registry
-from argus.core.project import Project
-from argus.scanners.dependencies import (
+from nephilex.core.config import Config
+from nephilex.core.plugin import ScannerContext, registry
+from nephilex.core.project import Project
+from nephilex.scanners.dependencies import (
     _parse_composer_lock,
     _parse_gemfile_lock,
     _parse_go_mod,
@@ -28,7 +28,7 @@ def _offline_config() -> Config:
 
 def _scan_deps(tmp_path: Path) -> list:
     project = Project.from_path(tmp_path)
-    from argus.analysis.repository import RepositoryAnalyzer
+    from nephilex.analysis.repository import RepositoryAnalyzer
 
     RepositoryAnalyzer().analyze(project)
     cls = registry.get_scanner("dependencies")
@@ -182,7 +182,7 @@ def test_go_module_flows_to_finding_via_osv(tmp_path: Path, monkeypatch):
         encoding="utf-8",
     )
 
-    from argus.scanners import osv
+    from nephilex.scanners import osv
 
     captured: dict[str, str] = {}
 
@@ -202,7 +202,7 @@ def test_go_module_flows_to_finding_via_osv(tmp_path: Path, monkeypatch):
     monkeypatch.setattr(osv, "query", _fake_query)
 
     project = Project.from_path(tmp_path)
-    from argus.analysis.repository import RepositoryAnalyzer
+    from nephilex.analysis.repository import RepositoryAnalyzer
 
     RepositoryAnalyzer().analyze(project)
     cls = registry.get_scanner("dependencies")
@@ -270,7 +270,7 @@ def test_both_versions_are_queried_and_reported(tmp_path: Path, monkeypatch):
         encoding="utf-8",
     )
 
-    from argus.scanners import osv
+    from nephilex.scanners import osv
 
     queried: list[tuple[str, str]] = []
 
@@ -289,7 +289,7 @@ def test_both_versions_are_queried_and_reported(tmp_path: Path, monkeypatch):
     monkeypatch.setattr(osv, "query", _fake_query)
 
     project = Project.from_path(tmp_path)
-    from argus.analysis.repository import RepositoryAnalyzer
+    from nephilex.analysis.repository import RepositoryAnalyzer
 
     RepositoryAnalyzer().analyze(project)
     cls = registry.get_scanner("dependencies")
@@ -315,7 +315,7 @@ def test_both_versions_are_queried_and_reported(tmp_path: Path, monkeypatch):
 @pytest.mark.osv_network  # exercises osv.query with a mock transport (never real network)
 def test_osv_query_accepts_version_pairs():
     # The pair form keys results per (name, version), so duplicate names survive.
-    from argus.scanners import osv
+    from nephilex.scanners import osv
 
     pairs = [("lodash", "4.17.20"), ("lodash", "4.17.19")]
     seen: list[tuple[str, str]] = []

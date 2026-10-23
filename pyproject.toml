@@ -3,7 +3,7 @@ requires = ["hatchling>=1.27"]
 build-backend = "hatchling.build"
 
 [project]
-name = "argus-appsec"
+name = "nephilex"
 dynamic = ["version"]
 description = "An open-source AI Security Engineer: maps your application, finds vulnerabilities, explains them, and proposes verified fixes."
 readme = "README.md"
@@ -57,7 +57,7 @@ dependencies = [
 # Cloud AI providers
 anthropic = ["anthropic>=0.39"]
 openai = ["openai>=1.40"]
-# AST-based data-flow scanning (tree-sitter). Optional: without it, Argus uses the
+# AST-based data-flow scanning (tree-sitter). Optional: without it, Nephilex uses the
 # regex + lightweight-taint code scanner and skips the deeper AST tier gracefully.
 ast = [
   "tree-sitter>=0.21",
@@ -97,31 +97,36 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/Argus-CodeSecurity/Argus-appsec"
-Documentation = "https://argus-codesecurity.github.io/Argus-appsec/"
-Repository = "https://github.com/Argus-CodeSecurity/Argus-appsec"
-Issues = "https://github.com/Argus-CodeSecurity/Argus-appsec/issues"
-Changelog = "https://github.com/Argus-CodeSecurity/Argus-appsec/blob/main/CHANGELOG.md"
-Security = "https://github.com/Argus-CodeSecurity/Argus-appsec/security/policy"
+Homepage = "https://github.com/nephilex/nephilex"
+Documentation = "https://nephilex.github.io/nephilex/"
+Repository = "https://github.com/nephilex/nephilex"
+Issues = "https://github.com/nephilex/nephilex/issues"
+Changelog = "https://github.com/nephilex/nephilex/blob/main/CHANGELOG.md"
+Security = "https://github.com/nephilex/nephilex/security/policy"
 
 [project.scripts]
-argus = "argus.cli.main:app"
+nephilex = "nephilex.cli.main:app"
 
 # Plugins are discovered through this entry-point group. Third-party packages
 # register scanners, reporters, and AI providers here without touching the core.
-[project.entry-points."argus.plugins"]
-builtin = "argus.plugins:register_builtins"
+[project.entry-points."nephilex.plugins"]
+builtin = "nephilex.plugins:register_builtins"
 
-# Single source of truth for the version: argus.__version__.
+# Single source of truth for the version: nephilex.__version__.
 [tool.hatch.version]
-path = "src/argus/__init__.py"
+path = "src/nephilex/__init__.py"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/argus"]
+packages = ["src/nephilex"]
+# Core metadata 2.4 is the version PEP 639 licence fields need and that
+# PyPI, pip and private package mirrors all read. Newer hatchling defaults
+# to 2.5, which older upload tooling rejects.
+core-metadata-version = "2.4"
 
 [tool.hatch.build.targets.sdist]
+core-metadata-version = "2.4"
 include = [
-  "src/argus",
+  "src/nephilex",
   "tests",
   "README.md",
   "CHANGELOG.md",
@@ -152,18 +157,18 @@ ignore = ["E501"]
 [tool.ruff.lint.per-file-ignores]
 # Typer's API intentionally uses function calls (Option/Argument) as parameter
 # defaults; B008 flags that pattern but it is correct and idiomatic here.
-"src/argus/cli/*" = ["B008"]
+"src/nephilex/cli/*" = ["B008"]
 # FastAPI's Depends() in parameter defaults is the framework's idiom, like Typer's.
-"src/argus/dashboard/*" = ["B008"]
+"src/nephilex/dashboard/*" = ["B008"]
 [tool.mypy]
 python_version = "3.10"
 warn_unused_ignores = true
 ignore_missing_imports = true
-packages = ["argus"]
+packages = ["nephilex"]
 
 [tool.coverage.run]
 branch = true
-source = ["argus"]
+source = ["nephilex"]
 
 [tool.coverage.report]
 show_missing = true

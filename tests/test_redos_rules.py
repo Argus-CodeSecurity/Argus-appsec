@@ -1,4 +1,4 @@
-"""ReDoS guard: Argus runs hundreds of regexes against untrusted files, so a rule
+"""ReDoS guard: Nephilex runs hundreds of regexes against untrusted files, so a rule
 with catastrophic backtracking would let a crafted file hang a scan (a DoS on the
 customer's CI pipeline). This test runs every rule/module regex against adversarial
 inputs under a strict time budget. A vulnerable regex blows up to seconds on these
@@ -14,7 +14,7 @@ from __future__ import annotations
 import re
 import time
 
-from argus.scanners import ast_python, llm, patterns
+from nephilex.scanners import ast_python, llm, patterns
 
 # Generous: catastrophic backtracking produces seconds-to-minutes on these inputs,
 # a safe regex is microseconds, so 0.5s never false-fails yet always catches ReDoS.

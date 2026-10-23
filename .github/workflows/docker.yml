@@ -1,13 +1,13 @@
-# Build and publish the official Argus container image to GitHub Container
+# Build and publish the official Nephilex container image to GitHub Container
 # Registry. Runs on every release (tagged with the version and `latest`) and can
 # be triggered manually for a one-off build. Every pushed image carries a signed
 # build-provenance attestation and an SBOM, verifiable with:
 #
-#   gh attestation verify oci://ghcr.io/argus-codesecurity/argus:<version> \
-#     --owner Argus-CodeSecurity
+#   gh attestation verify oci://ghcr.io/nephilex/nephilex:<version> \
+#     --owner nephilex
 #
 # Usage once published:
-#   docker run --rm -v "$PWD:/work" ghcr.io/argus-codesecurity/argus scan /work
+#   docker run --rm -v "$PWD:/work" ghcr.io/nephilex/nephilex scan /work
 name: Publish Docker image
 
 on:
@@ -35,6 +35,19 @@ jobs:
         with:
           persist-credentials: false
 
+      # The image is tagged from the release tag, so a tag created on the
+      # wrong commit would publish mislabeled images. Same check as publish.yml.
+      - name: Release tag matches the package version
+        if: github.event_name == 'release'
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          version="$(sed -n 's/^__version__ = "\(.*\)"$/\1/p' src/nephilex/__init__.py)"
+          if [ "${TAG#v}" != "$version" ]; then
+            echo "::error::Release tag '$TAG' does not match package version '$version'."
+            exit 1
+          fi
+
       - uses: docker/setup-buildx-action@f7ce87c1d6bead3e36075b2ce75da1f6cc28aaca # v3.9.0
 
       - name: Log in to GitHub Container Registry
@@ -48,7 +61,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@369eb591f429131d6889c46b94e711f089e6ca96 # v5.6.1
         with:
-          images: ghcr.io/${{ github.repository_owner }}/argus
+          images: ghcr.io/${{ github.repository_owner }}/nephilex
           tags: |
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
@@ -72,6 +85,6 @@ jobs:
       - name: Attest build provenance
         uses: actions/attest-build-provenance@520d128f165991a6c774bcb264f323e3d70747f4 # v2.2.0
         with:
-          subject-name: ghcr.io/${{ github.repository_owner }}/argus
+          subject-name: ghcr.io/${{ github.repository_owner }}/nephilex
           subject-digest: ${{ steps.push.outputs.digest }}
           push-to-registry: true

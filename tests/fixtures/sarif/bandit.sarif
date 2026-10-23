@@ -1,0 +1,170 @@
+{
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "Bandit",
+          "organization": "PyCQA",
+          "rules": [
+            {
+              "id": "B602",
+              "name": "subprocess_popen_with_shell_equals_true",
+              "properties": {
+                "tags": [
+                  "security",
+                  "external/cwe/cwe-78"
+                ],
+                "precision": "high"
+              },
+              "helpUri": "https://bandit.readthedocs.io/en/1.7.9/plugins/b602_subprocess_popen_with_shell_equals_true.html"
+            },
+            {
+              "id": "B506",
+              "name": "yaml_load",
+              "properties": {
+                "tags": [
+                  "security",
+                  "external/cwe/cwe-20"
+                ],
+                "precision": "high"
+              },
+              "helpUri": "https://bandit.readthedocs.io/en/1.7.9/plugins/b506_yaml_load.html"
+            },
+            {
+              "id": "B324",
+              "name": "hashlib",
+              "properties": {
+                "tags": [
+                  "security",
+                  "external/cwe/cwe-327"
+                ],
+                "precision": "high"
+              },
+              "helpUri": "https://bandit.readthedocs.io/en/1.7.9/plugins/b324_hashlib.html"
+            }
+          ],
+          "version": "1.7.9",
+          "semanticVersion": "1.7.9"
+        }
+      },
+      "invocations": [
+        {
+          "executionSuccessful": true,
+          "endTimeUtc": "2024-07-01T10:00:00Z"
+        }
+      ],
+      "properties": {
+        "metrics": {
+          "_totals": {
+            "loc": 15,
+            "nosec": 0,
+            "SEVERITY.HIGH": 2,
+            "SEVERITY.MEDIUM": 1,
+            "CONFIDENCE.HIGH": 3
+          }
+        }
+      },
+      "results": [
+        {
+          "message": {
+            "text": "subprocess call with shell=True identified, security issue."
+          },
+          "level": "error",
+          "locations": [
+            {
+              "physicalLocation": {
+                "region": {
+                  "snippet": {
+                    "text": "    subprocess.run(\"ping \" + request.args.get(\"host\"), shell=True)\n"
+                  },
+                  "endColumn": 67,
+                  "endLine": 11,
+                  "startColumn": 5,
+                  "startLine": 11
+                },
+                "artifactLocation": {
+                  "uri": "app.py"
+                },
+                "contextRegion": {
+                  "snippet": {
+                    "text": "def run():\n    subprocess.run(\"ping \" + request.args.get(\"host\"), shell=True)\ndef load(raw):\n"
+                  },
+                  "endLine": 12,
+                  "startLine": 10
+                }
+              }
+            }
+          ],
+          "properties": {
+            "issue_confidence": "HIGH",
+            "issue_severity": "HIGH"
+          },
+          "ruleId": "B602",
+          "ruleIndex": 0
+        },
+        {
+          "message": {
+            "text": "Use of unsafe yaml load. Allows instantiation of arbitrary objects. Consider yaml.safe_load()."
+          },
+          "level": "warning",
+          "locations": [
+            {
+              "physicalLocation": {
+                "region": {
+                  "snippet": {
+                    "text": "    return yaml.load(raw)\n"
+                  },
+                  "endColumn": 26,
+                  "endLine": 13,
+                  "startColumn": 12,
+                  "startLine": 13
+                },
+                "artifactLocation": {
+                  "uri": "app.py"
+                }
+              }
+            }
+          ],
+          "properties": {
+            "issue_confidence": "HIGH",
+            "issue_severity": "MEDIUM"
+          },
+          "ruleId": "B506",
+          "ruleIndex": 1
+        },
+        {
+          "message": {
+            "text": "Use of weak MD5 hash for security. Consider usedforsecurity=False"
+          },
+          "level": "error",
+          "locations": [
+            {
+              "physicalLocation": {
+                "region": {
+                  "snippet": {
+                    "text": "    return hashlib.md5(p.encode()).hexdigest()\n"
+                  },
+                  "endColumn": 35,
+                  "endLine": 15,
+                  "startColumn": 12,
+                  "startLine": 15
+                },
+                "artifactLocation": {
+                  "uri": "app.py"
+                }
+              }
+            }
+          ],
+          "properties": {
+            "issue_confidence": "HIGH",
+            "issue_severity": "HIGH"
+          },
+          "ruleId": "B324",
+          "ruleIndex": 2
+        }
+      ]
+    }
+  ],
+  "version": "2.1.0",
+  "$schema": "https://json.schemastore.org/sarif-2.1.0.json"
+}

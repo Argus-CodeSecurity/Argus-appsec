@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from argus.analysis.repository import RepositoryAnalyzer
-from argus.core.project import Project
+from nephilex.analysis.repository import RepositoryAnalyzer
+from nephilex.core.project import Project
 
 
 def _arch(tmp_path: Path, files: dict[str, str]) -> dict:

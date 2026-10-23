@@ -12,16 +12,16 @@ pytest.importorskip("sqlmodel")
 from fastapi.testclient import TestClient  # noqa: E402
 from sqlmodel import Session, select  # noqa: E402
 
-from argus.core.models import ScanResult  # noqa: E402
-from argus.dashboard import app as app_module  # noqa: E402
-from argus.dashboard import db, store  # noqa: E402
+from nephilex.core.models import ScanResult  # noqa: E402
+from nephilex.dashboard import app as app_module  # noqa: E402
+from nephilex.dashboard import db, store  # noqa: E402
 
 JSON = {"Content-Type": "application/json"}
 
 
 @pytest.fixture(autouse=True)
 def _fresh(monkeypatch):
-    monkeypatch.setenv("ARGUS_DASHBOARD_DB", ":memory:")
+    monkeypatch.setenv("NEPHILEX_DASHBOARD_DB", ":memory:")
     monkeypatch.delenv(app_module.ALLOWED_HOSTS_ENV, raising=False)
     monkeypatch.delenv(app_module.MAX_SCANS_ENV, raising=False)
     db.reset_engine_for_tests()
@@ -60,9 +60,9 @@ def test_rebound_host_headers_are_rejected(client, host):
 
 
 def test_allowed_hosts_env(monkeypatch):
-    monkeypatch.setenv(app_module.ALLOWED_HOSTS_ENV, "argus.internal")
+    monkeypatch.setenv(app_module.ALLOWED_HOSTS_ENV, "nephilex.internal")
     app_module.configure("127.0.0.1")
-    c = TestClient(app_module.app, base_url="http://argus.internal")
+    c = TestClient(app_module.app, base_url="http://nephilex.internal")
     assert c.get("/").status_code == 200
 
 

@@ -8,12 +8,12 @@ from pathlib import Path
 import pytest
 from typer.testing import CliRunner
 
-from argus.cli.main import app
-from argus.core.config import Config, ConfigError
-from argus.core.engine import ScanEngine
-from argus.core.models import Finding
-from argus.core.plugin import Scanner, ScannerContext, registry
-from argus.core.project import Project
+from nephilex.cli.main import app
+from nephilex.core.config import Config, ConfigError
+from nephilex.core.engine import ScanEngine
+from nephilex.core.models import Finding
+from nephilex.core.plugin import Scanner, ScannerContext, registry
+from nephilex.core.project import Project
 
 runner = CliRunner()
 
@@ -52,7 +52,7 @@ def test_cli_unknown_scanner_exits_2(tmp_path: Path) -> None:
 
 def test_yaml_string_scanners_is_rejected(tmp_path: Path) -> None:
     _project(tmp_path)
-    (tmp_path / ".argus.yml").write_text("scanners: patterns\n", encoding="utf-8")
+    (tmp_path / ".nephilex.yml").write_text("scanners: patterns\n", encoding="utf-8")
     res = runner.invoke(app, ["scan", str(tmp_path), "--quiet", "--no-ai", "--no-cache"])
     assert res.exit_code == 2, res.output
 

@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-import argus.targets as targets
+import nephilex.targets as targets
 
 
 class _FakeGit:

@@ -1,0 +1,189 @@
+"""Dependency version differential scanner for pull requests."""
+
+from __future__ import annotations
+
+from collections.abc import Iterable
+from pathlib import Path
+from typing import TYPE_CHECKING, Any
+
+from nephilex.core.models import (
+    Confidence,
+    Finding,
+    Likelihood,
+    Location,
+    Remediation,
+    Severity,
+)
+from nephilex.core.plugin import Scanner, ScannerContext, scanner
+from nephilex.remediation import git_ops
+
+if TYPE_CHECKING:
+    from nephilex.inventory.dependency_diff import PackageChange
+
+# The inventory and supply-chain helpers are imported when first used, not at
+# module import: ``nephilex.inventory`` imports ``nephilex.scanners.dependencies``,
+# which loads this package, so a top-level import here was a circular import,
+# and the supply-chain helpers pull in httpx, which registering the scanner
+# does not need. The thin wrappers keep the names patchable in tests.
+
+
+def diff_packages(root: Path, ref: str) -> list[PackageChange]:
+    from nephilex.inventory.dependency_diff import diff_packages as impl
+
+    return list(impl(root, ref))
+
+
+def fetch_fingerprint(package: str, version: str, **kwargs: Any) -> Any:
+    from nephilex.supply_chain.sandbox import fetch_fingerprint as impl
+
+    return impl(package, version, **kwargs)
+
+
+def compare_fingerprints(old: Any, new: Any) -> list[str]:
+    from nephilex.supply_chain.behavior import compare_fingerprints as impl
+
+    return list(impl(old, new))
+
+
+def _sandbox_modes() -> tuple[str, ...]:
+    from nephilex.supply_chain.sandbox import MODES
+
+    return tuple(MODES)
+
+
+def _change_finding(change: PackageChange, counter: int) -> Finding:
+    if change.change == "added":
+        title = f"Dependency added: {change.package}@{change.new_version}"
+        severity = Severity.MEDIUM
+        why = "A new dependency expands the supply-chain attack surface."
+    elif change.change == "removed":
+        title = f"Dependency removed: {change.package}"
+        severity = Severity.INFO
+        why = "Dependency removed; verify nothing required it at runtime."
+    else:
+        title = (
+            f"Dependency version changed: {change.package} "
+            f"{change.old_version} -> {change.new_version}"
+        )
+        severity = Severity.MEDIUM
+        why = "Version changes can introduce new vulnerabilities or malicious behavior."
+
+    return Finding(
+        id=f"dependency-diff:{change.change}:{counter}",
+        rule_id=f"dependency-diff.{change.change}",
+        scanner="dependency-diff",
+        title=title,
+        description=(
+            f"{change.package} ({change.ecosystem}) in `{change.manifest}`: "
+            f"{change.old_version or 'n/a'} -> {change.new_version or 'n/a'}."
+        ),
+        location=Location(
+            path=change.manifest,
+            snippet=f"{change.package}=={change.new_version or change.old_version}",
+        ),
+        severity=severity,
+        confidence=Confidence.HIGH,
+        likelihood=Likelihood.POSSIBLE if change.change != "removed" else Likelihood.RARE,
+        cwe=["CWE-1104"] if change.change != "removed" else [],
+        owasp=["A06:2021-Vulnerable and Outdated Components"],
+        why_vulnerable=why,
+        attacker_perspective=(
+            "Supply-chain attacks often land through new or updated dependencies "
+            "in lockfile changes merged without review."
+        ),
+        business_impact="Unreviewed dependency changes can introduce CVEs or malware.",
+        remediation=Remediation(
+            summary="Review the dependency diff before merge.",
+            guidance=("Run `nephilex scan --diff` and inspect SBOM delta; pin trusted versions."),
+        ),
+        tags=["supply-chain", "dependency-diff", change.change],
+        metadata={
+            "ecosystem": change.ecosystem,
+            "package": change.package,
+            "old_version": change.old_version,
+            "new_version": change.new_version,
+            "change": change.change,
+        },
+    )
+
+
+def _behavior_findings(
+    change: PackageChange, counter: int, *, timeout: float, sandbox: str = "host"
+) -> Iterable[Finding]:
+    if change.ecosystem != "npm" or change.change != "changed":
+        return
+    if not change.old_version or not change.new_version:
+        return
+    old_fp = fetch_fingerprint(change.package, change.old_version, mode=sandbox, timeout=timeout)
+    new_fp = fetch_fingerprint(change.package, change.new_version, mode=sandbox, timeout=timeout)
+    for anomaly in compare_fingerprints(old_fp, new_fp):
+        counter += 1
+        yield Finding(
+            id=f"dependency-diff:behavior:{counter}",
+            rule_id="dependency-diff.behavior-anomaly",
+            scanner="dependency-diff",
+            title=f"Behavioral anomaly in {change.package} version update",
+            description=(
+                f"{change.package} {change.old_version} -> {change.new_version}: {anomaly}."
+            ),
+            location=Location(path=change.manifest, snippet=anomaly),
+            severity=Severity.CRITICAL,
+            confidence=Confidence.MEDIUM,
+            likelihood=Likelihood.LIKELY,
+            cwe=["CWE-506"],
+            owasp=["A06:2021-Vulnerable and Outdated Components"],
+            why_vulnerable=(
+                "The new version adds install-time capabilities not present before, "
+                "a common sign of supply-chain compromise."
+            ),
+            attacker_perspective=(
+                "Malicious maintainers add install scripts in patch releases to "
+                "execute during CI `npm ci`."
+            ),
+            business_impact="Potential credential theft or backdoor during install.",
+            remediation=Remediation(
+                summary="Block merge until the version change is verified with the publisher.",
+                guidance=(
+                    "Compare registry metadata, review publisher identity, and test "
+                    "in an isolated environment before adopting the new version."
+                ),
+            ),
+            tags=["supply-chain", "behavior-anomaly"],
+            metadata={
+                "package": change.package,
+                "old_version": change.old_version,
+                "new_version": change.new_version,
+                "anomaly": anomaly,
+            },
+        )
+
+
+@scanner
+class DependencyDiffScanner(Scanner):
+    name = "dependency-diff"
+    category = "supply-chain"
+    description = "Reports dependency additions, removals, and version changes in a git diff."
+
+    file_local = False
+
+    def applies_to(self, project) -> bool:
+        return git_ops.is_git_repo(Path(project.root))
+
+    def scan(self, ctx: ScannerContext) -> Iterable[Finding]:
+        opts = ctx.config.options_for(self.name)
+        ref = opts.get("ref") or opts.get("diff_ref")
+        if not ref:
+            return
+        timeout = float(opts.get("timeout", 10.0))
+        behavior = bool(opts.get("behavior", True))
+        # Set by `nephilex supply-chain --sandbox`; plain scans query from the host.
+        sandbox = str(opts.get("sandbox") or "host").lower()
+        modes = _sandbox_modes()
+        if sandbox not in modes:
+            raise ValueError(
+                f"unknown sandbox mode {sandbox!r} (expected one of {', '.join(modes)})"
+            )
+        for counter, change in enumerate(diff_packages(Path(ctx.project.root), str(ref)), start=1):
+            yield _change_finding(change, counter)
+            if behavior:
+                yield from _behavior_findings(change, counter, timeout=timeout, sandbox=sandbox)

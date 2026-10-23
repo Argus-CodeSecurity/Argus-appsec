@@ -1,4 +1,4 @@
-"""`argus learn` and audience views must survive Rich markup in finding text."""
+"""`nephilex learn` and audience views must survive Rich markup in finding text."""
 
 from __future__ import annotations
 
@@ -7,9 +7,9 @@ from datetime import datetime, timezone
 import pytest
 from rich.console import Console
 
-from argus.core.models import Finding, Location, Remediation, ScanResult, Severity
-from argus.reporting.audience import AUDIENCES, render_for_audience
-from argus.reporting.learn import render_lessons
+from nephilex.core.models import Finding, Location, Remediation, ScanResult, Severity
+from nephilex.reporting.audience import AUDIENCES, render_for_audience
+from nephilex.reporting.learn import render_lessons
 
 NASTY = "[/bold] oops [link=https://evil.example]x[/link] [red]"
 

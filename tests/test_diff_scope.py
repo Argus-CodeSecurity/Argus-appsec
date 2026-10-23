@@ -8,10 +8,10 @@ from pathlib import Path
 
 import pytest
 
-from argus.analysis.diff_scan import DiffError, resolve_diff
-from argus.core.models import Finding, Location, ScanResult, Severity
-from argus.remediation import git_ops
-from argus.remediation.pr_review import _unquote_path, changed_lines, parse_changed_lines
+from nephilex.analysis.diff_scan import DiffError, resolve_diff
+from nephilex.core.models import Finding, Location, ScanResult, Severity
+from nephilex.remediation import git_ops
+from nephilex.remediation.pr_review import _unquote_path, changed_lines, parse_changed_lines
 
 pytestmark = pytest.mark.skipif(not git_ops.git_available(), reason="git not installed")
 
@@ -104,7 +104,7 @@ def test_pr_review_changed_lines_tolerates_bad_ref(tmp_path):
 
 
 def test_cli_keeps_all_findings_when_diff_fails(tmp_path):
-    from argus.cli._common import apply_diff
+    from nephilex.cli._common import apply_diff
 
     root = _repo(tmp_path)
     _commit(root, {"app.py": "a = 1\n"}, "init")
@@ -169,9 +169,9 @@ class _HungGit:
 
 
 def test_git_timeout_raises_git_error(tmp_path, monkeypatch):
-    from argus.core import gitexec
+    from nephilex.core import gitexec
 
-    monkeypatch.setenv("ARGUS_GIT_TIMEOUT", "0.2")
+    monkeypatch.setenv("NEPHILEX_GIT_TIMEOUT", "0.2")
     monkeypatch.setattr(gitexec.subprocess, "Popen", _HungGit)
     with pytest.raises(git_ops.GitError, match="timed out"):
         git_ops.diff(tmp_path, "HEAD")

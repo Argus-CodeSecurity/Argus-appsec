@@ -16,7 +16,7 @@ Closes #
 ## Checklist
 
 - [ ] `ruff check .` and `ruff format --check .` pass
-- [ ] `mypy src/argus` passes
+- [ ] `mypy src/nephilex` passes
 - [ ] `pytest` passes and new behaviour is covered by tests
 - [ ] `python benchmarks/accuracy.py` passes (or the corpus change is explained)
 - [ ] New findings carry a CWE and OWASP mapping and remediation guidance

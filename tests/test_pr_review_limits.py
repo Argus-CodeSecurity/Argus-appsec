@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from argus.core.models import Finding, Location, Severity
-from argus.remediation import pr_review
+from nephilex.core.models import Finding, Location, Severity
+from nephilex.remediation import pr_review
 
 
 def _finding(i: int, title: str = "t") -> Finding:

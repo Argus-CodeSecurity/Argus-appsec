@@ -1,4 +1,4 @@
-"""argus watch: failed pushes are retried, errors do not stop the loop, state stays bounded."""
+"""nephilex watch: failed pushes are retried, errors do not stop the loop, state stays bounded."""
 
 from __future__ import annotations
 
@@ -9,9 +9,9 @@ from pathlib import Path
 
 import pytest
 
-from argus.core.models import Finding, Location, ScanResult, Severity
-from argus.watch import scheduler
-from argus.watch.scheduler import (
+from nephilex.core.models import Finding, Location, ScanResult, Severity
+from nephilex.watch import scheduler
+from nephilex.watch.scheduler import (
     latest_snapshot_path,
     load_snapshot,
     prune_snapshots,

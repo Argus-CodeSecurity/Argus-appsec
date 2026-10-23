@@ -11,7 +11,7 @@ import json
 import httpx
 import pytest
 
-from argus.scanners import osv
+from nephilex.scanners import osv
 
 pytestmark = pytest.mark.osv_network
 

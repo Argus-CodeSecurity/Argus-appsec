@@ -1,5 +1,5 @@
-# Example Argus custom rules. Copy this to `.argus/rules/` in your project
-# (auto-loaded), or point `scanner_options.patterns.rules` at it in .argus.yml.
+# Example Nephilex custom rules. Copy this to `.nephilex/rules/` in your project
+# (auto-loaded), or point `scanner_options.patterns.rules` at it in .nephilex.yml.
 # No Python required, a rule is a regex plus some metadata.
 #
 # See docs/plugins.md ("Community rules") for the full field reference.
@@ -18,7 +18,7 @@ rules:
     impact: Environment coupling and internal-topology disclosure.
     fix: Move host addresses into configuration or service discovery.
     # A line containing this marker is treated as an accepted exception.
-    suppress: 'argus:allow-internal-ip'
+    suppress: 'nephilex:allow-internal-ip'
 
   - id: insecure-http-url
     title: Insecure http:// URL in source

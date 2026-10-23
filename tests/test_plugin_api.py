@@ -9,9 +9,9 @@ from pathlib import Path
 
 import pytest
 
-import argus.plugin_api as plugin_api
-from argus.ai.base import AIProvider
-from argus.core.plugin import (
+import nephilex.plugin_api as plugin_api
+from nephilex.ai.base import AIProvider
+from nephilex.core.plugin import (
     PLUGIN_API_VERSION,
     Registry,
     Reporter,
@@ -101,7 +101,7 @@ def test_same_major_in_string_form_is_accepted(version: str) -> None:
 def test_mismatched_version_is_skipped_and_logged(version: object, caplog) -> None:
     reg = _fresh_registry()
     cls = _scanner_cls("future", version)
-    with caplog.at_level(logging.WARNING, logger="argus.plugins"):
+    with caplog.at_level(logging.WARNING, logger="nephilex.plugins"):
         assert reg.register_scanner(cls) is cls  # no exception
     assert "future" not in reg.scanners()
     assert ("Scanner", "future") in reg.rejected()
@@ -126,7 +126,7 @@ def test_mismatched_reporter_and_provider_are_skipped(caplog) -> None:
             return ""
 
     reg = _fresh_registry()
-    with caplog.at_level(logging.WARNING, logger="argus.plugins"):
+    with caplog.at_level(logging.WARNING, logger="nephilex.plugins"):
         reg.register_reporter(FutureReporter)
         reg.register_ai_provider(FutureProvider)
     assert reg.reporters() == {} and reg.ai_providers() == {}
@@ -135,9 +135,9 @@ def test_mismatched_reporter_and_provider_are_skipped(caplog) -> None:
 
 
 def test_scan_runs_when_a_plugin_is_skipped(tmp_path: Path, monkeypatch) -> None:
-    from argus.core.config import Config
-    from argus.core.engine import ScanEngine
-    from argus.core.project import Project
+    from nephilex.core.config import Config
+    from nephilex.core.engine import ScanEngine
+    from nephilex.core.project import Project
 
     monkeypatch.setattr(registry, "_rejected", {})
     registry.register_scanner(_scanner_cls("from-the-future", 99))
@@ -153,8 +153,8 @@ def test_scan_runs_when_a_plugin_is_skipped(tmp_path: Path, monkeypatch) -> None
 
 
 def test_scanner_context_is_a_dataclass_with_the_old_call_shapes(tmp_path: Path) -> None:
-    from argus.core.config import Config
-    from argus.core.project import Project
+    from nephilex.core.config import Config
+    from nephilex.core.project import Project
 
     assert dataclasses.is_dataclass(ScannerContext)
     project, config = Project.from_path(tmp_path), Config()

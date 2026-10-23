@@ -1,16 +1,16 @@
 """The DAST scanner only probes a URL the operator chose.
 
-A ``scanner_options.dast.url`` in the scanned repository's own ``.argus.yml``
+A ``scanner_options.dast.url`` in the scanned repository's own ``.nephilex.yml``
 comes from whoever wrote the repo (in CI, possibly a fork's pull request), so
 it must never make the runner send requests.
 """
 
 from __future__ import annotations
 
-from argus.core.config import Config
-from argus.core.plugin import ScannerContext
-from argus.core.project import Project
-from argus.scanners import dast
+from nephilex.core.config import Config
+from nephilex.core.plugin import ScannerContext
+from nephilex.core.project import Project
+from nephilex.scanners import dast
 
 
 def _ctx(root, cfg: Config) -> ScannerContext:
@@ -26,7 +26,7 @@ def _record_requests(monkeypatch) -> list[str]:
 
 def test_dast_ignores_url_from_scanned_repo_config(tmp_path, monkeypatch):
     monkeypatch.delenv(dast.ENV_URL, raising=False)
-    (tmp_path / ".argus.yml").write_text(
+    (tmp_path / ".nephilex.yml").write_text(
         "scanner_options:\n  dast:\n    url: http://169.254.169.254/latest/meta-data/?a=1\n",
         encoding="utf-8",
     )
@@ -38,12 +38,12 @@ def test_dast_ignores_url_from_scanned_repo_config(tmp_path, monkeypatch):
 
 def test_dast_uses_operator_live_target(tmp_path, monkeypatch):
     monkeypatch.delenv(dast.ENV_URL, raising=False)
-    (tmp_path / ".argus.yml").write_text(
+    (tmp_path / ".nephilex.yml").write_text(
         "scanner_options:\n  dast:\n    url: http://169.254.169.254/\n",
         encoding="utf-8",
     )
     cfg = Config.load(project_root=tmp_path)
-    # What `argus scan --live-target` does after loading the config.
+    # What `nephilex scan --live-target` does after loading the config.
     cfg.dast_url = "https://app.example.com/"
     calls = _record_requests(monkeypatch)
     list(dast.DastScanner().scan(_ctx(tmp_path, cfg)))
@@ -54,7 +54,7 @@ def test_live_target_equal_to_repo_url_is_still_honoured(tmp_path, monkeypatch):
     # The operator chose this URL explicitly; that the repository happens to
     # declare the same one must not silently disable the scan.
     monkeypatch.delenv(dast.ENV_URL, raising=False)
-    (tmp_path / ".argus.yml").write_text(
+    (tmp_path / ".nephilex.yml").write_text(
         "scanner_options:\n  dast:\n    url: https://app.example.com/\n",
         encoding="utf-8",
     )
@@ -66,7 +66,7 @@ def test_live_target_equal_to_repo_url_is_still_honoured(tmp_path, monkeypatch):
 
 
 def test_config_files_cannot_set_the_live_target(tmp_path):
-    (tmp_path / ".argus.yml").write_text(
+    (tmp_path / ".nephilex.yml").write_text(
         "dast_url: http://169.254.169.254/\n",
         encoding="utf-8",
     )

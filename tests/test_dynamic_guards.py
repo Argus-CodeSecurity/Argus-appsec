@@ -1,4 +1,4 @@
-"""SSRF and size guards for the live-target probe (argus.dynamic.posture).
+"""SSRF and size guards for the live-target probe (nephilex.dynamic.posture).
 
 All network traffic is served by httpx.MockTransport. The connected peer
 address, which a real transport exposes through the ``network_stream``
@@ -10,7 +10,7 @@ from __future__ import annotations
 import httpx
 import pytest
 
-from argus.dynamic import posture
+from nephilex.dynamic import posture
 
 
 class _Stream:

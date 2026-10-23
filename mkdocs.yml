@@ -1,17 +1,19 @@
-site_name: Argus AppSec
+site_name: Nephilex
 site_description: >-
-  Argus AppSec, the open-source AI security engineer. Unified, explainable
+  Nephilex, the open-source AI security engineer. Unified, explainable
   security analysis across code, dependencies, secrets, IaC, and AI, with
   verified fixes.
-site_url: https://argus-codesecurity.github.io/Argus-appsec/
-repo_url: https://github.com/Argus-CodeSecurity/Argus-appsec
-repo_name: Argus-CodeSecurity/Argus-appsec
+site_url: https://nephilex.github.io/nephilex/
+repo_url: https://github.com/nephilex/nephilex
+repo_name: nephilex/nephilex
 edit_uri: edit/main/docs/
-copyright: Argus AppSec, Apache-2.0. The command is <code>argus</code>.
+copyright: Nephilex, Apache-2.0. The command is <code>nephilex</code>.
 
 theme:
   name: material
   language: en
+  logo: assets/brand/nephilex-mark.svg
+  favicon: assets/brand/nephilex-favicon.svg
   icon:
     repo: fontawesome/brands/github
   features:
@@ -62,14 +64,18 @@ nav:
       - Scanners & coverage: scanners.md
       - Configuration: configuration.md
       - Triage & baselines: triage.md
+      - Project context: context.md
+      - Audit log: audit-log.md
   - Using in your pipeline:
       - CI/CD integration: ci-cd.md
+      - Importing SARIF: importing.md
       - Infrastructure scanning: infrastructure-scanning.md
       - Policy as code: policy.md
       - Continuous monitoring: monitoring.md
       - Configuration drift: drift.md
       - Host agent: agent.md
       - Fixing & pull requests: fixing.md
+      - Editors & AI assistants: editors.md
       - MCP server (AI agents): mcp.md
       - Web dashboard: dashboard.md
   - Deeper:
@@ -80,7 +86,7 @@ nav:
       - Performance: performance.md
   - Trust:
       - Benchmarks & accuracy: benchmarks.md
-      - How Argus compares: comparison.md
+      - How Nephilex compares: comparison.md
       - Security & threat model: security.md
 
 exclude_docs: |

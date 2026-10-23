@@ -4,13 +4,15 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from argus.core.models import Finding, Location, Remediation, ScanResult, Severity
-from argus.reporting.audience import render_for_audience
+from nephilex.core.models import Finding, Location, Remediation, ScanResult, Severity
+from nephilex.reporting.audience import render_for_audience
 
 
 def _result() -> ScanResult:
     r = ScanResult(
-        target="/proj", started_at=datetime(2026, 1, 1, tzinfo=timezone.utc), argus_version="0.7.0"
+        target="/proj",
+        started_at=datetime(2026, 1, 1, tzinfo=timezone.utc),
+        nephilex_version="0.7.0",
     )
     r.findings = [
         Finding(

@@ -1,11 +1,11 @@
 # Governance
 
-This document describes how the Argus project is run: who makes decisions, how
+This document describes how the Nephilex project is run: who makes decisions, how
 they are made, and how contributors gain responsibility.
 
 ## Roles
 
-**Users** run Argus and report problems. Their feedback drives the roadmap.
+**Users** run Nephilex and report problems. Their feedback drives the roadmap.
 
 **Contributors** submit issues, pull requests, documentation, rules, or reviews.
 Anyone can be a contributor; no prior approval is needed.

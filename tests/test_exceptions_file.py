@@ -1,4 +1,4 @@
-"""`.argus/exceptions.yml` parsing: YAML dates, bad shapes, expiry."""
+"""`.nephilex/exceptions.yml` parsing: YAML dates, bad shapes, expiry."""
 
 from __future__ import annotations
 
@@ -7,9 +7,9 @@ from pathlib import Path
 
 import pytest
 
-from argus.core.config import ConfigError
-from argus.core.models import Finding, Location, Severity
-from argus.exceptions import FindingException, apply_exceptions, load_exceptions
+from nephilex.core.config import ConfigError
+from nephilex.core.models import Finding, Location, Severity
+from nephilex.exceptions import FindingException, apply_exceptions, load_exceptions
 
 
 def _finding() -> Finding:

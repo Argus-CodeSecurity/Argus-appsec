@@ -1,4 +1,4 @@
-# CodeQL static analysis of Argus's own source. A security tool should hold
+# CodeQL static analysis of Nephilex's own source. A security tool should hold
 # itself to the standard it applies to others.
 name: CodeQL
 
@@ -38,7 +38,7 @@ jobs:
           languages: ${{ matrix.language }}
           queries: security-extended
           # The examples, benchmark corpora and test fixtures are deliberately
-          # vulnerable code that exists for Argus to find.
+          # vulnerable code that exists for Nephilex to find.
           config: |
             paths-ignore:
               - examples

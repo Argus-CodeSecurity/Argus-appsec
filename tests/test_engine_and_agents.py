@@ -4,10 +4,10 @@ from __future__ import annotations
 
 import pytest
 
-from argus.ai.factory import build_provider
-from argus.core.config import AIConfig, Config
-from argus.core.engine import ScanEngine
-from argus.core.models import Severity
+from nephilex.ai.factory import build_provider
+from nephilex.core.config import AIConfig, Config
+from nephilex.core.engine import ScanEngine
+from nephilex.core.models import Severity
 
 
 def test_full_scan_offline(vulnerable_project):

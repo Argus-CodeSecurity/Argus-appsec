@@ -4,17 +4,17 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from argus.analysis.reachability import (
+from nephilex.analysis.reachability import (
     IMPORTED,
     NOT_IMPORTED,
     UNKNOWN,
     collect_python_imports,
     python_import_verdict,
 )
-from argus.core.config import Config
-from argus.core.models import Likelihood
-from argus.core.plugin import ScannerContext, registry
-from argus.core.project import Project
+from nephilex.core.config import Config
+from nephilex.core.models import Likelihood
+from nephilex.core.plugin import ScannerContext, registry
+from nephilex.core.project import Project
 
 
 def _reachability_config() -> Config:
