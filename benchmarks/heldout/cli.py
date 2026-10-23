@@ -114,6 +114,10 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
     )
     f.set_defaults(func=cmd_fetch)
 
+    # Imported here: harness imports this module for its paths.
+    from benchmarks.heldout import harness
+
+    harness.add_parsers(sub)
     return p.parse_args(argv)
 
 
